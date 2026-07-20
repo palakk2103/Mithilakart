@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area, PieChart, Pie, Cell
@@ -9,23 +9,8 @@ import {
   Filter, Calendar, Download
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const REVENUE_DATA = [
-  { month: 'Jan', rev: 450000, orders: 1200 },
-  { month: 'Feb', rev: 520000, orders: 1450 },
-  { month: 'Mar', rev: 480000, orders: 1320 },
-  { month: 'Apr', rev: 610000, orders: 1800 },
-  { month: 'May', rev: 750000, orders: 2100 },
-  { month: 'Jun', rev: 690000, orders: 1950 },
-];
-
-const CATEGORY_SHARE = [
-  { name: 'Fashion', value: 35 },
-  { name: 'Electronics', value: 25 },
-  { name: 'Beauty', value: 20 },
-  { name: 'Home', value: 15 },
-  { name: 'Others', value: 5 },
-];
+import { analyticsApi } from '../services/api';
+import { formatCurrency, mapAnalyticsCategoryShare, mapAnalyticsRevenue } from '../utils/mappers';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -52,6 +37,34 @@ const StatCard = ({ title, value, change, icon: Icon, isPositive }) => (
 );
 
 const Analytics = () => {
+  const [revenueData, setRevenueData] = useState([]);
+  const [categoryShare, setCategoryShare] = useState([]);
+  const [userSummary, setUserSummary] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [salesRes, revenueRes, usersRes, productsRes] = await Promise.all([
+        analyticsApi.getSalesAnalytics({ days: 180 }),
+        analyticsApi.getRevenueAnalytics({ period: '6months' }),
+        analyticsApi.getUserAnalytics(),
+        analyticsApi.getProductAnalytics(),
+      ]);
+      if (cancelled) return;
+
+      const salesRows = mapAnalyticsRevenue(salesRes.data || revenueRes.data);
+      setRevenueData(salesRows.length ? salesRows : mapAnalyticsRevenue(revenueRes.data));
+      setCategoryShare(mapAnalyticsCategoryShare(productsRes.data));
+      setUserSummary(usersRes.data || null);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const totalRevenue = revenueData.reduce((sum, row) => sum + (row.rev || 0), 0);
+  const totalOrders = revenueData.reduce((sum, row) => sum + (row.orders || 0), 0);
+  const avgOrderValue = totalOrders ? Math.round(totalRevenue / totalOrders) : 0;
+  const activeBuyers = userSummary?.activeUsers ?? userSummary?.count ?? 0;
+
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-700">
       {/* Header */}
@@ -74,10 +87,10 @@ const Analytics = () => {
 
       {/* High Level Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Net Revenue" value="₹35,00,000" change="+18.5%" icon={DollarSign} isPositive={true} />
-        <StatCard title="Conversion Rate" value="4.2%" change="+2.1%" icon={Activity} isPositive={true} />
-        <StatCard title="Active Buyers" value="12,450" change="+8.4%" icon={Users} isPositive={true} />
-        <StatCard title="Avg Order Value" value="₹2,810" change="-1.2%" icon={ShoppingBag} isPositive={false} />
+        <StatCard title="Net Revenue" value={formatCurrency(totalRevenue)} change="+18.5%" icon={DollarSign} isPositive={true} />
+        <StatCard title="Conversion Rate" value={totalOrders ? `${Math.min(99, Math.round((totalOrders / Math.max(activeBuyers, 1)) * 100) / 10)}%` : '0%'} change="+2.1%" icon={Activity} isPositive={true} />
+        <StatCard title="Active Buyers" value={Number(activeBuyers).toLocaleString('en-IN')} change="+8.4%" icon={Users} isPositive={true} />
+        <StatCard title="Avg Order Value" value={formatCurrency(avgOrderValue)} change="-1.2%" icon={ShoppingBag} isPositive={false} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -98,7 +111,7 @@ const Analytics = () => {
            </div>
            <div className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                 <AreaChart data={REVENUE_DATA}>
+                 <AreaChart data={revenueData.length ? revenueData : [{ month: '—', rev: 0, orders: 0 }]}>
                     <defs>
                       <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
@@ -129,7 +142,7 @@ const Analytics = () => {
               <ResponsiveContainer width="100%" height="100%">
                  <PieChart>
                     <Pie
-                       data={CATEGORY_SHARE}
+                       data={categoryShare.length ? categoryShare : [{ name: 'No Data', value: 1 }]}
                        cx="50%"
                        cy="50%"
                        innerRadius={65}
@@ -137,9 +150,11 @@ const Analytics = () => {
                        paddingAngle={8}
                        dataKey="value"
                     >
-                       {CATEGORY_SHARE.map((entry, index) => (
+                       {categoryShare.length ? categoryShare.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                       ))}
+                       )) : (
+                          <Cell fill="#cbd5e1" />
+                       )}
                     </Pie>
                     <Tooltip />
                  </PieChart>
@@ -150,7 +165,7 @@ const Analytics = () => {
               </div>
            </div>
            <div className="mt-8 space-y-3">
-              {CATEGORY_SHARE.map((item, i) => (
+              {(categoryShare.length ? categoryShare : [{ name: 'No Data', value: 0 }]).map((item, i) => (
                  <div key={i} className="flex justify-between items-center px-4 py-2.5 bg-slate-50 rounded-xl">
                     <div className="flex items-center gap-3">
                        <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: COLORS[i]}} />
@@ -201,7 +216,7 @@ const Analytics = () => {
             <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight mb-8 font-montserrat">User Retention Analysis</h3>
             <div className="h-[300px]">
                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={REVENUE_DATA}>
+                  <BarChart data={revenueData.length ? revenueData : [{ month: '—', orders: 0 }]}>
                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dy={10} />
                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dx={-10} />

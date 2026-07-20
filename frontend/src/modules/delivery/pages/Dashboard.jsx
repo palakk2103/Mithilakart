@@ -5,28 +5,40 @@ import {
   ChevronRight, MapPin, ArrowRight, Zap, User
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getDashboard, getOrders, getEarnings } from '../services/deliveryApi';
+import useDeliveryStore from '../../../store/useDeliveryStore';
 
-const ACTIVE_ORDER = {
-  id: 'OD87463',
-  customer: 'Rahul S.',
-  address: 'Sector 15, Noida, UP - 201301',
-  items: 3,
-  distance: '2.4 km',
-  status: 'picked_up',
-  earning: 48,
+const formatAddress = (addr) => {
+  if (!addr) return '';
+  if (typeof addr === 'string') return addr;
+  return [addr.line1, addr.line2, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
 };
 
-const EarningsChart = () => {
+const mapOrderRow = (assignment = {}) => {
+  const order = assignment.order || assignment.orderId || {};
+  const shipping = order.shippingAddress || assignment.shippingAddress || {};
+  return {
+    id: order._id || assignment.orderId || assignment._id,
+    customer: shipping.name || order.customerName || assignment.customerName || 'Customer',
+    address: formatAddress(shipping) || assignment.address || '—',
+    items: order.itemCount || assignment.items || 1,
+    distance: assignment.distance || '—',
+    earning: assignment.earningAmount ?? assignment.earning ?? 0,
+    status: assignment.status,
+  };
+};
+
+const EarningsChart = ({ weeklyTotal, weeklyValues, currentDay }) => {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const values = [40, 70, 45, 90, 65, 100, 30]; // Mock height %
-  const currentDay = 5; // Saturday (index 5)
+  const values = weeklyValues?.length === 7 ? weeklyValues : [0, 0, 0, 0, 0, 0, 0];
+  const maxVal = Math.max(...values, 1);
 
   return (
     <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weekly Performance</h3>
-          <p className="text-lg font-black text-slate-900 mt-0.5">₹2,480.00</p>
+          <p className="text-lg font-black text-slate-900 mt-0.5">₹{Number(weeklyTotal || 0).toLocaleString()}</p>
         </div>
         <div className="flex items-center gap-1 text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-lg">
           <TrendingUp size={12} />
@@ -40,13 +52,13 @@ const EarningsChart = () => {
             <div className="w-full relative flex items-end justify-center h-full">
                <motion.div 
                  initial={{ height: 0 }}
-                 animate={{ height: `${v}%` }}
+                 animate={{ height: `${(v / maxVal) * 100}%` }}
                  transition={{ delay: i * 0.1, duration: 1, ease: "easeOut" }}
                  className={`w-full max-w-[8px] rounded-full transition-colors ${i === currentDay ? 'bg-blue-600' : 'bg-slate-100 group-hover:bg-slate-200'}`}
                />
-               {i === currentDay && (
+               {i === currentDay && v > 0 && (
                  <div className="absolute -top-6 bg-slate-900 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                   ₹{v * 10}
+                   ₹{v}
                  </div>
                )}
             </div>
@@ -90,7 +102,6 @@ const ShiftTimer = ({ isOnline }) => {
         <div className={`w-2 h-2 rounded-full ml-auto mb-1 ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-slate-500'}`} />
         <p className="text-[10px] font-bold text-slate-400">{isOnline ? 'Recording' : 'Paused'}</p>
       </div>
-      {/* Background Glow */}
       {isOnline && (
         <motion.div 
           animate={{ opacity: [0.1, 0.3, 0.1] }}
@@ -103,7 +114,7 @@ const ShiftTimer = ({ isOnline }) => {
 };
 
 const CircularProgress = ({ current, total, label }) => {
-  const percentage = (current / total) * 100;
+  const percentage = total > 0 ? (current / total) * 100 : 0;
   const radius = 18;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -132,28 +143,78 @@ const CircularProgress = ({ current, total, label }) => {
   );
 };
 
+const buildWeeklyFromEarnings = (items = []) => {
+  const values = [0, 0, 0, 0, 0, 0, 0];
+  items.forEach((item) => {
+    const date = new Date(item.creditedAt || item.createdAt);
+    if (Number.isNaN(date.getTime())) return;
+    const dayIdx = (date.getDay() + 6) % 7;
+    values[dayIdx] += item.amount || 0;
+  });
+  return values;
+};
+
 const DeliveryDashboard = () => {
   const navigate = useNavigate();
   const { isOnline } = useOutletContext();
+  const { profile, fetchProfile } = useDeliveryStore();
+  const [dashboard, setDashboard] = React.useState(null);
+  const [activeOrder, setActiveOrder] = React.useState(null);
+  const [recentDeliveries, setRecentDeliveries] = React.useState([]);
+  const [weeklyValues, setWeeklyValues] = React.useState([0, 0, 0, 0, 0, 0, 0]);
+
+  React.useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  React.useEffect(() => {
+    const load = async () => {
+      try {
+        const [dash, ordersRes, earningsRes] = await Promise.all([
+          getDashboard(),
+          getOrders(),
+          getEarnings(),
+        ]);
+
+        setDashboard(dash || {});
+
+        const assigned = (ordersRes?.assigned || []).map(mapOrderRow);
+        const inProgress = assigned.find((o) => ['accepted', 'picked_up', 'assigned'].includes(o.status));
+        setActiveOrder(inProgress || null);
+
+        const earningsItems = Array.isArray(earningsRes) ? earningsRes : (earningsRes?.items || []);
+        setWeeklyValues(buildWeeklyFromEarnings(earningsItems));
+        setRecentDeliveries(
+          earningsItems.slice(0, 3).map((item) => ({
+            id: item.orderId?._id || item.orderId || item._id,
+            customer: item.orderId?.shippingAddress?.name || 'Customer',
+            address: formatAddress(item.orderId?.shippingAddress) || '—',
+            earning: item.amount || 0,
+            time: item.creditedAt ? new Date(item.creditedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+            status: 'delivered',
+          }))
+        );
+      } catch {
+        // keep UI defaults on error
+      }
+    };
+    load();
+  }, []);
 
   const stats = [
-    { label: "Today's Earnings", value: '₹284', sub: '+₹48 active', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: "Today's Earnings", value: `₹${dashboard?.totalEarnings ?? 0}`, sub: activeOrder ? `+₹${activeOrder.earning} active` : '—', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
     { label: 'Avg. Time', value: '22 min', sub: 'per delivery', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Orders Left', value: '2', sub: 'pending nearby', icon: Package, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Orders Left', value: String(dashboard?.activeDeliveries ?? 0), sub: 'pending nearby', icon: Package, color: 'text-purple-600', bg: 'bg-purple-50' },
   ];
 
-  const recentDeliveries = [
-    { id: 'OD87450', customer: 'Priya M.', address: 'Lajpat Nagar, Delhi', earning: 42, time: '10 min ago', status: 'delivered' },
-    { id: 'OD87447', customer: 'Amit V.', address: 'South Ex, Delhi', earning: 55, time: '48 min ago', status: 'delivered' },
-    { id: 'OD87441', customer: 'Sneha K.', address: 'Saket, Delhi', earning: 38, time: '2h ago', status: 'delivered' },
-  ];
+  const weeklyTotal = weeklyValues.reduce((sum, v) => sum + v, 0);
+  const currentDay = (new Date().getDay() + 6) % 7;
+  const displayName = profile.fullName || 'Partner';
 
   return (
     <div className="space-y-4 px-4 pt-5 pb-24">
-      {/* Shift Timer */}
       <ShiftTimer isOnline={isOnline} />
 
-      {/* Offline Banner */}
       {!isOnline && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -171,26 +232,23 @@ const DeliveryDashboard = () => {
         </motion.div>
       )}
 
-      {/* Greeting */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Hi, Amit 👋</h1>
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">South Delhi Zone</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Hi, {displayName.split(' ')[0]} 👋</h1>
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">{profile.city || 'Delivery Zone'}</p>
         </div>
         <div className="w-10 h-10 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
           <User size={20} />
         </div>
       </div>
 
-      {/* Daily Progress */}
-      <CircularProgress current={6} total={10} label="Daily Goal Progress" />
+      <CircularProgress current={dashboard?.completedDeliveries ?? 0} total={10} label="Daily Goal Progress" />
 
-      {/* Active Order Banner */}
-      {isOnline && (
+      {isOnline && activeOrder && (
         <motion.button
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          onClick={() => navigate(`/delivery/orders/${ACTIVE_ORDER.id}`)}
+          onClick={() => navigate(`/delivery/orders/${activeOrder.id}`)}
           className="w-full bg-blue-600 text-white rounded-3xl p-5 text-left shadow-xl shadow-blue-100"
         >
           <div className="flex items-start justify-between mb-4">
@@ -199,16 +257,16 @@ const DeliveryDashboard = () => {
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                 <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Active Delivery</span>
               </div>
-              <p className="text-lg font-black leading-tight">{ACTIVE_ORDER.customer}</p>
+              <p className="text-lg font-black leading-tight">{activeOrder.customer}</p>
             </div>
             <div className="bg-white/20 px-3 py-1.5 rounded-full">
-              <span className="text-xs font-black">+₹{ACTIVE_ORDER.earning}</span>
+              <span className="text-xs font-black">+₹{activeOrder.earning}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 text-blue-100 text-xs font-bold mb-4">
             <MapPin size={13} />
-            <span className="truncate">{ACTIVE_ORDER.address}</span>
-            <span className="opacity-60 whitespace-nowrap">• {ACTIVE_ORDER.distance}</span>
+            <span className="truncate">{activeOrder.address}</span>
+            <span className="opacity-60 whitespace-nowrap">• {activeOrder.distance}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-3 py-1.5 rounded-full">In Transit</span>
@@ -219,10 +277,8 @@ const DeliveryDashboard = () => {
         </motion.button>
       )}
 
-      {/* Weekly Chart */}
-      <EarningsChart />
+      <EarningsChart weeklyTotal={weeklyTotal} weeklyValues={weeklyValues} currentDay={currentDay} />
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-3 gap-2">
         {stats.map((stat, i) => (
           <motion.div
@@ -241,7 +297,6 @@ const DeliveryDashboard = () => {
         ))}
       </div>
 
-      {/* Recent Deliveries */}
       <div className="pt-2">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Recent Activity</h2>
@@ -250,21 +305,27 @@ const DeliveryDashboard = () => {
           </button>
         </div>
         <div className="space-y-2">
-          {recentDeliveries.map((d, i) => (
-            <div key={i} className="bg-white rounded-2xl px-4 py-3.5 border border-slate-50 shadow-sm flex items-center gap-4">
-              <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center shrink-0">
-                <CheckCircle2 size={18} className="text-green-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 leading-tight">{d.customer}</p>
-                <p className="text-[11px] text-slate-400 font-medium truncate">{d.address}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-black text-green-600">+₹{d.earning}</p>
-                <p className="text-[10px] text-slate-300 font-medium mt-0.5">{d.time}</p>
-              </div>
+          {recentDeliveries.length === 0 ? (
+            <div className="bg-white rounded-2xl px-4 py-6 border border-slate-50 shadow-sm text-center">
+              <p className="text-[11px] text-slate-400 font-bold uppercase">No recent deliveries</p>
             </div>
-          ))}
+          ) : (
+            recentDeliveries.map((d, i) => (
+              <div key={i} className="bg-white rounded-2xl px-4 py-3.5 border border-slate-50 shadow-sm flex items-center gap-4">
+                <div className="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={18} className="text-green-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-900 leading-tight">{d.customer}</p>
+                  <p className="text-[11px] text-slate-400 font-medium truncate">{d.address}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-black text-green-600">+₹{d.earning}</p>
+                  <p className="text-[10px] text-slate-300 font-medium mt-0.5">{d.time}</p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

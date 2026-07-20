@@ -1,6 +1,6 @@
 /**
  * Seller Auth Context
- * Manages seller authentication state with dummy validation.
+ * Manages seller authentication state with backend API.
  * When backend is ready, replace loginSeller/logoutSeller with real API calls.
  */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';

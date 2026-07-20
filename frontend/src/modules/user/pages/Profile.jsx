@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   ShoppingBag, 
   Heart, 
@@ -13,14 +13,31 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import useAccountStore from '../../../store/useAccountStore';
+import { getUser } from '../../../shared/api/tokenStorage';
 import { useTranslation } from 'react-i18next';
 import footerBorder from '../../../assets/footer-border.png';
+
+const mapStoredUser = (stored) => ({
+  name: stored?.name || '',
+  email: stored?.email || '',
+  phone: stored?.phone || '',
+  gender: stored?.gender || '',
+  dob: stored?.dob || stored?.dateOfBirth || '',
+  avatar: stored?.avatar || stored?.profileImage || null,
+});
 
 const VendorProfile = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { userProfile } = useAccountStore();
+  const { userProfile, updateProfile } = useAccountStore();
   const isAuthenticated = localStorage.getItem('isAuthenticated') !== 'false';
+
+  useEffect(() => {
+    const stored = getUser('customer');
+    if (stored) {
+      updateProfile(mapStoredUser(stored));
+    }
+  }, [updateProfile]);
 
   const handleLogout = () => {
     localStorage.removeItem('userWishlist');

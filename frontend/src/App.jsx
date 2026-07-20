@@ -1,17 +1,30 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import MarketRoutes from './modules/user/routes/MarketRoutes';
 import SellerRoutes from './modules/seller/routes/SellerRoutes';
 import AdminRoutes from './modules/admin/routes/AdminRoutes';
 import DeliveryRoutes from './modules/delivery/routes/DeliveryRoutes';
 import SplashScreen from './shared/components/SplashScreen';
 import ErrorBoundary from './shared/components/ErrorBoundary';
+import { initPushNotifications } from './shared/services/pushNotifications';
+import { isAuthenticated } from './shared/api/tokenStorage';
 
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
     return !sessionStorage.getItem('splashShown');
   });
+
+  useEffect(() => {
+    if (isAuthenticated('customer')) {
+      initPushNotifications('customer', (payload) => {
+        const title = payload.notification?.title || 'Mithilakart';
+        const body = payload.notification?.body || '';
+        toast(`${title}: ${body}`);
+      });
+    }
+  }, []);
 
   return (
     <ErrorBoundary>

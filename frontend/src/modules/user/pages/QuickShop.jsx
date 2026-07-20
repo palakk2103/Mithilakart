@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight } from 'lucide-react';
 import CategoryCard from '../components/vendor/CategoryCard';
+import useVendorStore from '../../../store/useVendorStore';
 
 // Import Assets
 import SamsungS24 from '../../../assets/products/product01.jpg';
@@ -173,6 +174,11 @@ const CATEGORIES_DATA = [
 
 const QuickShop = () => {
   const navigate = useNavigate();
+  const { fetchHomeSections } = useVendorStore();
+
+  useEffect(() => {
+    fetchHomeSections('quick_shop');
+  }, [fetchHomeSections]);
 
   // Simulated active tab for the filters
   const [activeFilter, setActiveFilter] = React.useState('All');

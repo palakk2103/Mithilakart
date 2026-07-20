@@ -1,19 +1,13 @@
 import SearchInput from '../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Wallet, ArrowUpRight, CheckCircle2, XCircle, 
   Clock, Download, Filter, Search, MoreVertical,
   Banknote, Landmark, ShieldCheck, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const MOCK_PAYOUTS = [
-  { id: 'PAY001', vendor: 'Fashion Hub', amount: 45000, status: 'Pending', date: '2026-05-09', method: 'Bank Transfer', bank: 'HDFC Bank' },
-  { id: 'PAY002', vendor: 'Elite Electronics', amount: 82000, status: 'Processing', date: '2026-05-09', method: 'IMPS', bank: 'ICICI Bank' },
-  { id: 'PAY003', vendor: 'Glow Cosmetics', amount: 12500, status: 'Settled', date: '2026-05-08', method: 'NEFT', bank: 'SBI' },
-  { id: 'PAY004', vendor: 'Modern Home', amount: 28900, status: 'Pending', date: '2026-05-08', method: 'Bank Transfer', bank: 'HDFC Bank' },
-  { id: 'PAY005', vendor: 'Tech World', amount: 15600, status: 'Rejected', date: '2026-05-07', method: 'IMPS', bank: 'Axis Bank' },
-];
+import { payoutsApi } from '../services/api';
+import { extractList, formatCurrency, titleCaseStatus } from '../utils/mappers';
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -31,7 +25,57 @@ const StatusBadge = ({ status }) => {
 
 const Payouts = () => {
   const [activeTab, setActiveTab] = useState('All');
+  const [payouts, setPayouts] = useState([]);
+  const [earnings, setEarnings] = useState(null);
   const tabs = ['All', 'Pending', 'Processing', 'Settled', 'Rejected'];
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await payoutsApi.getAll({ limit: 100 });
+      if (cancelled) return;
+      if (!error && data) {
+        const rows = extractList(data).map((row, index) => ({
+          id: row.id || row._id || row.payoutNumber || `PAY${String(index + 1).padStart(3, '0')}`,
+          vendor: row.vendor || row.vendorName || row.sellerName || 'Vendor',
+          amount: Number(row.amount ?? row.netAmount ?? 0),
+          status: titleCaseStatus(row.status || 'pending'),
+          date: row.date
+            ? new Date(row.date).toISOString().split('T')[0]
+            : (row.createdAt ? new Date(row.createdAt).toISOString().split('T')[0] : '—'),
+          method: row.method || row.payoutMethod || 'Bank Transfer',
+          bank: row.bank || row.bankName || '—',
+        }));
+        setPayouts(rows);
+        const settled = rows.filter((p) => p.status === 'Settled');
+        const pending = rows.filter((p) => p.status === 'Pending' || p.status === 'Processing');
+        setEarnings({
+          netCommission: settled.reduce((sum, p) => sum + p.amount, 0),
+          grossMerchandise: rows.reduce((sum, p) => sum + p.amount, 0),
+          pendingPayouts: pending.reduce((sum, p) => sum + p.amount, 0),
+          payoutCount: rows.length,
+        });
+      } else {
+        setEarnings(null);
+        setPayouts([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const filteredPayouts = payouts.filter((p) => activeTab === 'All' || p.status === activeTab);
+
+  const quickStats = earnings ? [
+    { label: 'Total Settled', value: formatCurrency(earnings.netCommission), sub: 'Platform commission', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
+    { label: 'Pending Requests', value: formatCurrency(earnings.pendingPayouts), sub: `${earnings.payoutCount} payout records`, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { label: 'Gross Merchandise', value: formatCurrency(earnings.grossMerchandise), sub: 'Total sales value', icon: Banknote, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Open Payouts', value: String(filteredPayouts.length), sub: 'In current view', icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
+  ] : [
+    { label: 'Total Settled', value: '₹0', sub: 'Last 30 days', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
+    { label: 'Pending Requests', value: '₹0', sub: 'No data', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { label: 'Avg Payout Time', value: '—', sub: 'No data', icon: Banknote, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Failed Settlements', value: '₹0', sub: 'Requires review', icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
+  ];
 
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-700">
@@ -55,12 +99,7 @@ const Payouts = () => {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Settled', value: '₹12.5L', sub: 'Last 30 days', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
-          { label: 'Pending Requests', value: '₹2.4L', sub: '12 vendors waiting', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-          { label: 'Avg Payout Time', value: '1.2 Days', sub: 'Faster than avg', icon: Banknote, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { label: 'Failed Settlements', value: '₹15K', sub: 'Requires review', icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
-        ].map((stat, i) => (
+        {quickStats.map((stat, i) => (
           <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
             <div className={`w-11 h-11 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center shadow-inner`}>
               <stat.icon size={22} />
@@ -116,7 +155,7 @@ const Payouts = () => {
             </thead>
             <tbody className="divide-y divide-slate-50">
               <AnimatePresence>
-                {MOCK_PAYOUTS.map((payout, i) => (
+                {filteredPayouts.map((payout, i) => (
                   <motion.tr 
                     key={payout.id}
                     initial={{ opacity: 0 }}

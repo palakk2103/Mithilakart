@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star } from 'lucide-react';
+import useVendorStore from '../../../store/useVendorStore';
+import { addProductToCart } from '../utils/cartUtils';
 
 import prod1 from '../../../assets/mithila/product01.png';
 import prod2 from '../../../assets/mithila/product02.png';
@@ -100,6 +102,7 @@ const Mithilak = () => {
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const { fetchHomeSections, homeSections } = useVendorStore();
 
   useEffect(() => {
     localStorage.setItem('isMithilakFlow', 'true');
@@ -107,7 +110,8 @@ const Mithilak = () => {
     localStorage.setItem('isFreshGroceryFlow', 'false');
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('cartUpdated'));
-  }, []);
+    fetchHomeSections('mithilak');
+  }, [fetchHomeSections]);
 
   const triggerToast = (msg) => {
     setToastMessage(msg);
@@ -116,7 +120,7 @@ const Mithilak = () => {
   };
 
   return (
-    <div className="bg-transparent min-h-screen px-4 py-5 select-none pb-24">
+    <div className="bg-[#F5F9FA] min-h-screen px-4 py-5 select-none pb-24">
       {/* Page Title Header */}
       <div className="mb-4 px-1">
         <h2 className="text-[19px] font-bold text-[#3F2A20] tracking-tight leading-none mb-1">
@@ -128,7 +132,7 @@ const Mithilak = () => {
       </div>
 
       {/* Promotional Banner */}
-      <div className="mb-6 bg-gradient-to-r from-[#207C8A] to-[#144f58] rounded-2xl p-4 text-white relative overflow-hidden shadow-sm flex items-center justify-between h-[165px]">
+      <div className="mb-6 bg-gradient-to-r from-[#207C8A] to-[#5DB6C3] rounded-2xl p-4 text-white relative overflow-hidden shadow-sm flex items-center justify-between h-[165px]">
         <div className="z-10 flex-1 max-w-[65%] flex flex-col justify-center h-full">
           <span className="bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full w-max uppercase tracking-wider">
             MITHILA UTSAV
@@ -150,7 +154,7 @@ const Mithilak = () => {
       </div>
 
       {/* Category Grid (Mobile View) */}
-      <div className="grid grid-cols-4 gap-y-5 gap-x-3 mb-7 md:hidden">
+      <div className="grid grid-cols-4 gap-y-5 gap-x-2.5 mb-8 md:hidden">
         {MITHILA_CATEGORIES.map((item, idx) => (
           <div
             key={idx}
@@ -162,7 +166,7 @@ const Mithilak = () => {
             className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform"
           >
             {/* Category Image Wrapper - White circle with light thin border */}
-            <div className="w-[68px] h-[68px] rounded-full bg-white border border-[#EADCC9]/55 flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.03)] overflow-hidden relative">
+            <div className="w-[66px] h-[66px] rounded-full bg-white border border-[#EADCC9]/55 flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.03)] overflow-hidden relative">
               <img
                 src={item.img}
                 alt={item.name}
@@ -173,7 +177,7 @@ const Mithilak = () => {
               <div className="absolute inset-0 rounded-full border-[5.5px] border-white z-20 pointer-events-none" />
             </div>
             
-            {/* Category label text - strictly 6px (mt-1.5) to 8px (mt-2) top spacing */}
+            {/* Category label text */}
             <span className="text-[11.5px] font-semibold text-center text-gray-800 mt-2 leading-snug tracking-tight line-clamp-2 h-[34px] w-full flex items-start justify-center">
               {getDisplayName(item.name)}
             </span>
@@ -215,8 +219,8 @@ const Mithilak = () => {
       </div>
 
       {/* Best Sellers Section */}
-      <div className="md:max-w-[800px] md:mx-auto md:w-full">
-        <div className="flex items-center justify-between mb-3.5 px-1">
+      <div className="md:max-w-[1600px] md:mx-auto md:w-full">
+        <div className="flex items-center justify-between mb-4 px-1">
           <h2 className="text-[17px] font-bold text-[#3F2A20] leading-none">Best Sellers</h2>
           <span 
             onClick={() => {
@@ -232,50 +236,50 @@ const Mithilak = () => {
 
         {/* Horizontal Cards Grid */}
         <div className="grid grid-cols-3 gap-3">
-          {MITHILA_BEST_SELLERS.map((prod) => (
+          {(homeSections.topSelection?.length ? homeSections.topSelection : homeSections.brandsSpotlight || []).slice(0, 6).map((prod) => {
+            const name = prod.title || prod.name || prod.label || 'Product';
+            const price = prod.product?.price ?? prod.price ?? 0;
+            const image = prod.img || prod.image;
+            const id = prod.id;
+
+            return (
             <div 
-              key={prod.id} 
+              key={id} 
               onClick={() => {
                 localStorage.setItem('isMithilakFlow', 'true');
                 localStorage.setItem('isQuickShopFlow', 'false');
-                navigate('/product-detail', { state: { product: { ...prod, image: prod.img, qty: 1 } } });
+                navigate('/vendor/product-detail', { state: { productId: id, product: prod.product || prod } });
               }}
               className="bg-white border border-[#3F2A20]/15 rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer active:scale-[0.98] transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
             >
-              {/* Product Image Container */}
               <div className="w-full aspect-square bg-white rounded-[16px] flex items-center justify-center p-2.5 border border-[#3F2A20]/10 shadow-[inset_0_1px_3px_rgba(0,0,0,0.01)] mb-2.5">
                 <img 
-                  src={prod.img} 
-                  alt={prod.name} 
+                  src={image} 
+                  alt={name} 
                   className="max-h-full max-w-full object-contain rounded-md" 
                 />
               </div>
 
-              {/* Title & Subtitle */}
               <div className="flex-1 flex flex-col justify-between">
                 <div>
-                  <span className="text-[12px] font-extrabold text-[#3F2A20] block leading-tight">
-                    {prod.line1}
-                  </span>
-                  <span className="text-[12px] font-extrabold text-[#3F2A20] block leading-tight">
-                    {prod.line2}
+                  <span className="text-[12px] font-extrabold text-[#3F2A20] block leading-tight truncate">
+                    {name}
                   </span>
                 </div>
 
-                {/* Price Tag */}
                 <div className="flex items-center justify-between mt-2.5">
-                  <span className="text-[13px] font-extrabold text-[#3F2A20]">₹{prod.price}</span>
+                  <span className="text-[13px] font-extrabold text-[#3F2A20]">₹{price}</span>
                   
-                  {/* Miniature Add Button */}
                   <button 
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
                       e.preventDefault();
-                      const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-                      cart.push({ name: prod.name, price: prod.price, image: prod.img, cartId: Date.now(), qty: 1 });
-                      localStorage.setItem('userCart', JSON.stringify(cart));
-                      window.dispatchEvent(new Event('cartUpdated'));
-                      triggerToast(`${prod.name} added to cart!`);
+                      try {
+                        await addProductToCart({ id, name, price, image });
+                        triggerToast(`${name} added to cart!`);
+                      } catch {
+                        triggerToast('Could not add to cart');
+                      }
                     }}
                     className="p-1.5 bg-white border border-[#207C8A]/30 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer active:scale-90"
                   >
@@ -286,7 +290,7 @@ const Mithilak = () => {
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 

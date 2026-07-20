@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { sectionsApi } from '../services/api';
+import { extractList } from '../utils/mappers';
 import { 
   Plus, Trash2, Edit2, GripVertical, Save, X,
   CheckCircle2, Image as ImageIcon, Layout,
@@ -41,16 +43,47 @@ const HomeSectionsManager = () => {
   const [sections, setSections] = useState(homeSections);
   const [isAdding, setIsAdding] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({ label: '', name: '', tag: '', title: '', sub: '', img: '', link: '#' });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await sectionsApi.getAll();
+      if (cancelled) return;
+      if (!apiError && data) {
+        setError(null);
+        const list = extractList(data);
+        if (list.length) {
+          const mapped = {};
+          list.forEach((section) => {
+            const key = section.sectionKey || section.key;
+            if (key) mapped[key] = section.items || section.data || [];
+          });
+          if (Object.keys(mapped).length) {
+            setSections((prev) => ({ ...prev, ...mapped }));
+            setHomeSections((prev) => ({ ...prev, ...mapped }));
+          }
+        }
+      } else if (apiError) {
+        setError(apiError);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [setHomeSections]);
 
   // Sync local state when store changes
   useEffect(() => {
     setSections(homeSections);
   }, [homeSections]);
 
-  const handleSaveAll = () => {
-    setHomeSections(sections);
+  const handleSaveAll = async () => {
     setSaved(true);
+    await sectionsApi.update(activeView, { items: sections[activeView] || [] });
+    setHomeSections(sections);
     setTimeout(() => setSaved(false), 2500);
   };
 

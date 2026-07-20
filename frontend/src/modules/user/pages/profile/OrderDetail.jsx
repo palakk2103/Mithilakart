@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, ChevronRight, Copy, CheckCircle2, 
   Truck, Wallet, Download, MapPin, User, Phone, Package, Calendar, Clock, ReceiptText
@@ -8,18 +8,46 @@ import { motion } from 'framer-motion';
 import useAccountStore from '../../../../store/useAccountStore';
 import { parsePrice, formatPrice } from '../../../../shared/utils/priceFormatter';
 import { useTranslation } from 'react-i18next';
-import { getProductImage, handleImageError } from '../../../../shared/utils/imageUtils';
+import { getOrderById } from '../../services/ordersApi';
+import { mapOrderDetail } from '../../utils/mappers';
 
 const OrderDetail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { orderId } = useParams();
   const orders = useAccountStore((state) => state.orders);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Find the specific order
-  const order = orders.find(o => o.id === orderId) || orders[0];
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await getOrderById(orderId);
+        if (!cancelled) setOrder(mapOrderDetail(data));
+      } catch {
+        if (!cancelled) {
+          const fallback = orders.find((o) => o.id === orderId) || orders[0];
+          setOrder(fallback || null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId, orders]);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading order...</div>;
+  }
 
   if (!order) return null;
 
@@ -50,46 +78,9 @@ const OrderDetail = () => {
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
-  const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#e0f2f1]/60 via-[#f2faf9] to-[#ffffff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
-  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
+  const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#f3e8ff]/60 via-[#faf5ff] to-[#f5f3ff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
+  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#ff2a5f] to-[#ff7e5f]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
-
-  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
-  const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#6FAE4A]');
-  const primaryLightBg = isMithilakFlow ? 'bg-[#207C8A]/5' : isFreshGroceryFlow ? 'bg-[#D9A21B]/5' : (isQuickShopFlow ? 'bg-[#F26522]/5' : 'bg-emerald-50');
-
-  const statusCardBg = isMithilakFlow 
-    ? 'bg-gradient-to-br from-[#207C8A] to-[#144f58]' 
-    : isFreshGroceryFlow 
-      ? 'bg-gradient-to-br from-[#D9A21B] to-[#735308]' 
-      : isQuickShopFlow 
-        ? 'bg-gradient-to-br from-[#F26522] to-[#8C3005]' 
-        : 'bg-gradient-to-br from-[#6FAE4A] to-[#5b953d]';
-
-  const statusCardBorder = isMithilakFlow 
-    ? 'border-[#6FAE4A]/30' 
-    : isFreshGroceryFlow 
-      ? 'border-[#D9A21B]/30' 
-      : isQuickShopFlow 
-        ? 'border-[#F26522]/30' 
-        : 'border-emerald-800/30';
-
-  const statusCardTextLight = isMithilakFlow 
-    ? 'text-cyan-200' 
-    : isFreshGroceryFlow 
-      ? 'text-amber-200' 
-      : isQuickShopFlow 
-        ? 'text-orange-200' 
-        : 'text-emerald-200';
-
-  const statusCardTextFaded = isMithilakFlow 
-    ? 'text-cyan-100/70' 
-    : isFreshGroceryFlow 
-      ? 'text-amber-100/70' 
-      : isQuickShopFlow 
-        ? 'text-orange-100/70' 
-        : 'text-emerald-100/70';
 
   return (
     <div className={`min-h-screen pb-20 font-sans text-slate-800 relative transition-colors duration-300 ${pageBg}`}>
@@ -112,7 +103,7 @@ const OrderDetail = () => {
           </button>
           <h1 className={`text-[17px] font-black tracking-tight ${headerTextColor}`}>Track Order</h1>
         </div>
-        <span className={`text-[11px] font-black bg-white px-3 py-1 rounded-full border ${primaryText} ${isMithilakFlow ? 'border-purple-100/50' : isFreshGroceryFlow ? 'border-amber-100/50' : isQuickShopFlow ? 'border-orange-100/50' : 'border-emerald-100/50'}`}>
+        <span className="text-[11px] font-black text-[#3E5A44] bg-[#FFF8EE] px-3 py-1 rounded-full border border-emerald-100/50">
           ORDER ID: #{order.id}
         </span>
       </div>
@@ -121,16 +112,16 @@ const OrderDetail = () => {
 
       <div className="w-full mx-auto px-4 pt-5 space-y-5 pb-24">
         {/* Modern Live Status Card */}
-        <div className={`rounded-3xl p-6 text-white relative overflow-hidden border shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${statusCardBg} ${statusCardBorder}`}>
+        <div className="bg-gradient-to-br from-[#3E5A44] to-[#042112] rounded-3xl p-6 text-white shadow-[0_8px_30px_rgba(8,66,36,0.12)] relative overflow-hidden border border-emerald-800/30">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 rounded-full bg-white/5 blur-xl pointer-events-none" />
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/15 flex-shrink-0">
               <Truck size={24} className="text-white" />
             </div>
             <div>
-              <span className={`text-[9px] font-black uppercase tracking-widest ${statusCardTextLight}`}>Current Status</span>
+              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-200">Current Status</span>
               <h2 className="text-[18px] font-black tracking-tight mt-0.5">{order.status}</h2>
-              <p className={`text-[11.5px] font-medium mt-1 leading-normal ${statusCardTextFaded}`}>
+              <p className="text-[11.5px] font-medium text-emerald-100/70 mt-1 leading-normal">
                 Estimated Delivery: <span className="text-yellow-400 font-bold">{order.date}</span>
               </p>
             </div>
@@ -140,7 +131,7 @@ const OrderDetail = () => {
         {/* Vertical Shipment Stepper */}
         <div className="bg-white rounded-3xl p-6 border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
           <h3 className="text-[14px] font-black text-slate-800 tracking-tight mb-5 flex items-center gap-2">
-            <Clock size={16} className={primaryText} />
+            <Clock size={16} className="text-[#3E5A44]" />
             Shipment Timeline
           </h3>
           <div className="space-y-6 pl-1.5">
@@ -156,10 +147,10 @@ const OrderDetail = () => {
                   {/* Dot */}
                   <div className={`z-10 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
                     update.active 
-                      ? `${primaryLightBg} ${primaryText} border-2 ${primaryBorder}` 
+                      ? 'bg-emerald-50 text-[#3E5A44] border-2 border-[#3E5A44]' 
                       : 'bg-slate-50 text-slate-300 border-2 border-slate-200'
                   }`}>
-                    <CheckCircle2 size={12} className={update.active ? primaryText : 'text-slate-300'} />
+                    <CheckCircle2 size={12} className={update.active ? 'text-[#3E5A44]' : 'text-slate-300'} />
                   </div>
 
                   <div className="flex-1 -mt-0.5 pb-2">
@@ -178,19 +169,19 @@ const OrderDetail = () => {
         {/* Product Items Details Card */}
         <div className="bg-white rounded-3xl border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden">
           <div className="px-5 py-4.5 border-b border-slate-100 flex items-center gap-2">
-            <Package size={16} className={primaryText} />
+            <Package size={16} className="text-[#3E5A44]" />
             <h3 className="text-[14px] font-black text-slate-800 tracking-tight">Order Items</h3>
           </div>
           <div className="divide-y divide-slate-100">
             {order.items.map((item, idx) => (
               <div key={idx} className="p-5 flex gap-4">
                 <div className="w-16 h-16 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 p-1.5 border border-slate-100/80">
-                  <img src={getProductImage(item.image || item.img)} alt={item.name} onError={handleImageError} className="w-full h-full object-contain mix-blend-multiply" />
+                  <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                 </div>
                 <div className="flex-1 py-0.5">
                   <h4 className="text-[13px] font-black text-slate-850 leading-snug line-clamp-2">{item.name}</h4>
                   <p className="text-[10.5px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Qty: 1</p>
-                  <p className={`text-[13px] font-black mt-1.5 ${primaryText}`}>{formatPrice(item.price)}</p>
+                  <p className="text-[13px] font-black text-[#3E5A44] mt-1.5">{formatPrice(item.price)}</p>
                 </div>
               </div>
             ))}
@@ -200,7 +191,7 @@ const OrderDetail = () => {
         {/* Shipping & Delivery Address Card */}
         <div className="bg-white rounded-3xl p-5 border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)] space-y-4">
           <h3 className="text-[14px] font-black text-slate-800 tracking-tight flex items-center gap-2">
-            <MapPin size={16} className={primaryText} />
+            <MapPin size={16} className="text-[#3E5A44]" />
             Delivery Details
           </h3>
           <div className="flex gap-4">
@@ -231,7 +222,7 @@ const OrderDetail = () => {
         {/* Pricing Summary Card */}
         <div className="bg-white rounded-3xl border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden">
           <div className="px-5 py-4.5 border-b border-slate-100 flex items-center gap-2">
-            <ReceiptText size={16} className={primaryText} />
+            <ReceiptText size={16} className="text-[#3E5A44]" />
             <h3 className="text-[14px] font-black text-slate-800 tracking-tight">Price Details</h3>
           </div>
           <div className="p-5 space-y-3.5 border-b border-slate-100">
@@ -241,7 +232,7 @@ const OrderDetail = () => {
             </div>
             <div className="flex justify-between items-center text-[12.5px] font-medium text-slate-500">
               <span>Special Discount</span>
-              <span className={`font-bold ${primaryText}`}>- {formatPrice(orderTotalOldPrice - orderTotalPrice)}</span>
+              <span className="font-bold text-[#3E5A44]">- {formatPrice(orderTotalOldPrice - orderTotalPrice)}</span>
             </div>
             <div className="flex justify-between items-center text-[12.5px] font-medium text-slate-500">
               <span>Delivery Charges</span>
@@ -249,13 +240,13 @@ const OrderDetail = () => {
             </div>
             <div className="pt-3.5 border-t border-dashed border-slate-100 flex justify-between items-center text-[14px] font-black text-slate-800">
               <span>Total Paid Amount</span>
-              <span className={primaryText}>{formatPrice(orderTotalPrice + 16)}</span>
+              <span className="text-[#3E5A44]">{formatPrice(orderTotalPrice + 16)}</span>
             </div>
           </div>
           <div className="bg-slate-50/50 px-5 py-4 flex justify-between items-center">
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Payment Mode</span>
             <div className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-100 shadow-2xs">
-              <Wallet size={14} className={primaryText} />
+              <Wallet size={14} className="text-[#3E5A44]" />
               <span className="text-[12px] font-bold text-slate-800">Cash On Delivery</span>
             </div>
           </div>
@@ -268,7 +259,7 @@ const OrderDetail = () => {
             disabled={isDownloading}
             className={`w-full bg-white hover:bg-slate-50/60 active:bg-slate-50 text-slate-800 border border-slate-100 py-4.5 rounded-2xl flex items-center justify-center gap-3 transition-colors shadow-[0_4px_20px_rgba(0,0,0,0.01)] ${isDownloading ? 'opacity-50' : ''}`}
           >
-            <Download size={18} className={isDownloading ? `animate-bounce ${primaryText}` : primaryText} />
+            <Download size={18} className={isDownloading ? "animate-bounce text-[#3E5A44]" : "text-[#3E5A44]"} />
             <span className="text-[13.5px] font-black uppercase tracking-wider">
               {isDownloading ? 'Downloading...' : 'Download Invoice'}
             </span>

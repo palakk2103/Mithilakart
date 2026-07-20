@@ -1,24 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { settingsApi } from '../services/api';
 import { 
   Settings as SettingsIcon, Globe, Shield, Bell, 
   Mail, Phone, CreditCard, Truck, Layout,
   Save, CheckCircle2, ChevronRight, X,
-  AlertCircle, Smartphone, Lock, Terminal, User, Wrench, Power
+  AlertCircle, Smartphone, Lock, Terminal, User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings = () => {
   const [activeSection, setActiveSection] = useState('Account');
   const [saved, setSaved] = useState(false);
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(
-    () => localStorage.getItem('isMaintenanceMode') === 'true'
-  );
+  const [settings, setSettings] = useState({ settings: {}, commission: null });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [formValues, setFormValues] = useState({
+    platformName: 'Cocio',
+    supportEmail: 'support@cocia.com',
+    helpline: '+91 1800 123 4567',
+    commission: 10,
+    gst: '07AAAAA0000A1Z5',
+  });
 
-  const toggleMaintenance = () => {
-    const nextState = !isMaintenanceMode;
-    setIsMaintenanceMode(nextState);
-    localStorage.setItem('isMaintenanceMode', nextState ? 'true' : 'false');
-  };
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await settingsApi.getAll();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+      } else if (data) {
+        setError(null);
+        setSettings(data);
+        setFormValues((prev) => ({
+          ...prev,
+          platformName: data.settings?.platformName || prev.platformName,
+          supportEmail: data.settings?.supportEmail || prev.supportEmail,
+          helpline: data.settings?.helpline || prev.helpline,
+          commission: data.commission?.rate != null ? Math.round(data.commission.rate * 100) : prev.commission,
+          gst: data.settings?.gst || prev.gst,
+        }));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const sections = [
     { id: 'Account', icon: User, label: 'My Profile' },
@@ -28,9 +55,17 @@ const Settings = () => {
     { id: 'Security', icon: Lock, label: 'Login & Security' },
   ];
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    const { error: apiError } = await settingsApi.update({
+      platformName: formValues.platformName,
+      supportEmail: formValues.supportEmail,
+      helpline: formValues.helpline,
+      gst: formValues.gst,
+    });
+    if (!apiError) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    }
   };
 
   return (
@@ -144,62 +179,26 @@ const Settings = () => {
                )}
 
                {activeSection === 'General' && (
-                 <div className="space-y-8">
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Platform Name</label>
-                         <input type="text" defaultValue="Cocio" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none" />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Support Email</label>
-                         <input type="email" defaultValue="support@cocia.com" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none" />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Helpline Number</label>
-                         <input type="text" defaultValue="+91 1800 123 4567" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none" />
-                      </div>
-                      <div className="space-y-2">
-                         <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Default Currency</label>
-                         <select className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none appearance-none">
-                            <option>INR (₹)</option>
-                            <option>USD ($)</option>
-                         </select>
-                      </div>
-                   </div>
-
-                   {/* Maintenance Mode Control Card */}
-                   <div className={`p-6 rounded-3xl border transition-all flex items-center justify-between gap-6 ${isMaintenanceMode ? 'bg-amber-500/10 border-amber-300' : 'bg-slate-50 border-slate-100'}`}>
-                      <div className="flex items-center gap-4">
-                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isMaintenanceMode ? 'bg-amber-500 text-white shadow-lg shadow-amber-200' : 'bg-slate-200 text-slate-600'}`}>
-                            <Wrench size={22} />
-                         </div>
-                         <div>
-                            <div className="flex items-center gap-2">
-                               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">System Maintenance Mode</h3>
-                               <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${isMaintenanceMode ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                                  {isMaintenanceMode ? 'ACTIVE (Site Locked)' : 'INACTIVE'}
-                               </span>
-                            </div>
-                            <p className="text-xs text-slate-500 font-medium mt-1">
-                               {isMaintenanceMode 
-                                 ? 'Customer store is currently locked. Users visiting the app will see the Maintenance Page.' 
-                                 : 'Enable to temporary lock customer store for scheduled upgrades.'}
-                            </p>
-                         </div>
-                      </div>
-
-                      <button
-                         onClick={toggleMaintenance}
-                         className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-md active:scale-95 ${
-                            isMaintenanceMode 
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700' 
-                            : 'bg-amber-500 text-white hover:bg-amber-600'
-                         }`}
-                      >
-                         <Power size={14} />
-                         {isMaintenanceMode ? 'Disable Maintenance' : 'Enable Maintenance'}
-                      </button>
-                   </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Platform Name</label>
+                       <input type="text" defaultValue={formValues.platformName} onChange={(e) => setFormValues(v => ({ ...v, platformName: e.target.value }))} className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Support Email</label>
+                       <input type="email" defaultValue="support@cocia.com" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Helpline Number</label>
+                       <input type="text" defaultValue="+91 1800 123 4567" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Default Currency</label>
+                       <select className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none appearance-none">
+                          <option>INR (₹)</option>
+                          <option>USD ($)</option>
+                       </select>
+                    </div>
                  </div>
                )}
 

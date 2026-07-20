@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { chipsApi } from '../services/api';
+import { extractList, mapChip } from '../utils/mappers';
 import {
   Plus, Trash2, Edit2, GripVertical, Save, X,
   CheckCircle2, Eye, EyeOff, Layers, LayoutGrid
@@ -24,10 +26,30 @@ const EMPTY_CAT = { label: '', emoji: '🏷️', active: true };
 
 const CategoryChipsManager = () => {
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_CAT);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await chipsApi.getAll();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+      } else {
+        setError(null);
+        const mapped = extractList(data).map(mapChip);
+        if (mapped.length) setCategories(mapped);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Banner tabs section
   const [bannerTabs, setBannerTabs] = useState(BANNER_TABS);

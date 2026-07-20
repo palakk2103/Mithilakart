@@ -1,5 +1,7 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { financeApi } from '../../services/api';
+import { extractList, mapTaxSlab } from '../../utils/mappers';
 import { 
   ShieldCheck, Search, Plus, Trash2, 
   Edit2, Info, AlertCircle, FileText,
@@ -7,16 +9,28 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const MOCK_TAX_SLABS = [
-  { id: 1, category: 'Fashion', gst: '12%', hsn: '4202', status: 'Active' },
-  { id: 2, category: 'Electronics', gst: '18%', hsn: '8518', status: 'Active' },
-  { id: 3, category: 'Beauty', gst: '18%', hsn: '3304', status: 'Active' },
-  { id: 4, category: 'Home Decor', gst: '12%', hsn: '9403', status: 'Active' },
-  { id: 5, category: 'Essential Goods', gst: '5%', hsn: '1001', status: 'Active' },
-];
-
 const TaxConfig = () => {
-  const [slabs, setSlabs] = useState(MOCK_TAX_SLABS);
+  const [slabs, setSlabs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await financeApi.getTaxConfigs();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setSlabs([]);
+      } else {
+        setError(null);
+        setSlabs(extractList(data).map(mapTaxSlab));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-700">

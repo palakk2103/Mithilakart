@@ -2,13 +2,13 @@
  * Product List Page
  * Grid/Table view with search, filter, sort, pagination.
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Grid3X3, List, Edit3, Trash2, Copy, Eye, Package, MoreVertical, Star } from 'lucide-react';
 import { PageHeader, StatusBadge, SearchFilter, ConfirmModal, DataTable } from '../../components/common';
 import { Button, EmptyState } from '../../components/ui';
-import { products } from '../../utils/dummyData';
+import { getProducts, deleteProduct, duplicateProduct } from '../../services/sellerApi';
 import { formatCurrency } from '../../utils/formatters';
 import usePagination from '../../hooks/usePagination';
 import useDebounce from '../../hooks/useDebounce';
@@ -20,14 +20,34 @@ const ProductList = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({});
   const [deleteModal, setDeleteModal] = useState({ open: false, product: null });
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const debouncedSearch = useDebounce(searchQuery);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getProducts();
+      setProducts(data?.products || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   // Filter and search products
   const filteredProducts = useMemo(() => {
     let result = [...products];
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
-      result = result.filter((p) => p.title.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+      result = result.filter((p) => p.title?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q));
     }
     if (filters.status && filters.status !== 'all') {
       result = result.filter((p) => p.status === filters.status);
@@ -36,7 +56,7 @@ const ProductList = () => {
       result = result.filter((p) => p.category === filters.category);
     }
     return result;
-  }, [debouncedSearch, filters]);
+  }, [products, debouncedSearch, filters]);
 
   const { paginatedData, currentPage, totalPages, pageSize, goToPage, changePageSize } = usePagination(filteredProducts, 10);
 
@@ -44,13 +64,25 @@ const ProductList = () => {
     setDeleteModal({ open: true, product });
   };
 
-  const confirmDelete = () => {
-    toast.success(`"${deleteModal.product?.title}" deleted successfully`);
-    setDeleteModal({ open: false, product: null });
+  const confirmDelete = async () => {
+    try {
+      await deleteProduct(deleteModal.product?.id);
+      toast.success(`"${deleteModal.product?.title}" deleted successfully`);
+      setDeleteModal({ open: false, product: null });
+      fetchProducts();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to delete product');
+    }
   };
 
-  const handleDuplicate = (product) => {
-    toast.success(`"${product.title}" duplicated`);
+  const handleDuplicate = async (product) => {
+    try {
+      await duplicateProduct(product.id);
+      toast.success(`"${product.title}" duplicated`);
+      fetchProducts();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to duplicate product');
+    }
   };
 
   const filterConfig = [
@@ -96,7 +128,7 @@ const ProductList = () => {
       </div>
     )},
     { key: 'status', label: 'Status', align: 'center', render: (val) => <StatusBadge status={val} size="sm" /> },
-    { key: 'sales', label: 'Sales', render: (val) => <span className="text-sm font-medium text-gray-600">{val}</span> },
+    { key: 'sales', label: 'Sales', render: (val) => <span className="text-sm font-medium text-gray-600">{val || 0}</span> },
     { key: 'actions', label: 'Actions', sortable: false, align: 'center', render: (_, row) => (
       <div className="flex items-center gap-1 justify-center">
         <button onClick={(e) => { e.stopPropagation(); navigate(`/seller/products/edit/${row.id}`); }}
@@ -179,14 +211,14 @@ const ProductList = () => {
                     </div>
                     <div className="flex items-center gap-1 text-xs text-gray-400">
                       <Star size={12} className="text-amber-400 fill-amber-400" />
-                      <span>{product.rating}</span>
+                      <span>{product.rating || 0}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
                     <span className={`text-xs font-medium ${product.stock === 0 ? 'text-red-500' : product.stock < 10 ? 'text-amber-500' : 'text-gray-500'}`}>
                       {product.stock === 0 ? 'Out of stock' : `${product.stock} in stock`}
                     </span>
-                    <span className="text-xs text-gray-400">{product.sales} sold</span>
+                    <span className="text-xs text-gray-400">{product.sales || 0} sold</span>
                   </div>
                 </div>
               </motion.div>
@@ -195,7 +227,7 @@ const ProductList = () => {
         </div>
       )}
 
-      {filteredProducts.length === 0 && (
+      {filteredProducts.length === 0 && !loading && (
         <EmptyState icon="products" title="No products found" description="Try adjusting your search or filters." actionLabel="Add Product" onAction={() => navigate('/seller/products/add')} />
       )}
 

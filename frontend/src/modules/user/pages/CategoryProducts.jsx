@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { getCategories, getCategoryProducts } from '../services/catalogApi';
+import { findCategoryByName, extractList, mapProductForCard } from '../utils/mappers';
+import { fetchCartCount } from '../utils/cartUtils';
 import { 
   Heart, 
   Star, 
@@ -165,11 +168,13 @@ const CategoryProducts = () => {
   const [showSortModal, setShowSortModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const updateCartCount = () => {
-      const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-      const totalCount = cart.reduce((acc, item) => acc + (item.quantity || item.qty || 1), 0);
+    const updateCartCount = async () => {
+      const totalCount = await fetchCartCount();
       setCartCount(totalCount);
     };
 
@@ -181,209 +186,44 @@ const CategoryProducts = () => {
     };
   }, []);
 
-  // Multi-category product data with verified assets
-  const categoryData = {
-    'Jewellery': [
-      {
-        id: 1,
-        brand: 'MODERN MINIMAL',
-        name: 'Sleek Geometric Pendant',
-        price: '4,499',
-        oldPrice: '7,999',
-        off: '43% off',
-        rating: '4.9',
-        reviews: '2,450',
-        delivery: 'Tomorrow',
-        image: BeautyJewel1,
-        bestseller: true
-      },
-      {
-        id: 2,
-        brand: 'FANCY CHIC',
-        name: 'Dainty Serenity Drops',
-        price: '2,199',
-        oldPrice: '4,500',
-        off: '51% off',
-        rating: '4.7',
-        reviews: '1,120',
-        delivery: 'Tomorrow',
-        image: BeautyJewel2,
-      },
-      {
-        id: 3,
-        brand: 'CONTEMPORARY',
-        name: 'Elegance Infinity Band',
-        price: '3,299',
-        oldPrice: '5,999',
-        off: '45% off',
-        rating: '4.8',
-        reviews: '3,890',
-        delivery: 'Tomorrow',
-        image: BeautyJewel3,
-      },
-      {
-        id: 4,
-        brand: 'URBAN LUXE',
-        name: 'Regal Strand Necklace',
-        price: '8,990',
-        oldPrice: '12,000',
-        off: '25% off',
-        rating: '4.9',
-        reviews: '560',
-        delivery: 'Tomorrow',
-        image: BeautyJewel4,
-      },
-      {
-        id: 5,
-        brand: 'PURE SILHOUETTE',
-        name: 'Slender Wristlet Set',
-        price: '6,499',
-        oldPrice: '9,999',
-        off: '35% off',
-        rating: '4.8',
-        reviews: '890',
-        delivery: 'Tomorrow',
-        image: BeautyJewel5,
-      },
-      {
-        id: 6,
-        brand: 'MODERNIST',
-        name: 'Abstract Nova Studs',
-        price: '1,599',
-        oldPrice: '2,999',
-        off: '46% off',
-        rating: '4.6',
-        reviews: '420',
-        delivery: 'Tomorrow',
-        image: BeautyJewel6,
-      },
-      {
-        id: 7,
-        brand: 'NOIR LUXE',
-        name: 'Midnight Solitaire Band',
-        price: '12,499',
-        oldPrice: '18,000',
-        off: '30% off',
-        rating: '4.9',
-        reviews: '120',
-        delivery: 'Tomorrow',
-        image: BeautyJewel1,
-      },
-      {
-        id: 8,
-        brand: 'ETHEREAL',
-        name: 'Lunar Glow Pendant',
-        price: '5,299',
-        oldPrice: '7,500',
-        off: '29% off',
-        rating: '4.7',
-        reviews: '2,100',
-        delivery: 'Tomorrow',
-        image: BeautyJewel2,
-      }
-    ],
-    'Electronics': [
-      {
-        id: 101,
-        brand: 'SAMSUNG',
-        name: 'Galaxy S24 5G (Cobalt Violet)',
-        price: '46,999',
-        oldPrice: '74,999',
-        off: '37% off',
-        rating: '4.6',
-        reviews: '61,382',
-        delivery: 'Tomorrow',
-        image: SamsungS24,
-        bestseller: true
-      },
-      {
-        id: 102,
-        brand: 'NOISE',
-        name: 'Buds VS102 Wireless Earbuds',
-        price: '1,299',
-        oldPrice: '2,999',
-        off: '56% off',
-        rating: '4.2',
-        reviews: '12,120',
-        delivery: 'Tomorrow',
-        image: EarbudsDeal,
-      },
-      {
-        id: 103,
-        brand: 'APPLE',
-        name: 'AirPods Pro (2nd Gen)',
-        price: '24,900',
-        oldPrice: '26,900',
-        off: '7% off',
-        rating: '4.8',
-        reviews: '45,210',
-        delivery: 'Tomorrow',
-        image: EarbudsDeal,
-      },
-      {
-        id: 104,
-        brand: 'SONY',
-        name: 'WH-1000XM5 Headphones',
-        price: '29,990',
-        oldPrice: '34,990',
-        off: '14% off',
-        rating: '4.7',
-        reviews: '8,920',
-        delivery: 'Tomorrow',
-        image: EarbudsDeal,
-      },
-      {
-        id: 105,
-        brand: 'BOAT',
-        name: 'Airdopes 141',
-        price: '1,499',
-        oldPrice: '4,490',
-        off: '66% off',
-        rating: '4.1',
-        reviews: '150k+',
-        delivery: 'Tomorrow',
-        image: EarbudsDeal,
-      }
-    ],
-    'Beauty': [
-      {
-        id: 201,
-        brand: 'PLUM',
-        name: 'Luxury Skincare Gift Set',
-        price: '1,249',
-        oldPrice: '1,999',
-        off: '37% off',
-        rating: '4.8',
-        reviews: '15,450',
-        delivery: 'Tomorrow',
-        image: MakeupHero,
-        bestseller: true
-      },
-      {
-        id: 202,
-        brand: 'MAYBELLINE',
-        name: 'SuperStay Matte Ink Liquid Lipstick',
-        price: '549',
-        oldPrice: '699',
-        off: '21% off',
-        rating: '4.5',
-        reviews: '89,120',
-        delivery: 'Tomorrow',
-        image: MakeupHero,
-      }
-    ]
-  };
+  useEffect(() => {
+    let cancelled = false;
 
-  const products = categoryData[category] || categoryData['Jewellery'];
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const categories = await getCategories();
+        const match = findCategoryByName(categories, category);
+        if (!match) {
+          if (!cancelled) setProducts([]);
+          return;
+        }
+        const data = await getCategoryProducts(match.id, { limit: 40 });
+        if (!cancelled) {
+          setProducts(extractList(data).map((p) => mapProductForCard(p)));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load products');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [category]);
 
   // Sorting logic
   const sortedProducts = [...products].sort((a, b) => {
-    const priceA = parseInt(a.price.replace(/,/g, ''));
-    const priceB = parseInt(b.price.replace(/,/g, ''));
+    const priceA = parseInt(String(a.price).replace(/,/g, ''));
+    const priceB = parseInt(String(b.price).replace(/,/g, ''));
     if (activeSort === 'Price: Low to High') return priceA - priceB;
     if (activeSort === 'Price: High to Low') return priceB - priceA;
     if (activeSort === 'Customer Rating') return parseFloat(b.rating) - parseFloat(a.rating);
-    return 0; // Popularity (Default)
+    return 0;
   });
 
   const trendingData = {

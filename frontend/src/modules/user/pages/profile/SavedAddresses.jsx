@@ -1,56 +1,120 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Plus, MapPin, Edit2, Trash2,
   Home, Building2, MoreVertical, X, Phone, User, CheckCircle2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import useAccountStore from '../../../../store/useAccountStore';
+import {
+  getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress,
+} from '../../services/userApi';
+import { extractList } from '../../utils/mappers';
 import toast from 'react-hot-toast';
+
+const mapAddressFromApi = (addr) => ({
+  id: addr.id || addr._id,
+  name: addr.name || '',
+  phone: addr.phone || '',
+  address: addr.address || addr.addressLine || '',
+  type: addr.type || 'HOME',
+  pincode: addr.pincode || '',
+  isDefault: Boolean(addr.isDefault),
+});
+
+const toAddressPayload = (formData) => ({
+  type: formData.type || 'HOME',
+  name: formData.name.trim(),
+  phone: formData.phone.trim(),
+  addressLine: formData.address.trim(),
+  pincode: formData.pincode || '000000',
+});
 
 const SavedAddresses = () => {
   const navigate = useNavigate();
-  const {
-    savedAddresses, removeAddress, addAddress,
-    updateAddress, selectedAddressId, setSelectedAddress
-  } = useAccountStore();
-
-  const [isModalOpen, setIsModalOpen]   = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', type: 'HOME' });
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', type: 'HOME', pincode: '' });
+
+  const loadAddresses = async () => {
+    try {
+      const data = await getAddresses();
+      const items = extractList(data).map(mapAddressFromApi);
+      setSavedAddresses(items);
+      const defaultAddr = items.find((a) => a.isDefault);
+      setSelectedAddressId((prev) => prev || defaultAddr?.id || items[0]?.id || null);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to load addresses');
+    }
+  };
+
+  useEffect(() => {
+    loadAddresses();
+  }, []);
 
   const handleOpenModal = (addr = null) => {
     if (addr) {
       setEditingAddress(addr);
-      setFormData({ ...addr });
+      setFormData({
+        name: addr.name,
+        phone: addr.phone,
+        address: addr.address,
+        type: addr.type,
+        pincode: addr.pincode || '',
+      });
     } else {
       setEditingAddress(null);
-      setFormData({ name: '', phone: '', address: '', type: 'HOME' });
+      setFormData({ name: '', phone: '', address: '', type: 'HOME', pincode: '' });
     }
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.phone || !formData.address) {
       toast.error('All fields are required');
       return;
     }
-    if (editingAddress) {
-      updateAddress(formData);
-      toast.success('Address updated');
-    } else {
-      const newAddr = { ...formData, id: Date.now() };
-      addAddress(newAddr);
-      setSelectedAddress(newAddr.id);
-      toast.success('Address added & selected');
+
+    try {
+      const payload = toAddressPayload(formData);
+      if (editingAddress) {
+        await updateAddress(editingAddress.id, payload);
+        toast.success('Address updated');
+      } else {
+        const created = await createAddress(payload);
+        const mapped = mapAddressFromApi(created);
+        setSelectedAddressId(mapped.id);
+        toast.success('Address added & selected');
+      }
+      setIsModalOpen(false);
+      await loadAddresses();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to save address');
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id, e) => {
+  const handleDelete = async (id, e) => {
     e.stopPropagation();
-    removeAddress(id);
-    toast.success('Address removed');
+    try {
+      await deleteAddress(id);
+      if (selectedAddressId === id) setSelectedAddressId(null);
+      toast.success('Address removed');
+      await loadAddresses();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to delete address');
+    }
+  };
+
+  const handleSelectAddress = async (addr) => {
+    try {
+      await setDefaultAddress(addr.id);
+      setSelectedAddressId(addr.id);
+      toast.success(`Deliver to ${addr.type} selected`);
+      await loadAddresses();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to set default address');
+    }
   };
 
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
@@ -133,10 +197,7 @@ const SavedAddresses = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                onClick={() => {
-                  setSelectedAddress(addr.id);
-                  toast.success(`Deliver to ${addr.type} selected`);
-                }}
+                onClick={() => handleSelectAddress(addr)}
                 className={`bg-white rounded-2xl p-4 border cursor-pointer transition-all duration-200 ${
                   isSelected
                     ? `${primaryBorder} shadow-md scale-[1.01]`
@@ -317,5 +378,3 @@ const SavedAddresses = () => {
 };
 
 export default SavedAddresses;
-
-

@@ -7,9 +7,20 @@ import {
 } from 'lucide-react';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import useAccountStore from '../../../store/useAccountStore';
-import ElectronicsImg from '../../../assets/products/product04.jpg';
 import ShippingUnavailable from '../components/common/ShippingUnavailable';
+import { createOrder, initiatePayment, verifyPayment } from '../services/ordersApi';
+import { getAddresses } from '../services/userApi';
+import { fetchCartItems } from '../utils/cartUtils';
+import { clearCart, dispatchCartUpdated } from '../utils/cartUtils';
+import { openRazorpayCheckout } from '../../../shared/services/razorpay';
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
 
+const PAYMENT_METHOD_MAP = {
+  UPI: 'upi',
+  CARD: 'card',
+  COD: 'cod',
+  WALLET: 'wallet',
+};
 
 const Checkout = () => {
   const { t } = useTranslation();
@@ -33,35 +44,59 @@ const Checkout = () => {
   const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#6FAE4A]');
   const shopNowLink = isMithilakFlow ? '/mithilak' : isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/home');
 
-  const defaultProduct = {
-    name: 'EVOFOX Blaze Wired Ambidextrous Gaming Mouse',
-    price: 622,
-    oldPrice: 1299,
-    discount: '52%',
-    image: ElectronicsImg,
-    rating: '4.5',
-    reviews: '5,960',
-    qty: 1
-  };
-
-  const [checkoutItems, setCheckoutItems] = useState([defaultProduct]);
+  const [checkoutItems, setCheckoutItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [defaultAddress, setDefaultAddress] = useState(null);
 
   useEffect(() => {
-    if (location.state?.product) {
-      setCheckoutItems([location.state.product]);
-    } else {
-      try {
-        const items = JSON.parse(localStorage.getItem('userCart') || '[]');
-        if (items.length > 0) {
-          setCheckoutItems(items);
-        } else {
-          setCheckoutItems([defaultProduct]);
+    let cancelled = false;
+
+    const load = async () => {
+      if (location.state?.product) {
+        if (!cancelled) {
+          setCheckoutItems([location.state.product]);
+          setLoading(false);
         }
-      } catch (e) {
-        setCheckoutItems([defaultProduct]);
+        return;
       }
-    }
+
+      try {
+        const { items } = await fetchCartItems();
+        if (!cancelled) {
+          setCheckoutItems(items.length ? items : []);
+        }
+      } catch {
+        if (!cancelled) setCheckoutItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [location.state]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAddresses = async () => {
+      try {
+        const addresses = await getAddresses();
+        const list = Array.isArray(addresses) ? addresses : addresses?.items || [];
+        const preferred = list.find((item) => item.isDefault) || list[0];
+        if (!cancelled) setDefaultAddress(preferred || null);
+      } catch {
+        if (!cancelled) setDefaultAddress(null);
+      }
+    };
+
+    loadAddresses();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const totalPrice = checkoutItems.reduce((acc, item) => {
     return acc + parsePrice(item.price) * parsePrice(item.qty || 1);
@@ -71,20 +106,22 @@ const Checkout = () => {
     return acc + parsePrice(item.oldPrice || item.price) * parsePrice(item.qty || 1);
   }, 0);
 
-  const firstItem = checkoutItems[0] || defaultProduct;
+  const firstItem = checkoutItems[0] || { name: 'Order', price: 0, image: '' };
 
-  // Read address from localStorage (saved by Cart's address modal)
-  const savedAddr = localStorage.getItem('cartAddress');
-  const address = savedAddr ? { ...JSON.parse(savedAddr), type: 'HOME' } : {
+  const address = defaultAddress ? {
+    ...defaultAddress,
+    type: defaultAddress.type || 'HOME',
+    address: defaultAddress.address || defaultAddress.addressLine,
+  } : {
     name: 'Guest',
     type: 'HOME',
     address: 'No address provided',
-    phone: '—'
+    phone: '—',
   };
 
   // Auth guard — redirect unauthenticated users to login
   useEffect(() => {
-    if (localStorage.getItem('isAuthenticated') !== 'true') {
+    if (!isAuthenticated('customer')) {
       navigate('/login', { state: { from: location.pathname } });
     }
   }, [navigate, location.pathname]);
@@ -93,31 +130,80 @@ const Checkout = () => {
     window.scrollTo(0, 0);
   }, [currentStep]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (currentStep === 2) {
       setCurrentStep(3);
     } else if (currentStep === 3) {
       setOrderStatus('processing');
-      
-      const newOrder = {
-        id: `OD${Math.floor(Math.random() * 1000000000)}`,
-        status: 'Confirmed',
-        date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-        items: checkoutItems.map(item => ({
-          name: item.name,
-          price: item.price,
-          image: item.image || item.img
-        }))
-      };
 
-      setTimeout(() => {
+      try {
+        if (!defaultAddress?.id) {
+          throw new Error('Please add a delivery address before checkout');
+        }
+
+        const paymentMethod = PAYMENT_METHOD_MAP[selectedPayment] || 'upi';
+        const result = await createOrder({
+          addressId: defaultAddress.id,
+          paymentMethod,
+          commerceFlow: isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'fresh_grocery' : 'standard',
+        });
+
+        let paymentStatus = result.paymentStatus || result.payment?.paymentStatus;
+
+        if (paymentMethod !== 'cod' && paymentStatus !== 'paid') {
+          const paymentInit = result.payment?.keyId
+            ? result.payment
+            : await initiatePayment({ orderId: result.orderId, paymentMethod });
+
+          const razorpayResult = await openRazorpayCheckout({
+            keyId: paymentInit.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
+            amountInPaise: paymentInit.amountInPaise,
+            providerOrderId: paymentInit.providerOrderId || paymentInit.providerPaymentId,
+            orderId: result.orderId,
+            prefill: {
+              name: address.name,
+              contact: address.phone,
+            },
+          });
+
+          const verified = await verifyPayment({
+            orderId: result.orderId,
+            providerPaymentId: razorpayResult.providerPaymentId,
+            providerOrderId: razorpayResult.providerOrderId,
+            signature: razorpayResult.signature,
+          });
+          paymentStatus = verified.paymentStatus;
+        }
+
+        if (paymentMethod !== 'cod' && paymentStatus !== 'paid') {
+          throw new Error('Payment was not completed');
+        }
+
+        const newOrder = {
+          id: result.orderNumber || result.orderId,
+          status: result.status || 'Confirmed',
+          date: new Date().toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+          items: checkoutItems.map((item) => ({
+            name: item.name || item.title,
+            price: item.price,
+            image: item.image || item.img,
+          })),
+        };
+
         addOrder(newOrder);
         setPlacedOrder(newOrder);
+        await clearCart();
+        dispatchCartUpdated();
         setOrderStatus('idle');
-        localStorage.removeItem('userCart');
-        window.dispatchEvent(new Event('cartUpdated'));
         navigate('/order-confirmation', { state: { placedOrder: newOrder, checkoutItems } });
-      }, 2000);
+      } catch (err) {
+        console.error('Order failed', err);
+        setOrderStatus('idle');
+      }
     }
   };
 

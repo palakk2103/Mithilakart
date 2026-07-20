@@ -1,21 +1,44 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { auditApi } from '../../services/api';
+import { extractList, mapAuditLog, mapLoginHistory } from '../../utils/mappers';
 import { 
   Terminal, Search, Filter, Calendar, 
   Download, Clock, Shield, Key, 
   Database, UserCheck, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_AUDIT_LOGS, MOCK_LOGIN_HISTORY } from '../../constants/dummyData';
 import { Pagination } from '../../components/ui';
 
 const AuditLogs = () => {
-  const [activeTab, setActiveTab] = useState('Activity'); // 'Activity' | 'Logins'
+  const [activeTab, setActiveTab] = useState('Activity');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [loginLogs, setLoginLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const itemsPerPage = 10;
 
-  const logs = activeTab === 'Activity' ? MOCK_AUDIT_LOGS : MOCK_LOGIN_HISTORY;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [logsRes, loginRes] = await Promise.all([
+        auditApi.getLogs(),
+        auditApi.getLoginHistory(),
+      ]);
+      if (cancelled) return;
+      if (logsRes.error && loginRes.error) setError(logsRes.error);
+      else setError(null);
+      if (logsRes.data) setActivityLogs(extractList(logsRes.data).map(mapAuditLog));
+      if (loginRes.data) setLoginLogs(extractList(loginRes.data).map(mapLoginHistory));
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const logs = activeTab === 'Activity' ? activityLogs : loginLogs;
 
   const filteredLogs = logs.filter(log => {
     const q = searchQuery.toLowerCase();

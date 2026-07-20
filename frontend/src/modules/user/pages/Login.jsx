@@ -137,7 +137,6 @@ const Login = () => {
       
       if (response && response.success) {
         setSuccess('Authentication successful! Logging in...');
-        localStorage.setItem('isAuthenticated', 'true');
         setTimeout(() => {
           const redirectTo = location.state?.from || '/home';
           const redirectState = location.state?.checkoutProduct ? { product: location.state.checkoutProduct } : undefined;

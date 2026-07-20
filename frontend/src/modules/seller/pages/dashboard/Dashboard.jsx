@@ -19,27 +19,72 @@ import { Card } from '../../components/ui';
 import { DashboardSkeleton } from '../../components/ui/Skeleton';
 import { formatCurrency, formatDate, getRelativeTime } from '../../utils/formatters';
 import {
-  dashboardStats, orders, products, reviews,
-  monthlySalesData, weeklySalesData, categorySalesData, inventoryAlerts,
-} from '../../utils/dummyData';
+  getDashboard, getOrders, getProducts, getReviews, getSalesAnalytics, getInventory,
+} from '../../services/sellerApi';
 import { CHART_COLORS } from '../../constants';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState({});
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [latestReviews, setLatestReviews] = useState([]);
+  const [monthlySalesData, setMonthlySalesData] = useState([]);
+  const [weeklySalesData, setWeeklySalesData] = useState([]);
+  const [categorySalesData, setCategorySalesData] = useState([]);
+  const [inventoryAlerts, setInventoryAlerts] = useState([]);
+  const [reviewCount, setReviewCount] = useState(0);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [dashboard, ordersRes, productsRes, reviewsRes, salesMonthly, salesWeekly, inventory] = await Promise.all([
+        getDashboard(),
+        getOrders(),
+        getProducts(),
+        getReviews(),
+        getSalesAnalytics('monthly'),
+        getSalesAnalytics('weekly'),
+        getInventory(),
+      ]);
+
+      setStats(dashboard || {});
+      setRecentOrders((ordersRes?.orders || []).slice(0, 5));
+      setTopProducts(
+        [...(productsRes?.products || [])].sort((a, b) => (b.sales || 0) - (a.sales || 0)).slice(0, 5)
+      );
+      const reviewsList = reviewsRes?.reviews || [];
+      setLatestReviews(reviewsList.slice(0, 3));
+      setReviewCount(reviewsRes?.total ?? reviewsList.length);
+
+      const monthly = Array.isArray(salesMonthly)
+        ? salesMonthly
+        : salesMonthly?.monthly ?? salesMonthly?.data ?? [];
+      const weekly = Array.isArray(salesWeekly)
+        ? salesWeekly
+        : salesWeekly?.weekly ?? salesWeekly?.data ?? [];
+      setMonthlySalesData(monthly);
+      setWeeklySalesData(weekly);
+
+      const categories = salesMonthly?.categories ?? salesMonthly?.categoryBreakdown ?? [];
+      setCategorySalesData(Array.isArray(categories) ? categories : []);
+
+      setInventoryAlerts(inventory?.alerts || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate API loading
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
+    fetchData();
   }, []);
 
   if (loading) return <DashboardSkeleton />;
-
-  const stats = dashboardStats;
-  const recentOrders = orders.slice(0, 5);
-  const topProducts = [...products].sort((a, b) => b.sales - a.sales).slice(0, 5);
-  const latestReviews = reviews.slice(0, 3);
 
   return (
     <div className="space-y-8 pb-8">
@@ -55,19 +100,19 @@ const Dashboard = () => {
 
       {/* ─── Stat Cards ─────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard title="Today's Orders" value={stats.todayOrders} subtitle="orders received today" icon={ShoppingCart} iconBg="bg-blue-50" iconColor="text-blue-600" trend="up" trendValue="+12%" delay={0} />
-        <StatCard title="Revenue" value={formatCurrency(stats.revenue)} subtitle="total revenue this month" icon={DollarSign} iconBg="bg-green-50" iconColor="text-green-600" trend="up" trendValue="+18%" delay={1} />
-        <StatCard title="Wallet Balance" value={formatCurrency(stats.walletBalance)} subtitle="available for withdrawal" icon={Wallet} iconBg="bg-purple-50" iconColor="text-purple-600" delay={2} />
-        <StatCard title="Avg. Rating" value={stats.averageRating} subtitle={`based on ${328} reviews`} icon={Star} iconBg="bg-amber-50" iconColor="text-amber-500" trend="up" trendValue="+0.2" delay={3} />
+        <StatCard title="Today's Orders" value={stats.todayOrders || 0} subtitle="orders received today" icon={ShoppingCart} iconBg="bg-blue-50" iconColor="text-blue-600" trend="up" trendValue="+12%" delay={0} />
+        <StatCard title="Revenue" value={formatCurrency(stats.revenue || 0)} subtitle="total revenue this month" icon={DollarSign} iconBg="bg-green-50" iconColor="text-green-600" trend="up" trendValue="+18%" delay={1} />
+        <StatCard title="Wallet Balance" value={formatCurrency(stats.walletBalance || 0)} subtitle="available for withdrawal" icon={Wallet} iconBg="bg-purple-50" iconColor="text-purple-600" delay={2} />
+        <StatCard title="Avg. Rating" value={stats.averageRating || 0} subtitle={`based on ${reviewCount || 0} reviews`} icon={Star} iconBg="bg-amber-50" iconColor="text-amber-500" trend="up" trendValue="+0.2" delay={3} />
       </div>
 
       {/* ─── Quick Stats Row ─────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Pending', value: stats.pendingOrders, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-          { label: 'Completed', value: stats.completedOrders, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
-          { label: 'Cancelled', value: stats.cancelledOrders, icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
-          { label: 'Returns', value: stats.returns, icon: RotateCcw, color: 'text-orange-500', bg: 'bg-orange-50' },
+          { label: 'Pending', value: stats.pendingOrders || 0, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+          { label: 'Completed', value: stats.completedOrders || 0, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
+          { label: 'Cancelled', value: stats.cancelledOrders || 0, icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
+          { label: 'Returns', value: stats.returns || 0, icon: RotateCcw, color: 'text-orange-500', bg: 'bg-orange-50' },
         ].map((item, i) => (
           <motion.div
             key={item.label}
@@ -214,11 +259,11 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-900">#{order.id}</p>
-                    <p className="text-xs text-gray-400">{order.customer.name}</p>
+                    <p className="text-xs text-gray-400">{order.customer?.name || 'Customer'}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">{formatCurrency(order.finalAmount)}</p>
+                  <p className="text-sm font-semibold text-gray-900">{formatCurrency(order.finalAmount || order.totalAmount || 0)}</p>
                   <StatusBadge status={order.status} size="sm" />
                 </div>
               </div>
@@ -237,13 +282,13 @@ const Dashboard = () => {
         >
           <div className="space-y-3 mt-4">
             {inventoryAlerts.map((alert) => (
-              <div key={alert.productId} className="flex items-center justify-between p-3.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+              <div key={alert.productId || alert.id} className="flex items-center justify-between p-3.5 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${alert.status === 'out' ? 'bg-red-50' : 'bg-amber-50'}`}>
                     <AlertTriangle size={18} className={alert.status === 'out' ? 'text-red-500' : 'text-amber-500'} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{alert.title}</p>
+                    <p className="text-sm font-semibold text-gray-900">{alert.title || alert.name}</p>
                     <p className="text-xs text-gray-400">
                       {alert.stock === 0 ? 'Out of stock' : `${alert.stock} units remaining`}
                     </p>
@@ -266,7 +311,7 @@ const Dashboard = () => {
                     </span>
                     <p className="text-sm text-gray-700 font-medium line-clamp-1">{product.title}</p>
                   </div>
-                  <span className="text-xs font-semibold text-gray-500">{product.sales} sold</span>
+                  <span className="text-xs font-semibold text-gray-500">{product.sales || 0} sold</span>
                 </div>
               ))}
             </div>
@@ -296,7 +341,7 @@ const Dashboard = () => {
               </div>
               <p className="text-sm text-gray-600 line-clamp-2 mb-2">{review.text}</p>
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-gray-900">{review.customer}</p>
+                <p className="text-xs font-semibold text-gray-900">{review.customer || review.customerName}</p>
                 <p className="text-[10px] text-gray-400 truncate ml-2">{review.productTitle}</p>
               </div>
             </div>

@@ -2,7 +2,7 @@
  * Analytics Page
  * Detailed metrics, charts and breakdown of store performance.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Package } from 'lucide-react';
 import { PageHeader } from '../../components/common';
 import { Card, Button } from '../../components/ui';
@@ -12,13 +12,66 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { formatCurrency } from '../../utils/formatters';
-import { monthlySalesData, weeklySalesData, categorySalesData, products } from '../../utils/dummyData';
+import {
+  getSalesAnalytics, getRevenueAnalytics, getProductAnalytics, getCategoryAnalytics, getCustomerAnalytics,
+} from '../../services/sellerApi';
 
 const Analytics = () => {
   const [timeRange, setTimeRange] = useState('monthly');
+  const [chartData, setChartData] = useState([]);
+  const [categorySalesData, setCategorySalesData] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const chartData = timeRange === 'monthly' ? monthlySalesData : weeklySalesData;
-  const topProducts = [...products].sort((a, b) => b.sales - a.sales).slice(0, 5);
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const range = timeRange === 'monthly' ? 'monthly' : 'weekly';
+      const [sales, revenue, products, categories, customers] = await Promise.all([
+        getSalesAnalytics(range),
+        getRevenueAnalytics(),
+        getProductAnalytics(),
+        getCategoryAnalytics(),
+        getCustomerAnalytics(),
+      ]);
+
+      const salesChart = Array.isArray(sales)
+        ? sales
+        : sales?.[range] ?? sales?.data ?? sales?.chart ?? [];
+      setChartData(salesChart);
+
+      const categoriesList = Array.isArray(categories)
+        ? categories
+        : categories?.categories ?? categories?.data ?? [];
+      setCategorySalesData(categoriesList);
+
+      const productsList = Array.isArray(products)
+        ? products
+        : products?.products ?? products?.topProducts ?? products?.data ?? [];
+      setTopProducts(
+        [...productsList].sort((a, b) => (b.sales || 0) - (a.sales || 0)).slice(0, 5)
+      );
+    } catch (err) {
+      setError(err?.message || 'Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [timeRange]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6 pb-8">
+        <PageHeader title="Analytics" subtitle="Deep-dive into sales, category patterns, and product trends" />
+        <CardSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-8">
@@ -89,7 +142,7 @@ const Analytics = () => {
         <Card title="Top Selling Products" subtitle="Top 5 items driving your store's GMV">
           <div className="space-y-4 mt-6">
             {topProducts.map((p, i) => (
-              <div key={p.id} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
+              <div key={p.id || i} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
                 <div className="flex items-center gap-3">
                   <span className="w-6 h-6 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center text-[11px] font-bold">
                     {i + 1}
@@ -100,8 +153,8 @@ const Analytics = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-gray-900">{p.sales} sales</p>
-                  <p className="text-xs text-gray-400">{formatCurrency((p.discountPrice || p.price) * p.sales)}</p>
+                  <p className="text-sm font-bold text-gray-900">{p.sales || 0} sales</p>
+                  <p className="text-xs text-gray-400">{formatCurrency((p.discountPrice || p.price || 0) * (p.sales || 0))}</p>
                 </div>
               </div>
             ))}

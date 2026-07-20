@@ -1,20 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   HelpCircle, MessageCircle, Search, Filter, 
   MoreVertical, CheckCircle2, XCircle, Trash2, 
   User, Calendar, Send, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const MOCK_QNA = [
-  { id: 1, user: 'Rahul Sharma', product: 'Premium Leather Satchel', question: 'Does it fit a 15-inch laptop?', answer: 'Yes, it has a dedicated padded compartment for up to 15.6-inch laptops.', status: 'Answered', date: '2026-05-10' },
-  { id: 2, user: 'Priyanka Das', product: 'Biotique Face Wash', question: 'Is this suitable for very oily skin?', answer: null, status: 'Pending', date: '2026-05-09' },
-  { id: 3, user: 'Amit Verma', product: 'Wireless Earbuds Pro', question: 'What is the actual battery life?', answer: 'We have tested it and it gives about 6-7 hours on a single charge.', status: 'Answered', date: '2026-05-08' },
-];
+import { productsApi } from '../../services/api';
+import { extractList, mapProductQnaPlaceholder } from '../../utils/mappers';
 
 const QnAModeration = () => {
-  const [qna, setQna] = useState(MOCK_QNA);
+  const [qna, setQna] = useState([]);
   const [activeTab, setActiveTab] = useState('Pending');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await productsApi.getAll({ limit: 20 });
+      if (cancelled) return;
+      if (!error) {
+        setQna(extractList(data).map(mapProductQnaPlaceholder));
+      } else {
+        setQna([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const tabs = ['Pending', 'Answered', 'All'];
 
@@ -49,7 +62,11 @@ const QnAModeration = () => {
         </div>
 
         <div className="divide-y divide-slate-50">
-          {qna.filter(q => activeTab === 'All' || q.status === activeTab).map((item) => (
+          {loading ? (
+            <div className="p-8 text-center text-slate-400 text-sm font-bold">Loading Q&A items...</div>
+          ) : qna.filter(q => activeTab === 'All' || q.status === activeTab).length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm font-bold">No Q&A items to moderate yet</div>
+          ) : qna.filter(q => activeTab === 'All' || q.status === activeTab).map((item) => (
             <motion.div 
               key={item.id}
               initial={{ opacity: 0 }}

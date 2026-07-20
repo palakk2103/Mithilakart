@@ -2,9 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Share2, ChevronDown, Heart } from 'lucide-react';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
-import { getCurrentMarketplaceTab, productBelongsToTab } from '../../../shared/utils/marketplaceHelpers';
 import closedShutter from '../../../assets/closed_shutter.png';
-import { handleImageError, getProductImage, DEFAULT_PRODUCT_IMAGE as FALLBACK_IMAGE } from '../../../shared/utils/imageUtils';
+import { getCategories, getCategoryProducts } from '../services/catalogApi';
+import { findCategoryByName, extractList, mapProductForCard } from '../utils/mappers';
+import { addProductToCart } from '../utils/cartUtils';
+
+const FALLBACK_IMAGE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="%23fdfbf7" rx="12"/><text x="75" y="80" font-size="12" font-family="sans-serif" font-weight="bold" fill="%23d3a075" text-anchor="middle">Mithilakart</text></svg>`;
+
+const handleImageError = (e) => {
+  e.target.onerror = null;
+  e.target.src = FALLBACK_IMAGE;
+};
 
 
 const DYNAMIC_DATA = {
@@ -293,20 +301,81 @@ const QuickShopSubcategory = () => {
   
   const primaryText = isFreshGroceryFlow ? 'text-[#D9A21B]' : isMithilakFlow ? 'text-[#207C8A]' : 'text-[#F26522]';
   const primaryBg = isFreshGroceryFlow ? 'bg-[#D9A21B]' : isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#F26522]';
-  const primaryBgHover = isFreshGroceryFlow ? 'hover:bg-[#FFF8EE] bg-white' : isMithilakFlow ? 'hover:bg-[#e0f2f1] bg-white' : 'hover:bg-orange-50 bg-white';
+  const primaryBgHover = isFreshGroceryFlow ? 'hover:bg-[#FFF8EE] bg-white' : isMithilakFlow ? 'hover:bg-[#F5F9FA] bg-white' : 'hover:bg-orange-50 bg-white';
   const primaryBorder = isFreshGroceryFlow ? 'border-[#D9A21B]' : isMithilakFlow ? 'border-[#207C8A]' : 'border-[#F26522]';
   const primaryBorderLight = isFreshGroceryFlow ? 'border-[#D9A21B]/25' : isMithilakFlow ? 'border-[#207C8A]/25' : 'border-[#F26522]/25';
-  const primaryLightBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#e0f2f1]/40' : 'bg-[#FFF5EE]';
+  const primaryLightBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : 'bg-[#FFF5EE]';
   const primarySidebarAccent = isFreshGroceryFlow ? 'bg-[#D9A21B]' : isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#F26522]';
   
-  const rightGridBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#e0f2f1]/10' : 'bg-orange-50/15';
-  const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[#D9A21B]/15' : isMithilakFlow ? 'bg-[#e0f2f1]/40 border border-[#207C8A]/15' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
+  const rightGridBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]/20' : 'bg-orange-50/15';
+  const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[#D9A21B]/15' : isMithilakFlow ? 'bg-[#F5F9FA]/65 border border-[#207C8A]/15' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
 
-  // Get dynamic category structure
-  const categoryData = getCategoryData(categoryName);
-  
-  const subCategories = categoryData.subcategories;
-  const productsList = categoryData.products;
+  // Get dynamic category structure (API with local fallback)
+  const fallbackData = getCategoryData(categoryName);
+  const [subCategories, setSubCategories] = useState(fallbackData.subcategories);
+  const [productsList, setProductsList] = useState(fallbackData.products);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const categories = await getCategories({ commerceFlow: 'quick_shop' });
+        const match = findCategoryByName(categories, categoryName);
+        if (!match) {
+          if (!cancelled) {
+            setSubCategories(fallbackData.subcategories);
+            setProductsList(fallbackData.products);
+          }
+          return;
+        }
+
+        const data = await getCategoryProducts(match.id, { limit: 40 });
+        const mapped = extractList(data).map((p) => {
+          const card = mapProductForCard(p);
+          return {
+            id: card.id,
+            name: card.name,
+            img: card.image,
+            brand: card.brand || 'Mithila Brand',
+            weight: '1 Unit',
+            price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
+            oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
+            eta: '14 mins',
+            tags: ['Fresh'],
+            category: 'all',
+          };
+        });
+
+        if (!cancelled) {
+          setSubCategories(
+            (match.children || []).length
+              ? [{ id: 'all', name: 'All', icon: match.imageUrl || FALLBACK_IMAGE }, ...match.children.map((child) => ({
+                  id: child.id,
+                  name: child.name,
+                  icon: child.imageUrl || child.iconUrl || FALLBACK_IMAGE,
+                }))]
+              : fallbackData.subcategories
+          );
+          setProductsList(mapped.length ? mapped : fallbackData.products);
+        }
+      } catch {
+        if (!cancelled) {
+          setSubCategories(fallbackData.subcategories);
+          setProductsList(fallbackData.products);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryName]);
 
   const [activeSub, setActiveSub] = useState('all');
   const [favorites, setFavorites] = useState([]);
@@ -326,7 +395,7 @@ const QuickShopSubcategory = () => {
 
   const handleProductClick = (product) => {
     const discountPct = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) + '% OFF';
-    navigate('/product-detail', {
+    navigate('/vendor/product-detail', {
       state: {
         product: {
           ...product,
@@ -340,12 +409,9 @@ const QuickShopSubcategory = () => {
     });
   };
 
-  const currentTab = React.useMemo(() => getCurrentMarketplaceTab(), []);
-
-  const filteredProducts = productsList.filter(p => {
-    if (activeSub !== 'all' && p.category !== activeSub) return false;
-    return productBelongsToTab(p, currentTab);
-  });
+  const filteredProducts = activeSub === 'all' 
+    ? productsList 
+    : productsList.filter(p => p.category === activeSub);
 
   const isQuickShopHeader = !isFreshGroceryFlow && !isMithilakFlow;
 
@@ -718,11 +784,7 @@ const QuickShopSubcategory = () => {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Add to cart local storage flow
-                        const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-                        cart.push({ ...product, image: product.img, cartId: Date.now(), qty: 1 });
-                        localStorage.setItem('userCart', JSON.stringify(cart));
-                        window.dispatchEvent(new Event('cartUpdated'));
+                        addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
                       }}
                       className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
                     >

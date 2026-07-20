@@ -1,49 +1,86 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, ShoppingCart, Star, ChevronRight } from 'lucide-react';
-import { allCategoryProducts } from '../../../data/categoryData';
+import { ArrowLeft, Search, ShoppingCart, Star } from 'lucide-react';
+import { getProductById, getCategoryProducts } from '../services/catalogApi';
+import { extractList, mapProductForCard, getEntityId } from '../utils/mappers';
+
+const fallbackProduct = (productId) => ({
+  id: productId,
+  name: 'Premium Product',
+  category: 'Fashion',
+  price: '1299',
+  oldPrice: '2499',
+  discount: '48% OFF',
+  rating: '4.5',
+  image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400&h=400',
+  brand: 'Drasert',
+});
 
 const ContinueShopping = () => {
   const { productId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = React.useState('Trending');
+  const [clickedProduct, setClickedProduct] = useState(null);
+  const [categoryProducts, setCategoryProducts] = useState([]);
 
-  // Get product from state or find in data
-  const clickedProduct = useMemo(() => {
-    if (state?.product) return state.product;
-    
-    for (const cat in allCategoryProducts) {
-      const p = allCategoryProducts[cat].find(item => item.id === productId);
-      if (p) return p;
-    }
-    
-    return {
-      id: productId,
-      name: 'Premium Product',
-      category: 'Fashion',
-      price: 1299,
-      oldPrice: 2499,
-      discount: '48% OFF',
-      rating: 4.5,
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400&h=400',
-      brand: 'Drasert'
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      let product = state?.product ? mapProductForCard(state.product) : null;
+
+      if (!product && productId) {
+        try {
+          const data = await getProductById(productId);
+          const raw = data?.product || data;
+          if (raw) product = mapProductForCard(raw);
+        } catch {
+          // keep fallback below
+        }
+      }
+
+      if (cancelled) return;
+
+      const resolved = product || fallbackProduct(productId);
+      setClickedProduct(resolved);
+
+      const categoryId = state?.product?.categoryId || product?.categoryId;
+      if (categoryId) {
+        try {
+          const data = await getCategoryProducts(categoryId, { limit: 20 });
+          if (!cancelled) {
+            setCategoryProducts(extractList(data).map((item) => mapProductForCard(item)));
+          }
+        } catch {
+          if (!cancelled) setCategoryProducts([]);
+        }
+      } else {
+        setCategoryProducts([]);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
     };
   }, [productId, state]);
 
-  // Get another related product for the "Recently Viewed" section
   const relatedRecentlyViewed = useMemo(() => {
-    const categoryProducts = allCategoryProducts[clickedProduct.category] || allCategoryProducts['You Buy'];
-    return categoryProducts.find(p => p.id !== clickedProduct.id) || categoryProducts[0];
-  }, [clickedProduct]);
+    if (!clickedProduct) return null;
+    return (
+      categoryProducts.find((p) => getEntityId(p) !== getEntityId(clickedProduct)) ||
+      categoryProducts[0] ||
+      clickedProduct
+    );
+  }, [clickedProduct, categoryProducts]);
 
-  // Similar products for the bottom section
   const similarProducts = useMemo(() => {
-    let products = allCategoryProducts[clickedProduct.category] || allCategoryProducts['You Buy'];
-    products = products.filter(p => p.id !== clickedProduct.id);
+    if (!clickedProduct) return [];
+    let products = categoryProducts.filter((p) => getEntityId(p) !== getEntityId(clickedProduct));
 
     if (activeFilter === 'High rated') {
-      return [...products].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 10);
+      return [...products].sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0)).slice(0, 10);
     }
     if (activeFilter === 'Best seller') {
       return [...products].reverse().slice(0, 10);
@@ -51,15 +88,23 @@ const ContinueShopping = () => {
     if (activeFilter === 'Brand name') {
       return [...products].sort((a, b) => (a.brand || '').localeCompare(b.brand || '')).slice(0, 10);
     }
-    
+
     return products.slice(0, 10);
-  }, [clickedProduct, activeFilter]);
+  }, [clickedProduct, categoryProducts, activeFilter]);
 
   const filters = ['Trending', 'High rated', 'Best seller', 'Brand name', 'Color'];
 
   const handleProductClick = (product) => {
     navigate('/product-detail', { state: { product } });
   };
+
+  if (!clickedProduct) {
+    return (
+      <div className="bg-[#f4faf6] min-h-screen flex items-center justify-center text-sm font-bold text-slate-500">
+        Loading products...
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f4faf6] min-h-screen pb-24 font-sans text-slate-800">

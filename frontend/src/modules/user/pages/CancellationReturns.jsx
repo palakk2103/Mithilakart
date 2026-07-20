@@ -2,18 +2,16 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, RotateCcw, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Footer from '../../../shared/components/Footer';
+import useLegalPage from '../hooks/useLegalPage';
 
 const CancellationReturns = () => {
   const navigate = useNavigate();
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
+  const { page, loading, error } = useLegalPage('cancellation');
 
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className={`sticky top-0 z-50 ${primaryBg} px-4 py-4 flex items-center gap-3 shadow-md`}>
+      <div className="sticky top-0 z-50 bg-[#3E5A44] px-4 py-4 flex items-center gap-3 shadow-md">
         <button 
           onClick={() => navigate(-1)}
           className="text-white active:scale-90 transition-transform"
@@ -25,6 +23,17 @@ const CancellationReturns = () => {
 
       {/* Content */}
       <div className="px-6 py-6 space-y-6">
+        {loading && <p className="text-sm text-gray-500">Loading...</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {page?.content ? (
+          <>
+            <div className="text-[11px] text-gray-400">
+              Last Updated: {page.updatedAt ? new Date(page.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+            </div>
+            <div className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap">{page.content}</div>
+          </>
+        ) : (
+          <>
         {/* Last Updated */}
         <div className="text-[11px] text-gray-400">
           Last Updated: May 8, 2026
@@ -42,7 +51,7 @@ const CancellationReturns = () => {
         {/* Quick Info Cards */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-primary-light border border-primary-green/30 rounded-xl p-4 text-center">
-            <Clock size={24} className="text-[#6FAE4A] mx-auto mb-2" />
+            <Clock size={24} className="text-[#3E5A44] mx-auto mb-2" />
             <p className="text-[12px] font-bold text-slate-900">10 Days</p>
             <p className="text-[10px] text-gray-500">Return Window</p>
           </div>
@@ -56,7 +65,7 @@ const CancellationReturns = () => {
         {/* Order Cancellation */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <XCircle size={20} className="text-[#6FAE4A]" />
+            <XCircle size={20} className="text-[#3E5A44]" />
             <h2 className="text-[16px] font-bold text-slate-900">Order Cancellation</h2>
           </div>
 
@@ -85,7 +94,7 @@ const CancellationReturns = () => {
         {/* Return Policy */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <RotateCcw size={20} className="text-[#6FAE4A]" />
+            <RotateCcw size={20} className="text-[#3E5A44]" />
             <h2 className="text-[16px] font-bold text-slate-900">Return Policy</h2>
           </div>
 
@@ -133,7 +142,7 @@ const CancellationReturns = () => {
           <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">2.4 How to Return</h3>
           <div className="space-y-3">
             <div className="flex gap-3">
-              <div className="w-8 h-8 bg-[#6FAE4A] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 1
               </div>
               <div>
@@ -142,7 +151,7 @@ const CancellationReturns = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="w-8 h-8 bg-[#6FAE4A] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 2
               </div>
               <div>
@@ -151,7 +160,7 @@ const CancellationReturns = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="w-8 h-8 bg-[#6FAE4A] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 3
               </div>
               <div>
@@ -160,7 +169,7 @@ const CancellationReturns = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="w-8 h-8 bg-[#6FAE4A] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 4
               </div>
               <div>
@@ -169,7 +178,7 @@ const CancellationReturns = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="w-8 h-8 bg-[#6FAE4A] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 5
               </div>
               <div>
@@ -183,7 +192,7 @@ const CancellationReturns = () => {
         {/* Refund Policy */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <Package size={20} className="text-[#6FAE4A]" />
+            <Package size={20} className="text-[#3E5A44]" />
             <h2 className="text-[16px] font-bold text-slate-900">Refund Policy</h2>
           </div>
 
@@ -251,6 +260,8 @@ const CancellationReturns = () => {
             </div>
           </div>
         </section>
+          </>
+        )}
         <Footer />
       </div>
     </div>

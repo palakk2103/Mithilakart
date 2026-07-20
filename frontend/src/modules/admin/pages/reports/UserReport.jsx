@@ -1,12 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, UserCheck, Download, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { motion } from 'framer-motion';
-import { USER_REPORT_DATA } from '../../constants/dummyData';
+import { reportsApi } from '../../services/api';
+import { mapUserReportData } from '../../utils/mappers';
 
 const UserReport = () => {
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await reportsApi.getUserReport();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setReportData([]);
+      } else {
+        setError(null);
+        setReportData(mapUserReportData(data));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const stats = [
-    { label: 'Total Users', value: '12,450', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Total Users', value: reportData.reduce((s, r) => s + (r.activeUsers || 0), 0).toLocaleString() || '0', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
     { label: 'New This Month', value: '650', icon: UserPlus, color: 'text-green-500', bg: 'bg-green-50' },
     { label: 'Active Users', value: '4,500', icon: UserCheck, color: 'text-indigo-500', bg: 'bg-indigo-50' },
     { label: 'Retention Rate', value: '72%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50' },
@@ -39,7 +62,7 @@ const UserReport = () => {
           <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight font-montserrat mb-8">User Growth Trend</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={USER_REPORT_DATA}>
+              <AreaChart data={reportData.length ? reportData : [{ month: '—', activeUsers: 0, newUsers: 0 }]}>
                 <defs>
                   <linearGradient id="userNewGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
                   <linearGradient id="userActiveGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
@@ -63,7 +86,7 @@ const UserReport = () => {
           <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight font-montserrat mb-8">Returning Users</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={USER_REPORT_DATA}>
+              <BarChart data={reportData.length ? reportData : [{ month: '—', returningUsers: 0 }]}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dx={-10} />
@@ -81,7 +104,7 @@ const UserReport = () => {
           <table className="w-full text-left">
             <thead><tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-6 py-4">Month</th><th className="px-6 py-4">New Users</th><th className="px-6 py-4">Active Users</th><th className="px-6 py-4">Returning</th></tr></thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {USER_REPORT_DATA.map((row, i) => (
+              {reportData.map((row, i) => (
                 <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-5 font-bold text-slate-900 font-montserrat">{row.month}</td>
                   <td className="px-6 py-5 font-black text-blue-500 font-roboto">+{row.newUsers}</td>

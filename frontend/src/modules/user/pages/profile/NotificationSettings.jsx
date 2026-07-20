@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Bell, Smartphone, Mail, Zap, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { updateNotificationPreferences } from '../../services/userApi';
 
 const NotificationSettings = () => {
   const navigate = useNavigate();
@@ -12,9 +13,19 @@ const NotificationSettings = () => {
     security: true,
     newsletter: false
   });
+  const [saving, setSaving] = useState(false);
 
-  const toggleSetting = (key) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleSetting = async (key) => {
+    const next = { ...settings, [key]: !settings[key] };
+    setSettings(next);
+    setSaving(true);
+    try {
+      await updateNotificationPreferences(next);
+    } catch {
+      setSettings(settings);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';

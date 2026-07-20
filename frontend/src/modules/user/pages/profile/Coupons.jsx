@@ -1,27 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Ticket, Copy, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { getMyCoupons } from '../../services/userApi';
+import { extractList, mapCoupon } from '../../utils/mappers';
 
 const Coupons = () => {
   const navigate = useNavigate();
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const coupons = [
-    {
-      code: 'MITHILAKART50',
-      discount: '50% OFF',
-      desc: 'On your first jewelry purchase',
-      minOrder: '₹999',
-      expiry: 'Ends in 2 days'
-    },
-    {
-      code: 'GOLD20',
-      discount: '₹200 OFF',
-      desc: 'Exclusive discount for premium members',
-      minOrder: '₹4,999',
-      expiry: 'Valid till 30 May'
-    }
-  ];
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getMyCoupons();
+        if (!cancelled) {
+          setCoupons(extractList(data).map(mapCoupon));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load coupons');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -65,6 +77,8 @@ const Coupons = () => {
       </div>
 
       <div className="container mx-auto px-4 py-6 w-full space-y-6 relative z-10">
+        {loading && <p className="text-sm text-gray-500">Loading coupons...</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
         {coupons.map((coupon, idx) => (
           <div key={idx} className="relative group overflow-hidden bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
             <div className={`absolute inset-0 bg-gradient-to-r ${gradientOverlay} to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ordersApi } from '../../services/api';
+import { mapOrderDetail, titleCaseStatus } from '../../utils/mappers';
 import { 
   ArrowLeft, Package, User, MapPin, 
   CreditCard, Truck, Calendar, Clock,
@@ -13,18 +15,57 @@ const OrderDetail = () => {
   const navigate = useNavigate();
 
   const [status, setStatus] = useState('Confirmed');
+  const [orderData, setOrderData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const timeline = [
-    { status: 'Pending', date: '2026-05-10 10:30 AM', desc: 'Order placed by customer', completed: true },
-    { status: 'Confirmed', date: '2026-05-10 11:15 AM', desc: 'Payment verified and order confirmed', completed: true },
-    { status: 'Packed', date: 'Pending', desc: 'Waiting for vendor to pack', completed: false },
-    { status: 'Shipped', date: 'Pending', desc: 'Awaiting courier pickup', completed: false },
-  ];
+  const fetchOrder = async () => {
+    if (!orderId) return;
+    setLoading(true);
+    const { data, error: apiError } = await ordersApi.getById(orderId);
+    if (apiError) {
+      setError(apiError);
+      setOrderData(null);
+    } else {
+      setError(null);
+      const mapped = mapOrderDetail(data);
+      setOrderData(mapped);
+      setStatus(mapped.status);
+    }
+    setLoading(false);
+  };
 
-  const items = [
+  useEffect(() => {
+    fetchOrder();
+  }, [orderId]);
+
+  const handleUpdateStatus = async () => {
+    if (!orderId) return;
+    const nextStatus = status === 'Confirmed' ? 'packed' : 'confirmed';
+    const { data, error: apiError } = await ordersApi.updateStatus(orderId, nextStatus);
+    if (!apiError && data) {
+      const mapped = mapOrderDetail(data);
+      setOrderData(mapped);
+      setStatus(mapped.status);
+    } else if (!apiError) {
+      setStatus(titleCaseStatus(nextStatus));
+    }
+  };
+
+  const items = orderData?.items || [
     { id: 1, name: 'Premium Leather Satchel', price: '₹4,500', qty: 1, img: 'https://via.placeholder.com/100' },
-    { id: 2, name: 'Biotique Face Wash', price: '₹250', qty: 2, img: 'https://via.placeholder.com/100' },
   ];
+
+  const timeline = orderData?.timeline || [
+    { status: 'Pending', date: 'Pending', desc: 'Waiting for order data', completed: false },
+  ];
+
+  const customer = orderData?.customer || {
+    name: 'Rahul Sharma',
+    email: 'rahul@example.com',
+    phone: '+91 98765 43210',
+    address: '123, Sector 44, Gurgaon, Haryana - 122003',
+  };
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-700">
@@ -39,7 +80,7 @@ const OrderDetail = () => {
                  <h1 className="text-2xl font-black text-slate-900 font-montserrat uppercase tracking-tight">Order #{orderId || 'OD87459'}</h1>
                  <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-[9px] font-black uppercase tracking-widest">{status}</span>
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Placed on May 10, 2026 • 10:30 AM</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Placed on {orderData?.placedAt || 'May 10, 2026 • 10:30 AM'}</p>
            </div>
         </div>
         <div className="flex gap-3">
@@ -60,7 +101,7 @@ const OrderDetail = () => {
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
                <div className="p-6 border-b border-slate-50 flex items-center gap-3">
                   <Package size={18} className="text-blue-500" />
-                  <h3 className="text-sm font-black text-slate-900 font-montserrat uppercase tracking-widest">Order Items (3)</h3>
+                  <h3 className="text-sm font-black text-slate-900 font-montserrat uppercase tracking-widest">Order Items ({orderData?.itemCount || items.length})</h3>
                </div>
                <div className="divide-y divide-slate-50">
                   {items.map((item) => (
@@ -82,7 +123,7 @@ const OrderDetail = () => {
                              </div>
                              <div className="ml-auto text-right">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
-                                <p className="text-sm font-black text-blue-600 font-roboto">₹4,500</p>
+                                <p className="text-sm font-black text-blue-600 font-roboto">{item.price}</p>
                              </div>
                           </div>
                        </div>
@@ -92,19 +133,19 @@ const OrderDetail = () => {
                <div className="p-8 bg-slate-50/50 border-t border-slate-100 space-y-3">
                   <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-widest">
                      <span>Subtotal</span>
-                     <span className="text-slate-900">₹5,000</span>
+                     <span className="text-slate-900">{orderData?.subtotal || '₹5,000'}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-widest">
                      <span>Delivery Charges</span>
-                     <span className="text-green-500">FREE</span>
+                     <span className="text-green-500">{orderData?.deliveryCharge || 'FREE'}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-widest">
                      <span>Tax (GST 18%)</span>
-                     <span className="text-slate-900">₹900</span>
+                     <span className="text-slate-900">{orderData?.tax || '₹900'}</span>
                   </div>
                   <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
                      <p className="text-sm font-black text-slate-900 font-montserrat uppercase tracking-widest">Order Total</p>
-                     <p className="text-2xl font-black text-blue-600 font-roboto">₹5,900</p>
+                     <p className="text-2xl font-black text-blue-600 font-roboto">{orderData?.total || '₹5,900'}</p>
                   </div>
                </div>
             </div>
@@ -121,10 +162,10 @@ const OrderDetail = () => {
                         <Smartphone size={20} className="text-slate-400" />
                      </div>
                      <div>
-                        <p className="text-xs font-black text-slate-900 uppercase tracking-tight">UPI Payment</p>
+                        <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{orderData?.paymentMethod || 'UPI Payment'}</p>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Txn ID: 874592031</p>
                      </div>
-                     <span className="ml-auto px-2 py-0.5 bg-green-50 text-green-500 border border-green-100 rounded text-[8px] font-black uppercase">Success</span>
+                     <span className="ml-auto px-2 py-0.5 bg-green-50 text-green-500 border border-green-100 rounded text-[8px] font-black uppercase">{orderData?.paymentStatus || 'Success'}</span>
                   </div>
                </div>
 
@@ -156,25 +197,25 @@ const OrderDetail = () => {
                </div>
                <div className="flex items-center gap-4">
                   <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center text-xl font-black border border-blue-100 shadow-inner">
-                     R
+                     {customer.name.charAt(0)}
                   </div>
                   <div>
-                     <h4 className="text-lg font-black text-slate-900 font-montserrat uppercase tracking-tight">Rahul Sharma</h4>
+                     <h4 className="text-lg font-black text-slate-900 font-montserrat uppercase tracking-tight">{customer.name}</h4>
                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Customer since 2024</p>
                   </div>
                </div>
                <div className="space-y-3 pt-4 border-t border-slate-50">
                   <div className="flex items-center gap-3 text-slate-500 text-xs font-bold uppercase tracking-widest">
                      <Mail size={14} className="text-slate-300" />
-                     rahul@example.com
+                     {customer.email}
                   </div>
                   <div className="flex items-center gap-3 text-slate-500 text-xs font-bold uppercase tracking-widest">
                      <Smartphone size={14} className="text-slate-300" />
-                     +91 98765 43210
+                     {customer.phone}
                   </div>
                   <div className="flex items-start gap-3 text-slate-500 text-xs font-bold uppercase tracking-widest leading-relaxed">
                      <MapPin size={14} className="text-slate-300 mt-0.5" />
-                     123, Sector 44, Gurgaon, Haryana - 122003
+                     {customer.address}
                   </div>
                </div>
             </div>
@@ -199,7 +240,10 @@ const OrderDetail = () => {
                     </div>
                   ))}
                </div>
-               <button className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 hover:scale-105 transition-all flex items-center justify-center gap-2">
+               <button
+                 onClick={handleUpdateStatus}
+                 className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-200 hover:scale-105 transition-all flex items-center justify-center gap-2"
+               >
                   Update Order Status
                   <ChevronRight size={14} />
                </button>

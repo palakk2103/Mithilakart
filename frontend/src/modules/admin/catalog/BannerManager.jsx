@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { bannersApi } from '../services/api';
+import { extractList } from '../utils/mappers';
 import {
   Plus, Trash2, Edit2, Eye, EyeOff, Image as ImageIcon,
   GripVertical, ToggleLeft, ToggleRight, Save, X, Upload,
@@ -133,6 +135,38 @@ const BannerManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_BANNER);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await bannersApi.getAll();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+      } else {
+        setError(null);
+        const grouped = {};
+        extractList(data).forEach((b, i) => {
+          const cat = b.category || b.targetCategory || 'Home';
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push({
+            id: b._id || b.id || i + 1,
+            title: b.title || '',
+            subtitle: b.subtitle || '',
+            image: b.image || b.imageUrl || '',
+            link: b.link || '/home',
+            active: b.isActive !== false,
+          });
+        });
+        if (Object.keys(grouped).length) setBanners(grouped);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const currentBanners = banners[activeTab] || [];
 

@@ -1,23 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Key, Percent, Plus, Edit2, Trash2, 
   CheckCircle2, Info, Layers, Save, X,
   ShieldCheck, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const INITIAL_RULES = [
-  { id: 1, category: 'Fashion', rate: 10, type: 'Percentage', status: 'Active', minSale: '₹0' },
-  { id: 2, category: 'Electronics', rate: 8, type: 'Percentage', status: 'Active', minSale: '₹10,000' },
-  { id: 3, category: 'Beauty', rate: 12, type: 'Percentage', status: 'Active', minSale: '₹0' },
-  { id: 4, category: 'Home Decor', rate: 15, type: 'Percentage', status: 'Draft', minSale: '₹500' },
-  { id: 5, category: 'Toys', rate: 5, type: 'Fixed Fee', status: 'Active', minSale: '₹0' },
-];
+import { financeApi } from '../services/api';
+import { extractList, mapCommissionRule } from '../utils/mappers';
 
 const CommissionRules = () => {
-  const [rules, setRules] = useState(INITIAL_RULES);
+  const [rules, setRules] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await financeApi.getCommissionRules();
+      if (cancelled) return;
+      if (!error) {
+        setRules(extractList(data).map(mapCommissionRule));
+      } else {
+        setRules([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSave = () => {
     setSaved(true);
@@ -57,7 +68,11 @@ const CommissionRules = () => {
       {/* Rules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <AnimatePresence>
-          {rules.map((rule, i) => (
+          {loading ? (
+            <div className="col-span-full p-8 text-center text-slate-400 text-sm font-bold">Loading commission rules...</div>
+          ) : rules.length === 0 ? (
+            <div className="col-span-full p-8 text-center text-slate-400 text-sm font-bold">No commission rules found</div>
+          ) : rules.map((rule, i) => (
             <motion.div
               key={rule.id}
               initial={{ opacity: 0, scale: 0.95 }}

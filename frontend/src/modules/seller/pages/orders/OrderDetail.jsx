@@ -2,19 +2,46 @@
  * Order Detail Page
  * Full order details with timeline, customer info, products, and invoice.
  */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Printer, Package, MapPin, CreditCard, User, Clock, CheckCircle2, Truck, ShoppingBag } from 'lucide-react';
 import { PageHeader, StatusBadge } from '../../components/common';
 import { Button, Card } from '../../components/ui';
-import { orders } from '../../utils/dummyData';
+import { getOrder } from '../../services/sellerApi';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const order = orders.find((o) => o.id === id);
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchOrder = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getOrder(id);
+      setOrder(data);
+    } catch (err) {
+      setError(err?.message || 'Failed to load order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrder();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-gray-500">Loading order...</p>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -70,7 +97,7 @@ const OrderDetail = () => {
           {/* Products */}
           <Card title="Products">
             <div className="space-y-3 mt-4">
-              {order.products.map((product) => (
+              {(order.products || []).map((product) => (
                 <div key={product.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-gray-100">
@@ -78,20 +105,20 @@ const OrderDetail = () => {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{product.title}</p>
-                      <p className="text-xs text-gray-400">Qty: {product.qty}</p>
+                      <p className="text-xs text-gray-400">Qty: {product.qty || product.quantity || 1}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{formatCurrency(product.price * product.qty)}</p>
+                  <p className="text-sm font-semibold text-gray-900">{formatCurrency((product.price || 0) * (product.qty || product.quantity || 1))}</p>
                 </div>
               ))}
             </div>
 
             {/* Price Summary */}
             <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span className="text-gray-900">{formatCurrency(order.totalAmount)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span className="text-gray-900">{formatCurrency(order.totalAmount || 0)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-500">Shipping</span><span className="text-gray-900">{order.shippingCharge ? formatCurrency(order.shippingCharge) : 'Free'}</span></div>
-              {order.discount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount</span><span className="text-green-600">-{formatCurrency(order.discount)}</span></div>}
-              <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-100"><span>Total</span><span>{formatCurrency(order.finalAmount)}</span></div>
+              {(order.discount || 0) > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount</span><span className="text-green-600">-{formatCurrency(order.discount)}</span></div>}
+              <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-100"><span>Total</span><span>{formatCurrency(order.finalAmount || order.totalAmount || 0)}</span></div>
             </div>
           </Card>
 
@@ -99,8 +126,8 @@ const OrderDetail = () => {
           <div className="seller-print-area hidden">
             <h2 className="text-xl font-bold mb-4">Invoice — #{order.id}</h2>
             <p>Date: {formatDate(order.placedAt, 'long')}</p>
-            <p>Customer: {order.customer.name}</p>
-            <p>Total: {formatCurrency(order.finalAmount)}</p>
+            <p>Customer: {order.customer?.name}</p>
+            <p>Total: {formatCurrency(order.finalAmount || order.totalAmount || 0)}</p>
           </div>
         </div>
 
@@ -124,11 +151,11 @@ const OrderDetail = () => {
                   <User size={18} className="text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">{order.customer.name}</p>
-                  <p className="text-xs text-gray-400">{order.customer.email}</p>
+                  <p className="text-sm font-semibold text-gray-900">{order.customer?.name || '—'}</p>
+                  <p className="text-xs text-gray-400">{order.customer?.email || ''}</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500">📞 {order.customer.phone}</p>
+              {order.customer?.phone && <p className="text-xs text-gray-500">📞 {order.customer.phone}</p>}
             </div>
           </Card>
 
@@ -137,7 +164,7 @@ const OrderDetail = () => {
             <div className="mt-3 flex items-start gap-3">
               <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-gray-600 leading-relaxed">
-                {order.address.line1}, {order.address.city}, {order.address.state} — {order.address.pincode}
+                {order.address?.line1}, {order.address?.city}, {order.address?.state} — {order.address?.pincode}
               </div>
             </div>
           </Card>
@@ -147,13 +174,13 @@ const OrderDetail = () => {
             <div className="mt-3 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Method</span>
-                <span className="font-medium text-gray-900">{order.payment.method}</span>
+                <span className="font-medium text-gray-900">{order.payment?.method || '—'}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Status</span>
-                <StatusBadge status={order.payment.status} size="sm" />
+                <StatusBadge status={order.payment?.status || 'pending'} size="sm" />
               </div>
-              {order.payment.transactionId && (
+              {order.payment?.transactionId && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Txn ID</span>
                   <span className="font-mono text-xs text-gray-600">{order.payment.transactionId}</span>

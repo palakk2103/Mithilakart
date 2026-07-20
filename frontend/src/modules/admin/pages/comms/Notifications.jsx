@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { notificationsApi } from '../../services/api';
+import { extractList, mapNotification } from '../../utils/mappers';
 import { 
   Bell, Send, Search, Filter, 
   MoreVertical, CheckCircle2, Clock, 
@@ -7,15 +9,29 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_HISTORY = [
-  { id: 1, title: 'Flash Sale Live!', body: 'Up to 70% off on electronics. Shop now!', target: 'All Users', sent: '2026-05-10 12:00 PM', read: '82%', status: 'Delivered' },
-  { id: 2, title: 'Order Update', body: 'Your order #OD87459 has been shipped.', target: 'Specific User', sent: '2026-05-09 10:30 AM', read: '100%', status: 'Delivered' },
-  { id: 3, title: 'Weekend Special', body: 'New fashion arrivals are here. Check them out!', target: 'VIP Users', sent: '2026-05-08 09:00 AM', read: '45%', status: 'Delivered' },
-];
-
 const Notifications = () => {
-  const [history, setHistory] = useState(MOCK_HISTORY);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isComposeOpen, setIsComposeOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await notificationsApi.getTemplates();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setHistory([]);
+      } else {
+        setError(null);
+        setHistory(extractList(data).map(mapNotification));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-700">

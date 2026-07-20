@@ -1,22 +1,34 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MessageSquare, Star, Search, Filter, MoreVertical, 
   CheckCircle2, XCircle, AlertCircle, Trash2, 
   User, ShoppingBag, Calendar, ThumbsUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const MOCK_REVIEWS = [
-  { id: 1, user: 'Rahul Sharma', product: 'Premium Leather Satchel', rating: 5, comment: 'Amazing quality! The leather feels very premium and the stitching is perfect.', date: '2026-05-10', status: 'Pending' },
-  { id: 2, user: 'Priyanka Das', product: 'Biotique Face Wash', rating: 4, comment: 'Good product, but the delivery was a bit slow.', date: '2026-05-09', status: 'Approved' },
-  { id: 3, user: 'Amit Verma', product: 'Wireless Earbuds Pro', rating: 1, comment: 'Worst experience. The left earbud stopped working after 2 days.', date: '2026-05-08', status: 'Flagged' },
-  { id: 4, user: 'Sneha Kapur', product: 'Summer Floral Dress', rating: 5, comment: 'Perfect fit and beautiful design. Highly recommended!', date: '2026-05-08', status: 'Pending' },
-];
+import { productsApi } from '../../services/api';
+import { extractList, mapProductReviewPlaceholder } from '../../utils/mappers';
 
 const ReviewModeration = () => {
-  const [reviews, setReviews] = useState(MOCK_REVIEWS);
+  const [reviews, setReviews] = useState([]);
   const [activeTab, setActiveTab] = useState('Pending');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await productsApi.getAll({ limit: 20 });
+      if (cancelled) return;
+      if (!error) {
+        setReviews(extractList(data).map(mapProductReviewPlaceholder));
+      } else {
+        setReviews([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const tabs = ['Pending', 'Approved', 'Flagged', 'All'];
 
@@ -68,7 +80,11 @@ const ReviewModeration = () => {
         </div>
 
         <div className="divide-y divide-slate-50">
-          {reviews.filter(r => activeTab === 'All' || r.status === activeTab).map((review) => (
+          {loading ? (
+            <div className="p-8 text-center text-slate-400 text-sm font-bold">Loading reviews...</div>
+          ) : reviews.filter(r => activeTab === 'All' || r.status === activeTab).length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm font-bold">No reviews to moderate yet</div>
+          ) : reviews.filter(r => activeTab === 'All' || r.status === activeTab).map((review) => (
             <motion.div 
               key={review.id}
               initial={{ opacity: 0 }}

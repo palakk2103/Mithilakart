@@ -1,40 +1,98 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Camera, User, Mail, Phone, MapPin, Calendar, Users, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import useAccountStore from '../../../../store/useAccountStore';
+import { getProfile, updateProfile as updateProfileApi } from '../../services/userApi';
+import { getUser, setUser } from '../../../../shared/api/tokenStorage';
 import toast from 'react-hot-toast';
+
+const mapProfileToForm = (profile) => ({
+  name: profile?.name || '',
+  email: profile?.email || '',
+  phone: profile?.phone || '',
+  gender: profile?.gender
+    ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1).toLowerCase()
+    : 'Male',
+  dob: profile?.dob ? String(profile.dob).split('T')[0] : '',
+  avatar: profile?.avatar || profile?.avatarUrl || profile?.profileImage || null,
+});
 
 const EditProfile = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const { userProfile, updateProfile } = useAccountStore();
-  
-  const [formData, setFormData] = useState({ ...userProfile });
+
+  const [formData, setFormData] = useState(() => {
+    const stored = getUser('customer');
+    return stored ? mapProfileToForm(stored) : {
+      name: '',
+      email: '',
+      phone: '',
+      gender: 'Male',
+      dob: '',
+      avatar: null,
+    };
+  });
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = await getProfile();
+        if (cancelled) return;
+        const mapped = mapProfileToForm(profile);
+        setFormData(mapped);
+      } catch (err) {
+        if (!cancelled) {
+          const stored = getUser('customer');
+          if (stored) setFormData(mapProfileToForm(stored));
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const validate = () => {
     let newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Name is required';
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!emailRegex.test(formData.email)) newErrors.email = 'Invalid email format';
-    
+
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
     else if (formData.phone.length < 10) newErrors.phone = 'Invalid phone number';
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
-    if (validate()) {
-      updateProfile(formData);
+  const handleSave = async () => {
+    if (!validate()) {
+      toast.error('Please fix the errors');
+      return;
+    }
+
+    try {
+      const updated = await updateProfileApi({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        gender: formData.gender.toLowerCase(),
+        dob: formData.dob || null,
+      });
+
+      const stored = getUser('customer') || {};
+      setUser('customer', {
+        ...stored,
+        ...updated,
+        phone: formData.phone,
+        avatar: formData.avatar || updated.avatarUrl || stored.avatar,
+      });
+
       toast.success('Profile Updated Successfully');
       setTimeout(() => navigate(-1), 1500);
-    } else {
-      toast.error('Please fix the errors');
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update profile');
     }
   };
 
@@ -45,7 +103,7 @@ const EditProfile = () => {
         toast.error('Image size should be less than 2MB');
         return;
       }
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, avatar: reader.result }));

@@ -18,7 +18,10 @@ import MatrixShampoo from '../../../assets/products/product05.jpg';
 import JewelleryImg  from '../../../assets/products/product12.jpg';
 import BeautyTab     from '../../../assets/products/product08.jpg';
 
-import { allCategoryProducts } from '../../../data/categoryData';
+import { getCategories, getCategoryProducts } from '../services/catalogApi';
+import { getFlowHome } from '../services/storefrontApi';
+import { extractList, findCategoryByName, mapProductForCard } from '../utils/mappers';
+import { fetchCartCount, addProductToCart, dispatchCartUpdated } from '../utils/cartUtils';
 
 // Banner Assets
 import ImageBanner1 from '../../../assets/TopBanner/ImageBanner1.jpg';
@@ -137,16 +140,53 @@ const BeautyLanding = () => {
   const navigate  = useNavigate();
   const [active, setActive]     = useState('Beauty');
   const [cartCount, setCartCount] = useState(0);
+  const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    const update = () => {
-      const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-      setCartCount(cart.reduce((a, i) => a + (i.quantity || i.qty || 1), 0));
-    };
+    const update = async () => setCartCount(await fetchCartCount());
     update();
     window.addEventListener('cartUpdated', update);
     return () => window.removeEventListener('cartUpdated', update);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProducts = async () => {
+      try {
+        const homeData = await getFlowHome('beauty');
+        const sectionProducts = (homeData?.sections || []).flatMap((section) => section.products || []);
+        if (sectionProducts.length && !cancelled) {
+          setProducts(sectionProducts.map((item) => mapProductForCard(item)));
+          return;
+        }
+      } catch {
+        // fall through to category lookup
+      }
+
+      try {
+        const categories = await getCategories();
+        const category = findCategoryByName(categories, active) || findCategoryByName(categories, 'Beauty');
+        const categoryId = category?.id || category?._id;
+        if (categoryId) {
+          const data = await getCategoryProducts(categoryId, { limit: 24 });
+          if (!cancelled) {
+            setProducts(extractList(data).map((item) => mapProductForCard(item)));
+          }
+          return;
+        }
+      } catch {
+        // ignore
+      }
+
+      if (!cancelled) setProducts([]);
+    };
+
+    loadProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, [active]);
 
   const handleProductClick = useCallback((product) => {
     navigate('/product-detail', {
@@ -154,16 +194,15 @@ const BeautyLanding = () => {
     });
   }, [navigate]);
 
-  const addToCart = useCallback((product) => {
-    const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-    const ex = cart.find(i => i.id === product.id);
-    if (ex) ex.quantity = (ex.quantity || 1) + 1;
-    else cart.push({ ...product, quantity: 1 });
-    localStorage.setItem('userCart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('cartUpdated'));
+  const addToCart = useCallback(async (product) => {
+    try {
+      await addProductToCart(product, 1, 'beauty');
+      dispatchCartUpdated();
+    } catch {
+      // cart API may require auth for some flows
+    }
   }, []);
 
-  const products  = allCategoryProducts[active] || [];
   const banners   = BANNERS[active]   || BANNERS['Beauty'];
   const deals     = DEALS[active]     || [];
   const trending  = TRENDING[active]  || [];

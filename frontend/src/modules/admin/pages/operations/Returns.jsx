@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { returnsApi } from '../../services/api';
+import { extractList, mapReturn } from '../../utils/mappers';
 import { 
   RotateCcw, Search, Filter, MoreVertical, 
   CheckCircle2, XCircle, Clock, Truck, 
@@ -7,15 +9,38 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_RETURNS = [
-  { id: 'RET1024', orderId: 'OD87459', user: 'Rahul Sharma', item: 'Leather Satchel', amount: '₹4,500', reason: 'Damaged Product', status: 'Requested', date: '2026-05-10' },
-  { id: 'RET1025', orderId: 'OD87460', user: 'Priyanka Das', item: 'Face Wash', amount: '₹1,250', reason: 'Wrong Item Sent', status: 'Approved', date: '2026-05-09' },
-  { id: 'RET1026', orderId: 'OD87461', user: 'Amit Verma', item: 'Wireless Earbuds', amount: '₹8,900', reason: 'Defective Unit', status: 'Pick-up Scheduled', date: '2026-05-08' },
-];
-
 const Returns = () => {
-  const [returns, setReturns] = useState(MOCK_RETURNS);
+  const [returns, setReturns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('All');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await returnsApi.getAll();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setReturns([]);
+      } else {
+        setError(null);
+        setReturns(extractList(data).map(mapReturn));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleApprove = async (returnId) => {
+    const { error: apiError } = await returnsApi.approve(returnId);
+    if (!apiError) {
+      setReturns((prev) =>
+        prev.map((r) => (r.id === returnId ? { ...r, status: 'Approved' } : r))
+      );
+    }
+  };
 
   const tabs = ['All', 'Requested', 'Approved', 'Pick-up', 'Received', 'Refunded'];
 
@@ -120,7 +145,10 @@ const Returns = () => {
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex justify-end gap-2">
-                       <button className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">
+                       <button
+                         onClick={() => handleApprove(item.id)}
+                         className="px-4 py-2 bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                       >
                           Manage
                        </button>
                        <button className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-100 transition-all">

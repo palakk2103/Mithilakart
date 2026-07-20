@@ -23,15 +23,16 @@ import ImageBanner4 from '../../../assets/TopBanner/ImageBanner4.jpg';
 
 import BannerCarousel from '../components/vendor/BannerCarousel';
 
+import { fetchCartCount } from '../utils/cartUtils';
+
 const ToysLanding = () => {
   const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState('Toys, baby..');
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    const updateCart = () => {
-      const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-      setCartCount(cart.reduce((acc, item) => acc + (item.qty || 1), 0));
+    const updateCart = async () => {
+      setCartCount(await fetchCartCount());
     };
     updateCart();
     window.addEventListener('cartUpdated', updateCart);

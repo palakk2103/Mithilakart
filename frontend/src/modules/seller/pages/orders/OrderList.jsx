@@ -2,14 +2,13 @@
  * Order List Page
  * Tabbed order management with search, filters, and status actions.
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Eye } from 'lucide-react';
 import { PageHeader, StatusBadge, SearchFilter, DataTable } from '../../components/common';
-import { orders } from '../../utils/dummyData';
+import { getOrders } from '../../services/sellerApi';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import useDebounce from '../../hooks/useDebounce';
-import toast from 'react-hot-toast';
 
 const tabs = [
   { key: 'all', label: 'All Orders' },
@@ -25,43 +24,59 @@ const OrderList = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const debouncedSearch = useDebounce(searchQuery);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getOrders();
+      setOrders(data?.orders || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   const filteredOrders = useMemo(() => {
     let result = [...orders];
     if (activeTab !== 'all') result = result.filter((o) => o.status === activeTab);
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
-      result = result.filter((o) => o.id.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q));
+      result = result.filter((o) => o.id?.toLowerCase().includes(q) || o.customer?.name?.toLowerCase().includes(q));
     }
     return result;
-  }, [activeTab, debouncedSearch]);
+  }, [orders, activeTab, debouncedSearch]);
 
   const getTabCount = (tab) => tab === 'all' ? orders.length : orders.filter((o) => o.status === tab).length;
-
-  const handleStatusUpdate = (orderId, newStatus) => {
-    toast.success(`Order #${orderId} status updated to ${newStatus}`);
-  };
 
   const columns = [
     { key: 'id', label: 'Order ID', render: (val) => <span className="text-sm font-semibold text-blue-600">#{val}</span> },
     { key: 'customer', label: 'Customer', render: (val) => (
       <div>
-        <p className="text-sm font-medium text-gray-900">{val.name}</p>
-        <p className="text-xs text-gray-400">{val.phone}</p>
+        <p className="text-sm font-medium text-gray-900">{val?.name || '—'}</p>
+        <p className="text-xs text-gray-400">{val?.phone || ''}</p>
       </div>
     )},
     { key: 'products', label: 'Items', render: (val) => (
       <div>
-        <p className="text-sm text-gray-700">{val[0]?.title?.substring(0, 30)}...</p>
-        {val.length > 1 && <p className="text-xs text-gray-400">+{val.length - 1} more</p>}
+        <p className="text-sm text-gray-700">{val?.[0]?.title?.substring(0, 30)}...</p>
+        {val?.length > 1 && <p className="text-xs text-gray-400">+{val.length - 1} more</p>}
       </div>
     )},
-    { key: 'finalAmount', label: 'Total', render: (val) => <span className="text-sm font-semibold text-gray-900">{formatCurrency(val)}</span> },
+    { key: 'finalAmount', label: 'Total', render: (val, row) => <span className="text-sm font-semibold text-gray-900">{formatCurrency(val || row.totalAmount || 0)}</span> },
     { key: 'payment', label: 'Payment', render: (val) => (
       <div>
-        <p className="text-xs font-medium text-gray-600">{val.method}</p>
-        <StatusBadge status={val.status} size="sm" />
+        <p className="text-xs font-medium text-gray-600">{val?.method || '—'}</p>
+        <StatusBadge status={val?.status || 'pending'} size="sm" />
       </div>
     )},
     { key: 'status', label: 'Status', align: 'center', render: (val) => <StatusBadge status={val} /> },

@@ -1,18 +1,12 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, MapPin, Phone, CheckCircle2, Navigation, 
-  ShieldCheck, AlertCircle, ArrowRight, Camera, PenTool, Trash2
+  ShieldCheck, ArrowRight, Camera, Trash2, Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-
-const MOCK_ORDER = {
-  id: 'OD87463', customer: 'Rahul Sharma', phone: '+91 98765 43210',
-  address: 'Flat 4B, Emerald Apartments, Sector 15, Noida, UP - 201301',
-  lat: 28.5355, lng: 77.3910,
-  pickupAddress: 'FreshMart, Shop 12, Sector 15 Market, Noida',
-  pickupLat: 28.5400, pickupLng: 77.3890,
-  items: 3, earning: 48, otp: '7843', status: 'in_transit',
-};
+import { getOrderById, getOrders, markPickup, markDelivered } from '../services/deliveryApi';
 
 const STATUS_STEPS = [
   { key: 'accepted', label: 'Accepted', desc: 'Head to vendor' },
@@ -20,6 +14,41 @@ const STATUS_STEPS = [
   { key: 'in_transit', label: 'Transit', desc: 'On the way' },
   { key: 'delivered', label: 'Done', desc: 'Delivered' },
 ];
+
+const formatAddress = (addr) => {
+  if (!addr) return '';
+  if (typeof addr === 'string') return addr;
+  return [addr.line1, addr.line2, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+};
+
+const mapAssignmentStatus = (status) => {
+  if (status === 'picked_up') return 'in_transit';
+  if (status === 'delivered') return 'delivered';
+  if (status === 'assigned') return 'accepted';
+  return 'accepted';
+};
+
+const mapApiOrder = (data = {}) => {
+  const order = data.order || data.orderId || data;
+  const assignment = data.assignment || data;
+  const shipping = order.addressSnapshot || order.shippingAddress || data.shippingAddress || {};
+  const pickup = order.pickupAddress || data.pickupAddress || {};
+
+  return {
+    id: order._id || assignment.orderId || data._id,
+    customer: shipping.name || order.customerName || data.customerName || 'Customer',
+    phone: shipping.phone || order.customerPhone || data.phone || '',
+    address: formatAddress(shipping) || data.address || '—',
+    lat: shipping.lat || data.lat,
+    lng: shipping.lng || data.lng,
+    pickupAddress: typeof pickup === 'string' ? pickup : formatAddress(pickup) || data.pickupAddress || 'Vendor location',
+    pickupLat: pickup.lat || data.pickupLat,
+    pickupLng: pickup.lng || data.pickupLng,
+    items: order.itemCount || data.items || 1,
+    earning: assignment.earningAmount ?? data.earningAmount ?? data.earning ?? 0,
+    status: mapAssignmentStatus(assignment.status || data.status),
+  };
+};
 
 const SignaturePad = ({ onSave }) => {
   const canvasRef = React.useRef(null);
@@ -147,32 +176,75 @@ const CameraSimulation = ({ onCapture, onClose }) => {
 
 const DeliveryOrderDetail = () => {
   const navigate = useNavigate();
+  const { orderId } = useParams();
+  const [order, setOrder] = useState(null);
   const [currentStatus, setCurrentStatus] = useState('accepted');
   const [otpInput, setOtpInput] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [delivered, setDelivered] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   
-  // Proof states
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const [signature, setSignature] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
 
+  useEffect(() => {
+    const loadOrder = async () => {
+      try {
+        let data = null;
+        try {
+          data = await getOrderById(orderId);
+        } catch {
+          const list = await getOrders();
+          const all = [...(list?.available || []), ...(list?.assigned || [])];
+          const match = all.find((a) => String(a.orderId?._id || a.orderId || a._id) === String(orderId));
+          data = match || null;
+        }
+        if (!data) throw new Error('Order not found');
+        const mapped = mapApiOrder(data);
+        setOrder(mapped);
+        setCurrentStatus(mapped.status === 'delivered' ? 'delivered' : mapped.status);
+        setDelivered(mapped.status === 'delivered');
+      } catch (err) {
+        toast.error(err?.message || 'Failed to load order');
+      }
+    };
+    if (orderId) loadOrder();
+  }, [orderId]);
+
   const statusIndex = STATUS_STEPS.findIndex(s => s.key === currentStatus);
 
-  const handleNextStep = () => {
-    if (statusIndex === 0) setCurrentStatus('at_pickup');
-    else if (statusIndex === 1) setCurrentStatus('in_transit');
+  const handleNextStep = async () => {
+    if (statusIndex === 0) {
+      setCurrentStatus('at_pickup');
+      return;
+    }
+    if (statusIndex === 1) {
+      setActionLoading(true);
+      try {
+        await markPickup(order.id);
+        setCurrentStatus('in_transit');
+      } catch (err) {
+        toast.error(err?.message || 'Failed to confirm pickup');
+      } finally {
+        setActionLoading(false);
+      }
+    }
   };
 
-  const handleVerifyOTP = () => {
-    if (otpInput === MOCK_ORDER.otp) {
+  const handleVerifyOTP = async () => {
+    setActionLoading(true);
+    try {
+      await markDelivered(order.id, otpInput);
       setOtpVerified(true);
       setTimeout(() => {
         handleMarkDelivered();
       }, 1500);
-    } else {
-      toast.error('Incorrect OTP. Please check with customer.');
+    } catch (err) {
+      toast.error(err?.message || 'Incorrect OTP. Please check with customer.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -188,6 +260,14 @@ const DeliveryOrderDetail = () => {
     return 'Completed';
   };
 
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Loading order...</p>
+      </div>
+    );
+  }
+
   if (delivered) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6 text-center">
@@ -198,7 +278,7 @@ const DeliveryOrderDetail = () => {
         </motion.div>
 
         <h2 className="text-2xl font-black text-slate-900 mb-2">Delivery Successful!</h2>
-        <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Order #{MOCK_ORDER.id}</p>
+        <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Order #{order.id}</p>
         
         <div className="mt-8 grid grid-cols-2 gap-3 w-full">
            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
@@ -213,7 +293,7 @@ const DeliveryOrderDetail = () => {
 
         <div className="mt-4 p-5 bg-slate-900 rounded-2xl w-full">
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Earnings</p>
-           <p className="text-3xl font-black text-white">₹{MOCK_ORDER.earning}.00</p>
+           <p className="text-3xl font-black text-white">₹{order.earning}.00</p>
         </div>
 
         <button onClick={() => navigate('/delivery/orders')}
@@ -235,11 +315,10 @@ const DeliveryOrderDetail = () => {
         )}
       </AnimatePresence>
 
-      {/* Header */}
       <div className="sticky top-0 bg-white/80 backdrop-blur-md z-40 px-4 py-4 border-b border-slate-100 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="p-2.5 bg-slate-100 rounded-xl text-slate-700"><ArrowLeft size={20} /></button>
         <div className="flex-1">
-          <h1 className="text-sm font-black text-slate-900">Order #{MOCK_ORDER.id}</h1>
+          <h1 className="text-sm font-black text-slate-900">Order #{order.id}</h1>
           <div className="flex items-center gap-1.5 mt-0.5">
              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
              <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{currentStatus.replace('_', ' ')}</p>
@@ -248,7 +327,6 @@ const DeliveryOrderDetail = () => {
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Status Timeline */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-5 border-b border-slate-50 flex items-center justify-between">
              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trip Status</h3>
@@ -266,28 +344,27 @@ const DeliveryOrderDetail = () => {
           </div>
         </div>
 
-        {/* Store Card */}
         <div className={`bg-white rounded-3xl border p-5 ${statusIndex < 2 ? 'border-blue-100 ring-4 ring-blue-50/50' : 'opacity-60'}`}>
           <div className="flex items-start justify-between mb-4">
             <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Store</p><p className="text-base font-black text-slate-900">FreshMart Vendor</p></div>
-            <button onClick={() => window.open(`https://www.google.com/maps/dir/`)} className="w-10 h-10 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Navigation size={18} /></button>
+            <button onClick={() => window.open(order.lat && order.lng ? `https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`)} className="w-10 h-10 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Navigation size={18} /></button>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100"><MapPin size={14} className="text-blue-600" /><span className="truncate">{MOCK_ORDER.pickupAddress}</span></div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100"><MapPin size={14} className="text-blue-600" /><span className="truncate">{order.pickupAddress}</span></div>
         </div>
 
-        {/* Customer Card */}
         <div className={`bg-white rounded-3xl border p-5 ${statusIndex >= 2 ? 'border-green-100 ring-4 ring-green-50/50' : 'opacity-60'}`}>
           <div className="flex items-start justify-between mb-4">
-            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p><p className="text-base font-black text-slate-900">{MOCK_ORDER.customer}</p></div>
+            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p><p className="text-base font-black text-slate-900">{order.customer}</p></div>
             <div className="flex gap-2">
-              <a href={`tel:${MOCK_ORDER.phone}`} className="w-10 h-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center"><Phone size={18} /></a>
-              <button onClick={() => window.open(`https://www.google.com/maps/dir/`)} className="w-10 h-10 bg-green-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Navigation size={18} /></button>
+              {order.phone && (
+                <a href={`tel:${order.phone}`} className="w-10 h-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center"><Phone size={18} /></a>
+              )}
+              <button onClick={() => window.open(order.pickupLat && order.pickupLng ? `https://www.google.com/maps/dir/?api=1&destination=${order.pickupLat},${order.pickupLng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.pickupAddress)}`)} className="w-10 h-10 bg-green-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Navigation size={18} /></button>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100"><MapPin size={14} className="text-green-600" /><span className="truncate">{MOCK_ORDER.address}</span></div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100"><MapPin size={14} className="text-green-600" /><span className="truncate">{order.address}</span></div>
         </div>
 
-        {/* Proof of Delivery Section */}
         {statusIndex >= 2 && (
           <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-100 overflow-hidden">
             <div className="p-5 border-b border-slate-50 flex items-center gap-3">
@@ -296,7 +373,6 @@ const DeliveryOrderDetail = () => {
             </div>
             
             <div className="p-5 space-y-4">
-               {/* Photo Proof */}
                <div className="space-y-2">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Package Photo</p>
                   {capturedPhoto ? (
@@ -312,7 +388,6 @@ const DeliveryOrderDetail = () => {
                   )}
                </div>
 
-               {/* Signature Proof */}
                <div className="space-y-2">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Signature</p>
                   <SignaturePad onSave={setSignature} />
@@ -321,7 +396,6 @@ const DeliveryOrderDetail = () => {
           </div>
         )}
 
-        {/* OTP Section */}
         <div id="otp-section" className={`bg-white rounded-3xl border p-6 transition-all ${statusIndex >= 2 && capturedPhoto && signature ? 'border-amber-200 shadow-xl shadow-amber-50' : 'opacity-30 pointer-events-none'}`}>
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center"><ShieldCheck size={20} className="text-amber-600" /></div>
@@ -341,7 +415,7 @@ const DeliveryOrderDetail = () => {
               }} className="w-full aspect-square bg-slate-50 border-2 border-slate-100 rounded-2xl text-center text-xl font-black text-slate-900 focus:border-amber-400 outline-none" />
             ))}
           </div>
-          <button onClick={handleVerifyOTP} disabled={otpInput.length < 4 || otpVerified} className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest ${otpVerified ? 'bg-green-600 text-white' : 'bg-amber-500 text-white shadow-lg shadow-amber-100 active:scale-95 transition-all'}`}>{otpVerified ? 'IDENTITY VERIFIED ✓' : 'VERIFY & COMPLETE'}</button>
+          <button onClick={handleVerifyOTP} disabled={otpInput.length < 4 || otpVerified || actionLoading} className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest ${otpVerified ? 'bg-green-600 text-white' : 'bg-amber-500 text-white shadow-lg shadow-amber-100 active:scale-95 transition-all'}`}>{otpVerified ? 'IDENTITY VERIFIED ✓' : 'VERIFY & COMPLETE'}</button>
         </div>
 
         <button onClick={() => setShowIssueModal(true)} className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest border-2 border-dashed border-slate-200 rounded-3xl">Report Issue</button>
@@ -349,13 +423,12 @@ const DeliveryOrderDetail = () => {
 
       {!delivered && (
         <div className="fixed bottom-6 left-6 right-6 z-50">
-           <motion.button whileTap={{ scale: 0.95 }} onClick={handleNextStep} className={`w-full py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 ${statusIndex >= 2 ? 'bg-slate-100 text-slate-400 pointer-events-none' : 'bg-blue-600 text-white shadow-blue-200'}`}>
+           <motion.button whileTap={{ scale: 0.95 }} onClick={handleNextStep} disabled={actionLoading || statusIndex >= 2} className={`w-full py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 ${statusIndex >= 2 ? 'bg-slate-100 text-slate-400 pointer-events-none' : 'bg-blue-600 text-white shadow-blue-200'}`}>
               {getPrimaryButtonLabel()} <ArrowRight size={18} />
            </motion.button>
         </div>
       )}
 
-      {/* Issue Modal */}
       <AnimatePresence>
         {showIssueModal && (
           <div className="fixed inset-0 z-[100] flex items-end">

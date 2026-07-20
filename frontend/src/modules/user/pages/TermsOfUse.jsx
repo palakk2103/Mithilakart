@@ -3,18 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Footer from '../../../shared/components/Footer';
+import useLegalPage from '../hooks/useLegalPage';
 
 const TermsOfUse = () => {
   const navigate = useNavigate();
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
+  const { page, loading, error } = useLegalPage('terms');
 
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className={`sticky top-0 z-50 ${primaryBg} px-4 py-4 flex items-center gap-3 shadow-md`}>
+      <div className="sticky top-0 z-50 bg-[#3E5A44] px-4 py-4 flex items-center gap-3 shadow-md">
         <button 
           onClick={() => navigate(-1)}
           className="text-white active:scale-90 transition-transform"
@@ -26,6 +24,17 @@ const TermsOfUse = () => {
 
       {/* Content */}
       <div className="px-6 py-6 space-y-6">
+        {loading && <p className="text-sm text-gray-500">Loading...</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {page?.content ? (
+          <>
+            <div className="text-[11px] text-gray-400">
+              Last Updated: {page.updatedAt ? new Date(page.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+            </div>
+            <div className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap">{page.content}</div>
+          </>
+        ) : (
+          <>
         {/* Last Updated */}
         <div className="text-[11px] text-gray-400">
           Last Updated: May 8, 2026
@@ -173,6 +182,8 @@ const TermsOfUse = () => {
             <p>Address: Mithilakart Pvt Ltd, Mumbai, India</p>
           </div>
         </section>
+          </>
+        )}
         <Footer />
       </div>
     </div>

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { reportsApi } from '../../services/api';
+import { mapSalesReportData } from '../../utils/mappers';
 import { 
   DollarSign, TrendingUp, ShoppingBag, Calendar,
   Download, Filter, ArrowUpRight, ArrowDownRight
@@ -8,15 +10,36 @@ import {
   ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { SALES_REPORT_DATA } from '../../constants/dummyData';
 
 const SalesReport = () => {
   const [period, setPeriod] = useState('6months');
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const days = period === '30days' ? 30 : period === '1year' ? 365 : 180;
+      const { data, error: apiError } = await reportsApi.getSalesReport({ days });
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setReportData([]);
+      } else {
+        setError(null);
+        setReportData(mapSalesReportData(data));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [period]);
 
   const summaryStats = [
-    { label: 'Total Revenue', value: '₹35,00,000', change: '+18.5%', isPositive: true, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'Total Orders', value: '9,820', change: '+12.3%', isPositive: true, icon: ShoppingBag, color: 'text-green-500', bg: 'bg-green-50' },
-    { label: 'Avg Order Value', value: '₹3,565', change: '-2.1%', isPositive: false, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { label: 'Total Revenue', value: reportData.length ? `₹${reportData.reduce((s, r) => s + (r.revenue || 0), 0).toLocaleString()}` : '₹0', change: '+18.5%', isPositive: true, icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Total Orders', value: reportData.length ? reportData.reduce((s, r) => s + (r.orders || 0), 0).toLocaleString() : '0', change: '+12.3%', isPositive: true, icon: ShoppingBag, color: 'text-green-500', bg: 'bg-green-50' },
+    { label: 'Avg Order Value', value: reportData.length ? `₹${Math.round(reportData.reduce((s, r) => s + (r.avgOrderValue || 0), 0) / reportData.length).toLocaleString()}` : '₹0', change: '-2.1%', isPositive: false, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50' },
     { label: 'Growth Rate', value: '24.5%', change: '+5.4%', isPositive: true, icon: ArrowUpRight, color: 'text-indigo-500', bg: 'bg-indigo-50' },
   ];
 
@@ -82,7 +105,7 @@ const SalesReport = () => {
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={SALES_REPORT_DATA}>
+              <AreaChart data={reportData.length ? reportData : [{ month: '—', revenue: 0 }]}>
                 <defs>
                   <linearGradient id="salesRevGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
@@ -105,7 +128,7 @@ const SalesReport = () => {
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={SALES_REPORT_DATA}>
+              <BarChart data={reportData.length ? reportData : [{ month: '—', orders: 0 }]}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dx={-10} />
@@ -133,7 +156,7 @@ const SalesReport = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {SALES_REPORT_DATA.map((row, i) => (
+              {reportData.map((row, i) => (
                 <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-5 font-bold text-slate-900 font-montserrat">{row.month}</td>
                   <td className="px-6 py-5 font-black text-slate-900 font-roboto">₹{row.revenue.toLocaleString()}</td>

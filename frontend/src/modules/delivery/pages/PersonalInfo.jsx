@@ -7,12 +7,16 @@ import useDeliveryStore from '../../../store/useDeliveryStore';
 
 const PersonalInfo = () => {
   const navigate = useNavigate();
-  const { profile, updateProfile } = useDeliveryStore();
+  const { profile, updateProfile, fetchProfile } = useDeliveryStore();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(profile);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // Sync state with store if store changes (e.g. after signup)
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
   useEffect(() => {
     setFormData(profile);
   }, [profile]);
@@ -21,10 +25,17 @@ const PersonalInfo = () => {
     setFormData({ ...formData, [key]: e.target.value });
   };
 
-  const handleSave = () => {
-    updateProfile(formData);
-    toast.success('Profile updated successfully!');
-    setIsEditing(false);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateProfile(formData);
+      toast.success('Profile updated successfully!');
+      setIsEditing(false);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const SectionHeader = ({ title }) => (
@@ -35,7 +46,6 @@ const PersonalInfo = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-24 font-sans">
-      {/* Header */}
       <div className="sticky top-0 z-40 bg-white border-b border-slate-100 px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-slate-600">
@@ -53,7 +63,6 @@ const PersonalInfo = () => {
       </div>
 
       <div className="p-4 space-y-2">
-        {/* Avatar Section */}
         <div className="flex flex-col items-center py-4">
           <div className="relative">
             <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center border-4 border-white shadow-md">
@@ -68,9 +77,7 @@ const PersonalInfo = () => {
           <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-3">Partner ID: #7742</p>
         </div>
 
-        {/* Form Sections */}
         <div className="space-y-6">
-          {/* 1. PERSONAL */}
           <div>
             <SectionHeader title="Personal Details" />
             <div className="space-y-3">
@@ -106,7 +113,6 @@ const PersonalInfo = () => {
             </div>
           </div>
 
-          {/* 2. IDENTITY */}
           <div>
             <SectionHeader title="Identity Details" />
             <div className="space-y-3">
@@ -132,7 +138,6 @@ const PersonalInfo = () => {
             </div>
           </div>
 
-          {/* 3. VEHICLE */}
           <div>
             <SectionHeader title="Vehicle Info" />
             <div className="space-y-3">
@@ -161,7 +166,6 @@ const PersonalInfo = () => {
             </div>
           </div>
 
-          {/* 4. BANK */}
           <div>
             <SectionHeader title="Bank Details" />
             <div className="space-y-3">
@@ -190,7 +194,6 @@ const PersonalInfo = () => {
             </div>
           </div>
 
-          {/* 5. DOCUMENTS */}
           <div>
             <SectionHeader title="Uploaded Documents" />
             <div className="grid grid-cols-2 gap-3">
@@ -227,12 +230,12 @@ const PersonalInfo = () => {
           </div>
         </div>
 
-        {/* Save Button */}
         {isEditing && (
           <motion.button 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={handleSave}
+            disabled={saving}
             className="w-full bg-[#3E5A44] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2 mt-8"
           >
             <Save size={18} />
@@ -241,7 +244,6 @@ const PersonalInfo = () => {
         )}
       </div>
 
-      {/* Image View Modal */}
       {selectedImage && (
         <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-4 animate-in fade-in duration-300">
           <div className="absolute top-6 right-6 flex gap-4">
@@ -258,4 +260,3 @@ const PersonalInfo = () => {
 };
 
 export default PersonalInfo;
-

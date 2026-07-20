@@ -1,0 +1,104 @@
+const { BaseService } = require('../../core/BaseService');
+const { AppError } = require('../../utils/AppError');
+const { assertSellerResource } = require('../../helpers/sellerScope');
+const { PRODUCT_STATUS } = require('../../constants/catalog');
+const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
+const { buildListFilters } = require('../../utils/filter');
+const { buildSortQuery } = require('../../utils/sort');
+const { eventBus } = require('../../events/EventBus');
+
+class SellerProductService extends BaseService {
+  constructor({ productRepository, productVariantRepository, categoryRepository, cacheService }) {
+    super();
+    this.productRepository = productRepository;
+    this.productVariantRepository = productVariantRepository;
+    this.categoryRepository = categoryRepository;
+    this.cacheService = cacheService;
+  }
+
+  async list(sellerId, query = {}) {
+    const pagination = parsePagination(query);
+    const filters = buildListFilters(query, { exactFields: ['status', 'categoryId'] });
+    const sort = buildSortQuery(query, { allowedFields: ['createdAt', 'price', 'title'], defaultSort: { createdAt: -1 } });
+
+    const [items, total] = await Promise.all([
+      this.productRepository.findBySeller(sellerId, filters, {
+        sort,
+        skip: pagination.skip,
+        limit: pagination.limit,
+      }),
+      this.productRepository.countBySeller(sellerId, filters),
+    ]);
+
+    return { items, meta: buildPaginationMeta(pagination.page, pagination.limit, total) };
+  }
+
+  async getById(sellerId, productId) {
+    const product = await this.productRepository.findOne({ _id: productId, sellerId, deletedAt: null });
+    if (!product) throw AppError.notFound('Product not found');
+    const variants = await this.productVariantRepository.findByProductId(productId);
+    return { ...product.toObject(), variants };
+  }
+
+  async create(sellerId, data) {
+    const category = await this.categoryRepository.findById(data.categoryId);
+    if (!category || category.deletedAt) throw AppError.notFound('Category not found');
+
+    const product = await this.productRepository.create({
+      ...data,
+      sellerId,
+      status: PRODUCT_STATUS.PENDING,
+    });
+
+    eventBus.publish('product.created', { productId: product._id, sellerId });
+    return product;
+  }
+
+  async update(sellerId, productId, data) {
+    const product = await this.productRepository.findOne({ _id: productId, sellerId, deletedAt: null });
+    if (!product) throw AppError.notFound('Product not found');
+
+    if (data.categoryId) {
+      const category = await this.categoryRepository.findById(data.categoryId);
+      if (!category || category.deletedAt) throw AppError.notFound('Category not found');
+    }
+
+    return this.productRepository.updateById(productId, { ...data, status: PRODUCT_STATUS.PENDING });
+  }
+
+  async delete(sellerId, productId) {
+    const product = await this.productRepository.findOne({ _id: productId, sellerId, deletedAt: null });
+    if (!product) throw AppError.notFound('Product not found');
+    return this.productRepository.updateById(productId, { deletedAt: new Date() });
+  }
+
+  async duplicate(sellerId, productId) {
+    const product = await this.getById(sellerId, productId);
+    const copy = await this.productRepository.create({
+      sellerId,
+      title: `${product.title} (Copy)`,
+      description: product.description,
+      sku: `${product.sku}-COPY-${Date.now()}`,
+      price: product.price,
+      mrp: product.mrp,
+      stock: product.stock,
+      categoryId: product.categoryId,
+      status: PRODUCT_STATUS.PENDING,
+      images: product.images,
+      tags: product.tags,
+      commerceFlows: product.commerceFlows,
+      brand: product.brand,
+      attributes: product.attributes,
+    });
+    return copy;
+  }
+
+  async updateStatus(sellerId, productId, status) {
+    const product = await this.productRepository.findOne({ _id: productId, sellerId, deletedAt: null });
+    if (!product) throw AppError.notFound('Product not found');
+    assertSellerResource(product.sellerId, sellerId);
+    return this.productRepository.updateStatus(productId, status);
+  }
+}
+
+module.exports = { SellerProductService };

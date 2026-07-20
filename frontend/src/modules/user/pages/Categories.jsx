@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CategoryCard from '../components/vendor/CategoryCard';
+import { getCategories } from '../services/catalogApi';
+import { mapCategorySections } from '../utils/mappers';
 
 // Import Assets (aligned with categories)
 import SamsungS24 from '../../../assets/products/product01.jpg';
@@ -165,11 +167,47 @@ const MITHILA_CATEGORIES = [
 
 const Categories = () => {
   const navigate = useNavigate();
+  const [apiSections, setApiSections] = useState(null);
+  const [loading, setLoading] = useState(true);
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
-  const sectionsList = isMithilakFlow ? MITHILA_CATEGORIES : (isQuickShopFlow ? QUICK_SHOP_CATEGORIES : SECTIONS);
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const commerceFlow = isMithilakFlow
+          ? 'mithilak'
+          : isFreshGroceryFlow
+            ? 'fresh_grocery'
+            : isQuickShopFlow
+              ? 'quick_shop'
+              : 'standard';
+        const data = await getCategories({ commerceFlow });
+        if (!cancelled) {
+          setApiSections(mapCategorySections(data, SECTIONS));
+        }
+      } catch {
+        if (!cancelled) setApiSections(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [isMithilakFlow, isQuickShopFlow, isFreshGroceryFlow]);
+
+  const sectionsList = isMithilakFlow
+    ? MITHILA_CATEGORIES
+    : isQuickShopFlow
+      ? QUICK_SHOP_CATEGORIES
+      : apiSections || SECTIONS;
   const pageBg = isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
   const headerBg = isMithilakFlow ? 'bg-[#6FAE4A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow) ? 'text-white' : 'text-[#3C2415]';

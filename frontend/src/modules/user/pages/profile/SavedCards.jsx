@@ -1,14 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, CreditCard, ShieldCheck, Trash2, X, Lock, Calendar, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import useAccountStore from '../../../../store/useAccountStore';
+import { getSavedCards, createCard, deleteCard } from '../../services/userApi';
+import { extractList } from '../../utils/mappers';
 import toast from 'react-hot-toast';
+
+const cardColorForType = (type) => (
+  type === 'MASTERCARD' ? 'from-gray-800 to-gray-900' : 'from-blue-600 to-indigo-700'
+);
+
+const mapCardFromApi = (card) => ({
+  id: card.id || card._id,
+  number: card.number || `•••• •••• •••• ${card.last4 || '0000'}`,
+  expiry: card.expiry || (card.expiryMonth && card.expiryYear
+    ? `${card.expiryMonth}/${String(card.expiryYear).slice(-2)}`
+    : ''),
+  holder: card.holder || card.holderName || '',
+  type: card.type || 'VISA',
+  color: card.color || cardColorForType(card.type || 'VISA'),
+});
+
+const toCardPayload = (formData) => {
+  const digits = formData.number.replace(/\s/g, '');
+  const [month, year] = formData.expiry.split('/');
+  return {
+    type: formData.type,
+    last4: digits.slice(-4),
+    expiryMonth: month,
+    expiryYear: year?.length === 2 ? `20${year}` : year,
+    holderName: formData.holder.trim(),
+  };
+};
 
 const SavedCards = () => {
   const navigate = useNavigate();
-  const { savedCards, addCard, removeCard } = useAccountStore();
-  
+  const [savedCards, setSavedCards] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     number: '',
@@ -18,6 +45,19 @@ const SavedCards = () => {
     type: 'VISA',
     color: 'from-blue-600 to-indigo-700'
   });
+
+  const loadCards = async () => {
+    try {
+      const data = await getSavedCards();
+      setSavedCards(extractList(data).map(mapCardFromApi));
+    } catch (err) {
+      toast.error(err?.message || 'Failed to load cards');
+    }
+  };
+
+  useEffect(() => {
+    loadCards();
+  }, []);
 
   const formatCardNumber = (value) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
@@ -34,8 +74,7 @@ const SavedCards = () => {
   const handleCardNumberChange = (e) => {
     const formatted = formatCardNumber(e.target.value);
     setFormData({ ...formData, number: formatted.substring(0, 19) });
-    
-    // Simple type detection
+
     if (formatted.startsWith('4')) setFormData(prev => ({ ...prev, type: 'VISA', color: 'from-blue-600 to-indigo-700' }));
     else if (formatted.startsWith('5')) setFormData(prev => ({ ...prev, type: 'MASTERCARD', color: 'from-gray-800 to-gray-900' }));
   };
@@ -44,23 +83,31 @@ const SavedCards = () => {
     return value.replace(/[^0-9]/g, '').replace(/^([2-9])/, '0$1').replace(/^(0[1-9]|1[0-2])([0-9])/, '$1/$2').substring(0, 5);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (formData.number.length < 19 || formData.expiry.length < 5 || !formData.holder || formData.cvv.length < 3) {
       toast.error('Invalid card details');
       return;
     }
-    
-    // Mask number for storage
-    const maskedNumber = `•••• •••• •••• ${formData.number.slice(-4)}`;
-    addCard({ ...formData, number: maskedNumber });
-    toast.success('Card added successfully');
-    setIsModalOpen(false);
-    setFormData({ number: '', expiry: '', holder: '', cvv: '', type: 'VISA', color: 'from-blue-600 to-indigo-700' });
+
+    try {
+      await createCard(toCardPayload(formData));
+      toast.success('Card added successfully');
+      setIsModalOpen(false);
+      setFormData({ number: '', expiry: '', holder: '', cvv: '', type: 'VISA', color: 'from-blue-600 to-indigo-700' });
+      await loadCards();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to save card');
+    }
   };
 
-  const handleDelete = (id) => {
-    removeCard(id);
-    toast.success('Card removed');
+  const handleDelete = async (id) => {
+    try {
+      await deleteCard(id);
+      toast.success('Card removed');
+      await loadCards();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to remove card');
+    }
   };
 
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';

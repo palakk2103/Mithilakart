@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { financeApi } from '../../services/api';
+import { extractList, mapDeliveryZone } from '../../utils/mappers';
 import { 
   Truck, Search, Plus, MapPin, 
   Trash2, Edit2, DollarSign, CheckCircle2,
@@ -6,14 +8,28 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const MOCK_ZONES = [
-  { id: 1, name: 'Metro Cities', area: 'Delhi, Mumbai, Bangalore...', baseFee: '₹49', freeAbove: '₹999', status: 'Active' },
-  { id: 2, name: 'Tier 2 Cities', area: 'Jaipur, Lucknow, Pune...', baseFee: '₹79', freeAbove: '₹1,499', status: 'Active' },
-  { id: 3, name: 'Rest of India', area: 'All other locations', baseFee: '₹120', freeAbove: '₹2,499', status: 'Active' },
-];
-
 const DeliveryCharges = () => {
-  const [zones, setZones] = useState(MOCK_ZONES);
+  const [zones, setZones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await financeApi.getDeliveryCharges();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setZones([]);
+      } else {
+        setError(null);
+        setZones(extractList(data).map(mapDeliveryZone));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-700">

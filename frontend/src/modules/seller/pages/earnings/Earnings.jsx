@@ -2,42 +2,90 @@
  * Earnings Page
  * Wallets, Payouts, Transaction history, Settlements.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wallet, Landmark, RefreshCw, DollarSign, Download, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { PageHeader, StatCard, DataTable, StatusBadge } from '../../components/common';
 import { Card, Button } from '../../components/ui';
-import { earningsData, transactions, settlements } from '../../utils/dummyData';
+import { getEarnings, getTransactions, getSettlements, requestPayout } from '../../services/sellerApi';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const Earnings = () => {
   const [requesting, setRequesting] = useState(false);
+  const [earningsData, setEarningsData] = useState({
+    availableBalance: 0,
+    totalWithdrawn: 0,
+    bankDetails: { bankName: '', accountNumber: '', ifsc: '', holderName: '' },
+  });
+  const [transactions, setTransactions] = useState([]);
+  const [settlements, setSettlements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handlePayoutRequest = () => {
+  const fetchEarnings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [earnings, txRes, settlementsRes] = await Promise.all([
+        getEarnings(),
+        getTransactions(),
+        getSettlements(),
+      ]);
+
+      const bank = earnings?.bankDetails || {};
+      setEarningsData({
+        availableBalance: earnings?.availableBalance ?? earnings?.walletBalance ?? 0,
+        totalWithdrawn: earnings?.totalWithdrawn ?? earnings?.totalPayouts ?? 0,
+        bankDetails: {
+          bankName: bank.bankName || '',
+          accountNumber: bank.accountNumber || '',
+          ifsc: bank.ifsc || '',
+          holderName: bank.holderName || bank.accountHolder || '',
+        },
+      });
+      setTransactions(txRes?.transactions || []);
+      setSettlements(settlementsRes?.settlements || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load earnings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEarnings();
+  }, []);
+
+  const handlePayoutRequest = async () => {
     setRequesting(true);
-    setTimeout(() => {
-      setRequesting(false);
+    try {
+      await requestPayout(earningsData.availableBalance);
       toast.success('Payout request submitted successfully!');
-    }, 1000);
+      fetchEarnings();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to request payout');
+    } finally {
+      setRequesting(false);
+    }
   };
 
   const columns = [
     { key: 'id', label: 'Transaction ID', render: (val) => <span className="font-mono text-xs">{val}</span> },
     { key: 'type', label: 'Type', render: (val) => (
       <span className={`inline-flex items-center gap-1 text-xs font-semibold ${
-        val === 'payout' ? 'text-red-600' : 'text-green-600'
+        val === 'payout' || val === 'debit' ? 'text-red-600' : 'text-green-600'
       }`}>
-        {val === 'payout' ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-        {val === 'payout' ? 'Withdrawal' : 'Sale'}
+        {val === 'payout' || val === 'debit' ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+        {val === 'payout' || val === 'debit' ? 'Withdrawal' : 'Sale'}
       </span>
     )},
     { key: 'amount', label: 'Amount', render: (val, row) => (
-      <span className={`text-sm font-semibold ${row.type === 'payout' ? 'text-red-600' : 'text-green-600'}`}>
-        {row.type === 'payout' ? '-' : '+'}{formatCurrency(val)}
+      <span className={`text-sm font-semibold ${row.type === 'payout' || row.type === 'debit' ? 'text-red-600' : 'text-green-600'}`}>
+        {row.type === 'payout' || row.type === 'debit' ? '-' : '+'}{formatCurrency(val || 0)}
       </span>
     )},
     { key: 'status', label: 'Status', render: (val) => <StatusBadge status={val} size="sm" /> },
-    { key: 'createdAt', label: 'Date & Time', render: (val) => <span className="text-xs text-gray-500">{formatDate(val, 'short')}</span> }
+    { key: 'createdAt', label: 'Date & Time', render: (val, row) => <span className="text-xs text-gray-500">{formatDate(val || row.date, 'short')}</span> }
   ];
 
   return (
@@ -100,13 +148,13 @@ const Earnings = () => {
               <div className="flex items-center gap-3">
                 <Landmark size={20} className="text-gray-400" />
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">{earningsData.bankDetails.bankName}</p>
-                  <p className="text-xs text-gray-400">Account: *******{earningsData.bankDetails.accountNumber.slice(-4)}</p>
+                  <p className="text-sm font-semibold text-gray-900">{earningsData.bankDetails.bankName || '—'}</p>
+                  <p className="text-xs text-gray-400">Account: *******{(earningsData.bankDetails.accountNumber || '').slice(-4)}</p>
                 </div>
               </div>
               <div className="border-t border-gray-100 pt-3 text-xs text-gray-500 space-y-1">
-                <div className="flex justify-between"><span>IFSC Code:</span><span className="font-semibold text-gray-700">{earningsData.bankDetails.ifsc}</span></div>
-                <div className="flex justify-between"><span>Beneficiary:</span><span className="font-semibold text-gray-700">{earningsData.bankDetails.holderName}</span></div>
+                <div className="flex justify-between"><span>IFSC Code:</span><span className="font-semibold text-gray-700">{earningsData.bankDetails.ifsc || '—'}</span></div>
+                <div className="flex justify-between"><span>Beneficiary:</span><span className="font-semibold text-gray-700">{earningsData.bankDetails.holderName || '—'}</span></div>
               </div>
             </div>
           </Card>
@@ -117,10 +165,10 @@ const Earnings = () => {
                 <div key={s.id} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
                   <div>
                     <p className="text-xs font-semibold text-gray-900">{s.id}</p>
-                    <p className="text-[10px] text-gray-400">{formatDate(s.date)}</p>
+                    <p className="text-[10px] text-gray-400">{formatDate(s.date || s.paidAt || s.period)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900">{formatCurrency(s.amount)}</p>
+                    <p className="text-sm font-bold text-gray-900">{formatCurrency(s.amount || s.netAmount || 0)}</p>
                     <StatusBadge status={s.status} size="sm" />
                   </div>
                 </div>

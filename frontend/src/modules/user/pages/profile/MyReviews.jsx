@@ -1,29 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Star, MessageSquare, ThumbsUp, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { getMyReviews } from '../../services/userApi';
+import { extractList, mapReview } from '../../utils/mappers';
 
 const MyReviews = () => {
   const navigate = useNavigate();
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const reviews = [
-    {
-      id: 1,
-      product: 'Premium Gold Finish Watch',
-      rating: 5,
-      comment: 'Absolutely stunning watch! The gold finish is very premium and it looks much better in person.',
-      date: '15 Apr 2026',
-      likes: 12
-    },
-    {
-      id: 2,
-      product: 'Silver Geometric Earring',
-      rating: 4,
-      comment: 'Very beautiful design, though a bit smaller than expected.',
-      date: '10 Apr 2026',
-      likes: 5
-    }
-  ];
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getMyReviews();
+        if (!cancelled) {
+          setReviews(extractList(data).map(mapReview));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load reviews');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -59,6 +69,8 @@ const MyReviews = () => {
       </div>
 
       <div className="container mx-auto px-4 py-8 w-full space-y-6 relative z-10">
+        {loading && <p className="text-sm text-gray-500">Loading reviews...</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="bg-white border border-[#EADCC9]/65 rounded-2xl p-6 flex items-center justify-between shadow-xs">
            <div className="text-center flex-1 border-r border-[var(--card-border)]">
               <h3 className="text-3xl font-black text-[var(--color-gold)]">4.5</h3>

@@ -1,7 +1,8 @@
 import SearchInput from '../../../shared/components/SearchInput';
-import React, { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { sellersApi } from '../services/api';
+import { extractList, mapVendor } from '../utils/mappers';
 import { 
   Search, Filter, MoreVertical, ExternalLink, 
   UserCheck, UserX, Ban, MessageSquare, Download
@@ -10,9 +11,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const VendorList = () => {
   const navigate = useNavigate();
-  const { allVendors } = useSelector(state => state.admin);
+  const [allVendors, setAllVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await sellersApi.getAll();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setAllVendors([]);
+      } else {
+        setError(null);
+        setAllVendors(extractList(data).map(mapVendor));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const filteredVendors = allVendors.filter(v => 
     (filterStatus === 'All' || v.status === filterStatus) &&

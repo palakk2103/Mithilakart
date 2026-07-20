@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Filter, Edit3, Trash2, 
   Eye, Package, MoreVertical, ExternalLink, 
@@ -7,13 +6,29 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchInput from '../../../shared/components/SearchInput';
+import { productsApi } from '../../admin/services/api';
+import { extractList, mapProduct } from '../../admin/utils/mappers';
 
 const InventoryList = () => {
-  const { allProducts } = useSelector(state => state.products);
-  const { currentVendor } = useSelector(state => state.vendor);
-  
-  const myProducts = allProducts; // Admin sees all products
+  const [myProducts, setMyProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await productsApi.getAll({ limit: 100 });
+      if (cancelled) return;
+      if (!error) {
+        setMyProducts(extractList(data).map(mapProduct));
+      } else {
+        setMyProducts([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const filteredProducts = myProducts.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -65,7 +80,7 @@ const InventoryList = () => {
         {[
           { label: 'Live Products', value: myProducts.filter(p => p.status === 'Approved').length, icon: Layers, color: 'text-green-500', bg: 'bg-green-50' },
           { label: 'Low Stock Alert', value: myProducts.filter(p => p.stock < 10 && p.stock > 0).length, icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50' },
-          { label: 'Platform Sales', value: myProducts.reduce((acc, p) => acc + (p.sales || 0), 0), icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' }
+          { label: 'Platform Sales', value: myProducts.length, icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' }
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5">
              <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color} shadow-inner`}>
@@ -95,7 +110,15 @@ const InventoryList = () => {
             </thead>
             <tbody className="divide-y divide-slate-50">
               <AnimatePresence>
-                {filteredProducts.map((product, index) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-12 text-center text-slate-400 text-sm font-bold">Loading inventory...</td>
+                  </tr>
+                ) : filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-12 text-center text-slate-400 text-sm font-bold">No products found</td>
+                  </tr>
+                ) : filteredProducts.map((product, index) => (
                   <motion.tr 
                     key={product.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -123,7 +146,7 @@ const InventoryList = () => {
                       <StatusBadge status={product.status} />
                     </td>
                     <td className="px-8 py-7">
-                      <p className="font-black text-slate-900 text-base font-roboto">₹{product.price.toLocaleString()}</p>
+                      <p className="font-black text-slate-900 text-base font-roboto">₹{Number(product.price || 0).toLocaleString()}</p>
                     </td>
                     <td className="px-8 py-7">
                       <div className="flex flex-col gap-1.5">

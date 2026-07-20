@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { sellersApi } from '../../services/api';
+import { extractList, mapSellerDetail } from '../../utils/mappers';
 import { 
   Store, Mail, Phone, MapPin, 
   ShoppingBag, Star, DollarSign, Clock,
@@ -7,14 +9,65 @@ import {
   Calendar, FileText, Check, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_SELLER_DETAIL } from '../../constants/dummyData';
 import { StatusBadge } from '../../components/ui';
+
+const defaultSeller = {
+  id: '',
+  storeName: 'Store',
+  owner: '—',
+  email: '—',
+  phone: '—',
+  address: '—',
+  status: 'Pending',
+  kycStatus: 'Pending',
+  pan: '—',
+  gst: '—',
+  bankAccount: '—',
+  totalSales: '₹0',
+  totalOrders: 0,
+  totalProducts: 0,
+  avgRating: 0,
+  documents: [],
+  topProducts: [],
+  recentOrders: [],
+};
 
 const SellerDetail = () => {
   const { vendorId } = useParams();
   const navigate = useNavigate();
-  const [seller, setSeller] = useState(MOCK_SELLER_DETAIL);
-  const [activeTab, setActiveTab] = useState('Storefront'); // 'Storefront' | 'Products' | 'Orders' | 'Documents'
+  const [seller, setSeller] = useState(defaultSeller);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('Storefront');
+
+  useEffect(() => {
+    if (!vendorId) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [sellerRes, earningsRes, productsRes, ordersRes] = await Promise.all([
+        sellersApi.getById(vendorId),
+        sellersApi.getEarnings(vendorId),
+        sellersApi.getProducts(vendorId),
+        sellersApi.getOrders(vendorId),
+      ]);
+      if (cancelled) return;
+      if (sellerRes.error) {
+        setError(sellerRes.error);
+      } else {
+        setError(null);
+        setSeller(mapSellerDetail(sellerRes.data, {
+          earnings: earningsRes.data?.total ?? 0,
+          products: extractList(productsRes.data),
+          orders: extractList(ordersRes.data),
+          productCount: extractList(productsRes.data).length,
+          orderCount: extractList(ordersRes.data).length,
+        }));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [vendorId]);
 
   const tabs = ['Storefront', 'Products', 'Orders', 'Documents'];
 

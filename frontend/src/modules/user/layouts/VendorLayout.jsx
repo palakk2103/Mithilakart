@@ -17,6 +17,8 @@ import CategoryNavbar from '../components/common/CategoryNavbar';
 import LanguageSelector from '../components/common/LanguageSelector';
 import useAccountStore from '../../../store/useAccountStore';
 import useVendorStore from '../../../store/useVendorStore';
+import { getCart } from '../services/cartApi';
+import { fetchCartCount } from '../utils/cartUtils';
 import { useTranslation } from 'react-i18next';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import Footer from '../../../shared/components/Footer';
@@ -87,12 +89,16 @@ const VendorLayout = () => {
 
   /* ── Cart listener ── */
   useEffect(() => {
-    const updateCart = () => {
+    const updateCart = async () => {
       try {
-        const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-        setCartItems(cart);
-        const total = cart.reduce((acc, item) => acc + (item.qty || 1), 0);
-        setCartCount(total);
+        const count = await fetchCartCount();
+        setCartCount(count);
+        const cart = await getCart();
+        setCartItems((cart?.items || []).map((item) => ({
+          ...item,
+          cartId: item.itemKey || item.id,
+          qty: item.quantity,
+        })));
       } catch {
         setCartItems([]);
         setCartCount(0);
