@@ -49,7 +49,28 @@ const PRODUCT_IMAGES = {
   gifting: GiftingImg,
 };
 
+const getInitialFlow = () => {
+  if (typeof window === 'undefined') return 'mithilakart';
+  const path = window.location.pathname;
+  if (path.includes('/mithilak')) return 'mithilak';
+  if (path.includes('/fresh-grocery')) return 'freshgrocery';
+  if (path.includes('/quick-shop')) {
+    return localStorage.getItem('isMithilakFlow') === 'true' ? 'mithilak' : 'quickshop';
+  }
+  if (localStorage.getItem('isMithilakFlow') === 'true') return 'mithilak';
+  if (localStorage.getItem('isFreshGroceryFlow') === 'true') return 'freshgrocery';
+  if (localStorage.getItem('isQuickShopFlow') === 'true') return 'quickshop';
+  return 'mithilakart';
+};
+
 const useVendorStore = create((set) => ({
+  activeFlow: getInitialFlow(),
+  setActiveFlow: (flow) => {
+    localStorage.setItem('isMithilakFlow', flow === 'mithilak' ? 'true' : 'false');
+    localStorage.setItem('isQuickShopFlow', flow === 'quickshop' ? 'true' : 'false');
+    localStorage.setItem('isFreshGroceryFlow', flow === 'freshgrocery' ? 'true' : 'false');
+    set({ activeFlow: flow });
+  },
   selectedCategory: 'You Buy',
   setSelectedCategory: (category) => set({ selectedCategory: category }),
   

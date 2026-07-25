@@ -27,11 +27,11 @@ const SearchBar = ({ selectedAddress }) => {
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
 
-  const { selectedCategory } = useVendorStore();
+  const { selectedCategory, activeFlow } = useVendorStore();
 
-  const isMithilakActive = location.pathname.includes('/mithilak');
-  const isFreshGroceryActive = location.pathname.includes('/fresh-grocery');
-  const isQuickShopActive = location.pathname.includes('/quick-shop') && !isMithilakActive;
+  const isMithilakActive = activeFlow === 'mithilak';
+  const isFreshGroceryActive = activeFlow === 'freshgrocery';
+  const isQuickShopActive = activeFlow === 'quickshop';
 
   const isDarkHeader = isMithilakActive || isQuickShopActive;
   const isMithilakartFlow = !isMithilakActive && !isFreshGroceryActive && !isQuickShopActive;

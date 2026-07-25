@@ -4,31 +4,23 @@ import { motion } from 'framer-motion';
 import { Plane, Zap, Timer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import useVendorStore from '../../../../store/useVendorStore';
+
 const HeaderTabs = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isQuickShopActive = location.pathname.includes('/quick-shop') && !isMithilakFlow;
-  const isMithilakActive = location.pathname.includes('/mithilak') || (location.pathname.includes('/quick-shop') && isMithilakFlow);
-  const isFreshGroceryActive = location.pathname.includes('/fresh-grocery');
-  const isMithilakartActive = !isQuickShopActive && !isMithilakActive && !isFreshGroceryActive;
+  const { activeFlow, setActiveFlow } = useVendorStore();
+  const isQuickShopActive = activeFlow === 'quickshop';
+  const isMithilakActive = activeFlow === 'mithilak';
+  const isFreshGroceryActive = activeFlow === 'freshgrocery';
+  const isMithilakartActive = activeFlow === 'mithilakart';
 
   const isHeaderLight = isMithilakartActive || isFreshGroceryActive;
 
-  const handleTabClick = (path, isQuick) => {
-    localStorage.setItem('isQuickShopFlow', isQuick ? 'true' : 'false');
-    if (path === '/mithilak') {
-      localStorage.setItem('isMithilakFlow', 'true');
-    } else {
-      localStorage.setItem('isMithilakFlow', 'false');
-    }
-    if (path === '/fresh-grocery') {
-      localStorage.setItem('isFreshGroceryFlow', 'true');
-    } else {
-      localStorage.setItem('isFreshGroceryFlow', 'false');
-    }
+  const handleTabClick = (path, flow) => {
+    setActiveFlow(flow);
     navigate(path);
   };
 
@@ -37,7 +29,7 @@ const HeaderTabs = () => {
       {/* ── Tab 1: Mithilakart ── */}
       <motion.div
         whileTap={{ scale: 0.95 }}
-        onClick={() => handleTabClick('/home', false)}
+        onClick={() => handleTabClick('/home', 'mithilakart')}
         className={`flex flex-col items-center justify-center py-1 md:py-1 rounded-lg border h-[48px] md:h-[46px] gap-0.5 md:gap-1 cursor-pointer transition-all duration-300 ${
           isMithilakartActive
             ? 'bg-white text-[#6FAE4A] border-white shadow-md scale-102 z-10'
@@ -79,7 +71,7 @@ const HeaderTabs = () => {
       {/* ── Tab 2: Quick Shop ── */}
       <motion.div
         whileTap={{ scale: 0.95 }}
-        onClick={() => handleTabClick('/quick-shop', true)}
+        onClick={() => handleTabClick('/quick-shop', 'quickshop')}
         className={`flex flex-col items-center justify-center py-1 md:py-1 rounded-lg border h-[48px] md:h-[46px] gap-0.5 md:gap-1 cursor-pointer transition-all duration-300 ${
           isQuickShopActive
             ? 'bg-white text-[#F26522] border-white shadow-md scale-102 z-10'
@@ -127,7 +119,7 @@ const HeaderTabs = () => {
       {/* ── Tab 3: Mithilak ── */}
       <motion.div
         whileTap={{ scale: 0.95 }}
-        onClick={() => handleTabClick('/mithilak', false)}
+        onClick={() => handleTabClick('/mithilak', 'mithilak')}
         className={`flex flex-col items-center justify-center py-1 md:py-1 rounded-lg border h-[48px] md:h-[46px] gap-0.5 md:gap-1 cursor-pointer transition-all duration-300 ${
           isMithilakActive
             ? 'bg-white text-[#207C8A] border-white shadow-md scale-102 z-10'
@@ -174,7 +166,7 @@ const HeaderTabs = () => {
       {/* ── Tab 4: Fresh/Grocery ── */}
       <motion.div
         whileTap={{ scale: 0.95 }}
-        onClick={() => handleTabClick('/fresh-grocery', true)}
+        onClick={() => handleTabClick('/fresh-grocery', 'freshgrocery')}
         className={`flex flex-col items-center justify-center py-1 md:py-1 rounded-lg border h-[48px] md:h-[46px] cursor-pointer transition-all duration-300 ${
           isFreshGroceryActive
             ? 'bg-white text-[#7A3E17] border-white shadow-md scale-102 z-10'
