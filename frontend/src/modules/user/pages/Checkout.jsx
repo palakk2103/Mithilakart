@@ -113,9 +113,10 @@ const Checkout = () => {
       setTimeout(() => {
         addOrder(newOrder);
         setPlacedOrder(newOrder);
-        setOrderStatus('success');
+        setOrderStatus('idle');
         localStorage.removeItem('userCart');
         window.dispatchEvent(new Event('cartUpdated'));
+        navigate('/order-confirmation', { state: { placedOrder: newOrder, checkoutItems } });
       }, 2000);
     }
   };
@@ -425,79 +426,16 @@ const Checkout = () => {
     </div>
   );
 
-  if (orderStatus !== 'idle') {
-    const deliveryDate = new Date();
-    deliveryDate.setDate(deliveryDate.getDate() + 2);
-    const estDeliveryStr = deliveryDate.toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    });
-
+  if (orderStatus === 'processing') {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center w-full fixed inset-0 z-[1000] px-4 py-6 overflow-y-auto transition-colors duration-300 ${
         isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/45 via-[#FFFDF3]/95 to-white/95 backdrop-blur-xs' : 'bg-[#f0f3f6]'
       }`}>
-        {orderStatus === 'processing' ? (
-          <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-xl max-w-sm w-full text-center flex flex-col items-center">
-            <Loader2 size={48} className={`${primaryText} animate-spin mb-6`} />
-            <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Processing Your Order</p>
-            <p className="text-sm text-slate-500 mt-2 font-medium">Please do not close this window</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-[32px] p-6 border border-slate-100/50 shadow-xl max-w-md w-full text-center animate-in zoom-in duration-500 space-y-6">
-            <div>
-              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-green-100 mx-auto">
-                <CheckCircle size={32} className="text-white" strokeWidth={2.5} />
-              </div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Order Placed Successfully!</h2>
-              {placedOrder && (
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                  Order ID: {placedOrder.id}
-                </p>
-              )}
-            </div>
-
-            {/* Product & Order Details Card */}
-            <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-100 text-left space-y-4">
-              <div className="flex gap-4 items-center">
-                <div className="w-16 h-16 bg-white border border-slate-100 rounded-xl p-1.5 flex-shrink-0 flex items-center justify-center">
-                  <img src={firstItem.image || firstItem.img} className="w-full h-full object-contain mix-blend-multiply" alt="product" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[13.5px] font-black text-slate-800 line-clamp-2 leading-snug">{firstItem.name}</h4>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-[14px] font-black text-slate-900">{formatPrice(firstItem.price)}</span>
-                    <span className="text-[11px] text-slate-400 font-bold">Qty: {firstItem.qty || 1}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-dashed border-slate-200 pt-3 flex items-center gap-2">
-                <Truck size={16} className={primaryText} />
-                <p className="text-[12.5px] text-slate-705 font-medium">
-                  Estimated Delivery: <span className={`font-black ${primaryText}`}>{estDeliveryStr}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3 pt-2">
-              <button 
-                onClick={() => navigate(`/profile/orders/${placedOrder?.id || ''}`)}
-                className={`w-full ${primaryBgHover} text-white py-4 rounded-full font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
-              >
-                Track Order
-              </button>
-              <button 
-                onClick={() => navigate(shopNowLink)}
-                className="w-full bg-white border-2 border-slate-200 text-slate-750 hover:bg-slate-50 py-4 rounded-full font-black uppercase text-[12px] tracking-widest active:scale-95 transition-transform"
-              >
-                Continue Shopping
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-xl max-w-sm w-full text-center flex flex-col items-center">
+          <Loader2 size={48} className={`${primaryText} animate-spin mb-6`} />
+          <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Processing Your Order</p>
+          <p className="text-sm text-slate-500 mt-2 font-medium">Please do not close this window</p>
+        </div>
       </div>
     );
   }

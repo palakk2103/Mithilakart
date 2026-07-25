@@ -16,6 +16,7 @@ import CategoryProducts from '../pages/CategoryProducts';
 import ToysLanding from '../pages/ToysLanding';
 import BeautyLanding from '../pages/BeautyLanding';
 import Checkout from '../pages/Checkout';
+import OrderConfirmation from '../pages/OrderConfirmation';
 import AllOffers from '../pages/AllOffers';
 import DealsPage from '../pages/DealsPage';
 import Search from '../pages/Search';
@@ -56,6 +57,7 @@ const MarketRoutes = () => {
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/order-confirmation" element={<OrderConfirmation />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/cancellation-returns" element={<CancellationReturns />} />
