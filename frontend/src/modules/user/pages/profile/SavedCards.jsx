@@ -96,7 +96,7 @@ const SavedCards = () => {
           </button>
           <h1 className={`text-lg font-black uppercase tracking-widest ${headerTextColor}`}>Saved Cards</h1>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className={`text-current ${isMithilakFlow ? 'text-[#207C8A]' : 'text-[#6FAE4A]'}`}>
+        <button onClick={() => setIsModalOpen(true)} className={`text-current ${isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]'}`}>
           <Plus size={24} />
         </button>
       </div>

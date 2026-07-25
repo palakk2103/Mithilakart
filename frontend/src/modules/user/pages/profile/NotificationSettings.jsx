@@ -25,6 +25,10 @@ const NotificationSettings = () => {
   const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
 
+  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
+  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
+  const primaryLightBg = isMithilakFlow ? 'bg-[#207C8A]/10 text-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]/10 text-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]/10 text-[#F26522]' : 'bg-emerald-50 text-[#6FAE4A]');
+
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }}
@@ -52,7 +56,7 @@ const NotificationSettings = () => {
 
       <div className="container mx-auto px-4 py-8 w-full space-y-8 relative z-10">
         <div className="bg-white border border-slate-100 shadow-sm rounded-3xl p-5 flex items-center gap-4 mb-8">
-           <div className="p-3 bg-emerald-50 rounded-2xl text-[#6FAE4A]">
+           <div className={`p-3 ${primaryLightBg} rounded-2xl`}>
               <Bell size={24} className="animate-bounce" />
            </div>
            <div>
@@ -62,7 +66,7 @@ const NotificationSettings = () => {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-[10px] font-black text-[#6FAE4A] uppercase tracking-[3px] ml-1">Push Notifications</h2>
+          <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>Push Notifications</h2>
           
           <div className="bg-white border border-slate-100 shadow-sm rounded-3xl overflow-hidden divide-y divide-slate-100">
              {[
@@ -80,7 +84,7 @@ const NotificationSettings = () => {
                   </div>
                   <button 
                     onClick={() => toggleSetting(item.id)}
-                    className={`w-12 h-6.5 rounded-full transition-all relative ${settings[item.id] ? 'bg-[#6FAE4A]' : 'bg-slate-200'}`}
+                    className={`w-12 h-6.5 rounded-full transition-all relative ${settings[item.id] ? primaryBg : 'bg-slate-200'}`}
                   >
                     <div className={`absolute top-1 w-4.5 h-4.5 bg-white rounded-full transition-all shadow-sm ${settings[item.id] ? 'right-1' : 'left-1'}`}></div>
                   </button>
@@ -90,7 +94,7 @@ const NotificationSettings = () => {
         </div>
 
         <div className="space-y-4">
-           <h2 className="text-[10px] font-black text-[#6FAE4A] uppercase tracking-[3px] ml-1">Email Preferences</h2>
+           <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>Email Preferences</h2>
            <div className="bg-white border border-slate-100 shadow-sm rounded-3xl p-5 flex items-center justify-between">
               <div className="flex items-center gap-4">
                  <div className="p-2.5 rounded-xl text-green-600 bg-green-50">
@@ -100,7 +104,7 @@ const NotificationSettings = () => {
               </div>
               <button 
                 onClick={() => toggleSetting('newsletter')}
-                className={`w-12 h-6.5 rounded-full transition-all relative ${settings.newsletter ? 'bg-[#6FAE4A]' : 'bg-slate-200'}`}
+                className={`w-12 h-6.5 rounded-full transition-all relative ${settings.newsletter ? primaryBg : 'bg-slate-200'}`}
               >
                 <div className={`absolute top-1 w-4.5 h-4.5 bg-white rounded-full transition-all shadow-sm ${settings.newsletter ? 'right-1' : 'left-1'}`}></div>
               </button>

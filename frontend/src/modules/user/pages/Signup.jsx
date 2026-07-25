@@ -175,7 +175,7 @@ const Signup = () => {
   const backgroundPattern = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><path d="M10 20c2-3 5-5 8-5s6 2 8 5-2 8-5 8-6-2-8-5zm30 20c2-3 5-5 8-5s6 2 8 5-2 8-5 8-6-2-8-5zM25 45c1-2 3-3 5-3s4 1 5 3-1 4-3 4-4-1-5-3zM45 15c1-2 3-3 5-3s4 1 5 3-1 4-3 4-4-1-5-3z" fill="%23ffffff" fill-opacity="0.12" fill-rule="evenodd"/></svg>`;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-2 py-2 md:p-6 bg-[#f7f4eb] relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-between p-2.5 py-3 md:p-6 bg-[#f7f4eb] relative overflow-hidden">
       {/* Background Image with lower opacity */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-25 pointer-events-none"
@@ -183,19 +183,19 @@ const Signup = () => {
       />
 
       {/* Top Header Row */}
-      <div className="w-full max-w-[390px] flex items-center justify-between z-10">
+      <div className="w-full max-w-[420px] flex items-center justify-between z-10">
         <button 
           onClick={() => navigate(-1)}
-          className="bg-[#F26522]/10 hover:bg-[#F26522]/20 text-[#F26522] p-1.5 rounded-full backdrop-blur-md active:scale-95 transition-all"
+          className="bg-[#F26522]/10 hover:bg-[#F26522]/20 text-[#F26522] p-2 rounded-full backdrop-blur-md active:scale-95 transition-all"
         >
-          <X size={18} strokeWidth={2.5} />
+          <X size={20} strokeWidth={2.5} />
         </button>
-        <div className="w-7"></div> {/* Spacer for symmetry */}
+        <div className="w-9"></div> {/* Spacer for symmetry */}
       </div>
 
       {/* Main card */}
-      <div className="w-full max-w-[390px] bg-[#FFF9F3]/95 rounded-[28px] md:rounded-[36px] p-2 md:p-2.5 shadow-2xl border border-[#F26522]/20 backdrop-blur-md z-10 my-1 md:my-6 relative overflow-hidden">
-        <div className="border border-dashed border-[#F26522]/40 rounded-[22px] md:rounded-[28px] px-3.5 py-3.5 md:px-6 md:py-8 relative">
+      <div className="w-full max-w-[420px] bg-[#FFF9F3]/95 rounded-[36px] p-2.5 shadow-2xl border border-[#F26522]/20 backdrop-blur-md z-10 my-2.5 md:my-6 relative overflow-hidden">
+        <div className="border border-dashed border-[#F26522]/40 rounded-[28px] px-5 py-5 md:px-6 md:py-8 relative">
           
           {/* Faint mandala background watermark */}
           <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden">
@@ -214,30 +214,30 @@ const Signup = () => {
           </div>
 
           {/* Corner Flowers */}
-          <div className="absolute top-2 left-2"><FlowerIcon className="w-3.5 h-3.5" /></div>
-          <div className="absolute top-2 right-2"><FlowerIcon className="w-3.5 h-3.5" /></div>
-          <div className="absolute bottom-2 left-2"><FlowerIcon className="w-3.5 h-3.5" /></div>
-          <div className="absolute bottom-2 right-2"><FlowerIcon className="w-3.5 h-3.5" /></div>
+          <div className="absolute top-2.5 left-2.5"><FlowerIcon className="w-4 h-4" /></div>
+          <div className="absolute top-2.5 right-2.5"><FlowerIcon className="w-4 h-4" /></div>
+          <div className="absolute bottom-2.5 left-2.5"><FlowerIcon className="w-4 h-4" /></div>
+          <div className="absolute bottom-2.5 right-2.5"><FlowerIcon className="w-4 h-4" /></div>
 
-          <div className="text-center mb-2.5 md:mb-6 z-10 relative">
-            <h2 className="text-xl md:text-3xl font-extrabold font-serif text-[#321c13] flex items-center justify-center gap-1.5">
-              <FlowerIcon className="w-4 h-4 md:w-5 md:h-5" />
+          <div className="text-center mb-4 md:mb-6 z-10 relative">
+            <h2 className="text-2xl md:text-3xl font-extrabold font-serif text-[#321c13] flex items-center justify-center gap-2">
+              <FlowerIcon className="w-5 h-5" />
               <span>Create account</span>
-              <FlowerIcon className="w-4 h-4 md:w-5 md:h-5" />
+              <FlowerIcon className="w-5 h-5" />
             </h2>
             {/* Divider */}
-            <div className="flex items-center justify-center gap-1.5 my-1 md:my-2.5">
-              <div className="w-12 md:w-16 border-t border-dashed border-[#F26522]/40"></div>
-              <FlowerIcon className="w-3 h-3" />
-              <div className="w-12 md:w-16 border-t border-dashed border-[#F26522]/40"></div>
+            <div className="flex items-center justify-center gap-2 my-2 md:my-2.5">
+              <div className="w-16 border-t border-dashed border-[#F26522]/40"></div>
+              <FlowerIcon className="w-3.5 h-3.5" />
+              <div className="w-16 border-t border-dashed border-[#F26522]/40"></div>
             </div>
-            <p className="text-[#705c53] text-[11px] md:text-[13px] font-semibold mt-0.5">
+            <p className="text-[#705c53] text-[13px] font-semibold mt-1">
               Fresh Food & Handcrafted Items Delivered
             </p>
           </div>
 
           {/* Authentication Toggle */}
-          <div className="flex gap-1 bg-[#FFF5EE] border border-[#F26522]/25 p-0.5 rounded-xl mb-3 md:mb-5 z-10 relative">
+          <div className="flex gap-1.5 bg-[#FFF5EE] border border-[#F26522]/25 p-1 rounded-2xl mb-4 md:mb-5 z-10 relative">
             <button
               type="button"
               disabled={isSendingOtp || isVerifyingOtp}
@@ -248,7 +248,7 @@ const Signup = () => {
                 setSuccess('');
                 setOtp('');
               }}
-              className={`flex-1 py-2 px-1.5 sm:px-2 flex items-center justify-center gap-1 sm:gap-1.5 text-center text-[10.5px] sm:text-[11px] font-bold rounded-lg transition-all capitalize tracking-normal relative ${
+              className={`flex-1 py-3 px-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-bold rounded-xl transition-all capitalize tracking-normal whitespace-nowrap relative ${
                 !useEmail 
                   ? 'bg-[#F26522] text-white shadow-md' 
                   : 'text-[#F26522] hover:bg-[#F26522]/5'
@@ -257,8 +257,8 @@ const Signup = () => {
               {!useEmail && (
                 <div className="absolute inset-0.5 border border-dashed border-white/40 rounded-lg pointer-events-none" />
               )}
-              <Phone size={13} className="shrink-0" />
-              <span className="truncate">Phone Number</span>
+              <Phone size={14} />
+              <span>Continue With Phone</span>
             </button>
             <button
               type="button"
@@ -270,7 +270,7 @@ const Signup = () => {
                 setSuccess('');
                 setOtp('');
               }}
-              className={`flex-1 py-2 px-1.5 sm:px-2 flex items-center justify-center gap-1 sm:gap-1.5 text-center text-[10.5px] sm:text-[11px] font-bold rounded-lg transition-all capitalize tracking-normal relative ${
+              className={`flex-1 py-3 px-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-bold rounded-xl transition-all capitalize tracking-normal whitespace-nowrap relative ${
                 useEmail 
                   ? 'bg-[#F26522] text-white shadow-md' 
                   : 'text-[#F26522] hover:bg-[#F26522]/5'
@@ -279,38 +279,38 @@ const Signup = () => {
               {useEmail && (
                 <div className="absolute inset-0.5 border border-dashed border-white/40 rounded-lg pointer-events-none" />
               )}
-              <Mail size={13} className="shrink-0" />
-              <span className="truncate">Email Address</span>
+              <Mail size={14} />
+              <span>Continue With Email</span>
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4 z-10 relative">
+          <form onSubmit={handleSubmit} className="space-y-4 z-10 relative">
             {error && (
-              <div className="bg-red-50 border border-red-100 text-red-500 text-[10.5px] font-bold p-2.5 rounded-xl text-center uppercase tracking-wider">
+              <div className="bg-red-50 border border-red-100 text-red-500 text-[11px] font-bold p-3.5 rounded-2xl text-center uppercase tracking-wider">
                 {error}
               </div>
             )}
             {success && (
-              <div className="bg-green-50 border border-green-100 text-green-600 text-[10.5px] font-bold p-2.5 rounded-xl text-center uppercase tracking-wider">
+              <div className="bg-green-50 border border-green-100 text-green-600 text-[11px] font-bold p-3.5 rounded-2xl text-center uppercase tracking-wider">
                 {success}
               </div>
             )}
 
             {/* Name Field */}
             <div>
-              <label className="block text-[9.5px] md:text-[10px] font-bold text-[#556b2f] mb-1 px-1 uppercase tracking-wider">
+              <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
                 Full Name
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#b8a090]">
-                  <User size={16} />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b8a090]">
+                  <User size={18} />
                 </span>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter your full name"
-                  className="w-full pl-9 pr-3 py-2 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[13px] text-[13px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
+                  className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
                   disabled={isVerifyingOtp}
                   required
                 />
@@ -320,15 +320,15 @@ const Signup = () => {
             {/* Email / Phone Field */}
             {!useEmail ? (
               <div>
-                <label className="block text-[9.5px] md:text-[10px] font-bold text-[#556b2f] mb-1 px-1 uppercase tracking-wider">
+                <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
                   Phone Number
                 </label>
                 <div className="flex gap-2">
-                  <div className="w-[78px] relative">
+                  <div className="w-[85px] relative">
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="w-full pl-2 pr-5 py-2 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[13px] text-[13px] font-semibold text-[#321c13] focus:outline-none transition-all shadow-xs appearance-none text-center cursor-pointer"
+                      className="w-full pl-3 pr-6 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] focus:outline-none transition-all shadow-xs appearance-none text-center cursor-pointer"
                       disabled={otpSent || isSendingOtp || isVerifyingOtp}
                     >
                       <option value="+91">+91</option>
@@ -336,20 +336,20 @@ const Signup = () => {
                       <option value="+44">+44</option>
                       <option value="+971">+971</option>
                     </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[#b8a090]">
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#b8a090]">
                       <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
                     </div>
                   </div>
                   <div className="flex-1 relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#F26522]/70">
-                      <Phone size={16} />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F26522]/70">
+                      <Phone size={18} />
                     </span>
                     <input
                       type="tel"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
                       placeholder="9876543210"
-                      className="w-full pl-9 pr-3 py-2 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[13px] text-[13px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
+                      className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
                       disabled={otpSent || isSendingOtp || isVerifyingOtp}
                       required
                       maxLength={10}
@@ -359,19 +359,19 @@ const Signup = () => {
               </div>
             ) : (
               <div>
-                <label className="block text-[9.5px] md:text-[10px] font-bold text-[#556b2f] mb-1 px-1 uppercase tracking-wider">
+                <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
                   Email Address
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#F26522]/70">
-                    <Mail size={16} />
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F26522]/70">
+                    <Mail size={18} />
                   </span>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="example@gmail.com"
-                    className="w-full pl-9 pr-3 py-2 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[13px] text-[13px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
+                    className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
                     disabled={otpSent || isSendingOtp || isVerifyingOtp}
                     required
                   />
@@ -383,12 +383,12 @@ const Signup = () => {
             {otpSent && (
               <div className="space-y-2">
                 <div>
-                  <label className="block text-[9.5px] md:text-[10px] font-bold text-[#556b2f] mb-1 px-1 uppercase tracking-wider">
+                  <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
                     6-Digit OTP
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#F26522]/70">
-                      <MessageSquare size={16} />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F26522]/70">
+                      <MessageSquare size={18} />
                     </span>
                     <input
                       type="text"
@@ -396,7 +396,7 @@ const Signup = () => {
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                       placeholder="••••••"
                       maxLength={6}
-                      className="w-full pl-9 pr-3 py-2 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[13px] text-[13.5px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs tracking-widest text-center"
+                      className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs tracking-widest text-center"
                       disabled={isVerifyingOtp}
                       required
                     />
@@ -404,7 +404,7 @@ const Signup = () => {
                 </div>
 
                 {/* Resend Timer */}
-                <div className="flex items-center justify-between text-[11px] font-bold px-1 text-[#F26522]/80">
+                <div className="flex items-center justify-between text-[12px] font-bold px-1 text-[#F26522]/80">
                   <span>OTP expires in: {timer}s</span>
                   <button
                     type="button"
@@ -425,9 +425,9 @@ const Signup = () => {
               type="submit"
               whileTap={{ scale: 0.97 }}
               disabled={isSendingOtp || isVerifyingOtp}
-              className="w-full py-3 md:py-4 bg-[#F26522] hover:bg-[#d45014] text-white rounded-[13px] md:rounded-[16px] text-[13.5px] md:text-[15px] font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden font-serif mt-1"
+              className="w-full py-4 mt-2 bg-[#F26522] hover:bg-[#d45014] text-white rounded-[16px] text-[15px] font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden font-serif"
             >
-              <div className="absolute inset-1 border border-dashed border-white/50 rounded-lg pointer-events-none" />
+              <div className="absolute inset-1 border border-dashed border-white/50 rounded-xl pointer-events-none" />
               {isSendingOtp || isVerifyingOtp ? (
                 <span>Processing...</span>
               ) : otpSent ? (
@@ -439,7 +439,7 @@ const Signup = () => {
           </form>
 
           {/* Link to Login */}
-          <div className="text-center mt-3 md:mt-5 text-[11.5px] md:text-[12px] font-bold text-[#705c53] z-10 relative">
+          <div className="text-center mt-5 text-[12px] font-bold text-[#705c53] z-10 relative">
             Already have an account?{' '}
             <Link to="/login" className="text-[#F26522] hover:underline">
               Log in here!
@@ -449,14 +449,14 @@ const Signup = () => {
       </div>
 
       {/* Footer Logo & Styling */}
-      <div className="flex flex-col items-center gap-0.5 my-0.5 md:my-3 z-10 shrink-0">
+      <div className="flex flex-col items-center gap-1 my-1 md:my-3 z-10">
         <img 
           src="/mthibg.png" 
           alt="Mithilakart" 
-          className="h-7 md:h-14 w-auto object-contain"
+          className="h-10 md:h-16 w-auto object-contain"
         />
-        <div className="flex items-center text-[11.5px] md:text-[14px] font-bold text-black tracking-wide italic">
-          Mithilakart<span className="text-[9px] align-super ml-0.5">™</span>
+        <div className="flex items-center text-[13px] md:text-[14px] font-bold text-black tracking-wide italic">
+          Mithilakart<span className="text-[10px] align-super ml-0.5">™</span>
         </div>
       </div>
     </div>

@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Home, RefreshCw, ChevronDown, ChevronUp, LifeBuoy } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const ErrorPage = ({ error, resetErrorBoundary }) => {
-  const navigate = useNavigate();
   const [showDetails, setShowDetails] = useState(false);
 
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -97,7 +95,7 @@ const ErrorPage = ({ error, resetErrorBoundary }) => {
           </button>
 
           <button
-            onClick={() => navigate('/home')}
+            onClick={() => window.location.href = '/home'}
             className={`w-full sm:w-auto px-6 py-3 rounded-2xl border ${borderPrimary} font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm`}
           >
             <Home size={14} />

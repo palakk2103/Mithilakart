@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plane, Zap, Truck } from 'lucide-react';
+import { Plane, Zap, Timer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const HeaderTabs = () => {
@@ -42,7 +42,7 @@ const HeaderTabs = () => {
           isMithilakartActive
             ? 'bg-white text-[#6FAE4A] border-white shadow-md scale-102 z-10'
             : isFreshGroceryActive
-              ? 'bg-white/35 text-[#7A3E17]/85 border-white/15 hover:bg-white/45'
+              ? 'bg-white/20 text-white border-white/10 hover:bg-white/30'
               : isHeaderLight
                 ? 'bg-black/5 text-[#6FAE4A]/80 border-black/5 hover:bg-black/10'
                 : 'bg-white/15 text-white/90 border-white/10 hover:bg-white/25'
@@ -56,7 +56,7 @@ const HeaderTabs = () => {
               isMithilakartActive 
                 ? 'brightness-0' 
                 : isFreshGroceryActive 
-                  ? 'brightness-0' 
+                  ? 'brightness-200' 
                   : isHeaderLight 
                     ? 'brightness-50' 
                     : 'brightness-0'
@@ -67,7 +67,7 @@ const HeaderTabs = () => {
           isMithilakartActive 
             ? 'text-[#6FAE4A]' 
             : isFreshGroceryActive
-              ? 'text-[#7A3E17]/85'
+              ? 'text-white'
               : isHeaderLight 
                 ? 'text-[#6FAE4A]/80' 
                 : 'text-white'
@@ -84,7 +84,7 @@ const HeaderTabs = () => {
           isQuickShopActive
             ? 'bg-white text-[#F26522] border-white shadow-md scale-102 z-10'
             : isFreshGroceryActive
-              ? 'bg-white/35 text-[#7A3E17]/85 border-white/15 hover:bg-white/45'
+              ? 'bg-white/20 text-white border-white/10 hover:bg-white/30'
               : isMithilakartActive
                 ? 'bg-white/20 text-white border-white/10 hover:bg-white/30'
                 : isHeaderLight
@@ -97,7 +97,7 @@ const HeaderTabs = () => {
             isQuickShopActive 
               ? 'bg-[#F26522] text-white' 
               : isFreshGroceryActive
-                ? 'bg-[#7A3E17]/15 text-[#7A3E17]'
+                ? 'bg-white/20 text-white'
                 : isMithilakartActive
                   ? 'bg-white/30 text-white'
                   : isHeaderLight
@@ -105,14 +105,14 @@ const HeaderTabs = () => {
                     : 'bg-white text-[#F26522]'
           }`}
         >
-          <Truck size={10} className="w-[10px] h-[10px] md:w-[11px] md:h-[11px]" />
+          <Timer size={10} className="w-[10px] h-[10px] md:w-[11px] md:h-[11px]" />
         </div>
         <span
           className={`text-[11.5px] md:text-[12px] xl:text-[12.5px] font-extrabold tracking-tight leading-none text-center px-0.5 mb-0.5 transition-colors duration-300 ${
             isQuickShopActive 
               ? 'text-[#F26522]' 
               : isFreshGroceryActive
-                ? 'text-[#7A3E17]/85'
+                ? 'text-white'
                 : isMithilakartActive
                   ? 'text-white/90'
                   : isHeaderLight 
@@ -132,7 +132,7 @@ const HeaderTabs = () => {
           isMithilakActive
             ? 'bg-white text-[#207C8A] border-white shadow-md scale-102 z-10'
             : isFreshGroceryActive
-              ? 'bg-white/35 text-[#7A3E17]/85 border-white/15 hover:bg-white/45'
+              ? 'bg-white/20 text-white border-white/10 hover:bg-white/30'
               : isMithilakartActive
                 ? 'bg-white/20 text-white border-white/10 hover:bg-white/30'
                 : isHeaderLight
@@ -147,7 +147,7 @@ const HeaderTabs = () => {
               isMithilakActive 
                 ? "text-[#207C8A] fill-[#207C8A]/20" 
                 : isFreshGroceryActive
-                  ? "text-[#7A3E17]/85"
+                  ? "text-white"
                   : isMithilakartActive
                     ? "text-white/90"
                     : isHeaderLight 
@@ -160,7 +160,7 @@ const HeaderTabs = () => {
           isMithilakActive 
             ? 'text-[#207C8A]' 
             : isFreshGroceryActive
-              ? 'text-[#7A3E17]/85'
+              ? 'text-white'
               : isMithilakartActive
                 ? 'text-white/90'
                 : isHeaderLight 

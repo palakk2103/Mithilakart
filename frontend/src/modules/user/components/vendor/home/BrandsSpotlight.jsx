@@ -7,7 +7,7 @@ const BrandsSpotlight = ({ items }) => {
   const { t } = useTranslation();
 
   const handleBrandClick = useCallback((card) => {
-    navigate('/vendor/product-detail', { 
+    navigate('/product-detail', { 
       state: { 
         product: { 
           id: Math.random().toString(36).substr(2, 9),

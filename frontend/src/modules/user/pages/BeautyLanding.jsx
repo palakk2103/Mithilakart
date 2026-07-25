@@ -149,7 +149,7 @@ const BeautyLanding = () => {
   }, []);
 
   const handleProductClick = useCallback((product) => {
-    navigate('/vendor/product-detail', {
+    navigate('/product-detail', {
       state: { product: { ...product, off: product.discount, label: 'Beauty Deal', brand: 'Brand', reviews: '1,200', delivery: 'Tomorrow' } }
     });
   }, [navigate]);
@@ -182,7 +182,7 @@ const BeautyLanding = () => {
           <h2 className="text-[20px] font-bold text-slate-900" style={{ lineHeight: 1.2, letterSpacing: '-0.3px' }}>
             Great Savings
           </h2>
-          <button onClick={() => navigate('/vendor/all-offers')} className="flex items-center gap-0.5 text-[12px] font-bold text-[#6FAE4A]">
+          <button onClick={() => navigate('/all-offers')} className="flex items-center gap-0.5 text-[12px] font-bold text-[#6FAE4A]">
             See all <ChevronRight size={14} strokeWidth={2.5} />
           </button>
         </div>
@@ -191,7 +191,7 @@ const BeautyLanding = () => {
             <motion.div
               key={i}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/vendor/category-products', { state: { category: active } })}
+              onClick={() => navigate('/category-products', { state: { category: active } })}
               className="bg-gradient-to-br from-[#f0f5ff] to-white rounded-2xl p-3 border border-blue-50 shadow-sm flex flex-col gap-2 cursor-pointer"
             >
               <div className="aspect-square rounded-xl overflow-hidden bg-white flex items-center justify-center p-2">
@@ -216,7 +216,7 @@ const BeautyLanding = () => {
             <motion.div
               key={i}
               whileTap={{ scale: 0.92 }}
-              onClick={() => navigate('/vendor/category-products', { state: { category: active } })}
+              onClick={() => navigate('/category-products', { state: { category: active } })}
               className="flex-shrink-0 w-[90px] flex flex-col items-center gap-1.5 cursor-pointer"
             >
               <div className="w-[80px] h-[80px] rounded-2xl overflow-hidden bg-[#f0f5ff] border border-blue-50 flex items-center justify-center p-2">
@@ -238,7 +238,7 @@ const BeautyLanding = () => {
             <h3 className="text-white text-[22px] font-black leading-tight mt-0.5">Up to 60% Off</h3>
             <p className="text-white/80 text-[11px] font-medium mt-1">On {active} products</p>
             <button
-              onClick={() => navigate('/vendor/all-offers')}
+              onClick={() => navigate('/all-offers')}
               className="mt-3 bg-[#FFD500] text-[#1259c3] text-[11px] font-black px-4 py-1.5 rounded-full active:scale-95 transition-transform"
             >
               Shop Now
@@ -267,7 +267,7 @@ const BeautyLanding = () => {
           <p className="text-[17px] font-black text-slate-900">{cartCount} Products</p>
         </div>
         <button
-          onClick={() => navigate('/vendor/cart')}
+          onClick={() => navigate('/cart')}
           className="bg-[#6FAE4A] text-white px-7 py-3 rounded-xl font-black text-[13px] uppercase tracking-wider shadow-md shadow-emerald-100 active:scale-95 transition-transform"
         >
           Go to Cart

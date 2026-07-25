@@ -6,6 +6,7 @@ import LanguageSelector from './LanguageSelector';
 import { useTranslation } from 'react-i18next';
 import SearchInput from '../../../../shared/components/SearchInput';
 import toast from 'react-hot-toast';
+import useVendorStore from '../../../../store/useVendorStore';
 
 /**
  * SearchBar — Address selector (top) + Search input (bottom)
@@ -26,12 +27,87 @@ const SearchBar = ({ selectedAddress }) => {
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
 
+  const { selectedCategory } = useVendorStore();
+
   const isMithilakActive = location.pathname.includes('/mithilak');
   const isFreshGroceryActive = location.pathname.includes('/fresh-grocery');
   const isQuickShopActive = location.pathname.includes('/quick-shop') && !isMithilakActive;
 
   const isDarkHeader = isMithilakActive || isQuickShopActive;
   const isMithilakartFlow = !isMithilakActive && !isFreshGroceryActive && !isQuickShopActive;
+
+  const getThemeStyles = () => {
+    if (isMithilakActive) {
+      return {
+        addressBg: 'bg-[#18606B] border border-white/10 text-white',
+        starBg: 'bg-[#18606B] border border-white/10 text-white font-extrabold text-[12px]',
+      };
+    }
+    if (isFreshGroceryActive) {
+      return {
+        addressBg: 'bg-[#A6750D] border border-white/10 text-white',
+        starBg: 'bg-[#A6750D] border border-white/10 text-white font-extrabold text-[12px]',
+      };
+    }
+    if (isQuickShopActive) {
+      return {
+        addressBg: 'bg-[#C54E13] border border-white/10 text-white',
+        starBg: 'bg-[#C54E13] border border-white/10 text-white font-extrabold text-[11px]',
+      };
+    }
+    
+    // Mithilakart Flow Categories
+    switch (selectedCategory) {
+      case 'Beauty':
+        return {
+          addressBg: 'bg-[#DF88B5] border border-white/15 text-white',
+          starBg: 'bg-[#DF88B5] border border-white/15 text-white font-extrabold text-[12px]',
+        };
+      case 'Gifting':
+        return {
+          addressBg: 'bg-[#BE99E5] border border-white/15 text-white',
+          starBg: 'bg-[#BE99E5] border border-white/15 text-white font-extrabold text-[12px]',
+        };
+      case 'Electronics':
+        return {
+          addressBg: 'bg-[#76A7DE] border border-white/15 text-white',
+          starBg: 'bg-[#76A7DE] border border-white/15 text-white font-extrabold text-[12px]',
+        };
+      case 'Jewellery':
+        return {
+          addressBg: 'bg-[#E09D59] border border-white/15 text-white',
+          starBg: 'bg-[#E09D59] border border-white/15 text-white font-extrabold text-[12px]',
+        };
+      case 'Toys':
+        return {
+          addressBg: 'bg-[#7CD7C5] border border-white/15 text-white',
+          starBg: 'bg-[#7CD7C5] border border-white/15 text-white font-extrabold text-[12px]',
+        };
+      case 'Stationery':
+        return {
+          addressBg: 'bg-[#A8B2E0] border border-white/15 text-white',
+          starBg: 'bg-[#A8B2E0] border border-white/15 text-white font-extrabold text-[12px]',
+        };
+      case 'Fashion':
+        return {
+          addressBg: 'bg-[#DD8585] border border-white/15 text-white',
+          starBg: 'bg-[#DD8585] border border-white/15 text-white font-extrabold text-[12px]',
+        };
+      case 'Electrical':
+        return {
+          addressBg: 'bg-[#DDD26E] border border-white/15 text-white',
+          starBg: 'bg-[#DDD26E] border border-white/15 text-white font-extrabold text-[12px]',
+        };
+      case 'You Buy':
+      default:
+        return {
+          addressBg: 'bg-[#4E8F2C] border border-white/10 text-white',
+          starBg: 'bg-[#4E8F2C] border border-white/10 text-white font-extrabold text-[12px]',
+        };
+    }
+  };
+
+  const themedStyles = getThemeStyles();
 
   const handleSubmit = (e) => {
     e?.preventDefault();
@@ -155,40 +231,16 @@ const SearchBar = ({ selectedAddress }) => {
 
 
       <div className="flex items-center justify-between py-1.5 md:py-2.5">
-        {isFreshGroceryActive ? (
-          <Link
-            to="/profile/addresses"
-            className="flex items-center gap-1.5 min-w-0 text-white hover:text-white/95"
-          >
-            <MapPin size={15} strokeWidth={2.5} className="w-[15px] h-[15px] flex-shrink-0 text-white" />
-            <span className="text-[12px] md:text-[13px] font-bold truncate max-w-[170px] md:max-w-[220px]">
-              {displayAddress}
-            </span>
-            <ChevronDown size={13} strokeWidth={3} className="w-[13px] h-[13px] flex-shrink-0 text-white" />
-          </Link>
-        ) : isMithilakActive ? (
-          <Link
-            to="/profile/addresses"
-            className="flex items-center gap-1.5 min-w-0 text-white/95 hover:text-white"
-          >
-            <MapPin size={15} strokeWidth={2.5} className="w-[15px] h-[15px] md:w-[16px] md:h-[16px] flex-shrink-0" />
-            <span className="text-[13px] font-bold truncate max-w-[180px] md:max-w-[220px]">
-              {displayAddress}
-            </span>
-            <ChevronDown size={13} strokeWidth={3} className="w-[13px] h-[13px] md:w-[14px] md:h-[14px] flex-shrink-0" />
-          </Link>
-        ) : (
-          <Link
-            to="/profile/addresses"
-            className="flex items-center gap-1.5 min-w-0 text-white/95 hover:opacity-85 transition-opacity"
-          >
-            <MapPin size={15} strokeWidth={2.5} className="w-[15px] h-[15px] md:w-[16px] md:h-[16px] flex-shrink-0" />
-            <span className="text-[12px] md:text-[13px] font-bold truncate max-w-[170px] md:max-w-[220px]">
-              {displayAddress}
-            </span>
-            <ChevronDown size={13} strokeWidth={3} className="w-[13px] h-[13px] md:w-[14px] md:h-[14px] flex-shrink-0" />
-          </Link>
-        )}
+        <Link
+          to="/profile/addresses"
+          className={`flex items-center gap-1.5 min-w-0 rounded-lg px-3.5 py-1.5 shadow-xs transition-all duration-300 ${themedStyles.addressBg}`}
+        >
+          <MapPin size={15} strokeWidth={2.5} className="w-[15px] h-[15px] flex-shrink-0" />
+          <span className="text-[12px] md:text-[13px] font-extrabold truncate max-w-[140px] xs:max-w-[170px] md:max-w-[220px]">
+            {displayAddress}
+          </span>
+          <ChevronDown size={13} strokeWidth={3} className="w-[13px] h-[13px] flex-shrink-0" />
+        </Link>
 
         {/* Language Pill + Coin/Star Badge */}
         <div className="flex items-center gap-2.5 ml-3 flex-shrink-0">
@@ -197,24 +249,24 @@ const SearchBar = ({ selectedAddress }) => {
           
           {/* Custom Coins/Stars or Delivery Time Badge */}
           {isFreshGroceryActive ? (
-            <div className="flex items-center gap-1 px-2.5 py-1 bg-white/20 border border-white/10 rounded-full text-white font-bold text-[11px] shadow-xs whitespace-nowrap flex-shrink-0">
+            <div className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg shadow-xs whitespace-nowrap flex-shrink-0 ${themedStyles.starBg}`}>
               <Clock size={13} className="text-white" />
               <span>15 Mins</span>
             </div>
           ) : isMithilakActive ? (
-            <div className="flex items-center gap-0.5 px-3 py-1 bg-[#207C8A] border border-white/20 rounded-full text-white font-extrabold text-[12px] shadow-xs whitespace-nowrap flex-shrink-0">
+            <div className={`flex items-center gap-0.5 px-3.5 py-1.5 rounded-lg shadow-xs whitespace-nowrap flex-shrink-0 ${themedStyles.starBg}`}>
               <Star size={13} className="text-yellow-300 fill-yellow-300" />
               <span>3</span>
             </div>
           ) : isQuickShopActive ? (
-            <div className="flex items-center gap-1 px-2.5 py-1 bg-[#D45014] border border-white/20 rounded-full text-white font-extrabold text-[11px] shadow-xs whitespace-nowrap flex-shrink-0">
+            <div className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg shadow-xs whitespace-nowrap flex-shrink-0 ${themedStyles.starBg}`}>
               <Clock size={13} className="text-white" />
               <span>15 Mins</span>
             </div>
           ) : (
-            <div className="flex items-center gap-0.5 px-3 py-1 rounded-full text-white border border-[#FFF8EE]/20 shadow-xs bg-[#6FAE4A] whitespace-nowrap flex-shrink-0">
+            <div className={`flex items-center gap-0.5 px-3.5 py-1.5 rounded-lg shadow-xs whitespace-nowrap flex-shrink-0 ${themedStyles.starBg}`}>
               <Star size={13} className="text-yellow-300 fill-yellow-300" />
-              <span className="text-[12px] font-extrabold">3</span>
+              <span>3</span>
             </div>
           )}
         </div>

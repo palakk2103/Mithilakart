@@ -58,7 +58,7 @@ const ContinueShopping = () => {
   const filters = ['Trending', 'High rated', 'Best seller', 'Brand name', 'Color'];
 
   const handleProductClick = (product) => {
-    navigate('/vendor/product-detail', { state: { product } });
+    navigate('/product-detail', { state: { product } });
   };
 
   return (
@@ -72,11 +72,11 @@ const ContinueShopping = () => {
           <h1 className="text-[17px] font-black tracking-tight text-white">Continue Shopping</h1>
         </div>
         <div className="flex items-center gap-3.5">
-          <button onClick={() => navigate('/vendor/search')} className="p-1 hover:bg-white/10 rounded-full">
+          <button onClick={() => navigate('/search')} className="p-1 hover:bg-white/10 rounded-full">
             <Search size={20} className="text-white" />
           </button>
           <div 
-            onClick={() => navigate('/vendor/cart')} 
+            onClick={() => navigate('/cart')} 
             className="relative p-1 hover:bg-white/10 rounded-full cursor-pointer"
           >
             <ShoppingCart size={20} className="text-white" />

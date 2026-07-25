@@ -8,7 +8,7 @@ const RatingCard = React.memo(({ item }) => {
   const navigate = useNavigate();
 
   const handleProductClick = useCallback(() => {
-    navigate('/vendor/product-detail', { 
+    navigate('/product-detail', { 
       state: { 
         product: { 
           id: Math.random().toString(36).substr(2, 9),

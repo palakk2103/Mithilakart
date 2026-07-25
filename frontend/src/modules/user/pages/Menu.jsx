@@ -19,14 +19,14 @@ import { Link } from 'react-router-dom';
 
 const Menu = () => {
   const menuItems = [
-    { title: 'Prime', icon: <ShieldCheck className="text-primary-dark" size={32} />, path: '/vendor/profile' },
-    { title: 'Orders', icon: <ShoppingBag className="text-orange-500" size={32} />, path: '/vendor/profile' },
-    { title: 'Buy Again', icon: <RefreshCcw className="text-green-600" size={32} />, path: '/vendor/profile' },
-    { title: 'Account', icon: <Settings className="text-slate-500" size={32} />, path: '/vendor/profile' },
-    { title: 'Lists', icon: <Heart className="text-pink-500" size={32} />, path: '/vendor/profile' },
-    { title: 'Wallet', icon: <Wallet className="text-indigo-600" size={32} />, path: '/vendor/wallet' },
-    { title: 'Sell', icon: <Store className="text-emerald-600" size={32} />, path: '/vendor/home' },
-    { title: 'Settings', icon: <Smartphone className="text-slate-700" size={32} />, path: '/vendor/profile' },
+    { title: 'Prime', icon: <ShieldCheck className="text-primary-dark" size={32} />, path: '/profile' },
+    { title: 'Orders', icon: <ShoppingBag className="text-orange-500" size={32} />, path: '/profile' },
+    { title: 'Buy Again', icon: <RefreshCcw className="text-green-600" size={32} />, path: '/profile' },
+    { title: 'Account', icon: <Settings className="text-slate-500" size={32} />, path: '/profile' },
+    { title: 'Lists', icon: <Heart className="text-pink-500" size={32} />, path: '/profile' },
+    { title: 'Wallet', icon: <Wallet className="text-indigo-600" size={32} />, path: '/wallet' },
+    { title: 'Sell', icon: <Store className="text-emerald-600" size={32} />, path: '/home' },
+    { title: 'Settings', icon: <Smartphone className="text-slate-700" size={32} />, path: '/profile' },
   ];
 
   return (

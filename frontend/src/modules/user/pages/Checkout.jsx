@@ -31,7 +31,7 @@ const Checkout = () => {
   const primaryBgHover = isMithilakFlow ? 'bg-[#207C8A] hover:bg-[#1a6874]' : isFreshGroceryFlow ? 'bg-[#D9A21B] hover:bg-[#c49218]' : (isQuickShopFlow ? 'bg-[#F26522] hover:bg-[#d9561b]' : 'bg-[#6FAE4A] hover:bg-[#5b953d]');
   const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
   const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#6FAE4A]');
-  const shopNowLink = isMithilakFlow ? '/mithilak' : isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home');
+  const shopNowLink = isMithilakFlow ? '/mithilak' : isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/home');
 
   const defaultProduct = {
     name: 'EVOFOX Blaze Wired Ambidextrous Gaming Mouse',
@@ -484,7 +484,7 @@ const Checkout = () => {
             {/* Action Buttons */}
             <div className="space-y-3 pt-2">
               <button 
-                onClick={() => navigate(`/vendor/profile/orders/${placedOrder?.id || ''}`)}
+                onClick={() => navigate(`/profile/orders/${placedOrder?.id || ''}`)}
                 className={`w-full ${primaryBgHover} text-white py-4 rounded-full font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
               >
                 Track Order

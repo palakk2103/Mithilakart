@@ -91,7 +91,7 @@ const Home = () => {
 
   const handleTabClick = useCallback((label) => {
     if (label === 'Toys') {
-      navigate('/vendor/toys');
+      navigate('/toys');
     } else {
       setActiveTab(label);
     }

@@ -77,7 +77,7 @@ const CategoryProductCard = React.memo(({ product }) => {
 
   return (
     <Link
-      to="/vendor/product-detail"
+      to="/product-detail"
       state={{ product }}
       className="flex flex-col cursor-pointer group w-full relative bg-[#FFFDF9] border border-[#EADCC9]/70 rounded-[18px] md:rounded-[24px] p-1.5 md:p-2.5 shadow-[0_2px_8px_rgba(61,35,20,0.015)] hover:shadow-[0_6px_18px_rgba(61,35,20,0.04)] hover:border-[#6FAE4A]/35 transition-all duration-300 transform select-none"
     >
@@ -416,17 +416,17 @@ const CategoryProducts = () => {
         {/* Row 1: Back + Title + Actions */}
         <div className="px-3 pt-1.5 pb-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Link to="/vendor/home" className="p-1 active:scale-90 transition-transform">
+            <Link to="/home" className="p-1 active:scale-90 transition-transform">
               <ArrowLeft size={20} strokeWidth={2.5} />
             </Link>
             <h1 className="text-[15.5px] font-black tracking-tight">{category}</h1>
           </div>
           
           <div className="flex items-center gap-0.5">
-            <Link to="/vendor/search" className="p-1.5">
+            <Link to="/search" className="p-1.5">
               <Search size={18} strokeWidth={2} />
             </Link>
-            <Link to="/vendor/cart" className="relative p-1.5 active:scale-90 transition-transform">
+            <Link to="/cart" className="relative p-1.5 active:scale-90 transition-transform">
               <ShoppingCart size={18} strokeWidth={2} />
               {cartCount > 0 && (
                 <span className="absolute top-0.5 right-0.5 bg-red-500 text-white text-[7.5px] font-black min-w-[13px] h-3.5 rounded-full flex items-center justify-center border border-[#6FAE4A] shadow-sm">{cartCount}</span>
@@ -480,7 +480,7 @@ const CategoryProducts = () => {
         </div>
         <div className="flex overflow-x-auto gap-4 px-4 no-scrollbar pb-2">
           {trendingItems.map((item) => (
-            <Link to="/vendor/product-detail" state={{ product: item }} key={item.id} className="block w-[110px] flex-shrink-0 bg-white rounded-lg overflow-hidden border border-gray-100 p-1.5 group active:scale-95 transition-all shadow-sm">
+            <Link to="/product-detail" state={{ product: item }} key={item.id} className="block w-[110px] flex-shrink-0 bg-white rounded-lg overflow-hidden border border-gray-100 p-1.5 group active:scale-95 transition-all shadow-sm">
               <div className="aspect-square rounded-md overflow-hidden mb-1.5">
                 <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 product-img-blend" />
               </div>

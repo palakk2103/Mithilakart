@@ -14,7 +14,7 @@ const Cart = () => {
   const navigate = useNavigate();
 
   // Wishlist and confirmation states
-  const { wishlist, addToWishlist } = useAccountStore();
+  const { wishlist, addToWishlist, removeFromWishlist } = useAccountStore();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [itemToConfirm, setItemToConfirm] = useState(null);
 
@@ -46,7 +46,7 @@ const Cart = () => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
   const primaryBg = isMithilakFlow ? 'bg-[#207C8A] hover:bg-[#1a6874]' : (isFreshGroceryFlow ? 'bg-[#D9A21B] hover:bg-[#c49218]' : (isQuickShopFlow ? 'bg-[#F26522] hover:bg-[#d9561b]' : 'bg-[#6FAE4A] hover:bg-[#5b953d]'));
   const primaryText = isMithilakFlow ? 'text-[#207C8A]' : (isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]'));
-  const shopNowLink = isMithilakFlow ? '/mithilak' : (isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home'));
+  const shopNowLink = isMithilakFlow ? '/mithilak' : (isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/home'));
   const btnShadow = isMithilakFlow ? 'shadow-[0_4px_16px_rgba(32,124,138,0.22)]' : isFreshGroceryFlow ? 'shadow-[0_4px_16px_rgba(217,162,27,0.15)]' : (isQuickShopFlow ? 'shadow-[0_4px_16px_rgba(242,101,34,0.22)]' : 'shadow-[0_4px_16px_rgba(8,66,36,0.22)]');
 
   // Load cart items for all users (authenticated or not)
@@ -361,7 +361,7 @@ const Cart = () => {
                       <div 
                         key={item.id} 
                         className="w-[140px] flex-shrink-0 flex flex-col bg-slate-50/50 rounded-2xl p-3 border border-slate-100 relative group cursor-pointer"
-                        onClick={() => navigate('/vendor/product-detail', { state: { product: item } })}
+                        onClick={() => navigate('/product-detail', { state: { product: item } })}
                       >
                         <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center p-2 mb-2 border border-slate-100">
                           <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
@@ -380,6 +380,7 @@ const Cart = () => {
                               setCartItems(cart);
                               window.dispatchEvent(new Event('cartUpdated'));
                             }
+                            removeFromWishlist(item.id);
                           }}
                           className={`w-full mt-2 py-1.5 ${primaryBg} text-white text-[10px] font-black rounded-lg uppercase tracking-wider text-center active:scale-95 transition-transform`}
                         >
@@ -432,7 +433,7 @@ const Cart = () => {
                 </button>
               ) : (
                 <button 
-                  onClick={() => navigate('/vendor/checkout', { state: { product: cartItems[0] } })}
+                  onClick={() => navigate('/checkout', { state: { product: cartItems[0] } })}
                   className={`hidden md:flex w-full ${primaryBg} text-white font-black py-4 rounded-full active:scale-[0.98] transition-all items-center justify-center text-[14px] shadow-md cursor-pointer`}
                 >
                   Proceed to Checkout
@@ -466,7 +467,7 @@ const Cart = () => {
             </button>
           ) : (
             <button 
-              onClick={() => navigate('/vendor/checkout', { state: { product: cartItems[0] } })}
+              onClick={() => navigate('/checkout', { state: { product: cartItems[0] } })}
               className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider ${btnShadow} active:scale-95 transition-transform`}
             >
               Proceed to Checkout

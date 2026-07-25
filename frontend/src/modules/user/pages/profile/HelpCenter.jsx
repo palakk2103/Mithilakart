@@ -9,6 +9,14 @@ const HelpCenter = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFaq, setExpandedFaq] = useState(null);
 
+  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
+  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
+  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
+
+  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
+  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
+  const primaryLightBg = isMithilakFlow ? 'bg-[#207C8A]/10 text-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]/10 text-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]/10 text-[#F26522]' : 'bg-primary-light text-[#6FAE4A]');
+
   const faqs = [
     { 
       q: 'How to track my order?', 
@@ -42,14 +50,14 @@ const HelpCenter = () => {
       title: 'Call Us',
       subtitle: 'Mon-Sat (9am-6pm)',
       detail: '+91 1800-123-4567',
-      color: 'bg-primary-light text-[#6FAE4A]'
+      color: primaryLightBg
     },
     {
       icon: <Mail size={24} />,
       title: 'Email Us',
       subtitle: '24/7 support',
       detail: 'support@mithilakart.com',
-      color: 'bg-green-50 text-green-600'
+      color: primaryLightBg
     },
     {
       icon: <MessageCircle size={24} />,
@@ -59,10 +67,6 @@ const HelpCenter = () => {
       color: 'bg-purple-50 text-purple-600'
     }
   ];
-
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#e0f2f1]/60 via-[#f2faf9] to-[#ffffff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
   const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
@@ -121,7 +125,7 @@ const HelpCenter = () => {
                 <div className="flex-1">
                   <h3 className="text-[14px] font-bold text-slate-900">{method.title}</h3>
                   <p className="text-[12px] text-gray-500 font-medium">{method.subtitle}</p>
-                  <p className="text-[13px] text-[#6FAE4A] font-bold mt-1">{method.detail}</p>
+                  <p className={`text-[13px] ${primaryText} font-bold mt-1`}>{method.detail}</p>
                 </div>
                 <ChevronRight size={20} className="text-gray-300" />
               </motion.div>
@@ -143,7 +147,7 @@ const HelpCenter = () => {
                   className="w-full p-4 flex items-center justify-between text-left active:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-3 flex-1">
-                    <HelpCircle size={18} className="text-[#6FAE4A] flex-shrink-0" />
+                    <HelpCircle size={18} className={`${primaryText} flex-shrink-0`} />
                     <span className="text-[13px] font-bold text-slate-900">{faq.q}</span>
                   </div>
                   <ChevronRight 
@@ -171,7 +175,7 @@ const HelpCenter = () => {
         {/* Contact Us Section */}
         <section className="bg-gradient-to-br from-blue-50 to-white border border-primary-green/30 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-[#6FAE4A] rounded-full">
+            <div className={`p-2 ${primaryBg} rounded-full`}>
               <Send size={18} className="text-white" />
             </div>
             <h2 className="text-[16px] font-bold text-slate-900">Contact Us</h2>
@@ -185,11 +189,11 @@ const HelpCenter = () => {
             {/* Phone */}
             <div className="flex items-start gap-3">
               <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Phone size={16} className="text-[#6FAE4A]" />
+                <Phone size={16} className={primaryText} />
               </div>
               <div>
                 <p className="text-[12px] font-bold text-slate-900">Phone Support</p>
-                <p className="text-[13px] text-[#6FAE4A] font-bold">+91 1800-123-4567</p>
+                <p className={`text-[13px] ${primaryText} font-bold`}>+91 1800-123-4567</p>
                 <p className="text-[11px] text-gray-500">Mon-Sat: 9:00 AM - 6:00 PM</p>
               </div>
             </div>
@@ -197,11 +201,11 @@ const HelpCenter = () => {
             {/* Email */}
             <div className="flex items-start gap-3">
               <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Mail size={16} className="text-[#6FAE4A]" />
+                <Mail size={16} className={primaryText} />
               </div>
               <div>
                 <p className="text-[12px] font-bold text-slate-900">Email Support</p>
-                <p className="text-[13px] text-[#6FAE4A] font-bold">support@mithilakart.com</p>
+                <p className={`text-[13px] ${primaryText} font-bold`}>support@mithilakart.com</p>
                 <p className="text-[11px] text-gray-500">Response within 24 hours</p>
               </div>
             </div>
@@ -209,7 +213,7 @@ const HelpCenter = () => {
             {/* Address */}
             <div className="flex items-start gap-3">
               <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <MapPin size={16} className="text-[#6FAE4A]" />
+                <MapPin size={16} className={primaryText} />
               </div>
               <div>
                 <p className="text-[12px] font-bold text-slate-900">Office Address</p>
@@ -224,7 +228,7 @@ const HelpCenter = () => {
             {/* Business Hours */}
             <div className="flex items-start gap-3">
               <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Clock size={16} className="text-[#6FAE4A]" />
+                <Clock size={16} className={primaryText} />
               </div>
               <div>
                 <p className="text-[12px] font-bold text-slate-900">Business Hours</p>
@@ -237,7 +241,7 @@ const HelpCenter = () => {
           {/* CTA Button */}
           <motion.button
             whileTap={{ scale: 0.98 }}
-            className="w-full mt-6 bg-[#6FAE4A] text-white py-3 rounded-xl font-bold text-[14px] shadow-md active:shadow-sm transition-all"
+            className={`w-full mt-6 ${primaryBg} text-white py-3 rounded-xl font-bold text-[14px] shadow-md active:shadow-sm transition-all`}
           >
             Send us a message
           </motion.button>
@@ -248,10 +252,10 @@ const HelpCenter = () => {
           <h2 className="text-[16px] font-bold text-slate-900 mb-4">Policies & Information</h2>
           <div className="space-y-2">
             {[
-              { title: 'Privacy Policy', path: '/vendor/privacy' },
-              { title: 'Terms of Service', path: '/vendor/terms' },
-              { title: 'Cancellation & Returns', path: '/vendor/cancellation-returns' },
-              { title: 'Shipping Policy', path: '/vendor/shipping' }
+              { title: 'Privacy Policy', path: '/privacy' },
+              { title: 'Terms of Service', path: '/terms' },
+              { title: 'Cancellation & Returns', path: '/cancellation-returns' },
+              { title: 'Shipping Policy', path: '/shipping' }
             ].map((item, idx) => (
               <motion.div
                 key={idx}

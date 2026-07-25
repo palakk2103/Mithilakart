@@ -60,34 +60,34 @@ const useVendorStore = create((set) => ({
   // Home Page Sections Data
   homeSections: {
     stillLooking: [
-      { label: 'Co-ords', img: StillImg1, link: '/vendor/products' },
-      { label: 'Necklaces', img: StillImg2, link: '/vendor/products' },
-      { label: "Women's Tops", img: StillImg3, link: '/vendor/products' },
-      { label: 'Lipsticks', img: StillImg4, link: '/vendor/products' }
+      { label: 'Co-ords', img: StillImg1, link: '/products' },
+      { label: 'Necklaces', img: StillImg2, link: '/products' },
+      { label: "Women's Tops", img: StillImg3, link: '/products' },
+      { label: 'Lipsticks', img: StillImg4, link: '/products' }
     ],
     topSelection: [
-      { name: 'Biotique Face Wash', tag: 'Grab Or Gone', img: TopImg1, link: '/vendor/product-detail' },
-      { name: 'Lakmé Moisturizer', tag: 'Best Picks', img: TopImg2, link: '/vendor/product-detail' },
-      { name: 'Vaseline Lip Balm', tag: 'Popular', img: TopImg3, link: '/vendor/product-detail' },
-      { name: 'MARS Lipstick', tag: 'Widest Range', img: TopImg4, link: '/vendor/product-detail' }
+      { name: 'Biotique Face Wash', tag: 'Grab Or Gone', img: TopImg1, link: '/product-detail' },
+      { name: 'Lakmé Moisturizer', tag: 'Best Picks', img: TopImg2, link: '/product-detail' },
+      { name: 'Vaseline Lip Balm', tag: 'Popular', img: TopImg3, link: '/product-detail' },
+      { name: 'MARS Lipstick', tag: 'Widest Range', img: TopImg4, link: '/product-detail' }
     ],
     brandsSpotlight: [
-      { title: 'Flat 73% off', sub: 'Limited time deal', img: PRODUCT_IMAGES.earbuds, link: '/vendor/product-detail' },
-      { title: 'Shop now', sub: 'Blend easily', img: PRODUCT_IMAGES.makeup, link: '/vendor/product-detail' },
-      { title: 'Coming to India', sub: 'CMF Watch 3 Pro', img: PRODUCT_IMAGES.phone, link: '/vendor/product-detail' },
-      { title: 'Just ₹599', sub: 'Lowest price ever', img: PRODUCT_IMAGES.shampoo, link: '/vendor/product-detail' }
+      { title: 'Flat 73% off', sub: 'Limited time deal', img: PRODUCT_IMAGES.earbuds, link: '/product-detail' },
+      { title: 'Shop now', sub: 'Blend easily', img: PRODUCT_IMAGES.makeup, link: '/product-detail' },
+      { title: 'Coming to India', sub: 'CMF Watch 3 Pro', img: PRODUCT_IMAGES.phone, link: '/product-detail' },
+      { title: 'Just ₹599', sub: 'Lowest price ever', img: PRODUCT_IMAGES.shampoo, link: '/product-detail' }
     ],
     bestQuality: [
-      { name: "GUTI Women's Jeans", tag: 'Grab Or Gone', img: PRODUCT_IMAGES.fashion, link: '/vendor/product-detail' },
-      { name: "Mandarin Women's Shirts", tag: 'Popular', img: TopImg2, link: '/vendor/product-detail' },
-      { name: 'Royatto Necklaces', tag: 'Popular', img: PRODUCT_IMAGES.jewellery, link: '/vendor/product-detail' },
-      { name: "Sqew Women's Trousers", tag: 'In Focus Now', img: PRODUCT_IMAGES.shoes, link: '/vendor/product-detail' }
+      { name: "GUTI Women's Jeans", tag: 'Grab Or Gone', img: PRODUCT_IMAGES.fashion, link: '/product-detail' },
+      { name: "Mandarin Women's Shirts", tag: 'Popular', img: TopImg2, link: '/product-detail' },
+      { name: 'Royatto Necklaces', tag: 'Popular', img: PRODUCT_IMAGES.jewellery, link: '/product-detail' },
+      { name: "Sqew Women's Trousers", tag: 'In Focus Now', img: PRODUCT_IMAGES.shoes, link: '/product-detail' }
     ],
     keepShopping: [
-      { label: 'Suitcases', img: TopImg3, link: '/vendor/products' },
-      { label: 'Smartphones', img: TopImg1, link: '/vendor/products' },
-      { label: 'Electronics', img: PRODUCT_IMAGES.electronics, link: '/vendor/products' },
-      { label: 'Beauty', img: TopImg4, link: '/vendor/products' }
+      { label: 'Suitcases', img: TopImg3, link: '/products' },
+      { label: 'Smartphones', img: TopImg1, link: '/products' },
+      { label: 'Electronics', img: PRODUCT_IMAGES.electronics, link: '/products' },
+      { label: 'Beauty', img: TopImg4, link: '/products' }
     ]
   },
   

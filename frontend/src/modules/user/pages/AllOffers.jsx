@@ -94,7 +94,7 @@ const AllOffers = () => {
               <Search size={20} className="text-white" />
             </button>
             <div 
-              onClick={() => navigate('/vendor/cart')} 
+              onClick={() => navigate('/cart')} 
               className="relative p-1.5 hover:bg-white/10 rounded-full cursor-pointer active:scale-95 transition-transform"
             >
               <ShoppingCart size={20} className="text-white" />
@@ -121,7 +121,7 @@ const AllOffers = () => {
           <div 
             key={idx} 
             className="bg-white rounded-[24px] p-3 border border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] flex flex-col items-center justify-between active:scale-[0.98] transition-all cursor-pointer group hover:shadow-xs"
-            onClick={() => navigate('/vendor/product-detail', { state: { product: { id: idx, name: offer.title, image: offer.img, price: '499', oldPrice: '999', discount: '50% off', brand: 'Top Selection' } } })}
+            onClick={() => navigate('/product-detail', { state: { product: { id: idx, name: offer.title, image: offer.img, price: '499', oldPrice: '999', discount: '50% off', brand: 'Top Selection' } } })}
           >
             {/* Aspect Square Image Box */}
             <div className="aspect-square bg-slate-50 border border-slate-100 rounded-xl overflow-hidden p-2 flex items-center justify-center w-full mb-3">

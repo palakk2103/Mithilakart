@@ -238,7 +238,7 @@ const Mithilak = () => {
               onClick={() => {
                 localStorage.setItem('isMithilakFlow', 'true');
                 localStorage.setItem('isQuickShopFlow', 'false');
-                navigate('/vendor/product-detail', { state: { product: { ...prod, image: prod.img, qty: 1 } } });
+                navigate('/product-detail', { state: { product: { ...prod, image: prod.img, qty: 1 } } });
               }}
               className="bg-white border border-[#3F2A20]/15 rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer active:scale-[0.98] transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
             >

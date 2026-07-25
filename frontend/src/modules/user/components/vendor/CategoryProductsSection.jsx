@@ -159,7 +159,7 @@ const CategoryProductsSection = ({ selectedCategory }) => {
   }, []);
 
   const handleProductClick = useCallback((product) => {
-    navigate('/vendor/product-detail', {
+    navigate('/product-detail', {
       state: {
         product: {
           ...product,

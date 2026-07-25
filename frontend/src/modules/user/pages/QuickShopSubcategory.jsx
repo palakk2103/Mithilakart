@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Share2, ChevronDown, Heart } from 'lucide-react';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
+import { getCurrentMarketplaceTab, productBelongsToTab } from '../../../shared/utils/marketplaceHelpers';
 import closedShutter from '../../../assets/closed_shutter.png';
 import { handleImageError, getProductImage, DEFAULT_PRODUCT_IMAGE as FALLBACK_IMAGE } from '../../../shared/utils/imageUtils';
 
@@ -325,7 +326,7 @@ const QuickShopSubcategory = () => {
 
   const handleProductClick = (product) => {
     const discountPct = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) + '% OFF';
-    navigate('/vendor/product-detail', {
+    navigate('/product-detail', {
       state: {
         product: {
           ...product,

@@ -8,6 +8,17 @@ import { getProductImage, handleImageError } from '../../../../shared/utils/imag
 const Wishlist = () => {
   const navigate = useNavigate();
   const { wishlist, removeFromWishlist } = useAccountStore();
+  const [cartCount, setCartCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const updateCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
+      setCartCount(cart.length);
+    };
+    updateCartCount();
+    window.addEventListener('cartUpdated', updateCartCount);
+    return () => window.removeEventListener('cartUpdated', updateCartCount);
+  }, []);
 
   const addToCart = (product, e) => {
     e.stopPropagation();
@@ -17,7 +28,8 @@ const Wishlist = () => {
       localStorage.setItem('userCart', JSON.stringify(cart));
       window.dispatchEvent(new Event('cartUpdated'));
     }
-    navigate('/vendor/cart');
+    removeFromWishlist(product.id);
+    navigate('/cart');
   };
 
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
@@ -27,6 +39,38 @@ const Wishlist = () => {
   const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#e0f2f1]/60 via-[#f2faf9] to-[#ffffff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
   const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
+
+  const primaryBg = isMithilakFlow 
+    ? 'bg-[#207C8A] hover:bg-[#1a6874]' 
+    : isFreshGroceryFlow 
+      ? 'bg-[#D9A21B] hover:bg-[#c08f16]' 
+      : isQuickShopFlow 
+        ? 'bg-[#F26522] hover:bg-[#d64f19]' 
+        : 'bg-[#6FAE4A] hover:bg-[#5b953d]';
+
+  const primaryText = isMithilakFlow 
+    ? 'text-[#207C8A]' 
+    : isFreshGroceryFlow 
+      ? 'text-[#D9A21B]' 
+      : isQuickShopFlow 
+        ? 'text-[#F26522]' 
+        : 'text-[#6FAE4A]';
+
+  const primaryBorder = isMithilakFlow 
+    ? 'border-[#207C8A]' 
+    : isFreshGroceryFlow 
+      ? 'border-[#D9A21B]' 
+      : isQuickShopFlow 
+        ? 'border-[#F26522]' 
+        : 'border-[#6FAE4A]';
+
+  const primaryTextActive = isMithilakFlow 
+    ? 'text-[#207C8A] active:bg-[#207C8A]/10' 
+    : isFreshGroceryFlow 
+      ? 'text-[#D9A21B] active:bg-[#D9A21B]/10' 
+      : isQuickShopFlow 
+        ? 'text-[#F26522] active:bg-[#F26522]/10' 
+        : 'text-[#6FAE4A] active:bg-[#6FAE4A]/10';
 
   return (
     <div className={`min-h-screen pb-24 relative transition-colors duration-300 ${pageBg}`}>
@@ -46,12 +90,17 @@ const Wishlist = () => {
         <button onClick={() => navigate(-1)} className={`active:scale-95 transition-transform ${headerTextColor}`}>
           <ArrowLeft size={24} />
         </button>
-        <div className="relative">
-          <ShoppingCart size={24} className={headerTextColor} />
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#FCF7EE]">
-            9
-          </span>
-        </div>
+        <button 
+          onClick={() => navigate('/cart')}
+          className={`relative active:scale-95 transition-transform ${headerTextColor}`}
+        >
+          <ShoppingCart size={24} />
+          {cartCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#FCF7EE]">
+              {cartCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Title Section */}
@@ -64,10 +113,10 @@ const Wishlist = () => {
 
         {/* Share & Edit Buttons */}
         <div className="flex gap-3 mt-5">
-          <button className={`flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 rounded-sm text-[14px] font-bold ${isMithilakFlow ? 'text-[#207C8A]' : 'text-[#6FAE4A]'} active:bg-gray-50 transition-colors`}>
+          <button className={`flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 rounded-sm text-[14px] font-bold ${primaryText} active:bg-gray-50 transition-colors`}>
             <Share2 size={16} /> Share
           </button>
-          <button className={`flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 rounded-sm text-[14px] font-bold ${isMithilakFlow ? 'text-[#207C8A]' : 'text-[#6FAE4A]'} active:bg-gray-50 transition-colors`}>
+          <button className={`flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 rounded-sm text-[14px] font-bold ${primaryText} active:bg-gray-50 transition-colors`}>
             <Edit2 size={16} /> Edit
           </button>
           <button className="w-10 flex items-center justify-center text-gray-400">
@@ -87,7 +136,7 @@ const Wishlist = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className={`flex flex-col border-b border-gray-100 ${idx % 2 === 0 ? 'border-r' : ''}`}
-                onClick={() => navigate('/vendor/product-detail', { state: { product: item } })}
+                onClick={() => navigate('/product-detail', { state: { product: item } })}
               >
                 {/* Product Image Area */}
                 <div className="relative aspect-square p-4 bg-white group">
@@ -123,7 +172,7 @@ const Wishlist = () => {
                       {[1, 2, 3, 4].map(s => <Star key={s} size={12} fill="#16a34a" className="text-green-600" />)}
                       <Star size={12} className="text-gray-200" />
                     </div>
-                    <div className={`${isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#6FAE4A]'} px-1 rounded-sm flex items-center gap-0.5`}>
+                    <div className={`${isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]'} px-1 rounded-sm flex items-center gap-0.5`}>
                       <span className="text-[9px] text-white font-black italic">f</span>
                       <span className="text-[8px] text-white font-bold">Assured</span>
                     </div>
@@ -131,7 +180,7 @@ const Wishlist = () => {
 
                   <button 
                     onClick={(e) => addToCart(item, e)}
-                    className={`w-full mt-4 py-2 border border-gray-200 ${isMithilakFlow ? 'text-[#207C8A]' : 'text-[#6FAE4A]'} text-[14px] font-bold rounded-sm active:bg-primary-light transition-colors`}
+                    className={`w-full mt-4 py-2 border border-gray-200 ${primaryText} text-[14px] font-bold rounded-sm active:bg-primary-light transition-colors`}
                   >
                     Add to Cart
                   </button>
@@ -149,8 +198,8 @@ const Wishlist = () => {
             <h3 className="text-[18px] font-bold text-slate-800">Your Wishlist is Empty</h3>
             <p className="text-[14px] text-gray-400 mt-1">Add items that you like to your wishlist.</p>
             <button 
-              onClick={() => navigate('/vendor/home')}
-              className={`mt-6 ${isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#6FAE4A]'} text-white px-8 py-2.5 rounded-sm font-bold text-[14px] shadow-lg active:scale-95 transition-all`}
+              onClick={() => navigate('/home')}
+              className={`mt-6 ${isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]'} text-white px-8 py-2.5 rounded-sm font-bold text-[14px] shadow-lg active:scale-95 transition-all`}
             >
               Continue Shopping
             </button>

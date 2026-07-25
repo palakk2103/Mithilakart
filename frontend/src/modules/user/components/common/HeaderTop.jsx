@@ -19,7 +19,7 @@ const HeaderTop = ({ cartCount = 0 }) => {
   return (
     <div className="px-3 py-1 flex items-center justify-between">
       {/* ── Logo ── */}
-      <Link to="/vendor/home" className="flex items-center flex-shrink-0">
+      <Link to="/home" className="flex items-center flex-shrink-0">
         <motion.img
           src="/mthibg.png"
           alt="Mithilakart"
@@ -31,19 +31,19 @@ const HeaderTop = ({ cartCount = 0 }) => {
       {/* ── Action Icons ── */}
       <div className="flex items-center gap-0 flex-shrink-0">
         <motion.div whileTap={{ scale: 0.82 }}>
-          <Link to="/vendor/notifications" aria-label="Notifications" className="p-1.5 block">
+          <Link to="/notifications" aria-label="Notifications" className="p-1.5 block">
             <Bell size={20} strokeWidth={1.8} className="text-primary-dark" />
           </Link>
         </motion.div>
 
         <motion.div whileTap={{ scale: 0.82 }}>
-          <Link to="/vendor/wishlist" aria-label="Wishlist" className="p-1.5 block">
+          <Link to="/wishlist" aria-label="Wishlist" className="p-1.5 block">
             <Heart size={20} strokeWidth={1.8} className="text-primary-dark" />
           </Link>
         </motion.div>
 
         <motion.div whileTap={{ scale: 0.82 }}>
-          <Link to="/vendor/cart" aria-label="Cart" className="relative p-1.5 block">
+          <Link to="/cart" aria-label="Cart" className="relative p-1.5 block">
             <ShoppingCart size={20} strokeWidth={1.8} className="text-primary-dark" />
             {cartCount > 0 && (
               <span className={`absolute top-1 right-1 text-[8px] font-black min-w-[14px] h-3.5 rounded-full ${badgeBg} text-white flex items-center justify-center shadow-sm`}>

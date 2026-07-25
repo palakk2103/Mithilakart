@@ -121,7 +121,7 @@ const ToysLanding = () => {
             <span className="text-[18px] font-black text-slate-900">{cartCount} Products</span>
          </div>
          <button 
-           onClick={() => navigate('/vendor/cart')}
+           onClick={() => navigate('/cart')}
            className="bg-[#6FAE4A] text-white px-8 py-3.5 rounded-xl font-black text-[13px] uppercase tracking-wider shadow-lg shadow-emerald-100 active:scale-95 transition-transform"
          >
             Go to Cart

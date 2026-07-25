@@ -156,7 +156,7 @@ const DealsPage = () => {
          {products.map((product) => (
            <div 
              key={product.id} 
-             onClick={() => navigate('/vendor/product-detail', { state: { product } })}
+             onClick={() => navigate('/product-detail', { state: { product } })}
              className="flex flex-col cursor-pointer group w-full relative bg-[#FFFDF9] border border-[#EADCC9]/70 rounded-[18px] md:rounded-[24px] p-2 md:p-3.5 shadow-[0_2px_8px_rgba(61,35,20,0.015)] hover:shadow-[0_6px_18px_rgba(61,35,20,0.04)] hover:border-[#6FAE4A]/35 transition-all duration-300 transform select-none"
            >
               {/* Inner Decorative Dashed Border */}

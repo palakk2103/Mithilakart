@@ -106,10 +106,10 @@ const TrendingThisWeek = () => {
             <div
               key={item.id}
               onClick={() => navigate(item.path)}
-              className="flex-shrink-0 w-[88px] min-[375px]:w-[98px] md:w-[135px] bg-[#FCF7EE] rounded-t-[1000px] rounded-b-[12px] md:rounded-b-[15px] p-1.5 md:p-2 flex flex-col items-center cursor-pointer hover:shadow-xs hover:border-[#E5D2BA] transition-all duration-300 border border-[#F1E1CE] group"
+              className="flex-shrink-0 w-[96px] min-[375px]:w-[106px] md:w-[142px] bg-[#FCF7EE] rounded-t-[1000px] rounded-b-[12px] md:rounded-b-[15px] p-1.5 md:p-2 flex flex-col items-center cursor-pointer hover:shadow-xs hover:border-[#E5D2BA] transition-all duration-300 border border-[#F1E1CE] group"
             >
               {/* Category Title */}
-              <span className="text-[8.5px] min-[375px]:text-[10px] md:text-sm font-black text-[#3C2415] text-center mb-1 group-hover:text-[#D35400] transition-colors duration-200 w-full px-0.5 leading-tight break-words min-h-[24px] flex items-center justify-center">
+              <span className="text-[8.5px] min-[375px]:text-[10px] md:text-sm font-black text-[#3C2415] text-center mt-2 min-[375px]:mt-2.5 md:mt-4 mb-1 group-hover:text-[#D35400] transition-colors duration-200 w-full px-1.5 leading-tight break-words h-[28px] min-[375px]:h-[30px] md:h-[40px] flex items-center justify-center">
                 {item.name}
               </span>
 

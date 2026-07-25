@@ -177,7 +177,7 @@ const MyOrders = () => {
         animate={{ opacity: 1, y: 0 }}
         className="bg-white mx-3 my-2 rounded-xl shadow-sm border border-gray-100 p-3 active:bg-gray-50 transition-all cursor-pointer group"
       >
-        <div className="flex gap-3" onClick={() => navigate(`/vendor/profile/orders/${order.id}`)}>
+        <div className="flex gap-3" onClick={() => navigate(`/profile/orders/${order.id}`)}>
           {/* Compact Image */}
           <div className="w-16 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center p-1.5 border border-gray-100">
             <img src={mainItem.image} alt={mainItem.name} className="w-full h-full object-contain mix-blend-multiply" />
@@ -242,6 +242,22 @@ const MyOrders = () => {
   const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
   const filterBg = isMithilakFlow ? 'bg-[#e0f2f1]/80' : isFreshGroceryFlow ? 'bg-[#FFFDF3]/80' : (isQuickShopFlow ? 'bg-[#fff5f7]/80' : 'bg-bg-cream/80');
+
+  const primaryBg = isMithilakFlow 
+    ? 'bg-[#207C8A] hover:bg-[#1a6874]' 
+    : isFreshGroceryFlow 
+      ? 'bg-[#D9A21B] hover:bg-[#c08f16]' 
+      : isQuickShopFlow 
+        ? 'bg-[#F26522] hover:bg-[#d64f19]' 
+        : 'bg-[#6FAE4A] hover:bg-[#5b953d]';
+
+  const primaryShadow = isMithilakFlow
+    ? 'shadow-teal-100'
+    : isFreshGroceryFlow
+      ? 'shadow-yellow-100'
+      : isQuickShopFlow
+        ? 'shadow-orange-100'
+        : 'shadow-emerald-100';
 
   return (
     <div className={`min-h-screen font-nunito pb-20 relative transition-colors duration-300 ${pageBg}`}>
@@ -316,8 +332,8 @@ const MyOrders = () => {
                     {searchQuery ? "We couldn't find anything matching your search." : "Looks like you haven't placed any orders recently."}
                   </p>
                   <button 
-                    onClick={() => navigate('/vendor/home')}
-                    className="mt-10 bg-[#6FAE4A] text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest text-[12px] shadow-xl shadow-blue-100 active:scale-95 transition-transform"
+                    onClick={() => navigate('/home')}
+                    className={`mt-10 ${primaryBg} text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest text-[12px] shadow-xl ${primaryShadow} active:scale-95 transition-transform`}
                   >
                     Start Shopping
                   </button>
@@ -429,10 +445,10 @@ const MyOrders = () => {
                               key={opt}
                               onClick={() => setActiveFilters(prev => ({ ...prev, status: opt }))}
                               className={`px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all ${
-                                activeFilters.status === opt 
-                                ? 'bg-[#6FAE4A] text-white shadow-lg shadow-blue-100 scale-105' 
-                                : 'bg-gray-50 text-slate-600 border border-gray-100'
-                              }`}
+                                 activeFilters.status === opt 
+                                 ? `${primaryBg} text-white shadow-lg ${primaryShadow} scale-105` 
+                                 : 'bg-gray-50 text-slate-600 border border-gray-100'
+                               }`}
                             >
                                {opt}
                             </button>
@@ -450,10 +466,10 @@ const MyOrders = () => {
                               key={opt}
                               onClick={() => setActiveFilters(prev => ({ ...prev, time: opt }))}
                               className={`px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all ${
-                                activeFilters.time === opt 
-                                ? 'bg-[#6FAE4A] text-white shadow-lg shadow-blue-100 scale-105' 
-                                : 'bg-gray-50 text-slate-600 border border-gray-100'
-                              }`}
+                                 activeFilters.time === opt 
+                                 ? `${primaryBg} text-white shadow-lg ${primaryShadow} scale-105` 
+                                 : 'bg-gray-50 text-slate-600 border border-gray-100'
+                               }`}
                             >
                                {opt}
                             </button>

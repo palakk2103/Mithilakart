@@ -216,9 +216,9 @@ const ProductDetail = () => {
 
   const handleBuyNow = useCallback(() => {
     if (localStorage.getItem('isAuthenticated') !== 'true') {
-      navigate('/login', { state: { from: '/vendor/checkout', checkoutProduct: product } });
+      navigate('/login', { state: { from: '/checkout', checkoutProduct: product } });
     } else {
-      navigate('/vendor/checkout', { state: { product } });
+      navigate('/checkout', { state: { product } });
     }
   }, [product, navigate]);
 
@@ -262,7 +262,7 @@ const ProductDetail = () => {
         </span>
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => navigate('/vendor/search')} 
+            onClick={() => navigate('/search')} 
             className={`p-1.5 rounded-full transition-colors active:scale-90 ${
               (isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-gray-50'
             }`}
@@ -270,7 +270,7 @@ const ProductDetail = () => {
             <Search size={20} />
           </button>
           <div 
-            onClick={() => navigate('/vendor/cart')} 
+            onClick={() => navigate('/cart')} 
             className={`relative p-1.5 rounded-full transition-colors active:scale-95 cursor-pointer ${
               (isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-gray-50'
             }`}
@@ -658,7 +658,7 @@ const ProductDetail = () => {
           ].map((item, idx) => (
             <div 
               key={idx} 
-              onClick={() => navigate('/vendor/product-detail', { state: { product: { ...item, image: item.img, rating: 4.1, discount: '55% OFF' } } })}
+              onClick={() => navigate('/product-detail', { state: { product: { ...item, image: item.img, rating: 4.1, discount: '55% OFF' } } })}
               className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-sm"
             >
               <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">

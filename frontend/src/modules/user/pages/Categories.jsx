@@ -43,46 +43,46 @@ const SECTIONS = [
   {
     title: 'Beauty & Grooming',
     items: [
-      { name: 'Cosmetics', img: beautyCareImg, path: '/vendor/category-products?category=Beauty' },
-      { name: 'Skin Care', img: beautyCareImg, path: '/vendor/category-products?category=Beauty' },
-      { name: 'Hair Care', img: beautyCareImg, path: '/vendor/category-products?category=Beauty' },
-      { name: 'Fragrances', img: beautyCareImg, path: '/vendor/category-products?category=Beauty' },
+      { name: 'Cosmetics', img: beautyCareImg, path: '/category-products?category=Beauty' },
+      { name: 'Skin Care', img: beautyCareImg, path: '/category-products?category=Beauty' },
+      { name: 'Hair Care', img: beautyCareImg, path: '/category-products?category=Beauty' },
+      { name: 'Fragrances', img: beautyCareImg, path: '/category-products?category=Beauty' },
     ]
   },
   {
     title: 'Fashion & Jewellery',
     items: [
-      { name: 'Ethnic Wear', img: trendyFashionImg, path: '/vendor/category-products?category=Fashion' },
-      { name: 'Modern Wear', img: trendyFashionImg, path: '/vendor/category-products?category=Fashion' },
-      { name: 'Art. Jewellery', img: artJewelleryImg, path: '/vendor/category-products?category=Jewellery' },
-      { name: 'Bags & Wallets', img: trendyFashionImg, path: '/vendor/category-products?category=Fashion' },
+      { name: 'Ethnic Wear', img: trendyFashionImg, path: '/category-products?category=Fashion' },
+      { name: 'Modern Wear', img: trendyFashionImg, path: '/category-products?category=Fashion' },
+      { name: 'Art. Jewellery', img: artJewelleryImg, path: '/category-products?category=Jewellery' },
+      { name: 'Bags & Wallets', img: trendyFashionImg, path: '/category-products?category=Fashion' },
     ]
   },
   {
     title: 'Kids & Play',
     items: [
-      { name: 'Soft Toys', img: toysGamesImg, path: '/vendor/toys' },
-      { name: 'Board Games', img: toysGamesImg, path: '/vendor/toys' },
-      { name: 'Learning', img: toysGamesImg, path: '/vendor/toys' },
-      { name: 'Kids Wear', img: toysGamesImg, path: '/vendor/toys' },
+      { name: 'Soft Toys', img: toysGamesImg, path: '/toys' },
+      { name: 'Board Games', img: toysGamesImg, path: '/toys' },
+      { name: 'Learning', img: toysGamesImg, path: '/toys' },
+      { name: 'Kids Wear', img: toysGamesImg, path: '/toys' },
     ]
   },
   {
     title: 'Home & Stationery',
     items: [
-      { name: 'Notebooks', img: officeBooksImg, path: '/vendor/category-products?category=Stationery' },
-      { name: 'Art & Craft', img: officeBooksImg, path: '/vendor/category-products?category=Stationery' },
-      { name: 'Office Supply', img: officeBooksImg, path: '/vendor/category-products?category=Stationery' },
-      { name: 'Gifts', img: giftsHampersImg, path: '/vendor/category-products?category=Gifting' },
+      { name: 'Notebooks', img: officeBooksImg, path: '/category-products?category=Stationery' },
+      { name: 'Art & Craft', img: officeBooksImg, path: '/category-products?category=Stationery' },
+      { name: 'Office Supply', img: officeBooksImg, path: '/category-products?category=Stationery' },
+      { name: 'Gifts', img: giftsHampersImg, path: '/category-products?category=Gifting' },
     ]
   },
   {
     title: 'Electronics & Gadgets',
     items: [
-      { name: 'Smart Phones', img: smartGadgetsImg, path: '/vendor/category-products?category=Electronics' },
-      { name: 'Earbuds', img: smartGadgetsImg, path: '/vendor/category-products?category=Electronics' },
-      { name: 'Appliances', img: electricalsImg, path: '/vendor/category-products?category=Electronics' },
-      { name: 'Smart Watches', img: smartGadgetsImg, path: '/vendor/category-products?category=Electronics' },
+      { name: 'Smart Phones', img: smartGadgetsImg, path: '/category-products?category=Electronics' },
+      { name: 'Earbuds', img: smartGadgetsImg, path: '/category-products?category=Electronics' },
+      { name: 'Appliances', img: electricalsImg, path: '/category-products?category=Electronics' },
+      { name: 'Smart Watches', img: smartGadgetsImg, path: '/category-products?category=Electronics' },
     ]
   }
 ];
@@ -198,7 +198,7 @@ const Categories = () => {
           </button>
           <h1 className={`text-[19px] font-black tracking-tight ${headerTextColor}`}>Categories</h1>
         </div>
-        <button onClick={() => navigate('/vendor/search')} className={`p-1 active:scale-95 transition-transform ${headerTextColor}`}>
+        <button onClick={() => navigate('/search')} className={`p-1 active:scale-95 transition-transform ${headerTextColor}`}>
           <Search size={22} />
         </button>
       </div>

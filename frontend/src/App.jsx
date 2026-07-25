@@ -45,8 +45,7 @@ function App() {
         {/* Unified Admin Management Panel */}
         <Route path="/admin/*" element={<AdminRoutes />} />
 
-        {/* Marketplace App (Restored to root and /vendor) */}
-        <Route path="/vendor/*" element={<MarketRoutes />} />
+        {/* Marketplace App */}
         <Route path="/*" element={<MarketRoutes />} />
       </Routes>
     </BrowserRouter>

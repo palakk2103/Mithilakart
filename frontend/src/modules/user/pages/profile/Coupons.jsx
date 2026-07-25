@@ -31,6 +31,14 @@ const Coupons = () => {
   const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
 
+  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
+  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
+  const primaryBgHover = isMithilakFlow ? 'hover:bg-[#1a6874]' : isFreshGroceryFlow ? 'hover:bg-[#c08f16]' : (isQuickShopFlow ? 'hover:bg-[#d64f19]' : 'hover:bg-[#5b953d]');
+  const primaryLightBgColor = isMithilakFlow ? 'bg-[#207C8A]/10' : isFreshGroceryFlow ? 'bg-[#D9A21B]/10' : (isQuickShopFlow ? 'bg-[#F26522]/10' : 'bg-[#e8fced]');
+  const primaryBorderLight = isMithilakFlow ? 'border-[#207C8A]/20 group-hover:border-[#207C8A]/40' : isFreshGroceryFlow ? 'border-[#D9A21B]/20 group-hover:border-[#D9A21B]/40' : (isQuickShopFlow ? 'border-[#F26522]/20 group-hover:border-[#F26522]/40' : 'border-[#6FAE4A]/20 group-hover:border-[#6FAE4A]/40');
+  const primaryBorderInput = isMithilakFlow ? 'border-[#207C8A]/10 group-hover:border-[#207C8A]/30' : isFreshGroceryFlow ? 'border-[#D9A21B]/10 group-hover:border-[#D9A21B]/30' : (isQuickShopFlow ? 'border-[#F26522]/10 group-hover:border-[#F26522]/30' : 'border-[#6FAE4A]/10 group-hover:border-[#6FAE4A]/30');
+  const gradientOverlay = isMithilakFlow ? 'from-[#207C8A]/5' : isFreshGroceryFlow ? 'from-[#D9A21B]/5' : (isQuickShopFlow ? 'from-[#F26522]/5' : 'from-[#6FAE4A]/5');
+
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }}
@@ -59,14 +67,14 @@ const Coupons = () => {
       <div className="container mx-auto px-4 py-6 w-full space-y-6 relative z-10">
         {coupons.map((coupon, idx) => (
           <div key={idx} className="relative group overflow-hidden bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
-            <div className="absolute inset-0 bg-gradient-to-r from-[#6FAE4A]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="border-2 border-dashed border-[#6FAE4A]/20 rounded-2xl p-6 relative z-10 group-hover:border-[#6FAE4A]/40 transition-all">
+            <div className={`absolute inset-0 bg-gradient-to-r ${gradientOverlay} to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
+            <div className={`border-2 border-dashed ${primaryBorderLight} rounded-2xl p-6 relative z-10 transition-all`}>
               <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-[#e8fced] rounded-xl text-[#6FAE4A]">
+                <div className={`p-3 ${primaryLightBgColor} rounded-xl ${primaryText}`}>
                    <Ticket size={24} />
                 </div>
                 <div className="text-right">
-                   <h2 className="text-2xl font-black text-[#6FAE4A] italic leading-none mb-1">{coupon.discount}</h2>
+                   <h2 className={`text-2xl font-black ${primaryText} italic leading-none mb-1`}>{coupon.discount}</h2>
                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Min Order {coupon.minOrder}</p>
                 </div>
               </div>
@@ -81,11 +89,11 @@ const Coupons = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-[#e8fced] border border-[#6FAE4A]/10 rounded-xl py-3 px-4 flex items-center justify-between group-hover:border-[#6FAE4A]/30 transition-all">
-                    <span className="text-xs font-black uppercase tracking-[3px] text-[#6FAE4A]">{coupon.code}</span>
-                    <Copy size={16} className="text-[#6FAE4A]/70 cursor-pointer hover:text-[#6FAE4A] transition-colors" />
+                  <div className={`flex-1 ${primaryLightBgColor} border ${primaryBorderInput} rounded-xl py-3 px-4 flex items-center justify-between transition-all`}>
+                    <span className={`text-xs font-black uppercase tracking-[3px] ${primaryText}`}>{coupon.code}</span>
+                    <Copy size={16} className={`${primaryText}/70 cursor-pointer hover:${primaryText} transition-colors`} />
                   </div>
-                  <button className="bg-[#6FAE4A] text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-sm hover:bg-[#5b953d] active:scale-95 transition-all">Apply</button>
+                  <button className={`${primaryBg} text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-sm ${primaryBgHover} active:scale-95 transition-all`}>Apply</button>
                 </div>
               </div>
             </div>
@@ -94,10 +102,10 @@ const Coupons = () => {
 
         {coupons.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-             <div className="w-20 h-20 bg-[#e8fced] rounded-full flex items-center justify-center text-[#6FAE4A]">
+             <div className={`w-20 h-20 ${primaryLightBgColor} rounded-full flex items-center justify-center ${primaryText}`}>
                 <Ticket size={40} />
              </div>
-             <h3 className="text-lg font-black uppercase tracking-widest text-[#6FAE4A]">No Active Coupons</h3>
+             <h3 className={`text-lg font-black uppercase tracking-widest ${primaryText}`}>No Active Coupons</h3>
              <p className="text-sm text-gray-500 font-bold max-w-xs">Don't worry, keep shopping and check back soon for exclusive deals!</p>
           </div>
         )}

@@ -15,7 +15,7 @@ const StillLookingSection = ({ items }) => {
     if (item.label.toLowerCase().includes('lips')) category = 'Beauty';
     if (item.label.toLowerCase().includes('shamp')) category = 'Beauty';
 
-    navigate(`/vendor/continue-shopping/${productId}`, {
+    navigate(`/continue-shopping/${productId}`, {
       state: {
         product: {
           id: productId,

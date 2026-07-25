@@ -103,6 +103,11 @@ const VendorLayout = () => {
     return () => window.removeEventListener('cartUpdated', updateCart);
   }, []);
 
+  /* ── Route/Tab switch cart update trigger ── */
+  useEffect(() => {
+    window.dispatchEvent(new Event('cartUpdated'));
+  }, [location.pathname]);
+
   /* ── Scroll shadow listener ── */
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -127,6 +132,13 @@ const VendorLayout = () => {
   const hideFooter  = isImmersivePage && !location.pathname.includes('all-offers') && !location.pathname.includes('categories');
 
   const isCartOrCheckoutPage = location.pathname.includes('/cart') || location.pathname.includes('/checkout');
+  const shouldShowFloatingCart =
+    !isCartOrCheckoutPage &&
+    !location.pathname.includes('/profile') &&
+    !location.pathname.includes('/wishlist') &&
+    !location.pathname.includes('/wallet') &&
+    !location.pathname.includes('/menu');
+
   const cartTotalItems = cartItems.reduce((acc, item) => acc + (item.qty || 1), 0);
   const cartTotalPrice = cartItems.reduce((acc, item) => {
     return acc + parsePrice(item.price) * parsePrice(item.qty || 1);
@@ -358,9 +370,9 @@ const VendorLayout = () => {
       )}
 
       {/* Floating Cart Pill (Shows on all pages when cart has items, except cart/checkout page) */}
-      {!isCartOrCheckoutPage && cartTotalItems > 0 && (
+      {shouldShowFloatingCart && cartTotalItems > 0 && (
         <div 
-          onClick={() => navigate('/vendor/cart')}
+          onClick={() => navigate('/cart')}
           className={`fixed bottom-[76px] left-4 right-4 md:bottom-8 md:right-8 md:left-auto md:w-[380px] md:px-6 md:py-4 md:rounded-2xl z-[1000] rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgba(0,0,0,0.15)] text-white cursor-pointer active:scale-[0.98] transition-all duration-300 animate-in slide-in-from-bottom-6 ${
             localStorage.getItem('isFreshGroceryFlow') === 'true'
               ? 'bg-[#D9A21B] hover:bg-[#c08f16]'
