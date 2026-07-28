@@ -11,6 +11,7 @@ const CART = {
 
 const ORDER_STATUS = {
   PENDING: 'pending',
+  PLACED: 'placed',
   CONFIRMED: 'confirmed',
   PACKED: 'packed',
   SHIPPED: 'shipped',

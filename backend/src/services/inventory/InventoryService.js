@@ -17,7 +17,42 @@ class InventoryService extends BaseService {
   }
 
   async listInventory(sellerId) {
-    return this.productRepository.findBySeller(sellerId, {}, { sort: { stock: 1 } });
+    const [products, alerts, historyRecords] = await Promise.all([
+      this.productRepository.findBySeller(sellerId, {}, { sort: { stock: 1 } }),
+      this.stockAlertRepository.listBySeller(sellerId),
+      this.inventoryHistoryRepository.find(
+        { sellerId },
+        { sort: { createdAt: -1 }, limit: 25 }
+      ),
+    ]);
+
+    const productMap = new Map(products.map((product) => [String(product._id), product]));
+
+    return {
+      products,
+      alerts: alerts.map((alert) => {
+        const product = productMap.get(String(alert.productId));
+        return {
+          id: alert._id,
+          productId: alert.productId,
+          title: product?.title || 'Product',
+          stock: alert.currentStock,
+          threshold: alert.threshold,
+          status: alert.currentStock === 0 ? 'out' : 'low',
+        };
+      }),
+      history: historyRecords.map((entry) => {
+        const product = productMap.get(String(entry.productId));
+        return {
+          id: entry._id,
+          productId: entry.productId,
+          title: product?.title || 'Product',
+          change: entry.change,
+          type: entry.change >= 0 ? 'restock' : 'sale',
+          date: entry.createdAt,
+        };
+      }),
+    };
   }
 
   async updateStock(sellerId, productId, quantity, note = null) {

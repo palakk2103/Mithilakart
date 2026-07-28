@@ -10,6 +10,11 @@ const emptyHomeSections = {
   keepShopping: [],
 };
 
+const emptyStorefrontMeta = {
+  homeChips: [],
+  homeCategories: [],
+};
+
 const getInitialFlow = () => {
   if (typeof window === 'undefined') return 'mithilakart';
   const path = window.location.pathname;
@@ -40,6 +45,7 @@ const useVendorStore = create((set, get) => ({
 
   homeSections: { ...emptyHomeSections },
   homeBanners: [],
+  ...emptyStorefrontMeta,
   homeLoading: false,
   homeError: null,
 
@@ -58,9 +64,16 @@ const useVendorStore = create((set, get) => ({
         : await getHome();
 
       const mapped = mapStorefrontSections(data, get().homeSections);
+      const isStandardFlow = !commerceFlow || commerceFlow === 'standard';
       set({
         homeSections: mapped,
         homeBanners: data?.banners || [],
+        ...(isStandardFlow
+          ? {
+              homeChips: data?.chips || [],
+              homeCategories: data?.categories || [],
+            }
+          : {}),
         homeLoading: false,
       });
       return data;
@@ -86,6 +99,8 @@ const useVendorStore = create((set, get) => ({
       return null;
     }
   },
+
+  fetchStandardNav: async () => get().fetchHomeSections('standard'),
 }));
 
 export default useVendorStore;

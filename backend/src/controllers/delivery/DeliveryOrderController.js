@@ -5,11 +5,16 @@ const { asyncHandler } = require('../../utils/asyncHandler');
 class DeliveryOrderController extends BaseController {
   constructor(deliveryOrderService) {
     super(deliveryOrderService);
-    this.bindMethods(['listOrders', 'acceptOrder', 'confirmPickup', 'confirmDelivery', 'updateProfile', 'updateLocation', 'registerDevice']);
+    this.bindMethods(['listOrders', 'getOrderDetail', 'acceptOrder', 'confirmPickup', 'confirmDelivery', 'rejectOrder', 'markDeliveryFailed', 'getProfile', 'updateProfile', 'updateLocation', 'registerDevice']);
   }
 
   listOrders = asyncHandler(async (req, res) => {
     const data = await this.service.listOrders(req.partnerId);
+    return ApiResponse.success(res, data);
+  });
+
+  getOrderDetail = asyncHandler(async (req, res) => {
+    const data = await this.service.getOrderDetail(req.partnerId, req.params.id);
     return ApiResponse.success(res, data);
   });
 
@@ -28,8 +33,23 @@ class DeliveryOrderController extends BaseController {
     return ApiResponse.success(res, data);
   });
 
+  rejectOrder = asyncHandler(async (req, res) => {
+    const data = await this.service.rejectOrder(req.partnerId, req.params.id, req.body.reason);
+    return ApiResponse.success(res, data);
+  });
+
+  markDeliveryFailed = asyncHandler(async (req, res) => {
+    const data = await this.service.markDeliveryFailed(req.partnerId, req.params.id, req.body.reason);
+    return ApiResponse.success(res, data);
+  });
+
   updateProfile = asyncHandler(async (req, res) => {
     const data = await this.service.updateProfile(req.partnerId, req.body);
+    return ApiResponse.success(res, data);
+  });
+
+  getProfile = asyncHandler(async (req, res) => {
+    const data = await this.service.getProfile(req.partnerId);
     return ApiResponse.success(res, data);
   });
 

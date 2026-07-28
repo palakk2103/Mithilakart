@@ -10,7 +10,10 @@ class DeliveryEarningsController extends BaseController {
 
   list = asyncHandler(async (req, res) => {
     const result = await this.service.list(req.partnerId, req.query);
-    return ApiResponse.paginated(res, result.items, result.meta, { totalEarnings: result.totalEarnings });
+    return ApiResponse.success(res, result.items, {
+      ...result.meta,
+      totalEarnings: result.totalEarnings,
+    });
   });
 }
 

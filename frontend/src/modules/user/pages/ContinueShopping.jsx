@@ -4,46 +4,9 @@ import { ArrowLeft, Search, ShoppingCart, Star } from 'lucide-react';
 import { getProductById, getCategoryProducts } from '../services/catalogApi';
 import { extractList, mapProductForCard, getEntityId } from '../utils/mappers';
 
-const fallbackProduct = (productId) => ({
-  id: productId,
-  name: 'Premium Product',
-  category: 'Fashion',
-  price: '1299',
-  oldPrice: '2499',
-  discount: '48% OFF',
-  rating: '4.5',
-  image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=400&h=400',
-  brand: 'Drasert',
-});
-
-const ContinueShopping = () => {
-  const { productId } = useParams();
-  const { state } = useLocation();
-  const navigate = useNavigate();
-  const [activeFilter, setActiveFilter] = React.useState('Trending');
-  const [clickedProduct, setClickedProduct] = useState(null);
-  const [categoryProducts, setCategoryProducts] = useState([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      let product = state?.product ? mapProductForCard(state.product) : null;
-
-      if (!product && productId) {
-        try {
-          const data = await getProductById(productId);
-          const raw = data?.product || data;
-          if (raw) product = mapProductForCard(raw);
-        } catch {
-          // keep fallback below
-        }
-      }
-
       if (cancelled) return;
 
-      const resolved = product || fallbackProduct(productId);
-      setClickedProduct(resolved);
+      setClickedProduct(product || null);
 
       const categoryId = state?.product?.categoryId || product?.categoryId;
       if (categoryId) {

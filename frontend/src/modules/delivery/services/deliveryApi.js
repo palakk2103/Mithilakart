@@ -44,6 +44,10 @@ export const markPickup = (id, otp) => api.post(`/orders/${id}/pickup`, { otp })
 
 export const markDelivered = (id, otp) => api.post(`/orders/${id}/deliver`, { otp });
 
+export const rejectOrder = (id, reason) => api.post(`/orders/${id}/reject`, { reason });
+
+export const markDeliveryFailed = (id, reason) => api.post(`/orders/${id}/failed`, { reason });
+
 export const updateLocation = (latitude, longitude) => api.patch('/location', { latitude, longitude });
 
 export const registerDeliveryDevice = (deviceId, fcmToken) =>

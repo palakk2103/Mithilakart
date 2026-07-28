@@ -129,34 +129,40 @@ const ARCH_BACKGROUNDS = [
   '#C5AD9A', // Warm grey/brown
 ];
 
-const BEST_QUALITY_DATA = [
-  { name: "GUTI WOMEN'S JEANS", tag: 'Grab Or Gone', img: StillImg1 },
-  { name: "MANDARIN WOMEN'S SHIRTS", tag: 'Popular', img: StillImg2 },
-  { name: "ROYATTO NECKLACES", tag: 'Popular', img: StillImg3 },
-  { name: "SQEW WOMEN'S TROUSERS", tag: 'In Focus Now', img: StillImg4 }
-];
-
-const BestQuality = () => {
+const BestQuality = ({ items = [] }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  const products = (Array.isArray(items) && items.length)
+    ? items.slice(0, 4).map((item, idx) => ({
+        id: item.id || item._id || item.productId,
+        name: item.title || item.name || 'Product',
+        tag: item.tag || item.badge || 'Popular',
+        img: item.image || item.img || (Array.isArray(item.images) ? item.images[0]?.url : null),
+        price: item.price,
+        mrp: item.mrp,
+        brand: item.brand,
+      }))
+    : [];
+
   const handleProductClick = useCallback((product) => {
+    if (!product.id) return;
     navigate('/product-detail', {
       state: {
         product: {
-          id: Math.random().toString(36).substr(2, 9),
+          id: product.id,
           name: product.name,
-          brand: 'Premium Quality',
-          price: 999,
-          oldPrice: 1999,
-          discount: '50% off',
-          rating: 4.8,
+          brand: product.brand || 'Premium Quality',
+          price: product.price || 0,
+          oldPrice: product.mrp || product.price,
           image: product.img,
-          label: 'Best Quality'
-        }
-      }
+          label: 'Best Quality',
+        },
+      },
     });
   }, [navigate]);
+
+  if (!products.length) return null;
 
   return (
     <div className="py-3 px-3 w-full max-w-[1600px] mx-auto select-none bg-transparent">
@@ -179,11 +185,11 @@ const BestQuality = () => {
 
       {/* Grid Layout matching TopSelection */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        {BEST_QUALITY_DATA.map((product, idx) => {
+        {products.map((product, idx) => {
           const archBg = ARCH_BACKGROUNDS[idx % ARCH_BACKGROUNDS.length];
           return (
             <div
-              key={idx}
+              key={product.id || idx}
               onClick={() => handleProductClick(product)}
               className="bg-transparent rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all duration-300 border border-[#EADEC9] group"
             >

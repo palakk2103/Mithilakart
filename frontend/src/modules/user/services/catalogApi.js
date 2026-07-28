@@ -11,6 +11,9 @@ export const searchProducts = (params) => customerApi.get('/products/search', { 
 export const getCategoryProducts = (categoryId, params) =>
   customerApi.get(`/categories/${categoryId}/products`, { params });
 
+export const getNearbyProducts = (params) =>
+  customerApi.get('/maps/nearby/products', { params });
+
 export const getProductReviews = (productId) =>
   customerApi.get(`/products/${productId}/reviews`);
 

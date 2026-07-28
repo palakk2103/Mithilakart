@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { BaseRepository } = require('../core/BaseRepository');
 const OrderItem = require('../models/OrderItem');
 
@@ -6,13 +7,18 @@ class OrderItemRepository extends BaseRepository {
     super(OrderItem);
   }
 
+  _toSellerObjectId(sellerId) {
+    return new mongoose.Types.ObjectId(String(sellerId));
+  }
+
   async listByOrderId(orderId) {
     return this.find({ orderId, deletedAt: null });
   }
 
   async countDistinctOrdersBySeller(sellerId) {
+    const sellerObjectId = this._toSellerObjectId(sellerId);
     const result = await this.model.aggregate([
-      { $match: { sellerId, deletedAt: null } },
+      { $match: { sellerId: sellerObjectId, deletedAt: null } },
       { $group: { _id: '$orderId' } },
       { $count: 'total' },
     ]);
@@ -21,8 +27,9 @@ class OrderItemRepository extends BaseRepository {
   }
 
   async listDistinctOrderIdsBySeller(sellerId, { skip = 0, limit = 20 } = {}) {
+    const sellerObjectId = this._toSellerObjectId(sellerId);
     const rows = await this.model.aggregate([
-      { $match: { sellerId, deletedAt: null } },
+      { $match: { sellerId: sellerObjectId, deletedAt: null } },
       { $group: { _id: '$orderId', lastAt: { $max: '$createdAt' } } },
       { $sort: { lastAt: -1 } },
       { $skip: skip },

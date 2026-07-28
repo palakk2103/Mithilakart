@@ -1,91 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star } from 'lucide-react';
 import useVendorStore from '../../../store/useVendorStore';
 import { addProductToCart } from '../utils/cartUtils';
-
-import prod1 from '../../../assets/mithila/product01.png';
-import prod2 from '../../../assets/mithila/product02.png';
-import prod3 from '../../../assets/mithila/product03.png';
-import prod4 from '../../../assets/mithila/product04.png';
-import prod5 from '../../../assets/mithila/product05.png';
-import prod6 from '../../../assets/mithila/product06.png';
-import prod7 from '../../../assets/mithila/product07.png';
-import prod8 from '../../../assets/mithila/product08.png';
-import prod9 from '../../../assets/mithila/product09.png';
-import prod10 from '../../../assets/products/product10.jpg';
-import prod11 from '../../../assets/mithila/product11.png';
-import prod12 from '../../../assets/products/product12.jpg';
+import { getCategories } from '../services/catalogApi';
+import { mapMithilaCategoryCards } from '../utils/mappers';
 
 import bannerIllustration from '../../../assets/banner_illustration.png';
-
-const MITHILA_CATEGORIES = [
-  {
-    name: 'Mithila Festival & Cultural',
-    img: prod1
-  },
-  {
-    name: 'Mithila Paridhan',
-    img: prod2
-  },
-  {
-    name: 'Mithila Special Cuisines',
-    img: prod3
-  },
-  {
-    name: 'Mithila Lac Bangles',
-    img: prod4
-  },
-  {
-    name: 'Mithila Handcrafted Items',
-    img: prod5
-  },
-  {
-    name: 'Mithila Pooja Needs',
-    img: prod6
-  },
-  {
-    name: 'Mithila Books & Panchang',
-    img: prod7
-  },
-  {
-    name: 'Mithila Achaar',
-    img: prod8
-  }
-];
-
-const MITHILA_BEST_SELLERS = [
-  {
-    id: 'bs1',
-    line1: 'Madhubani',
-    line2: 'Wall Art',
-    name: 'Madhubani Wall Art',
-    img: prod9,
-    price: 899,
-    weight: '1 Unit',
-    rating: 4.9
-  },
-  {
-    id: 'bs2',
-    line1: 'Handpainted',
-    line2: 'Pot',
-    name: 'Handpainted Pot',
-    img: prod7,
-    price: 699,
-    weight: '1 Unit',
-    rating: 4.8
-  },
-  {
-    id: 'bs3',
-    line1: 'Mithila',
-    line2: 'Jewellery',
-    name: 'Mithila Jewellery',
-    img: prod11,
-    price: 499,
-    weight: '1 Set',
-    rating: 4.7
-  }
-];
 
 const getDisplayName = (name) => {
   if (name === 'Mithila Festival & Cultural') return 'Festival & Cultural';
@@ -102,6 +22,7 @@ const Mithilak = () => {
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [mithilaCategories, setMithilaCategories] = useState([]);
   const { fetchHomeSections, homeSections } = useVendorStore();
 
   useEffect(() => {
@@ -112,6 +33,22 @@ const Mithilak = () => {
     window.dispatchEvent(new Event('cartUpdated'));
     fetchHomeSections('mithilak');
   }, [fetchHomeSections]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getCategories({ commerceFlow: 'mithilak' })
+      .then((data) => {
+        if (!cancelled) setMithilaCategories(mapMithilaCategoryCards(data));
+      })
+      .catch(() => {
+        if (!cancelled) setMithilaCategories([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const triggerToast = (msg) => {
     setToastMessage(msg);
@@ -155,9 +92,9 @@ const Mithilak = () => {
 
       {/* Category Grid (Mobile View) */}
       <div className="grid grid-cols-4 gap-y-5 gap-x-2.5 mb-8 md:hidden">
-        {MITHILA_CATEGORIES.map((item, idx) => (
+        {mithilaCategories.map((item, idx) => (
           <div
-            key={idx}
+            key={item.id || idx}
             onClick={() => {
               localStorage.setItem('isMithilakFlow', 'true');
               localStorage.setItem('isQuickShopFlow', 'false');
@@ -189,9 +126,9 @@ const Mithilak = () => {
       <div className="hidden md:block md:max-w-[800px] md:mx-auto md:w-full md:mb-8">
         <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-md">
           <div className="grid grid-cols-4 gap-x-8 gap-y-6 justify-items-center">
-            {MITHILA_CATEGORIES.map((item, idx) => (
+            {mithilaCategories.map((item, idx) => (
               <div
-                key={idx}
+                key={item.id || idx}
                 onClick={() => {
                   localStorage.setItem('isMithilakFlow', 'true');
                   localStorage.setItem('isQuickShopFlow', 'false');

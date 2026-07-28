@@ -16,14 +16,15 @@ export const verifyPhoneOtp = async (countryCode, phoneNumber, otp, name) => {
     ...(name ? { name } : {}),
   });
 
-  if (result?.tokens) {
-    setTokens('customer', result.tokens);
-    setUser('customer', result.user);
+  const tokens = result?.tokens || (result?.accessToken ? result : null);
+  if (tokens?.accessToken) {
+    setTokens('customer', tokens);
+    if (result?.user) setUser('customer', result.user);
   }
 
   return {
-    success: true,
-    token: result?.tokens?.accessToken,
+    success: Boolean(tokens?.accessToken),
+    token: tokens?.accessToken,
     user: result?.user,
     isNewUser: result?.isNewUser,
   };
@@ -40,14 +41,15 @@ export const verifyEmailOtp = async (email, otp, name) => {
     ...(name ? { name } : {}),
   });
 
-  if (result?.tokens) {
-    setTokens('customer', result.tokens);
-    setUser('customer', result.user);
+  const tokens = result?.tokens || (result?.accessToken ? result : null);
+  if (tokens?.accessToken) {
+    setTokens('customer', tokens);
+    if (result?.user) setUser('customer', result.user);
   }
 
   return {
-    success: true,
-    token: result?.tokens?.accessToken,
+    success: Boolean(tokens?.accessToken),
+    token: tokens?.accessToken,
     user: result?.user,
     isNewUser: result?.isNewUser,
   };

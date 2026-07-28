@@ -5,10 +5,18 @@ const { RazorpayPaymentProvider } = require('./RazorpayPaymentProvider');
 const { MockPushProvider, MockSmsProvider } = require('./MockNotificationProviders');
 const { FcmPushProvider } = require('./FcmPushProvider');
 const { SmsIndiaHubProvider } = require('./SmsIndiaHubProvider');
+const { createShippingProvider } = require('./shipping/createShippingProvider');
 const { logger } = require('../../utils/logger');
 
 function bootstrapProviders() {
-  if (config.razorpay?.enabled) {
+  const shippingProvider = createShippingProvider(config.shipping?.provider || process.env.SHIPPING_PROVIDER || 'mock');
+  registerProvider('shipping', shippingProvider);
+  logger.info(`Shipping provider: ${shippingProvider.displayName || shippingProvider.providerName || 'mock'} (e-commerce)`);
+
+  const paymentProvider = String(process.env.PAYMENT_PROVIDER || '').toLowerCase();
+  const useMockPayment = paymentProvider === 'mock' || (!config.razorpay?.enabled && paymentProvider !== 'razorpay');
+
+  if (!useMockPayment && config.razorpay?.enabled) {
     registerProvider(
       'payment',
       new RazorpayPaymentProvider({

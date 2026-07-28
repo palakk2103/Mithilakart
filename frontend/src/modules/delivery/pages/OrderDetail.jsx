@@ -7,6 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { getOrderById, getOrders, markPickup, markDelivered } from '../services/deliveryApi';
+import useDeliveryLocationShare from '../hooks/useDeliveryLocationShare';
 
 const STATUS_STEPS = [
   { key: 'accepted', label: 'Accepted', desc: 'Head to vendor' },
@@ -35,7 +36,7 @@ const mapApiOrder = (data = {}) => {
   const pickup = order.pickupAddress || data.pickupAddress || {};
 
   return {
-    id: order._id || assignment.orderId || data._id,
+    id: order.id || order._id || assignment.orderId || data._id,
     customer: shipping.name || order.customerName || data.customerName || 'Customer',
     phone: shipping.phone || order.customerPhone || data.phone || '',
     address: formatAddress(shipping) || data.address || '—',
@@ -189,6 +190,9 @@ const DeliveryOrderDetail = () => {
   const [signature, setSignature] = useState(null);
   const [showCamera, setShowCamera] = useState(false);
 
+  const shareLocation = ['accepted', 'at_pickup', 'in_transit'].includes(currentStatus);
+  useDeliveryLocationShare(shareLocation && !delivered);
+
   useEffect(() => {
     const loadOrder = async () => {
       try {
@@ -223,7 +227,11 @@ const DeliveryOrderDetail = () => {
     if (statusIndex === 1) {
       setActionLoading(true);
       try {
-        await markPickup(order.id);
+        const pickupOtp = sessionStorage.getItem(`delivery_pickup_otp_${order.id}`) || '0000';
+        const pickupResult = await markPickup(order.id, pickupOtp);
+        if (pickupResult?.deliveryOtp) {
+          sessionStorage.setItem(`delivery_customer_otp_hint_${order.id}`, String(pickupResult.deliveryOtp));
+        }
         setCurrentStatus('in_transit');
       } catch (err) {
         toast.error(err?.message || 'Failed to confirm pickup');
@@ -346,7 +354,7 @@ const DeliveryOrderDetail = () => {
 
         <div className={`bg-white rounded-3xl border p-5 ${statusIndex < 2 ? 'border-blue-100 ring-4 ring-blue-50/50' : 'opacity-60'}`}>
           <div className="flex items-start justify-between mb-4">
-            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Store</p><p className="text-base font-black text-slate-900">FreshMart Vendor</p></div>
+            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Store</p><p className="text-base font-black text-slate-900">{order.storeName || order.sellerName || 'Seller Store'}</p></div>
             <button onClick={() => window.open(order.lat && order.lng ? `https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`)} className="w-10 h-10 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Navigation size={18} /></button>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100"><MapPin size={14} className="text-blue-600" /><span className="truncate">{order.pickupAddress}</span></div>

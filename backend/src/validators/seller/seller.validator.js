@@ -17,7 +17,7 @@ const sellerProductCreateSchema = Joi.object({
     sortOrder: Joi.number().integer().min(0).optional(),
   })).optional(),
   tags: Joi.array().items(Joi.string()).optional(),
-  commerceFlows: Joi.array().items(Joi.string().valid(...COMMERCE_FLOW_VALUES)).optional(),
+  commerceFlows: Joi.array().items(Joi.string().valid(...COMMERCE_FLOW_VALUES)).min(1).optional(),
   brand: Joi.string().allow('').optional(),
   attributes: Joi.object().optional(),
 });

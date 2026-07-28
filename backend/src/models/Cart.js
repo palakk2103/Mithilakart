@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { COMMERCE_FLOW_VALUES } = require('../constants/catalog');
+const { MARKETPLACE_TAB_VALUES } = require('../constants/marketplace');
 
 const cartSchema = new mongoose.Schema(
   {
@@ -10,6 +11,11 @@ const cartSchema = new mongoose.Schema(
       type: String,
       enum: COMMERCE_FLOW_VALUES,
       default: 'standard',
+    },
+    marketplaceTab: {
+      type: String,
+      enum: MARKETPLACE_TAB_VALUES,
+      default: null,
     },
     currency: { type: String, default: 'INR' },
     subtotal: { type: Number, default: 0 },

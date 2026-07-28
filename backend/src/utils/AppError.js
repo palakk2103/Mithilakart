@@ -1,4 +1,4 @@
-const { ERROR_CODES, ERROR_CODE_TO_STATUS } = require('../constants/errorCodes');
+const { ERROR_CODES, ERROR_CODE_TO_STATUS, DOMAIN_ERROR_STATUS } = require('../constants/errorCodes');
 const { HTTP_STATUS } = require('../constants/httpStatus');
 
 class AppError extends Error {
@@ -6,7 +6,10 @@ class AppError extends Error {
     super(message);
     this.name = 'AppError';
     this.code = code;
-    this.statusCode = statusCode || ERROR_CODE_TO_STATUS[code] || HTTP_STATUS.INTERNAL_SERVER_ERROR;
+    this.statusCode = statusCode
+      || DOMAIN_ERROR_STATUS[code]
+      || ERROR_CODE_TO_STATUS[code]
+      || HTTP_STATUS.INTERNAL_SERVER_ERROR;
     this.details = details;
     this.isOperational = true;
     Error.captureStackTrace(this, this.constructor);
@@ -24,12 +27,24 @@ class AppError extends Error {
     return new AppError(message, ERROR_CODES.FORBIDDEN, HTTP_STATUS.FORBIDDEN, details);
   }
 
-  static notFound(message = 'Resource not found') {
-    return new AppError(message, ERROR_CODES.NOT_FOUND, HTTP_STATUS.NOT_FOUND);
+  static notFound(message = 'Resource not found', code = ERROR_CODES.NOT_FOUND) {
+    return new AppError(message, code, null);
   }
 
-  static conflict(message = 'Resource conflict', details = null) {
-    return new AppError(message, ERROR_CODES.CONFLICT, HTTP_STATUS.CONFLICT, details);
+  static conflict(message = 'Resource conflict', details = null, code = ERROR_CODES.CONFLICT) {
+    return new AppError(message, code, null, details);
+  }
+
+  static outOfStock(message = 'Insufficient stock', details = null) {
+    return new AppError(message, ERROR_CODES.OUT_OF_STOCK, null, details);
+  }
+
+  static paymentFailed(message = 'Payment failed', details = null) {
+    return new AppError(message, ERROR_CODES.PAYMENT_FAILED, null, details);
+  }
+
+  static deliveryNotAvailable(message = 'No delivery partner available', details = null) {
+    return new AppError(message, ERROR_CODES.DELIVERY_NOT_AVAILABLE, null, details);
   }
 
   static gone(message = 'Resource expired') {

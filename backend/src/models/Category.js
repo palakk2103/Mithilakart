@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { COMMERCE_FLOW_VALUES } = require('../constants/catalog');
+const { MARKETPLACE_TAB_VALUES } = require('../constants/marketplace');
 
 const categorySchema = new mongoose.Schema(
   {
@@ -14,6 +15,10 @@ const categorySchema = new mongoose.Schema(
     commerceFlows: {
       type: [{ type: String, enum: COMMERCE_FLOW_VALUES }],
       default: ['standard'],
+    },
+    visibleTabs: {
+      type: [{ type: String, enum: MARKETPLACE_TAB_VALUES }],
+      default: ['mithilakart'],
     },
     deletedAt: { type: Date, default: null },
   },

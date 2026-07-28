@@ -14,6 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { getNotifications } from '../../services/sellerApi';
 import { getRelativeTime } from '../../utils/formatters';
 import { SIDEBAR_MENU } from '../../constants';
+import useSellerOrderStream from '../../hooks/useSellerOrderStream';
 
 const Topbar = ({ onMenuClick }) => {
   const { seller, logout } = useSellerAuth();
@@ -44,6 +45,15 @@ const Topbar = ({ onMenuClick }) => {
     };
     fetchNotifications();
   }, []);
+
+  useSellerOrderStream(() => {
+    getNotifications()
+      .then((data) => {
+        setNotifications(data?.notifications || []);
+        setUnreadCount(data?.unreadCount ?? 0);
+      })
+      .catch(() => {});
+  });
 
   // Close dropdowns on outside click
   useEffect(() => {

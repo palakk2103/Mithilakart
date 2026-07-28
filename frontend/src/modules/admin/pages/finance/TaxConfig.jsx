@@ -1,133 +1,138 @@
-import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { financeApi } from '../../services/api';
 import { extractList, mapTaxSlab } from '../../utils/mappers';
-import { 
-  ShieldCheck, Search, Plus, Trash2, 
-  Edit2, Info, AlertCircle, FileText,
-  DollarSign, CheckCircle2, ChevronRight
-} from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Plus, Edit2, Trash2, Loader2, Save } from 'lucide-react';
+import Modal from '../../components/ui/Modal';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import toast from 'react-hot-toast';
+
+const EMPTY = { name: '', rate: 18, region: 'IN', isActive: true };
 
 const TaxConfig = () => {
   const [slabs, setSlabs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(EMPTY);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      const { data, error: apiError } = await financeApi.getTaxConfigs();
-      if (cancelled) return;
-      if (apiError) {
-        setError(apiError);
-        setSlabs([]);
-      } else {
-        setError(null);
-        setSlabs(extractList(data).map(mapTaxSlab));
-      }
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await financeApi.getTaxConfigs();
+    if (error) toast.error(error);
+    else setSlabs(extractList(data).map(mapTaxSlab));
+    setLoading(false);
   }, []);
 
+  useEffect(() => { load(); }, [load]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(EMPTY);
+    setModalOpen(true);
+  };
+
+  const openEdit = (slab) => {
+    setEditing(slab);
+    setForm({
+      name: slab.category,
+      rate: parseFloat(String(slab.gst).replace('%', '')) || 0,
+      region: slab.region || 'IN',
+      isActive: slab.status === 'Active',
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast.error('Tax name is required');
+      return;
+    }
+    const payload = {
+      name: form.name.trim(),
+      rate: Number(form.rate) / 100,
+      region: form.region || 'IN',
+      isActive: form.isActive,
+    };
+    const result = editing
+      ? await financeApi.updateTaxConfig(editing.id, payload)
+      : await financeApi.createTaxConfig(payload);
+    if (result.error) toast.error(result.error);
+    else {
+      toast.success(editing ? 'Tax slab updated' : 'Tax slab created');
+      setModalOpen(false);
+      load();
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await financeApi.deleteTaxConfig(deleteTarget.id);
+    if (error) toast.error(error);
+    else {
+      toast.success('Tax slab deleted');
+      setDeleteTarget(null);
+      load();
+    }
+  };
+
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-700">
-      {/* Header */}
+    <div className="space-y-6 pb-20">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-4xl font-semibold text-slate-900 tracking-tight font-montserrat uppercase">Tax & Compliance</h1>
-          <p className="text-slate-500 font-medium mt-1 font-raleway">Configure GST slabs, HSN codes and category-wise tax rules.</p>
+          <h1 className="text-4xl font-semibold text-slate-900 uppercase">Tax & Compliance</h1>
+          <p className="text-slate-500 text-sm mt-1">GST slabs applied at order pricing</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:scale-105 transition-all">
-          <Plus size={16} />
-          Add Tax Slab
+        <button onClick={openCreate} className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl text-xs font-black uppercase">
+          <Plus size={16} /> Add Tax Slab
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         {/* Tax Overview */}
-         <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-               <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                  <h3 className="text-sm font-black text-slate-900 font-montserrat uppercase tracking-widest">Category Tax Matrix</h3>
-                  <div className="w-64">
-                     <SearchInput type="text" placeholder="Search category..." />
-                  </div>
-               </div>
-               <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                     <thead>
-                        <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                           <th className="px-6 py-4">Category</th>
-                           <th className="px-6 py-4">GST Rate</th>
-                           <th className="px-6 py-4">HSN Code</th>
-                           <th className="px-6 py-4">Status</th>
-                           <th className="px-6 py-4 text-right">Actions</th>
-                        </tr>
-                     </thead>
-                     <tbody className="divide-y divide-slate-50 text-sm">
-                        {slabs.map((slab) => (
-                           <tr key={slab.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-6 py-5 font-bold text-slate-900">{slab.category}</td>
-                              <td className="px-6 py-5 font-black text-blue-600 font-roboto">{slab.gst}</td>
-                              <td className="px-6 py-5 font-bold text-slate-400 font-roboto">{slab.hsn}</td>
-                              <td className="px-6 py-5">
-                                 <span className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-green-100">
-                                    {slab.status}
-                                 </span>
-                              </td>
-                              <td className="px-6 py-5 text-right">
-                                 <button className="p-2 text-slate-300 hover:text-blue-500 transition-all">
-                                    <Edit2 size={16} />
-                                 </button>
-                              </td>
-                           </tr>
-                        ))}
-                     </tbody>
-                  </table>
-               </div>
-            </div>
-         </div>
+      {loading ? (
+        <div className="flex justify-center py-16 text-slate-400 gap-2"><Loader2 className="animate-spin" /> Loading...</div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <th className="px-6 py-4">Name</th>
+                <th className="px-6 py-4">GST Rate</th>
+                <th className="px-6 py-4">Region</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 text-sm">
+              {slabs.map((slab) => (
+                <tr key={slab.id}>
+                  <td className="px-6 py-5 font-bold">{slab.category}</td>
+                  <td className="px-6 py-5 font-black text-blue-600">{slab.gst}</td>
+                  <td className="px-6 py-5">{slab.region || 'IN'}</td>
+                  <td className="px-6 py-5"><span className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-[9px] font-black uppercase">{slab.status}</span></td>
+                  <td className="px-6 py-5 text-right">
+                    <button onClick={() => openEdit(slab)} className="p-2 text-slate-300 hover:text-blue-500"><Edit2 size={16} /></button>
+                    <button onClick={() => setDeleteTarget(slab)} className="p-2 text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {slabs.length === 0 && <p className="p-8 text-center text-slate-400 text-sm font-bold">No tax slabs configured</p>}
+        </div>
+      )}
 
-         {/* Configuration Sidebar */}
-         <div className="space-y-6">
-            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-               <div className="flex items-center gap-3">
-                  <ShieldCheck size={18} className="text-green-500" />
-                  <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Global Settings</h3>
-               </div>
-               <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                     <div>
-                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">Inclusive Pricing</p>
-                        <p className="text-[8px] text-slate-400 font-bold uppercase">Display prices with tax</p>
-                     </div>
-                     <div className="w-10 h-5 bg-blue-600 rounded-full relative cursor-pointer">
-                        <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm" />
-                     </div>
-                  </div>
-                  <div>
-                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Platform GSTIN</label>
-                     <input type="text" defaultValue="07AAAAA0000A1Z5" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-xs font-bold outline-none" />
-                  </div>
-               </div>
-            </div>
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Tax Slab' : 'Add Tax Slab'}>
+        <div className="space-y-4">
+          <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Name e.g. Standard GST" className="w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none" />
+          <input type="number" value={form.rate} onChange={(e) => setForm((p) => ({ ...p, rate: e.target.value }))} placeholder="Rate %" className="w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none" />
+          <input value={form.region} onChange={(e) => setForm((p) => ({ ...p, region: e.target.value }))} placeholder="Region" className="w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none" />
+          <button onClick={handleSave} className="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2">
+            <Save size={14} /> Save Slab
+          </button>
+        </div>
+      </Modal>
 
-            <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden">
-               <div className="absolute -right-4 -bottom-4 opacity-10">
-                  <FileText size={100} />
-               </div>
-               <div className="relative z-10">
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Legal Note</p>
-                  <p className="text-xs opacity-80 mt-4 leading-relaxed font-medium italic">
-                     "Tax changes are applied instantly. Ensure HSN codes match the latest government notifications to avoid compliance issues."
-                  </p>
-               </div>
-            </div>
-         </div>
-      </div>
+      <ConfirmDialog isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} type="delete" message="Delete this tax slab?" />
     </div>
   );
 };

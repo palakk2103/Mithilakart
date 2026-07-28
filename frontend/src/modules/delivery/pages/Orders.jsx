@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Package, CheckCircle2, Clock, MapPin, ChevronRight, X, Zap, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { getOrders, getEarnings, acceptOrder } from '../services/deliveryApi';
+import useDeliverySocket from '../hooks/useDeliverySocket';
 
 const TABS = ['Pending', 'Active', 'History'];
 
@@ -24,10 +25,10 @@ const formatOrderDate = (value) => {
 
 const mapAssignment = (assignment = {}) => {
   const order = assignment.order || assignment.orderId || {};
-  const shipping = order.shippingAddress || assignment.shippingAddress || {};
+  const shipping = order.shippingAddress || order.addressSnapshot || assignment.shippingAddress || {};
   const pickup = order.pickupAddress || assignment.pickupAddress || {};
   return {
-    id: order._id || assignment.orderId || assignment._id,
+    id: order.id || order._id || assignment.orderId || assignment._id,
     customer: shipping.name || order.customerName || assignment.customerName || 'Customer',
     address: formatAddress(shipping) || assignment.address || '—',
     pickupAddress: typeof pickup === 'string'
@@ -114,12 +115,20 @@ const SwipeAction = ({ children, onAccept, onDecline }) => {
 
 const DeliveryOrders = () => {
   const navigate = useNavigate();
+  const { isOnline } = useOutletContext();
   const [activeTab, setActiveTab] = useState('Pending');
   const [orders, setOrders] = useState({ pending: [], active: [], history: [] });
 
   const loadOrders = useCallback(async () => {
     try {
-      const [ordersRes, earningsRes] = await Promise.all([getOrders(), getEarnings()]);
+      const [ordersResult, earningsResult] = await Promise.allSettled([getOrders(), getEarnings()]);
+      const ordersRes = ordersResult.status === 'fulfilled' ? ordersResult.value : null;
+      const earningsRes = earningsResult.status === 'fulfilled' ? earningsResult.value : null;
+
+      if (!ordersRes) {
+        throw ordersResult.reason;
+      }
+
       const available = (ordersRes?.available || []).map(mapAssignment);
       const assigned = (ordersRes?.assigned || []).map(mapAssignment);
       const earningsItems = Array.isArray(earningsRes) ? earningsRes : (earningsRes?.items || []);
@@ -136,7 +145,14 @@ const DeliveryOrders = () => {
 
   useEffect(() => {
     loadOrders();
-  }, [loadOrders]);
+  }, [loadOrders, isOnline]);
+
+  useDeliverySocket((payload) => {
+    if (payload?.type === 'new_assignment') {
+      toast.success(`New delivery assignment${payload.orderNumber ? `: ${payload.orderNumber}` : ''}`);
+    }
+    loadOrders();
+  });
 
   const handleDecline = (orderId) => {
     setOrders(prev => ({
@@ -147,7 +163,10 @@ const DeliveryOrders = () => {
 
   const handleAccept = async (order) => {
     try {
-      await acceptOrder(order.id);
+      const result = await acceptOrder(order.id);
+      if (result?.pickupOtp) {
+        sessionStorage.setItem(`delivery_pickup_otp_${order.id}`, String(result.pickupOtp));
+      }
       setOrders(prev => ({
         ...prev,
         pending: prev.pending.filter(o => o.id !== order.id),
@@ -201,8 +220,12 @@ const DeliveryOrders = () => {
               {orders.pending.length === 0 ? (
                 <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-100">
                   <Package size={32} className="text-slate-200 mx-auto mb-3" />
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-wide">All caught up!</p>
-                  <p className="text-[10px] text-slate-300 font-bold mt-1 uppercase">Waiting for new assignments...</p>
+                  <p className="text-sm font-bold text-slate-400 uppercase tracking-wide">
+                    {isOnline ? 'All caught up!' : 'You are offline'}
+                  </p>
+                  <p className="text-[10px] text-slate-300 font-bold mt-1 uppercase">
+                    {isOnline ? 'Waiting for new assignments...' : 'Go online to receive delivery orders'}
+                  </p>
                 </div>
               ) : (
                 orders.pending.map((order) => (

@@ -2,10 +2,11 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 
 class AdminPlatformSettingsService extends BaseService {
-  constructor({ platformSettingRepository, commissionRuleRepository }) {
+  constructor({ platformSettingRepository, commissionRuleRepository, platformConfigService = null }) {
     super();
     this.platformSettingRepository = platformSettingRepository;
     this.commissionRuleRepository = commissionRuleRepository;
+    this.platformConfigService = platformConfigService;
   }
 
   async getSettings() {
@@ -30,6 +31,9 @@ class AdminPlatformSettingsService extends BaseService {
         results.push(await this.platformSettingRepository.create({ key, value, updatedBy: adminId }));
       }
     }
+    if (this.platformConfigService) {
+      await this.platformConfigService.invalidateCache();
+    }
     return results;
   }
 
@@ -38,15 +42,19 @@ class AdminPlatformSettingsService extends BaseService {
 
     let rule = await this.commissionRuleRepository.findDefault();
     if (rule) {
-      return this.commissionRuleRepository.updateById(rule._id, { rate, updatedBy: adminId });
+      const updated = await this.commissionRuleRepository.updateById(rule._id, { rate, updatedBy: adminId });
+      if (this.platformConfigService) await this.platformConfigService.invalidateCache();
+      return updated;
     }
 
-    return this.commissionRuleRepository.create({
+    const created = await this.commissionRuleRepository.create({
       name: 'Default Platform Commission',
       rate,
       isDefault: true,
       isActive: true,
     });
+    if (this.platformConfigService) await this.platformConfigService.invalidateCache();
+    return created;
   }
 }
 

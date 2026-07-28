@@ -83,6 +83,9 @@ function createSellerRoutes(controllers, middleware) {
   router.post('/reviews/:id/reply', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({ reply: Joi.string().required() })), controllers.reviews.reply);
   router.post('/reviews/:id/report', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({ reason: Joi.string().optional() })), controllers.reviews.report);
 
+  router.get('/questions', ...sellerScope, controllers.questions.list);
+  router.post('/questions/:id/answer', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({ answer: Joi.string().required() })), controllers.questions.answer);
+
   router.get('/settings/profile', ...sellerScope, controllers.settings.getProfile);
   router.put('/settings/profile', ...sellerScope, validateBody(sellerSettingsProfileSchema), controllers.settings.updateProfile);
   router.put('/settings/bank', ...sellerScope, validateBody(sellerSettingsBankSchema), controllers.settings.updateBank);

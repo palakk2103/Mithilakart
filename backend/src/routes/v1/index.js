@@ -34,6 +34,7 @@ router.use('/coupons', container.routes.coupons);
 router.use('/', container.routes.deals);
 router.use('/', container.routes.engagement);
 router.use('/seller', container.routes.seller);
+router.use('/seller', container.routes.sellerListings);
 router.use('/admin', container.routes.adminPromotions);
 router.use('/admin', container.routes.adminOrders);
 router.use('/admin', container.routes.adminDelivery);
@@ -42,8 +43,13 @@ router.use('/admin', container.routes.adminPlatform);
 router.use('/', container.routes.payments);
 
 router.use('/admin', container.routes.adminCatalog);
+router.use('/admin', container.routes.adminListings);
+router.use('/admin', container.routes.adminContent);
 router.use('/admin', container.routes.adminCms);
 
+router.use('/maps', container.routes.maps);
+router.use('/shipping', container.routes.shipping);
+router.use('/marketplace', container.routes.marketplace);
 router.use('/notifications', container.routes.notifications);
 router.use('/support', container.routes.support);
 router.use('/', container.routes.search);

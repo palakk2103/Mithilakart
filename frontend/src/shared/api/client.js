@@ -1,7 +1,16 @@
 import axios from 'axios';
-import { getTokens, clearTokens } from './tokenStorage';
+import { getTokens, setTokens, clearTokens } from './tokenStorage';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+const REFRESH_PATHS = {
+  customer: '/auth/refresh',
+  seller: '/auth/refresh',
+  admin: '/auth/refresh',
+  delivery: '/auth/refresh',
+};
+
+const refreshInflight = {};
 
 function unwrapResponse(response) {
   const body = response.data;
@@ -34,6 +43,44 @@ function extractError(error) {
   return error;
 }
 
+async function refreshPortalTokens(portal, baseURL) {
+  if (refreshInflight[portal]) {
+    return refreshInflight[portal];
+  }
+
+  refreshInflight[portal] = (async () => {
+    const { refreshToken } = getTokens(portal);
+    if (!refreshToken) {
+      throw new Error('Missing refresh token');
+    }
+
+    const response = await axios.post(
+      `${baseURL}${REFRESH_PATHS[portal]}`,
+      { refreshToken },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
+    );
+
+    const data = unwrapResponse(response);
+    const tokens = data?.tokens || data;
+    if (!tokens?.accessToken) {
+      throw new Error('Refresh response missing access token');
+    }
+
+    setTokens(portal, {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || refreshToken,
+    });
+
+    return tokens.accessToken;
+  })();
+
+  try {
+    return await refreshInflight[portal];
+  } finally {
+    delete refreshInflight[portal];
+  }
+}
+
 export function createApiClient({ portal, baseURL = API_BASE, onUnauthorized } = {}) {
   const instance = axios.create({
     baseURL,
@@ -56,12 +103,35 @@ export function createApiClient({ portal, baseURL = API_BASE, onUnauthorized } =
       if (response.status === 204) return null;
       return unwrapResponse(response);
     },
-    (error) => {
+    async (error) => {
       const status = error.response?.status;
-      if (status === 401 && portal) {
-        clearTokens(portal);
-        if (onUnauthorized) onUnauthorized();
+      const config = error.config || {};
+      const skipAuthLogout = config.skipAuthLogout === true;
+
+      if (status === 401 && portal && !skipAuthLogout) {
+        const isRefreshCall = config.url?.includes('/auth/refresh');
+        const canRetry = !config._authRetried && !isRefreshCall;
+
+        if (canRetry) {
+          try {
+            const newAccessToken = await refreshPortalTokens(portal, baseURL);
+            config._authRetried = true;
+            config.headers = {
+              ...config.headers,
+              Authorization: `Bearer ${newAccessToken}`,
+            };
+            const retryResponse = await instance.request(config);
+            return retryResponse;
+          } catch {
+            clearTokens(portal);
+            if (onUnauthorized) onUnauthorized();
+          }
+        } else {
+          clearTokens(portal);
+          if (onUnauthorized) onUnauthorized();
+        }
       }
+
       return Promise.reject(extractError(error));
     }
   );
@@ -72,9 +142,7 @@ export function createApiClient({ portal, baseURL = API_BASE, onUnauthorized } =
 export const customerApi = createApiClient({
   portal: 'customer',
   onUnauthorized: () => {
-    if (window.location.pathname.startsWith('/profile') || window.location.pathname.startsWith('/checkout')) {
-      window.location.href = '/login';
-    }
+    window.dispatchEvent(new Event('customer-auth-changed'));
   },
 });
 

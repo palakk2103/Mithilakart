@@ -7,6 +7,7 @@ const sellerSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     storeName: { type: String, trim: true },
     phone: { type: String, trim: true },
+    countryCode: { type: String, trim: true, default: '+91' },
     status: {
       type: String,
       enum: ['active', 'inactive', 'suspended'],
@@ -35,6 +36,27 @@ const sellerSchema = new mongoose.Schema(
       promotions: { type: Boolean, default: true },
     },
     balance: { type: Number, default: 0, min: 0 },
+    mithilakEligible: { type: Boolean, default: false },
+    quickCommerceEligible: { type: Boolean, default: false },
+    groceryEligible: { type: Boolean, default: false },
+    addressLine: { type: String, trim: true, default: null },
+    city: { type: String, trim: true, default: null },
+    state: { type: String, trim: true, default: null },
+    pincode: { type: String, trim: true, default: null },
+    latitude: { type: Number, default: null },
+    longitude: { type: Number, default: null },
+    placeId: { type: String, trim: true, default: null },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number],
+        default: undefined,
+      },
+    },
     deletedAt: { type: Date, default: null },
   },
   {
@@ -43,6 +65,22 @@ const sellerSchema = new mongoose.Schema(
   }
 );
 
+sellerSchema.pre('save', function preSaveSyncLocation(next) {
+  if (this.isModified('latitude') || this.isModified('longitude')) {
+    if (this.latitude != null && this.longitude != null) {
+      this.location = {
+        type: 'Point',
+        coordinates: [this.longitude, this.latitude],
+      };
+    } else {
+      this.location = undefined;
+    }
+  }
+  next();
+});
+
 sellerSchema.index({ status: 1, kycStatus: 1 });
+sellerSchema.index({ phone: 1, countryCode: 1 });
+sellerSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.models.Seller || mongoose.model('Seller', sellerSchema);

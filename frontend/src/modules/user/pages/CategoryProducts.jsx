@@ -226,28 +226,16 @@ const CategoryProducts = () => {
     return 0;
   });
 
-  const trendingData = {
-    'Jewellery': [
-      { id: 501, name: 'Chic Choker', price: '1,299', off: '60% off', image: BeautyJewel3 },
-      { id: 502, name: 'Golden Hoops', price: '899', off: '45% off', image: BeautyJewel4 },
-      { id: 503, name: 'Celestial Ring', price: '1,499', off: '30% off', image: BeautyJewel5 },
-      { id: 504, name: 'Urban Cuff', price: '2,100', off: '20% off', image: BeautyJewel6 }
-    ],
-    'Electronics': [
-      { id: 601, name: 'Smart Watch', price: '3,499', off: '40% off', image: SamsungS24 },
-      { id: 602, name: 'Wireless Headphones', price: '4,999', off: '50% off', image: EarbudsDeal },
-      { id: 603, name: 'Power Bank', price: '1,299', off: '35% off', image: EarbudsDeal },
-      { id: 604, name: 'Bluetooth Speaker', price: '2,100', off: '25% off', image: EarbudsDeal }
-    ],
-    'Beauty': [
-      { id: 701, name: 'Face Wash', price: '299', off: '10% off', image: MakeupHero },
-      { id: 702, name: 'Body Lotion', price: '499', off: '15% off', image: MakeupHero },
-      { id: 703, name: 'Lip Balm', price: '199', off: '5% off', image: MakeupHero },
-      { id: 704, name: 'Hair Serum', price: '699', off: '20% off', image: MakeupHero }
-    ]
-  };
-
-  const trendingItems = trendingData[category] || trendingData['Jewellery'];
+  const trendingItems = useMemo(
+    () => sortedProducts.slice(0, 4).map((product) => ({
+      id: product.id,
+      name: product.name || product.title,
+      price: product.price,
+      off: product.discount || product.off,
+      image: product.image || product.img,
+    })),
+    [sortedProducts]
+  );
 
   return (
     <div className="bg-gray-50 min-h-screen text-slate-900 transition-colors duration-300 pb-10 font-sans">

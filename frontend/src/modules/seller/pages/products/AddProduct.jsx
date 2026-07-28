@@ -10,19 +10,58 @@ import { Save, ArrowLeft, Eye, FileText, Package, DollarSign, Image, Settings, G
 import { PageHeader } from '../../components/common';
 import { ImageUploader } from '../../components/common';
 import { Button } from '../../components/ui';
-import { getProduct, createProduct, updateProduct } from '../../services/sellerApi';
-import { CATEGORIES } from '../../constants';
+import { getProduct, createProduct, updateProduct, createProductListing } from '../../services/sellerApi';
+import { customerApi } from '../../../../shared/api/client';
 import toast from 'react-hot-toast';
+
+const MARKETPLACE_TAB_OPTIONS = [
+  { key: 'mithilakart', label: 'Mithilakart', legacyFlow: 'standard' },
+  { key: 'mithilak', label: 'Mithilak', legacyFlow: 'mithilak' },
+  { key: 'quick_shop', label: 'Quick Shop', legacyFlow: 'quick_shop' },
+  { key: 'groceries_fresh', label: 'Groceries & Fresh', legacyFlow: 'fresh_grocery' },
+];
+const QUICK_TAB_KEYS = new Set(['quick_shop', 'groceries_fresh']);
+
+const DELIVERY_MODE_FLOWS = {
+  quick_commerce: ['quick_shop', 'fresh_grocery'],
+  ecommerce: ['standard', 'mithilak'],
+  both: ['quick_shop', 'fresh_grocery', 'standard', 'mithilak'],
+};
+
+const tabsToCommerceFlows = (tabs = []) => {
+  const flows = tabs
+    .map((tab) => MARKETPLACE_TAB_OPTIONS.find((o) => o.key === tab)?.legacyFlow)
+    .filter(Boolean);
+  return flows.length ? [...new Set(flows)] : ['standard'];
+};
+
+const commerceFlowsToTabs = (flows = []) => {
+  const set = new Set(flows);
+  const tabs = MARKETPLACE_TAB_OPTIONS
+    .filter((o) => set.has(o.legacyFlow))
+    .map((o) => o.key);
+  return tabs.length ? tabs : ['mithilakart'];
+};
+
+const inferDeliveryMode = (flows = []) => {
+  const set = new Set(flows);
+  const hasQuick = DELIVERY_MODE_FLOWS.quick_commerce.some((flow) => set.has(flow));
+  const hasEcom = DELIVERY_MODE_FLOWS.ecommerce.some((flow) => set.has(flow));
+  if (hasQuick && hasEcom) return 'both';
+  if (hasQuick) return 'quick_commerce';
+  return 'ecommerce';
+};
 
 const mapProductToForm = (product) => ({
   title: product?.title || '',
   shortDescription: product?.shortDescription || '',
   description: product?.description || '',
-  category: product?.category || '',
-  subcategory: product?.subcategory || '',
+  categoryId: product?.categoryId ? String(product.categoryId) : '',
+  subcategoryId: '',
   brand: product?.brand || '',
   sku: product?.sku || '',
   price: product?.price ?? '',
+  mrp: product?.mrp ?? product?.price ?? '',
   discountPrice: product?.discountPrice ?? '',
   gst: product?.gst ?? '',
   stock: product?.stock ?? '',
@@ -35,6 +74,8 @@ const mapProductToForm = (product) => ({
   seoTitle: product?.seo?.title || product?.seoTitle || '',
   seoDescription: product?.seo?.description || product?.seoDescription || '',
   highlights: Array.isArray(product?.highlights) ? product.highlights.join('\n') : product?.highlights || '',
+  serviceableRadius: product?.attributes?.serviceableRadius ?? '',
+  deliveryEstimate: product?.attributes?.deliveryEstimate ?? '',
 });
 
 const AddProduct = () => {
@@ -49,9 +90,42 @@ const AddProduct = () => {
   const [error, setError] = useState(null);
   const [existingProduct, setExistingProduct] = useState(null);
 
-  const { register, handleSubmit, formState: { errors }, watch, reset } = useForm({
+  const { register, handleSubmit, formState: { errors }, watch, reset, setValue } = useForm({
     defaultValues: mapProductToForm(null),
   });
+
+  const [deliveryMode, setDeliveryMode] = useState('ecommerce');
+  const [commerceFlow, setCommerceFlow] = useState('standard');
+  const [selectedTabs, setSelectedTabs] = useState(['mithilakart']);
+  const [quickDeliveryMinutes, setQuickDeliveryMinutes] = useState(20);
+  const [categoriesTree, setCategoriesTree] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  const selectedCategoryId = watch('categoryId');
+  const selectedRootCategory = categoriesTree.find((c) => String(c.id) === String(selectedCategoryId));
+
+  // Fetch category tree based on the selected commerce flow.
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        setCategoriesLoading(true);
+        const data = await customerApi.get('/categories', {
+          params: { commerceFlow },
+        });
+        if (!cancelled) setCategoriesTree(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setCategoriesTree([]);
+      } finally {
+        if (!cancelled) setCategoriesLoading(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [commerceFlow]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -62,8 +136,20 @@ const AddProduct = () => {
         const product = await getProduct(id);
         setExistingProduct(product);
         reset(mapProductToForm(product));
+        setCommerceFlow(product?.commerceFlows?.[0] || 'standard');
+        setDeliveryMode(inferDeliveryMode(product?.commerceFlows));
+        setSelectedTabs(commerceFlowsToTabs(product?.commerceFlows));
         setSpecifications(product?.specifications?.length ? product.specifications : [{ key: '', value: '' }]);
-        if (product?.gallery?.length) setImages(product.gallery);
+        if (product?.images?.length) {
+          setImages(product.images.map((img, index) => ({
+            id: `existing_${index}`,
+            preview: img.url,
+            url: img.url,
+            name: img.alt || `Image ${index + 1}`,
+          })));
+        } else if (product?.gallery?.length) {
+          setImages(product.gallery);
+        }
       } catch (err) {
         setError(err?.message || 'Failed to load product');
       } finally {
@@ -72,6 +158,35 @@ const AddProduct = () => {
     };
     fetchProduct();
   }, [id, isEdit, reset]);
+
+  // If the product's categoryId is a child node, select the correct root + subcategory ids.
+  useEffect(() => {
+    if (!isEdit || !existingProduct || !categoriesTree.length) return;
+    const targetId = existingProduct?.categoryId ? String(existingProduct.categoryId) : '';
+    if (!targetId) return;
+
+    // Case 1: target is root.
+    const rootMatch = categoriesTree.find((c) => String(c.id) === targetId);
+    if (rootMatch) {
+      setValue('categoryId', String(rootMatch.id));
+      setValue('subcategoryId', '');
+      return;
+    }
+
+    // Case 2: target is a child.
+    for (const root of categoriesTree) {
+      const child = (root.children || []).find((ch) => String(ch.id) === targetId);
+      if (child) {
+        setValue('categoryId', String(root.id));
+        setValue('subcategoryId', String(child.id));
+        return;
+      }
+    }
+
+    // Fallback: keep it as categoryId.
+    setValue('categoryId', targetId);
+    setValue('subcategoryId', '');
+  }, [categoriesTree, existingProduct, isEdit, setValue]);
 
   const sections = [
     { id: 'basic', label: 'Basic Info', icon: Package },
@@ -83,19 +198,49 @@ const AddProduct = () => {
 
   const buildPayload = (data, status = 'active') => {
     const dims = data.dimensions?.split('x').map(Number) || [];
+
+    const categoryIdEffective = data.subcategoryId || data.categoryId;
+    const tagsArr = data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
+    const specificationsArr = specifications.filter((s) => s.key && s.value);
+    const price = Number(data.price);
+    const mrp = Number(data.mrp || data.price);
+    const commerceFlows = tabsToCommerceFlows(selectedTabs);
+
+    const attributes = {
+      ...(specificationsArr.length ? Object.fromEntries(specificationsArr.map((s) => [s.key, s.value])) : {}),
+    };
+    if (selectedTabs.some((t) => QUICK_TAB_KEYS.has(t)) && data.serviceableRadius) {
+      attributes.serviceableRadius = Number(data.serviceableRadius);
+    }
+    if (!selectedTabs.every((t) => QUICK_TAB_KEYS.has(t))) {
+      if (data.weight) attributes.weight = Number(data.weight);
+      if (dims.length === 3) {
+        attributes.dimensions = { length: dims[0], width: dims[1], height: dims[2] };
+      }
+      if (data.deliveryEstimate) attributes.deliveryEstimate = data.deliveryEstimate;
+    }
+
+    const imagePayload = images
+      .map((img, index) => {
+        const url = img.url || img.preview;
+        if (!url || url.startsWith('blob:')) return null;
+        return { url, alt: img.name || data.title || '', sortOrder: index };
+      })
+      .filter(Boolean);
+
     return {
-      ...data,
-      price: Number(data.price),
-      discountPrice: data.discountPrice ? Number(data.discountPrice) : null,
-      gst: data.gst ? Number(data.gst) : 0,
+      title: data.title,
+      description: data.description || '',
+      sku: data.sku,
+      categoryId: categoryIdEffective,
+      brand: data.brand || '',
+      price,
+      mrp,
       stock: Number(data.stock),
-      weight: data.weight ? Number(data.weight) : 0,
-      dimensions: dims.length === 3 ? { length: dims[0], width: dims[1], height: dims[2] } : undefined,
-      tags: data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-      highlights: data.highlights ? data.highlights.split('\n').filter(Boolean) : [],
-      specifications: specifications.filter((s) => s.key && s.value),
-      gallery: images,
-      seo: { title: data.seoTitle, description: data.seoDescription },
+      tags: tagsArr,
+      images: imagePayload,
+      attributes,
+      commerceFlows,
       status,
     };
   };
@@ -107,8 +252,19 @@ const AddProduct = () => {
         await updateProduct(id, payload);
         toast.success('Product updated successfully!');
       } else {
-        await createProduct(payload);
-        toast.success('Product created successfully!');
+        const created = await createProduct(payload);
+        const productId = created?.id || created?._id;
+        if (productId && selectedTabs.length) {
+          for (const tab of selectedTabs) {
+            await createProductListing(productId, {
+              marketplaceTab: tab,
+              price: Number(data.price),
+              mrp: Number(data.mrp || data.price),
+              ...(QUICK_TAB_KEYS.has(tab) ? { deliveryPromiseMinutes: Number(quickDeliveryMinutes) } : {}),
+            });
+          }
+        }
+        toast.success('Product and marketplace listings created!');
       }
       navigate('/seller/products');
     } catch (err) {
@@ -193,24 +349,107 @@ const AddProduct = () => {
                   {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>}
                 </div>
 
+                <div>
+                  <label className={labelClass}>Marketplace tabs *</label>
+                  <div className="flex flex-wrap gap-2">
+                    {MARKETPLACE_TAB_OPTIONS.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTabs((prev) => {
+                            const exists = prev.includes(tab.key);
+                            const next = exists ? prev.filter((t) => t !== tab.key) : [...prev, tab.key];
+                            const flows = tabsToCommerceFlows(next.length ? next : ['mithilakart']);
+                            setCommerceFlow(flows[0]);
+                            setDeliveryMode(inferDeliveryMode(flows));
+                            return next.length ? next : ['mithilakart'];
+                          });
+                        }}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                          selectedTabs.includes(tab.key)
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white text-gray-600 border-gray-200'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedTabs.some((t) => QUICK_TAB_KEYS.has(t)) && (
+                  <div>
+                    <label className={labelClass}>Quick delivery promise (minutes)</label>
+                    <select
+                      value={quickDeliveryMinutes}
+                      onChange={(e) => setQuickDeliveryMinutes(Number(e.target.value))}
+                      className={inputClass}
+                    >
+                      {[15, 20, 25, 30].map((m) => (
+                        <option key={m} value={m}>{m} minutes</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>Category *</label>
-                    <select {...register('category', { required: 'Category is required' })} className={inputClass}>
-                      <option value="">Select category</option>
-                      {CATEGORIES.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    <select
+                      {...register('categoryId', { required: 'Category is required' })}
+                      className={inputClass}
+                      disabled={categoriesLoading}
+                    >
+                      <option value="">{categoriesLoading ? 'Loading...' : 'Select category'}</option>
+                      {(categoriesTree || []).map((c) => (
+                        <option key={c.id} value={String(c.id)}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
+
                   <div>
                     <label className={labelClass}>Subcategory</label>
-                    <select {...register('subcategory')} className={inputClass}>
-                      <option value="">Select subcategory</option>
-                      {CATEGORIES.find((c) => c.name === watch('category'))?.subcategories.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                    <select
+                      {...register('subcategoryId')}
+                      className={inputClass}
+                      disabled={categoriesLoading || !selectedRootCategory?.children?.length}
+                    >
+                      <option value="">Use category</option>
+                      {(selectedRootCategory?.children || []).map((s) => (
+                        <option key={s.id} value={String(s.id)}>
+                          {s.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                 </div>
+
+                {selectedTabs.some((t) => QUICK_TAB_KEYS.has(t)) && (
+                  <div>
+                    <label className={labelClass}>Serviceable Radius (km)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      {...register('serviceableRadius', { min: 0 })}
+                      placeholder="e.g. 5"
+                      className={inputClass}
+                    />
+                  </div>
+                )}
+
+                {!selectedTabs.every((t) => QUICK_TAB_KEYS.has(t)) && (
+                  <div>
+                    <label className={labelClass}>Delivery Estimate</label>
+                    <input
+                      {...register('deliveryEstimate')}
+                      placeholder="e.g. 3-5 business days"
+                      className={inputClass}
+                    />
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -238,9 +477,14 @@ const AddProduct = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className={labelClass}>Price (₹) *</label>
+                    <label className={labelClass}>Selling Price (₹) *</label>
                     <input type="number" {...register('price', { required: 'Price is required', min: { value: 0, message: 'Must be positive' } })} placeholder="0" className={inputClass} />
                     {errors.price && <p className="text-xs text-red-500 mt-1">{errors.price.message}</p>}
+                  </div>
+                  <div>
+                    <label className={labelClass}>MRP (₹) *</label>
+                    <input type="number" {...register('mrp', { required: 'MRP is required', min: { value: 0, message: 'Must be positive' } })} placeholder="0" className={inputClass} />
+                    {errors.mrp && <p className="text-xs text-red-500 mt-1">{errors.mrp.message}</p>}
                   </div>
                   <div>
                     <label className={labelClass}>Discount Price (₹)</label>

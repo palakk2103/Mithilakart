@@ -28,6 +28,11 @@ class ProductRepository extends BaseRepository {
     return this.findOne(this._publicFilter({ _id: id }));
   }
 
+  getAvailableStock(product) {
+    if (!product) return 0;
+    return Math.max(0, (product.stock || 0) - (product.reservedStock || 0));
+  }
+
   async findAdmin(filter = {}, options = {}) {
     return this.find(this._activeFilter(filter), options);
   }
@@ -85,7 +90,7 @@ class ProductRepository extends BaseRepository {
   async decrementStock(productId, quantity, session = null) {
     const query = this.model.updateOne(
       { _id: productId, deletedAt: null, stock: { $gte: quantity } },
-      { $inc: { stock: -quantity } }
+      { $inc: { stock: -quantity, reservedStock: -quantity } }
     );
 
     if (session) {
@@ -94,9 +99,43 @@ class ProductRepository extends BaseRepository {
 
     const result = await query.exec();
     if (!result || result.matchedCount === 0) {
-      throw AppError.conflict('Insufficient stock', [{ field: 'quantity', message: 'Not enough stock' }]);
+      throw AppError.outOfStock('Insufficient stock', [{ field: 'quantity', message: 'Not enough stock' }]);
     }
     return result;
+  }
+
+  async reserveStock(productId, quantity, session = null) {
+    const query = this.model.updateOne(
+      {
+        _id: productId,
+        deletedAt: null,
+        $expr: { $gte: [{ $subtract: ['$stock', '$reservedStock'] }, quantity] },
+      },
+      { $inc: { reservedStock: quantity } }
+    );
+
+    if (session) {
+      query.session(session);
+    }
+
+    const result = await query.exec();
+    if (!result || result.matchedCount === 0) {
+      throw AppError.outOfStock('Insufficient stock', [{ field: 'quantity', message: 'Not enough stock available' }]);
+    }
+    return result;
+  }
+
+  async releaseReservedStock(productId, quantity, session = null) {
+    const query = this.model.updateOne(
+      { _id: productId, deletedAt: null, reservedStock: { $gte: quantity } },
+      { $inc: { reservedStock: -quantity } }
+    );
+
+    if (session) {
+      query.session(session);
+    }
+
+    return query.exec();
   }
 
   async incrementStock(productId, quantity, session = null) {

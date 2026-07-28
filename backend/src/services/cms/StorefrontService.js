@@ -9,6 +9,7 @@ class StorefrontService extends BaseService {
     productRepository,
     categoryService,
     cacheService,
+    platformConfigService = null,
   }) {
     super();
     this.bannerRepository = bannerRepository;
@@ -17,6 +18,7 @@ class StorefrontService extends BaseService {
     this.productRepository = productRepository;
     this.categoryService = categoryService;
     this.cacheService = cacheService;
+    this.platformConfigService = platformConfigService;
   }
 
   async getHome(commerceFlow = COMMERCE_FLOWS.STANDARD) {
@@ -59,6 +61,13 @@ class StorefrontService extends BaseService {
     );
 
     return banners.map(this._serializeBanner);
+  }
+
+  async getPublicConfig() {
+    if (!this.platformConfigService) {
+      return {};
+    }
+    return this.platformConfigService.getPublicConfig();
   }
 
   _serializeBanner(banner) {

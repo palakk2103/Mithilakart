@@ -148,18 +148,32 @@ async function seedCatalog() {
     { upsert: true, new: true }
   );
 
-  await CategoryChip.findOneAndUpdate(
-    { label: 'Madhubani' },
-    {
-      label: 'Madhubani',
-      categoryId: madhubani._id,
-      commerceFlow: COMMERCE_FLOWS.MITHILAK,
-      sortOrder: 0,
-      isActive: true,
-      deletedAt: null,
-    },
-    { upsert: true, new: true }
-  );
+  const chipsToSeed = [
+    { label: 'You Buy', categoryId: madhubani._id, sortOrder: 0 },
+    { label: 'Fashion', categoryId: madhubani._id, sortOrder: 1 },
+    { label: 'Beauty', categoryId: beauty._id, sortOrder: 2 },
+    { label: 'Electronics', categoryId: quickShop._id, sortOrder: 3 },
+    { label: 'Jewellery', categoryId: madhubani._id, sortOrder: 4 },
+    { label: 'Toys', categoryId: toys._id, sortOrder: 5 },
+    { label: 'Stationery', categoryId: quickShop._id, sortOrder: 6 },
+    { label: 'Gifting', categoryId: madhubani._id, sortOrder: 7 },
+    { label: 'Electrical', categoryId: quickShop._id, sortOrder: 8 },
+  ];
+
+  for (const chip of chipsToSeed) {
+    await CategoryChip.findOneAndUpdate(
+      { label: chip.label },
+      {
+        label: chip.label,
+        categoryId: chip.categoryId,
+        commerceFlow: COMMERCE_FLOWS.STANDARD,
+        sortOrder: chip.sortOrder,
+        isActive: true,
+        deletedAt: null,
+      },
+      { upsert: true, new: true }
+    );
+  }
 
   for (const [index, sectionKey] of HOME_SECTION_KEYS.entries()) {
     await HomeSection.findOneAndUpdate(

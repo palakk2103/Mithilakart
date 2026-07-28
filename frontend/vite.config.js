@@ -77,6 +77,8 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,jpg,jpeg,gif,webp,woff,woff2,ttf,ico}"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api/],
+        // SPA routes (/admin, /seller, /home, etc.) — not only /
+        navigateFallbackAllowlist: [/^(?!\/api(?:\/|$)).*/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -111,7 +113,8 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true
+        enabled: true,
+        navigateFallbackAllowlist: [/^(?!\/api(?:\/|$)).*/],
       }
     }),
     {
@@ -151,9 +154,14 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      "/api": {
+      "/api/v1": {
         target: "http://localhost:5000",
         changeOrigin: true,
+      },
+      "/socket.io": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        ws: true,
       },
     },
   },

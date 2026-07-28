@@ -6,7 +6,10 @@ const orderItemSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', required: true, index: true },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
+    listingId: { type: mongoose.Schema.Types.ObjectId, ref: 'MarketplaceListing', default: null, index: true },
     variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', default: null },
+
+    listingSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
 
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },

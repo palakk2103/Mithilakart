@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { ORDER_STATUS } = require('../constants/commerce');
 const { COMMERCE_FLOW_VALUES } = require('../constants/catalog');
+const { MARKETPLACE_TAB_VALUES, DELIVERY_TYPE_VALUES } = require('../constants/marketplace');
 
 const orderSchema = new mongoose.Schema(
   {
@@ -13,6 +14,20 @@ const orderSchema = new mongoose.Schema(
       enum: COMMERCE_FLOW_VALUES,
       default: 'standard',
     },
+
+    marketplaceTab: {
+      type: String,
+      enum: MARKETPLACE_TAB_VALUES,
+      default: null,
+      index: true,
+    },
+    deliveryType: {
+      type: String,
+      enum: DELIVERY_TYPE_VALUES,
+      default: null,
+    },
+    deliveryPromiseMinutes: { type: Number, default: null },
+    estimatedDeliveryAt: { type: Date, default: null },
 
     subtotal: { type: Number, default: 0, min: 0 },
     discount: { type: Number, default: 0, min: 0 },
@@ -32,6 +47,7 @@ const orderSchema = new mongoose.Schema(
     couponCode: { type: String, default: null },
     couponDiscount: { type: Number, default: 0, min: 0 },
     inventoryDeducted: { type: Boolean, default: false },
+    idempotencyKey: { type: String, default: null, index: true, sparse: true },
 
     sellerSubOrders: [{
       sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller' },
@@ -39,6 +55,17 @@ const orderSchema = new mongoose.Schema(
       subtotal: { type: Number, default: 0 },
       status: { type: String, default: 'pending' },
     }],
+
+    fulfilmentType: {
+      type: String,
+      enum: ['local_delivery', 'courier', 'store_pickup'],
+      default: 'local_delivery',
+      index: true,
+    },
+    shipment: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
 
     cancelledAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },

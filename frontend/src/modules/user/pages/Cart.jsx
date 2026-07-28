@@ -7,29 +7,23 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import { fetchCartItems, updateCartItemQuantity, removeCartItemById } from '../utils/cartUtils';
+import { isAuthenticated as checkAuth } from '../../../shared/api/tokenStorage';
+import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
+import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
+import useAccountStore from '../../../store/useAccountStore';
+import { getUser } from '../../../shared/api/tokenStorage';
 
 const Cart = () => {
   const { t } = useTranslation();
   const [cartItems, setCartItems] = useState([]);
   const navigate = useNavigate();
+  const { location: liveLocation, setPromptOpen } = useLiveLocation();
+  const { savedAddresses, selectedAddressId } = useAccountStore();
+  useHydrateAddresses();
+  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
 
-  // Authentication and address flow states
-  const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem('isAuthenticated') === 'true');
-  const [address, setAddress] = useState(() => {
-    const saved = localStorage.getItem('cartAddress');
-    if (saved) return JSON.parse(saved);
-    // If user is already logged in on mount, auto-assign default address
-    if (localStorage.getItem('isAuthenticated') === 'true') {
-      const defaultAddr = {
-        name: 'Harsh Pandey',
-        phone: '9876543210',
-        address: '83 Kishan Pura Mataji Mandir, Sector No. 5 New Harsud Chh...'
-      };
-      localStorage.setItem('cartAddress', JSON.stringify(defaultAddr));
-      return defaultAddr;
-    }
-    return null;
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => checkAuth('customer'));
+  const [address, setAddress] = useState(null);
 
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [addrName, setAddrName] = useState('');
@@ -65,35 +59,31 @@ const Cart = () => {
     };
   }, []);
 
-  // Re-sync auth & address state when returning from login page
+  // Sync delivery address from live GPS / saved profile
+  useEffect(() => {
+    const user = getUser('customer');
+    if (deliverTo.source === 'live' || deliverTo.source === 'saved') {
+      setAddress({
+        name: user?.name || 'Delivery',
+        phone: user?.phone || '',
+        address: deliverTo.label,
+      });
+    }
+  }, [deliverTo.label, deliverTo.source]);
+
+  // Re-sync auth when returning from login
   useEffect(() => {
     const syncAuthState = () => {
-      const authNow = localStorage.getItem('isAuthenticated') === 'true';
-      setIsAuthenticated(authNow);
-      if (authNow) {
-        const savedAddr = localStorage.getItem('cartAddress');
-        if (savedAddr) {
-          setAddress(JSON.parse(savedAddr));
-        } else {
-          // Auto-assign default address for logged-in users without one
-          const defaultAddr = {
-            name: 'Harsh Pandey',
-            phone: '9876543210',
-            address: '83 Kishan Pura Mataji Mandir, Sector No. 5 New Harsud Chh...'
-          };
-          localStorage.setItem('cartAddress', JSON.stringify(defaultAddr));
-          setAddress(defaultAddr);
-        }
-      }
+      setIsAuthenticated(checkAuth('customer'));
     };
 
-    // Listen for popstate (back/forward navigation) and focus (tab switch back)
+    window.addEventListener('customer-auth-changed', syncAuthState);
     window.addEventListener('popstate', syncAuthState);
     window.addEventListener('focus', syncAuthState);
-    // Also run on mount in case we just returned from login
     syncAuthState();
 
     return () => {
+      window.removeEventListener('customer-auth-changed', syncAuthState);
       window.removeEventListener('popstate', syncAuthState);
       window.removeEventListener('focus', syncAuthState);
     };
@@ -407,7 +397,6 @@ const Cart = () => {
             <form onSubmit={(e) => {
               e.preventDefault();
               const newAddress = { name: addrName, phone: addrPhone, address: addrDetails };
-              localStorage.setItem('cartAddress', JSON.stringify(newAddress));
               setAddress(newAddress);
               setShowAddressModal(false);
             }} className="space-y-4">
@@ -417,7 +406,7 @@ const Cart = () => {
                   type="text" 
                   value={addrName} 
                   onChange={(e) => setAddrName(e.target.value)} 
-                  placeholder="e.g. Harsh Pandey"
+                  placeholder="Your name"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
                   required
                 />

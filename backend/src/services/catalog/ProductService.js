@@ -2,21 +2,26 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { PRODUCT_STATUS, CACHE_KEYS, CACHE_TTL } = require('../../constants/catalog');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
-const { buildListFilters } = require('../../utils/filter');
+const { buildListFilters, applyCommerceFlowFilter } = require('../../utils/filter');
+const { resolveTabFromQuery } = require('../../utils/marketplaceTab');
 const { buildSearchQuery } = require('../../utils/search');
 const { buildSortQuery } = require('../../utils/sort');
 const { eventBus } = require('../../events/EventBus');
 
 class ProductService extends BaseService {
-  constructor(productRepository, productVariantRepository, categoryRepository, cacheService) {
+  constructor(productRepository, productVariantRepository, categoryRepository, cacheService, marketplaceListingService = null) {
     super(productRepository);
     this.productRepository = productRepository;
     this.productVariantRepository = productVariantRepository;
     this.categoryRepository = categoryRepository;
     this.cacheService = cacheService;
+    this.marketplaceListingService = marketplaceListingService;
   }
 
   async listPublic(query = {}) {
+    if (this.marketplaceListingService && resolveTabFromQuery(query)) {
+      return this.marketplaceListingService.listPublicForTab(query);
+    }
     const pagination = parsePagination(query);
     const filters = buildListFilters(query, {
       exactFields: ['commerceFlow', 'brand'],
@@ -34,7 +39,7 @@ class ProductService extends BaseService {
       defaultSort: { createdAt: -1 },
     });
 
-    const combinedFilter = { ...filters, ...searchFilter };
+    const combinedFilter = applyCommerceFlowFilter({ ...filters, ...searchFilter }, query);
 
     const [items, total] = await Promise.all([
       this.productRepository.findPublic(combinedFilter, {
@@ -45,8 +50,12 @@ class ProductService extends BaseService {
       this.productRepository.countPublic(combinedFilter),
     ]);
 
+    const serializedItems = await Promise.all(
+      items.map(async (item) => this._withFlashSalePrice(this._serializeListItem(item), item._id))
+    );
+
     return {
-      items: items.map((item) => this._serializeListItem(item)),
+      items: serializedItems,
       meta: buildPaginationMeta(pagination.page, pagination.limit, total),
     };
   }
@@ -63,9 +72,10 @@ class ProductService extends BaseService {
     }
 
     const pagination = parsePagination(query);
-    const filter = buildListFilters(query, {
-      exactFields: ['commerceFlow'],
-    });
+    const filter = applyCommerceFlowFilter(
+      buildListFilters(query, { exactFields: ['commerceFlow'] }),
+      query
+    );
 
     const items = await this.productRepository.searchPublic(searchTerm, filter, {
       sort: { score: { $meta: 'textScore' } },
@@ -84,7 +94,11 @@ class ProductService extends BaseService {
     };
   }
 
-  async getPublicById(id) {
+  async getPublicById(id, query = {}) {
+    if (this.marketplaceListingService && resolveTabFromQuery(query)) {
+      return this.marketplaceListingService.getProductWithListing(id, query);
+    }
+
     const cacheKey = CACHE_KEYS.productDetail(id);
     const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
@@ -95,18 +109,40 @@ class ProductService extends BaseService {
     }
 
     const variants = await this.productVariantRepository.findByProductId(id);
-    const payload = this._serializeDetail(product, variants);
+    let payload = this._serializeDetail(product, variants);
+    payload = await this._withFlashSalePrice(payload, id);
 
     await this.cacheService.set(cacheKey, payload, CACHE_TTL.PRODUCT_DETAIL);
     return payload;
   }
 
+  setPromotionService(promotionService) {
+    this.promotionService = promotionService;
+  }
+
+  async _withFlashSalePrice(serialized, productId) {
+    if (!this.promotionService) return serialized;
+    const salePrice = await this.promotionService.getFlashSalePrice(productId);
+    if (salePrice != null && salePrice < serialized.price) {
+      return {
+        ...serialized,
+        price: salePrice,
+        flashSalePrice: salePrice,
+        mrp: serialized.mrp || serialized.price,
+      };
+    }
+    return serialized;
+  }
+
   async listAdmin(query = {}) {
     const pagination = parsePagination(query);
-    const filters = buildListFilters(query, {
-      exactFields: ['status', 'sellerId', 'categoryId', 'commerceFlow'],
-      dateRange: { fromKey: 'from', toKey: 'to', field: 'createdAt' },
-    });
+    const filters = applyCommerceFlowFilter(
+      buildListFilters(query, {
+        exactFields: ['status', 'sellerId', 'categoryId', 'commerceFlow'],
+        dateRange: { fromKey: 'from', toKey: 'to', field: 'createdAt' },
+      }),
+      query
+    );
 
     const sort = buildSortQuery(query, {
       allowedFields: ['createdAt', 'price', 'title', 'status'],
@@ -145,6 +181,7 @@ class ProductService extends BaseService {
     }
 
     await this.productRepository.updateStatus(id, PRODUCT_STATUS.APPROVED);
+    await this.productRepository.updateById(id, { masterStatus: PRODUCT_STATUS.APPROVED });
     await this._invalidateProductCache(id);
     eventBus.publish('product.approved', { productId: id, adminId });
     return this.getAdminById(id);

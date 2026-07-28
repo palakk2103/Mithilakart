@@ -8,6 +8,7 @@ class ApiResponse {
       success: true,
       data,
       requestId: ApiResponse._requestId(res),
+      timestamp: new Date().toISOString(),
     };
 
     if (meta !== null && meta !== undefined) {
@@ -25,6 +26,8 @@ class ApiResponse {
         message,
       },
       requestId: ApiResponse._requestId(res),
+      timestamp: new Date().toISOString(),
+      logReference: ApiResponse._requestId(res),
     };
 
     if (details !== null && details !== undefined) {

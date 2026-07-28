@@ -2,16 +2,25 @@ const Joi = require('joi');
 const { objectIdSchema } = require('../common.validator');
 const { COMMERCE_FLOW_VALUES, PRODUCT_STATUS_VALUES } = require('../../constants/catalog');
 
+const mediaUrlSchema = Joi.string().trim().custom((value, helpers) => {
+  if (!value) return value;
+  if (value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+  return helpers.error('any.invalid');
+}, 'media url').messages({ 'any.invalid': 'Must be a valid URL or path starting with /' });
+
 const categoryCreateSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100).required(),
   slug: Joi.string().trim().lowercase().pattern(/^[a-z0-9-]+$/).required(),
   description: Joi.string().allow('').optional(),
   parentId: objectIdSchema.optional().allow(null),
-  imageUrl: Joi.string().uri().optional().allow(null, ''),
-  iconUrl: Joi.string().uri().optional().allow(null, ''),
+  imageUrl: mediaUrlSchema.optional().allow(null, ''),
+  iconUrl: mediaUrlSchema.optional().allow(null, ''),
   sortOrder: Joi.number().integer().min(0).optional(),
   isActive: Joi.boolean().optional(),
   commerceFlows: Joi.array().items(Joi.string().valid(...COMMERCE_FLOW_VALUES)).optional(),
+  visibleTabs: Joi.array().items(Joi.string().valid(...require('../../constants/marketplace').MARKETPLACE_TAB_VALUES)).min(1).optional(),
 });
 
 const categoryUpdateSchema = categoryCreateSchema.fork(['name', 'slug'], (field) => field.optional());

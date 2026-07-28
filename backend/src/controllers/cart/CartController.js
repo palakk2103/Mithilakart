@@ -40,6 +40,7 @@ class CartController extends BaseController {
       userId,
       sessionId,
       commerceFlow: req.query.commerceFlow || 'standard',
+      marketplaceTab: req.query.marketplaceTab || null,
     });
 
     return ApiResponse.success(res, data);
@@ -51,7 +52,9 @@ class CartController extends BaseController {
       userId,
       sessionId,
       commerceFlow: req.body.commerceFlow || 'standard',
+      marketplaceTab: req.body.marketplaceTab || null,
       productId: req.body.productId,
+      listingId: req.body.listingId || null,
       variantId: req.body.variantId || null,
       quantity: req.body.quantity,
     });

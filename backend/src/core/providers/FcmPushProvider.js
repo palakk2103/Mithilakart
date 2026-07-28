@@ -49,7 +49,31 @@ class FcmPushProvider extends PushNotificationProvider {
         notification: { title, body },
         data: stringData,
         webpush: {
-          notification: { title, body },
+          notification: {
+            title,
+            body,
+            sound: 'default',
+            requireInteraction: true,
+            badge: '/badge-icon.png',
+            icon: '/app-icon.png',
+            actions: [{ action: 'open', title: 'Open' }],
+          },
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            channelId: 'orders',
+            priority: 'high',
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+            },
+          },
         },
       });
 

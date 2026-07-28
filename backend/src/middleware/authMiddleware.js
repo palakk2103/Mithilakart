@@ -1,8 +1,15 @@
 const { PORTALS } = require('../constants/portals');
+const { SELLER_STATUS, KYC_STATUS, DELIVERY_STATUS } = require('../constants/auth');
 const { AppError } = require('../utils/AppError');
 const { extractBearerToken } = require('./authenticate');
 
-function createAuthMiddleware({ tokenService }) {
+let sellerRepositoryRef = null;
+let deliveryPartnerRepositoryRef = null;
+
+function createAuthMiddleware({ tokenService, sellerRepository, deliveryPartnerRepository }) {
+  sellerRepositoryRef = sellerRepository || sellerRepositoryRef;
+  deliveryPartnerRepositoryRef = deliveryPartnerRepository || deliveryPartnerRepositoryRef;
+
   function authenticatePortal(portal, options = {}) {
     const { optional = false } = options;
 
@@ -33,7 +40,7 @@ function createAuthMiddleware({ tokenService }) {
           id: decoded.sub,
           role: decoded.role,
           portal,
-          sellerId: decoded.sellerId || null,
+          sellerId: decoded.sellerId || decoded.sub,
           permissions: decoded.permissions || [],
         };
 
@@ -60,22 +67,63 @@ function createAuthMiddleware({ tokenService }) {
 }
 
 function requireActiveSeller() {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.user || req.user.portal !== PORTALS.SELLER || !req.user.sellerId) {
       return next(AppError.forbidden('Seller context required'));
     }
 
-    return next();
+    if (!sellerRepositoryRef) {
+      return next();
+    }
+
+    try {
+      const seller = await sellerRepositoryRef.findById(req.user.sellerId);
+      if (!seller || seller.deletedAt) {
+        return next(AppError.forbidden('Seller account not found'));
+      }
+      if (seller.status !== SELLER_STATUS.ACTIVE) {
+        return next(AppError.forbidden('Seller account is not active'));
+      }
+      if (seller.kycStatus !== KYC_STATUS.APPROVED) {
+        return next(AppError.forbidden('Seller KYC is not approved'));
+      }
+      req.seller = seller;
+      return next();
+    } catch (error) {
+      return next(error);
+    }
   };
 }
 
 function requireApprovedPartner() {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.user || req.user.portal !== PORTALS.DELIVERY) {
       return next(AppError.forbidden('Delivery partner context required'));
     }
 
-    return next();
+    if (!deliveryPartnerRepositoryRef) {
+      return next();
+    }
+
+    try {
+      const partner = await deliveryPartnerRepositoryRef.findById(req.user.id);
+      if (!partner || partner.deletedAt) {
+        return next(AppError.forbidden('Delivery partner not found'));
+      }
+      if (partner.status === DELIVERY_STATUS.REJECTED) {
+        return next(AppError.forbidden('Delivery partner application was rejected'));
+      }
+      if (partner.status === DELIVERY_STATUS.SUSPENDED) {
+        return next(AppError.forbidden('Delivery partner account is suspended'));
+      }
+      if (partner.status !== DELIVERY_STATUS.APPROVED) {
+        return next(AppError.forbidden('Delivery partner account is pending approval'));
+      }
+      req.partner = partner;
+      return next();
+    } catch (error) {
+      return next(error);
+    }
   };
 }
 

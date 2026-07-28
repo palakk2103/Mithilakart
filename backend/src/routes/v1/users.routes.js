@@ -17,6 +17,7 @@ function createUsersRoutes(controllers, middleware) {
     qnaController,
     couponController,
     notificationController,
+    returnController,
   } = controllers;
 
   router.get('/me', authCustomer, userProfileController.getMe);
@@ -36,6 +37,8 @@ function createUsersRoutes(controllers, middleware) {
 
   router.get('/me/wallet', authCustomer, walletController.getWallet);
   router.get('/me/wallet/transactions', authCustomer, walletController.listTransactions);
+
+  router.get('/me/returns', authCustomer, returnController.listReturns);
 
   router.get('/me/wishlist', authCustomer, wishlistController.list);
   router.post('/me/wishlist', authCustomer, validateBody(Joi.object({ productId: objectIdSchema.required() })), wishlistController.add);

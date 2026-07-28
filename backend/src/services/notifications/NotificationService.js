@@ -1,7 +1,7 @@
 const { BaseService } = require('../../core/BaseService');
 const { queueManager } = require('../../queues/QueueManager');
 const { getProvider } = require('../../core/providers.registry');
-const { MockSmsProvider, MockEmailProvider } = require('../../core/providers/MockNotificationProviders');
+const { MockEmailProvider } = require('../../core/providers/MockNotificationProviders');
 const { eventBus } = require('../../events/EventBus');
 
 class NotificationService extends BaseService {
@@ -21,7 +21,7 @@ class NotificationService extends BaseService {
     this.deliveryPartnerRepository = deliveryPartnerRepository;
     this.sellerNotificationRepository = sellerNotificationRepository;
     this.pushProvider = getProvider('push');
-    this.smsProvider = new MockSmsProvider();
+    this.smsProvider = getProvider('sms');
     this.emailProvider = new MockEmailProvider();
     this._registerListeners();
   }
@@ -37,6 +37,10 @@ class NotificationService extends BaseService {
 
     eventBus.subscribe('order.placed', (event) => {
       this.notifySellerNewOrder(event.payload).catch(() => {});
+    });
+
+    eventBus.subscribe('delivery.otp_created', (event) => {
+      this.notifyCustomerDeliveryOtp(event.payload).catch(() => {});
     });
   }
 
@@ -122,13 +126,23 @@ class NotificationService extends BaseService {
     return { delivered: true };
   }
 
-  async notifyDeliveryPartners({ orderId, orderNumber }) {
+  async notifyDeliveryPartners({ orderId, orderNumber, partnerIds = null }) {
     if (!this.deliveryPartnerRepository) return null;
 
-    const partners = await this.deliveryPartnerRepository.list({
-      status: 'approved',
-      isOnline: true,
-    }, { limit: 100 });
+    let partners;
+    if (Array.isArray(partnerIds) && partnerIds.length > 0) {
+      // Only notify nearby partners identified by DeliveryOrderService
+      partners = await this.deliveryPartnerRepository.find({
+        _id: { $in: partnerIds },
+        deletedAt: null,
+      });
+    } else {
+      // Fallback: notify all online approved partners
+      partners = await this.deliveryPartnerRepository.list({
+        status: 'approved',
+        isOnline: true,
+      }, { limit: 100 });
+    }
 
     const title = 'New delivery available';
     const body = `Order ${orderNumber || orderId} is ready for pickup`;
@@ -146,6 +160,42 @@ class NotificationService extends BaseService {
     return { notified: partners.length };
   }
 
+  async notifyCustomerDeliveryOtp({ userId, orderId, orderNumber, otp, phone = null }) {
+    if (!userId || !otp) return null;
+
+    const user = await this.userRepository.findById(userId);
+    const targetPhone = phone || user?.phone;
+    const title = 'Delivery OTP';
+    const body = `Your Mithilakart delivery OTP is ${otp}. Share this with the delivery partner to complete order ${orderNumber || ''}.`.trim();
+
+    await this.userNotificationRepository.create({
+      userId,
+      title,
+      body,
+      channel: 'in_app',
+      referenceType: 'order',
+      referenceId: orderId,
+    });
+
+    const prefs = user?.notificationPreferences || {};
+
+    if (prefs.pushEnabled !== false) {
+      await this._sendPushToPortal({
+        userId,
+        portal: 'customer',
+        title,
+        body,
+        data: { orderId: String(orderId), orderNumber: orderNumber || '', type: 'delivery_otp' },
+      });
+    }
+
+    if (prefs.smsEnabled !== false && targetPhone) {
+      await this.smsProvider.send({ phone: targetPhone, message: body });
+    }
+
+    return { delivered: true };
+  }
+
   async notifySellerNewOrder({ sellerId, orderId, orderNumber }) {
     if (!this.sellerNotificationRepository || !sellerId) return null;
 
@@ -155,9 +205,9 @@ class NotificationService extends BaseService {
     await this.sellerNotificationRepository.create({
       sellerId,
       title,
-      body,
+      message: body,
       type: 'order',
-      referenceId: orderId,
+      metadata: { orderId: String(orderId), orderNumber: orderNumber || '' },
     });
 
     await this._sendPushToPortal({

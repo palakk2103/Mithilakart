@@ -36,6 +36,9 @@ describe('OrderService inventory timing', () => {
     const productRepository = {
       decrementStock: jest.fn().mockResolvedValue(true),
       incrementStock: jest.fn().mockResolvedValue(true),
+      reserveStock: jest.fn().mockResolvedValue(true),
+      releaseReservedStock: jest.fn().mockResolvedValue(true),
+      getAvailableStock: jest.fn((product) => Math.max(0, (product?.stock || 0) - (product?.reservedStock || 0))),
       findPublicById: jest.fn(),
       ...overrides.productRepository,
     };
@@ -48,6 +51,8 @@ describe('OrderService inventory timing', () => {
         paymentStatus: PAYMENT_STATUS.PENDING,
         sellerSubOrders: [{ sellerId, items: [], subtotal: 200, status: ORDER_STATUS.PENDING }],
       }),
+      findByIdempotencyKey: jest.fn().mockResolvedValue(null),
+      findUnpaidPendingByUser: jest.fn().mockResolvedValue([]),
       findById: jest.fn().mockImplementation((id) => Promise.resolve({
         _id: id,
         status: ORDER_STATUS.PENDING,
@@ -152,7 +157,7 @@ describe('OrderService inventory timing', () => {
     let confirmed = false;
     orderRepository.findById.mockImplementation(() => Promise.resolve({
       _id: orderId,
-      status: confirmed ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING,
+      status: confirmed ? ORDER_STATUS.PLACED : ORDER_STATUS.PENDING,
       inventoryDeducted: confirmed,
       sellerSubOrders: [{ sellerId, items: [], subtotal: 200, status: ORDER_STATUS.PENDING }],
     }));
@@ -166,5 +171,17 @@ describe('OrderService inventory timing', () => {
     await service.confirmOrder(orderId, userId);
 
     expect(productRepository.decrementStock).toHaveBeenCalledTimes(1);
+  });
+
+  it('sets status to placed (not confirmed) after payment confirmation', async () => {
+    const { service, orderRepository } = buildService();
+
+    await service.confirmOrder(orderId, userId);
+
+    expect(orderRepository.updateById).toHaveBeenCalledWith(
+      orderId,
+      expect.objectContaining({ status: ORDER_STATUS.PLACED, inventoryDeducted: true }),
+      null
+    );
   });
 });

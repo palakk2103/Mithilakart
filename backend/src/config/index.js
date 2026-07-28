@@ -106,16 +106,7 @@ function loadConfig() {
       timeoutMs: parseInteger('SHUTDOWN_TIMEOUT_MS', process.env.SHUTDOWN_TIMEOUT_MS, 10000),
     },
     auth: {
-      exposeOtpInDev: parseBoolean(
-        process.env.EXPOSE_OTP_IN_DEV,
-        !isProduction && !isTest && !(
-          process.env.SMS_PROVIDER === 'smsindiahub'
-          && process.env.SMS_API_KEY
-          && process.env.SMS_SENDER_ID
-          && process.env.SMS_ENTITY_ID
-          && process.env.SMS_DLT_TEMPLATE_ID
-        )
-      ),
+      exposeOtpInDev: parseBoolean(process.env.EXPOSE_OTP_IN_DEV, !isProduction && !isTest),
     },
     razorpay: {
       keyId: optional('RAZORPAY_KEY_ID', process.env.RAZORPAY_KEY_ID, null),
@@ -138,9 +129,31 @@ function loadConfig() {
     },
     maps: {
       apiKey: optional('GOOGLE_MAPS_API_KEY', process.env.GOOGLE_MAPS_API_KEY, null),
+      timeoutMs: parseInteger('GEOCODING_TIMEOUT_MS', process.env.GEOCODING_TIMEOUT_MS, 5000),
       get enabled() {
         return Boolean(this.apiKey);
       },
+    },
+    shiprocket: {
+      email: optional('SHIPROCKET_EMAIL', process.env.SHIPROCKET_EMAIL, null),
+      password: optional('SHIPROCKET_PASSWORD', process.env.SHIPROCKET_PASSWORD, null),
+      apiBaseUrl: optional('SHIPROCKET_API_BASE_URL', process.env.SHIPROCKET_API_BASE_URL, 'https://apiv2.shiprocket.in'),
+      pickupLocation: optional('SHIPROCKET_PICKUP_LOCATION', process.env.SHIPROCKET_PICKUP_LOCATION, 'Primary'),
+      pickupPincode: optional('SHIPROCKET_PICKUP_PINCODE', process.env.SHIPROCKET_PICKUP_PINCODE, null),
+      channelId: optional('SHIPROCKET_CHANNEL_ID', process.env.SHIPROCKET_CHANNEL_ID, null),
+      webhookSecret: optional('SHIPROCKET_WEBHOOK_SECRET', process.env.SHIPROCKET_WEBHOOK_SECRET, null),
+      defaultWeightKg: Number(optional('SHIPROCKET_DEFAULT_WEIGHT_KG', process.env.SHIPROCKET_DEFAULT_WEIGHT_KG, '0.5')),
+      defaultDimensions: {
+        length: parseInteger('SHIPROCKET_DEFAULT_LENGTH_CM', process.env.SHIPROCKET_DEFAULT_LENGTH_CM, 10),
+        breadth: parseInteger('SHIPROCKET_DEFAULT_BREADTH_CM', process.env.SHIPROCKET_DEFAULT_BREADTH_CM, 10),
+        height: parseInteger('SHIPROCKET_DEFAULT_HEIGHT_CM', process.env.SHIPROCKET_DEFAULT_HEIGHT_CM, 10),
+      },
+      get enabled() {
+        return Boolean(this.email && this.password);
+      },
+    },
+    shipping: {
+      provider: optional('SHIPPING_PROVIDER', process.env.SHIPPING_PROVIDER, 'mock'),
     },
     sms: {
       provider: optional('SMS_PROVIDER', process.env.SMS_PROVIDER, null),
@@ -148,13 +161,14 @@ function loadConfig() {
       senderId: optional('SMS_SENDER_ID', process.env.SMS_SENDER_ID, null),
       entityId: optional('SMS_ENTITY_ID', process.env.SMS_ENTITY_ID, null),
       dltTemplateId: optional('SMS_DLT_TEMPLATE_ID', process.env.SMS_DLT_TEMPLATE_ID, null),
+      route: optional('SMS_ROUTE', process.env.SMS_ROUTE, '2'),
       otpTemplate: optional('SMS_OTP_TEMPLATE', process.env.SMS_OTP_TEMPLATE, null),
       otpBrandName: optional('SMS_OTP_BRAND_NAME', process.env.SMS_OTP_BRAND_NAME, 'Mithilakart'),
-      channel: optional('SMS_CHANNEL', process.env.SMS_CHANNEL, 'Trans'),
+      channel: optional('SMS_CHANNEL', process.env.SMS_CHANNEL, '2'),
       gatewayUrl: optional(
         'SMS_GATEWAY_URL',
         process.env.SMS_GATEWAY_URL,
-        'https://cloud.smsindiahub.in/api/mt/SendSMS'
+        'https://cloud.smsindiahub.in/vendorsms/pushsms.aspx'
       ),
       forceSend: parseBoolean(process.env.SMS_FORCE_SEND, false),
       get enabled() {

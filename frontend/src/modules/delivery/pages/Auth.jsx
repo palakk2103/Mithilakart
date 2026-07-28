@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Phone, Lock, Eye, EyeOff, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { sendOtp, verifyOtp } from '../services/deliveryApi';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import { applyOtpSendResult } from '../../../shared/utils/otpResponse';
 
 const DeliveryAuth = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const DeliveryAuth = () => {
   const [showOtp, setShowOtp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (isAuthenticated('delivery')) {
@@ -29,6 +31,7 @@ const DeliveryAuth = () => {
 
   const handleSendOtp = async () => {
     setError('');
+    setSuccess('');
     const digits = phone.replace(/\D/g, '');
     if (digits.length !== 10) {
       setError('Enter a valid 10-digit phone number');
@@ -37,9 +40,8 @@ const DeliveryAuth = () => {
 
     setLoading(true);
     try {
-      await sendOtp('+91', digits);
-      setOtpSent(true);
-      setTimer(60);
+      const result = await sendOtp('+91', digits);
+      applyOtpSendResult(result, { setOtp, setSuccess, setOtpSent, setTimer });
     } catch (err) {
       setError(err.message || 'Failed to send OTP');
     } finally {
@@ -50,6 +52,7 @@ const DeliveryAuth = () => {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     const digits = phone.replace(/\D/g, '');
     if (!/^\d{6}$/.test(otp)) {
@@ -62,7 +65,12 @@ const DeliveryAuth = () => {
       await verifyOtp('+91', digits, otp);
       navigate('/delivery/dashboard');
     } catch (err) {
-      setError(err.message || 'Invalid OTP');
+      const msg = err.message || 'Invalid OTP';
+      if (/pending approval|not found|signup/i.test(msg)) {
+        setError('Account pending admin approval or not registered. Complete signup first.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -86,13 +94,18 @@ const DeliveryAuth = () => {
       <div className="w-full max-w-[420px] bg-[#f2fff5] rounded-[32px] px-6 py-8 shadow-2xl border border-white/40 z-10 my-6">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-[#0a4a17]">Partner Login</h2>
-          <p className="text-[#3b8a53] text-[13px] font-semibold mt-1">Live SMS OTP verification</p>
+          <p className="text-[#3b8a53] text-[13px] font-semibold mt-1">Phone OTP after admin approval</p>
         </div>
 
         <form onSubmit={otpSent ? handleVerifyOtp : (e) => { e.preventDefault(); handleSendOtp(); }} className="space-y-5">
           {error && (
             <div className="bg-red-50 border border-red-100 text-red-500 text-[11px] font-bold p-3.5 rounded-2xl text-center uppercase tracking-wider">
               {error}
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-50 border border-green-100 text-green-600 text-[11px] font-bold p-3.5 rounded-2xl text-center uppercase tracking-wider">
+              {success}
             </div>
           )}
 
@@ -148,6 +161,13 @@ const DeliveryAuth = () => {
             {loading ? 'Please wait...' : otpSent ? 'Verify & Login' : 'Send OTP'}
           </motion.button>
         </form>
+
+        <div className="text-center mt-6 text-[12px] font-bold text-[#3b8a53]">
+          New partner?{' '}
+          <Link to="/delivery/signup" className="text-[#0a4a17] hover:underline">
+            Register here
+          </Link>
+        </div>
       </div>
     </div>
   );

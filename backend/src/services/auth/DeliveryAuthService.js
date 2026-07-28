@@ -3,6 +3,8 @@ const { AppError } = require('../../utils/AppError');
 const { PORTALS } = require('../../constants/portals');
 const { DELIVERY_STATUS } = require('../../constants/auth');
 
+const { parseLocationFields } = require('../../utils/geoHelper');
+
 class DeliveryAuthService extends BaseService {
   constructor(dependencies) {
     super();
@@ -10,6 +12,7 @@ class DeliveryAuthService extends BaseService {
     this.otpService = dependencies.otpService;
     this.tokenService = dependencies.tokenService;
     this.sessionService = dependencies.sessionService;
+    this.geocodingService = dependencies.geocodingService || null;
   }
 
   _phoneIdentifier(countryCode, phone) {
@@ -25,6 +28,12 @@ class DeliveryAuthService extends BaseService {
   }
 
   async signup(payload) {
+    await this.otpService.verifyOtp(
+      PORTALS.DELIVERY,
+      this._phoneIdentifier(payload.countryCode, payload.phone),
+      payload.otp
+    );
+
     const existing = await this.deliveryPartnerRepository.findByPhone(payload.phone, payload.countryCode);
 
     if (existing) {
@@ -41,10 +50,24 @@ class DeliveryAuthService extends BaseService {
         drivingLicenseNumber: payload.drivingLicenseNumber,
         vehicleRegistrationNumber: payload.vehicleRegistrationNumber,
       },
+      addressLine: payload.addressLine || null,
+      city: payload.city || null,
+      state: payload.state || null,
+      pincode: payload.pincode || null,
+      latitude: payload.latitude ?? null,
+      longitude: payload.longitude ?? null,
+      placeId: payload.placeId || null,
+      location: parseLocationFields({
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+      }).location,
       status: DELIVERY_STATUS.PENDING,
     });
 
-    return this._serializePartner(partner);
+    return {
+      partner: this._serializePartner(partner),
+      message: 'Application submitted. Login after admin approval using phone OTP.',
+    };
   }
 
   async verifyOtp({ countryCode, phone, otp, deviceId }, sessionMeta) {

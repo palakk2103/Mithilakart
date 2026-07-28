@@ -20,7 +20,7 @@ import BeautyTab     from '../../../assets/products/product08.jpg';
 
 import { getCategories, getCategoryProducts } from '../services/catalogApi';
 import { getFlowHome } from '../services/storefrontApi';
-import { extractList, findCategoryByName, mapProductForCard } from '../utils/mappers';
+import { extractList, findCategoryByName, mapProductForCard, mapHomeBanners } from '../utils/mappers';
 import { fetchCartCount, addProductToCart, dispatchCartUpdated } from '../utils/cartUtils';
 
 // Banner Assets
@@ -141,6 +141,7 @@ const BeautyLanding = () => {
   const [active, setActive]     = useState('Beauty');
   const [cartCount, setCartCount] = useState(0);
   const [products, setProducts] = useState([]);
+  const [banners, setBanners] = useState(HOME_BANNERS);
 
   useEffect(() => {
     const update = async () => setCartCount(await fetchCartCount());
@@ -155,6 +156,9 @@ const BeautyLanding = () => {
     const loadProducts = async () => {
       try {
         const homeData = await getFlowHome('beauty');
+        if (homeData?.banners?.length) {
+          setBanners(mapHomeBanners(homeData.banners, HOME_BANNERS));
+        }
         const sectionProducts = (homeData?.sections || []).flatMap((section) => section.products || []);
         if (sectionProducts.length && !cancelled) {
           setProducts(sectionProducts.map((item) => mapProductForCard(item)));
@@ -203,9 +207,19 @@ const BeautyLanding = () => {
     }
   }, []);
 
-  const banners   = BANNERS[active]   || BANNERS['Beauty'];
-  const deals     = DEALS[active]     || [];
-  const trending  = TRENDING[active]  || [];
+  const deals     = products.length
+    ? products.slice(0, 4).map((product) => ({
+        label: product.name || product.title,
+        badge: product.discount || 'Deal',
+        img: product.image || product.img,
+      }))
+    : [];
+  const trending  = products.length
+    ? products.slice(0, 4).map((product) => ({
+        label: product.name || product.title,
+        img: product.image || product.img,
+      }))
+    : [];
 
   return (
     <div className="bg-white min-h-screen pb-24" style={{ fontFamily: "'Inter', Arial, sans-serif" }}>

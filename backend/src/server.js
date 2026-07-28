@@ -8,9 +8,10 @@ const config = require('./config');
 const { createApp } = require('./app');
 const { connectDatabase, disconnectDatabase } = require('./config/database');
 const { connectRedis, disconnectRedis } = require('./config/redis');
-const { resetContainer } = require('./bootstrap/container');
+const { resetContainer, getContainer } = require('./bootstrap/container');
 const { logger } = require('./utils/logger');
 const { eventBus, EVENT_TYPES } = require('./events/EventBus');
+const { initSocketGateway, closeSocketGateway } = require('./realtime/SocketGateway');
 
 let server = null;
 let isShuttingDown = false;
@@ -22,6 +23,7 @@ async function startServer() {
 
   const app = createApp();
   server = http.createServer(app);
+  initSocketGateway(server, getContainer());
 
   await new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -63,6 +65,8 @@ async function shutdown(signal) {
   forceExitTimer.unref();
 
   try {
+    await closeSocketGateway();
+
     if (server) {
       await new Promise((resolve, reject) => {
         server.close((error) => {

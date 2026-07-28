@@ -50,12 +50,12 @@ import ImageBanner4 from '../../../assets/TopBanner/ImageBanner4.jpg';
 import useVendorStore from '../../../store/useVendorStore';
 import toast from 'react-hot-toast';
 import { addProductToCart } from '../utils/cartUtils';
-import { mapHomeBanners } from '../utils/mappers';
+import { mapHomeBanners, mapNavChips } from '../utils/mappers';
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState('You Buy');
   const navigate = useNavigate();
-  const { selectedCategory, homeSections, homeBanners, fetchHomeSections } = useVendorStore();
+  const { selectedCategory, homeSections, homeBanners, homeChips, fetchHomeSections } = useVendorStore();
 
   useEffect(() => {
     fetchHomeSections('standard');
@@ -82,6 +82,31 @@ const Home = () => {
     };
   }, [homeBanners]);
 
+  const mainCategoriesList = useMemo(() => {
+    const iconMap = {
+      'You Buy': <ShoppingBag size={18} className="text-[#3E5A44]" />,
+      Fashion: <Shirt size={18} className="text-[#3E5A44]" />,
+      Beauty: <Sparkles size={18} className="text-[#3E5A44]" />,
+      Electronics: <Monitor size={18} className="text-[#3E5A44]" />,
+      Jewellery: <Gem size={18} className="text-[#3E5A44]" />,
+      Toys: <Gamepad2 size={18} className="text-[#3E5A44]" />,
+      Stationery: <BookOpen size={18} className="text-[#3E5A44]" />,
+      Gifting: <Gift size={18} className="text-[#3E5A44]" />,
+      Electrical: <Zap size={18} className="text-[#3E5A44]" />,
+    };
+
+    return mapNavChips(homeChips).map((chip) => ({
+      label: chip.label,
+      icon: iconMap[chip.label] || <ShoppingBag size={18} className="text-[#3E5A44]" />,
+      path:
+        chip.label === 'You Buy'
+          ? '/home'
+          : chip.label === 'Toys'
+            ? '/toys'
+            : `/category-products?category=${encodeURIComponent(chip.label)}`,
+    }));
+  }, [homeChips]);
+
   const data = useMemo(() => ({
     ratings: [
       { name: 'SONATA...', fullName: 'SONATA NP7987YM06W So...', date: 'Delivered on Apr 13, 2026', img: JewelleryImg },
@@ -104,18 +129,7 @@ const Home = () => {
     }
   }, [navigate]);
 
-  // Main 9 horizontal category tabs on top (restored and compact)
-  const mainCategoriesList = [
-    { label: 'You Buy', icon: <ShoppingBag size={18} className="text-[#3E5A44]" />, path: '/home' },
-    { label: 'Fashion', icon: <Shirt size={18} className="text-[#3E5A44]" />, path: '/category-products?category=Fashion' },
-    { label: 'Beauty', icon: <Sparkles size={18} className="text-[#3E5A44]" />, path: '/category-products?category=Beauty' },
-    { label: 'Electronics', icon: <Monitor size={18} className="text-[#3E5A44]" />, path: '/category-products?category=Electronics' },
-    { label: 'Jewellery', icon: <Gem size={18} className="text-[#3E5A44]" />, path: '/category-products?category=Jewellery' },
-    { label: 'Toys', icon: <Gamepad2 size={18} className="text-[#3E5A44]" />, path: '/toys' },
-    { label: 'Stationery', icon: <BookOpen size={18} className="text-[#3E5A44]" />, path: '/category-products?category=Stationery' },
-    { label: 'Gifting', icon: <Gift size={18} className="text-[#3E5A44]" />, path: '/category-products?category=Gifting' },
-    { label: 'Electrical', icon: <Zap size={18} className="text-[#3E5A44]" />, path: '/category-products?category=Electrical' },
-  ];
+  // Main horizontal category tabs (from admin category chips)
 
   return (
     <div

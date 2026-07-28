@@ -29,6 +29,8 @@ export const getWallet = () => customerApi.get('/users/me/wallet');
 export const getWalletTransactions = (params) =>
   customerApi.get('/users/me/wallet/transactions', { params });
 
+export const getMyReturns = (params) => customerApi.get('/users/me/returns', { params });
+
 export const getWishlist = () => customerApi.get('/users/me/wishlist');
 
 export const addToWishlist = (productId) =>

@@ -149,6 +149,7 @@ export const mapOrderDetail = (data = {}) => {
 
 export const mapReturn = (r = {}) => ({
   id: r.returnNumber || r._id || r.id || '',
+  rawStatus: r.status || '',
   orderId: r.orderNumber || r.orderId || '—',
   user: r.userName || r.user?.name || 'Customer',
   item: r.productName || r.itemName || 'Item',
@@ -251,13 +252,15 @@ export const mapTaxSlab = (t = {}) => ({
   category: t.name || t.category || 'General',
   gst: t.rate != null ? `${Math.round(Number(t.rate) * 100)}%` : (t.gst || '18%'),
   hsn: t.hsnCode || t.hsn || '—',
+  region: t.region || 'IN',
   status: t.isActive !== false ? 'Active' : 'Inactive',
 });
 
 export const mapDeliveryZone = (z = {}) => ({
   id: z._id || z.id || '',
   name: z.name || 'Zone',
-  area: z.pincodePrefix ? `Prefix: ${z.pincodePrefix}` : (z.area || 'All locations'),
+  area: z.pincodePrefix ? `Pin: ${z.pincodePrefix}` : (z.area || 'All locations'),
+  pincodePrefix: z.pincodePrefix || '',
   baseFee: formatCurrency(z.baseCharge ?? z.baseFee ?? 0),
   freeAbove: formatCurrency(z.freeAbove ?? 0),
   status: z.isActive !== false ? 'Active' : 'Inactive',
@@ -288,15 +291,26 @@ export const mapCategory = (c = {}) => ({
   id: c._id || c.id || '',
   name: c.name || 'Category',
   slug: c.slug || c.name?.toLowerCase().replace(/\s+/g, '-') || '',
+  description: c.description || '',
+  parentId: c.parentId?._id || c.parentId || '',
+  parentName: c.parentId?.name || c.parentName || '',
   count: c.productCount ?? c.count ?? 0,
   status: c.isActive === false ? 'Inactive' : (c.status === 'draft' ? 'Draft' : 'Active'),
+  isActive: c.isActive !== false,
   image: c.image || c.imageUrl || 'https://via.placeholder.com/400',
+  imageUrl: c.imageUrl || c.image || '',
+  iconUrl: c.iconUrl || '',
+  sortOrder: c.sortOrder ?? 0,
+  commerceFlows: c.commerceFlows || ['standard'],
 });
 
 export const mapChip = (c = {}, index = 0) => ({
   id: c._id || c.id || c.slug || `chip-${index}`,
   label: c.label || c.name || 'Chip',
   emoji: c.emoji || c.icon || '🏷️',
+  imageUrl: c.imageUrl || '',
+  categoryId: c.categoryId?._id || c.categoryId || '',
+  commerceFlow: c.commerceFlow || 'standard',
   active: c.isActive !== false,
   order: c.order ?? c.sortOrder ?? index + 1,
 });
@@ -406,10 +420,12 @@ export const mapSellerReportData = (raw) => {
 
 export const mapCommissionRule = (r = {}) => ({
   id: r._id || r.id || '',
+  name: r.name || 'General',
   category: r.name || 'General',
-  rate: r.rate != null ? Math.round(Number(r.rate) * 100) : 0,
+  rate: r.rate != null ? `${Math.round(Number(r.rate) * 100)}%` : '0%',
   type: 'Percentage',
   status: r.isActive !== false ? 'Active' : 'Draft',
+  isDefault: r.isDefault === true,
   minSale: '₹0',
 });
 
@@ -474,6 +490,28 @@ export const mapProductQnaPlaceholder = (p = {}, index = 0) => ({
   answer: null,
   status: 'Pending',
   date: formatDate(p.updatedAt || p.createdAt),
+});
+
+export const mapAdminReview = (r = {}) => ({
+  id: r._id || r.id || '',
+  rawStatus: r.status || 'pending',
+  user: r.userName || 'Customer',
+  product: r.productName || r.product?.title || 'Product',
+  rating: r.rating ?? 0,
+  comment: r.body || r.comment || '',
+  date: formatDate(r.createdAt),
+  status: titleCaseStatus(r.status),
+});
+
+export const mapAdminQna = (q = {}) => ({
+  id: q._id || q.id || '',
+  rawStatus: q.status || 'pending',
+  user: q.userName || 'Customer',
+  product: q.productName || 'Product',
+  question: q.question || '',
+  answer: q.answer || null,
+  date: formatDate(q.createdAt),
+  status: q.answer ? 'Answered' : titleCaseStatus(q.status),
 });
 
 export const mapRoleAsSubAdmin = (r = {}, index = 0) => ({

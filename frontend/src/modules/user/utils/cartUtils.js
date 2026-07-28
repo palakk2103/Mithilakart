@@ -21,15 +21,25 @@ export const fetchCartCount = async () => {
 };
 
 export const addProductToCart = async (product, quantity = 1, commerceFlow) => {
-  const productId = product.id || product._id || product.productId;
-  if (!productId) throw new Error('Product ID is required');
+  const listingId = product.listingId;
+  const productId = product.productId || product.id || product._id;
+  const marketplaceTab = product.marketplaceTab || getMarketplaceTab();
+  const flow = commerceFlow || getCommerceFlow();
 
-  await addCartItem({
-    productId,
-    variantId: product.variantId,
-    quantity,
-    ...(commerceFlow ? { commerceFlow } : {}),
-  });
+  if (listingId) {
+    await addCartItem({ listingId, marketplaceTab, quantity });
+  } else if (productId) {
+    await addCartItem({
+      productId,
+      variantId: product.variantId,
+      quantity,
+      commerceFlow: flow,
+      marketplaceTab,
+    });
+  } else {
+    throw new Error('Product ID is required');
+  }
+
   dispatchCartUpdated();
 };
 
@@ -54,3 +64,12 @@ export const getCommerceFlow = () => {
   if (localStorage.getItem('isQuickShopFlow') === 'true') return 'quick_shop';
   return 'standard';
 };
+
+const FLOW_TO_TAB = {
+  standard: 'mithilakart',
+  mithilak: 'mithilak',
+  quick_shop: 'quick_shop',
+  fresh_grocery: 'groceries_fresh',
+};
+
+export const getMarketplaceTab = () => FLOW_TO_TAB[getCommerceFlow()] || 'mithilakart';

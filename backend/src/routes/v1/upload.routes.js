@@ -13,7 +13,12 @@ function createUploadRoutes(controller, middleware) {
 
   router.post('/presign', middleware.authenticateCustomer({ optional: true }), validateBody(presignSchema), controller.presign);
   router.post('/confirm', middleware.authenticateCustomer({ optional: true }), validateBody(confirmUploadSchema), controller.confirm);
-  router.post('/local/:storageKey(*)', memoryUpload.single('file'), controller.uploadLocal);
+  router.post(
+    '/local/:storageKey(*)',
+    middleware.authenticateSeller(),
+    memoryUpload.single('file'),
+    controller.uploadLocal
+  );
 
   return router;
 }

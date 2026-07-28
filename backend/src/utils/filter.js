@@ -87,10 +87,21 @@ function buildListFilters(query, config = {}) {
   };
 }
 
+/** Map API query `commerceFlow` to Product schema field `commerceFlows` (array contains). */
+function applyCommerceFlowFilter(filter, query = {}) {
+  const flow = query.commerceFlow;
+  if (!flow) return filter;
+  const next = { ...filter };
+  delete next.commerceFlow;
+  next.commerceFlows = flow;
+  return next;
+}
+
 module.exports = {
   parseMultiValue,
   buildExactMatchFilter,
   buildRangeFilter,
   buildDateRangeFilter,
   buildListFilters,
+  applyCommerceFlowFilter,
 };

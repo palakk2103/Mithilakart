@@ -25,6 +25,14 @@ const signupSchema = Joi.object({
   aadharNumber: Joi.string().trim().pattern(/^\d{12}$/).required(),
   drivingLicenseNumber: Joi.string().trim().min(5).max(20).required(),
   vehicleRegistrationNumber: Joi.string().trim().min(4).max(20).required(),
+  otp: otpSchema,
+  addressLine: Joi.string().trim().min(5).max(300).optional(),
+  city: Joi.string().trim().min(2).max(100).required(),
+  state: Joi.string().trim().min(2).max(100).optional(),
+  pincode: Joi.string().trim().pattern(/^\d{6}$/).optional(),
+  latitude: Joi.number().optional(),
+  longitude: Joi.number().optional(),
+  placeId: Joi.string().trim().optional(),
 });
 
 const refreshTokenSchema = Joi.object({

@@ -25,6 +25,19 @@ class DeliveryPartnerRepository extends BaseRepository {
   async updateStatus(id, status) {
     return this.updateById(id, { status });
   }
+
+  async findNearbyOnline({ latitude, longitude, maxDistanceMeters = 10000, limit = 20 }) {
+    if (latitude == null || longitude == null) return [];
+    return this.model.find({
+      ...this._activeFilter({ status: 'approved', isOnline: true }),
+      location: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [longitude, latitude] },
+          $maxDistance: maxDistanceMeters,
+        },
+      },
+    }).limit(limit).lean();
+  }
 }
 
 module.exports = {

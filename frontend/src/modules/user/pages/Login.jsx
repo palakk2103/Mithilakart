@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { X, User, Mail, Phone, Lock, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { sendPhoneOtp, verifyPhoneOtp, sendEmailOtp, verifyEmailOtp } from '../services/authApi';
+import { applyOtpSendResult } from '../../../shared/utils/otpResponse';
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 
 const FlowerIcon = ({ className = "w-5 h-5" }) => (
   <svg viewBox="0 0 24 24" className={`${className} inline-block`} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -27,7 +30,8 @@ const FlowerIcon = ({ className = "w-5 h-5" }) => (
 const Login = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const location = useLocation();
+  const location = useRouterLocation();
+  const { refreshLiveLocation } = useLiveLocation();
   
   const [useEmail, setUseEmail] = useState(false);
   const [countryCode, setCountryCode] = useState('+91');
@@ -40,6 +44,13 @@ const Login = () => {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    if (isAuthenticated('customer')) {
+      const redirectTo = location.state?.from || '/home';
+      navigate(redirectTo, { replace: true });
+    }
+  }, [location.state?.from, navigate]);
 
   // 60-second countdown timer for resending OTP
   useEffect(() => {
@@ -101,10 +112,8 @@ const Login = () => {
       
       setIsSendingOtp(true);
       try {
-        await sendPhoneOtp(countryCode, phoneNumber);
-        setOtpSent(true);
-        setTimer(60);
-        setSuccess('OTP sent successfully to your phone');
+        const result = await sendPhoneOtp(countryCode, phoneNumber);
+        applyOtpSendResult(result, { setOtp, setSuccess, setOtpSent, setTimer });
       } catch (err) {
         setError(err.message || 'Failed to send OTP');
       } finally {
@@ -137,6 +146,7 @@ const Login = () => {
       
       if (response && response.success) {
         setSuccess('Authentication successful! Logging in...');
+        refreshLiveLocation({ silent: true }).catch(() => {});
         setTimeout(() => {
           const redirectTo = location.state?.from || '/home';
           const redirectState = location.state?.checkoutProduct ? { product: location.state.checkoutProduct } : undefined;

@@ -3,6 +3,8 @@ const { AppError } = require('../../utils/AppError');
 const { PORTALS } = require('../../constants/portals');
 const { SELLER_STATUS, KYC_STATUS } = require('../../constants/auth');
 
+const { parseLocationFields } = require('../../utils/geoHelper');
+
 class SellerAuthService extends BaseService {
   constructor(dependencies) {
     super();
@@ -11,6 +13,7 @@ class SellerAuthService extends BaseService {
     this.tokenService = dependencies.tokenService;
     this.sessionService = dependencies.sessionService;
     this.otpService = dependencies.otpService || null;
+    this.geocodingService = dependencies.geocodingService || null;
   }
 
   _phoneIdentifier(countryCode, phone) {
@@ -29,7 +32,7 @@ class SellerAuthService extends BaseService {
     );
   }
 
-  async register({ name, email, storeName, phone, countryCode = '+91', password, otp, deviceId }, sessionMeta) {
+  async register({ name, email, storeName, phone, countryCode = '+91', password, otp, deviceId, addressLine, city, state, pincode, latitude, longitude, placeId }, sessionMeta) {
     if (!this.otpService) {
       throw AppError.internal('OTP service unavailable');
     }
@@ -51,35 +54,53 @@ class SellerAuthService extends BaseService {
     }
 
     const passwordHash = await this.passwordService.hash(password);
+
+    let resolvedLat = latitude ?? null;
+    let resolvedLng = longitude ?? null;
+    let resolvedPlaceId = placeId ?? null;
+    let resolvedCity = city || null;
+    let resolvedState = state || null;
+    let resolvedAddressLine = addressLine || null;
+
+    if ((resolvedLat == null || resolvedLng == null) && this.geocodingService?.isEnabled()) {
+      const geocoded = await this.geocodingService.geocodeAddress({
+        addressLine: resolvedAddressLine || `${storeName}, ${resolvedCity || 'India'}`,
+        city: resolvedCity,
+        state: resolvedState,
+        pincode,
+      });
+      if (geocoded) {
+        resolvedLat = geocoded.latitude;
+        resolvedLng = geocoded.longitude;
+        resolvedPlaceId = geocoded.placeId;
+        resolvedAddressLine = resolvedAddressLine || geocoded.formattedAddress;
+      }
+    }
+
+    const geo = parseLocationFields({ latitude: resolvedLat, longitude: resolvedLng });
+
     const seller = await this.sellerRepository.create({
       name,
       email: email.toLowerCase(),
       storeName,
       phone,
+      countryCode,
       passwordHash,
+      addressLine: resolvedAddressLine,
+      city: resolvedCity,
+      state: resolvedState,
+      pincode: pincode || null,
+      latitude: geo.latitude,
+      longitude: geo.longitude,
+      placeId: resolvedPlaceId,
+      location: geo.location,
       status: SELLER_STATUS.INACTIVE,
       kycStatus: KYC_STATUS.PENDING,
     });
 
-    const tokens = await this.tokenService.issueTokenPair({
-      portal: PORTALS.SELLER,
-      subject: seller._id.toString(),
-      role: 'seller',
-      claims: { sellerId: seller._id.toString() },
-      sessionMeta: { ...sessionMeta, deviceId },
-    });
-
-    await this.sessionService.trackDevice({
-      userId: seller._id,
-      portal: PORTALS.SELLER,
-      deviceId,
-      userAgent: sessionMeta.userAgent,
-    });
-
     return {
       seller: this._serializeSeller(seller),
-      tokens,
-      message: 'Registration submitted. Await admin KYC approval before selling.',
+      message: 'Registration submitted. Await admin KYC approval, then login with email and password.',
     };
   }
 
@@ -163,6 +184,11 @@ class SellerAuthService extends BaseService {
       email: seller.email,
       storeName: seller.storeName,
       phone: seller.phone,
+      countryCode: seller.countryCode,
+      city: seller.city,
+      addressLine: seller.addressLine,
+      latitude: seller.latitude,
+      longitude: seller.longitude,
       status: seller.status,
       kycStatus: seller.kycStatus,
     };

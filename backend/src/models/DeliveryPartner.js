@@ -12,6 +12,10 @@ const deliveryPartnerSchema = new mongoose.Schema(
       drivingLicenseNumber: { type: String, default: null },
       vehicleRegistrationNumber: { type: String, default: null },
     },
+    addressLine: { type: String, trim: true, default: null },
+    city: { type: String, trim: true, default: null },
+    state: { type: String, trim: true, default: null },
+    pincode: { type: String, trim: true, default: null },
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected', 'suspended'],
@@ -20,6 +24,18 @@ const deliveryPartnerSchema = new mongoose.Schema(
     isOnline: { type: Boolean, default: false, index: true },
     latitude: { type: Number, default: null },
     longitude: { type: Number, default: null },
+    placeId: { type: String, default: null, trim: true },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number],
+        default: undefined,
+      },
+    },
     lastLocationAt: { type: Date, default: null },
     balance: { type: Number, default: 0, min: 0 },
     deletedAt: { type: Date, default: null },
@@ -32,5 +48,6 @@ const deliveryPartnerSchema = new mongoose.Schema(
 
 deliveryPartnerSchema.index({ phone: 1, countryCode: 1 }, { unique: true });
 deliveryPartnerSchema.index({ status: 1 });
+deliveryPartnerSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.models.DeliveryPartner || mongoose.model('DeliveryPartner', deliveryPartnerSchema);

@@ -1,5 +1,7 @@
 import { parsePrice } from '../../../shared/utils/priceFormatter';
 
+export const DEFAULT_PRODUCT_IMAGE = 'https://via.placeholder.com/120?text=Product';
+
 export const extractList = (data) => {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.items)) return data.items;
@@ -11,13 +13,14 @@ export const extractList = (data) => {
 
 export const getEntityId = (entity) => entity?.id || entity?._id || '';
 
-export const getProductImage = (product, fallback = '') => {
+export const getProductImage = (product, fallback = DEFAULT_PRODUCT_IMAGE) => {
   if (product?.image) return product.image;
   if (product?.img) return product.img;
   if (product?.imageUrl) return product.imageUrl;
   if (Array.isArray(product?.images) && product.images.length > 0) {
     const first = product.images[0];
-    return typeof first === 'string' ? first : first?.url || fallback;
+    const url = typeof first === 'string' ? first : first?.url;
+    if (url) return url;
   }
   return fallback;
 };
@@ -35,12 +38,19 @@ export const calcDiscountLabel = (price, mrp) => {
 };
 
 export const mapProductForCard = (product, fallbackImage = '') => {
-  const id = getEntityId(product);
+  const rawId = getEntityId(product);
+  const listingId = product.listingId || (product.marketplaceTab ? rawId : undefined);
+  const productId = product.productId || (!product.marketplaceTab ? rawId : undefined);
   const price = product.price ?? product.salePrice ?? 0;
   const mrp = product.mrp ?? product.oldPrice ?? product.mrp;
 
   return {
-    id,
+    id: productId || rawId,
+    listingId,
+    productId,
+    marketplaceTab: product.marketplaceTab,
+    deliveryPromiseMinutes: product.deliveryPromiseMinutes,
+    deliveryLabel: product.deliveryLabel,
     title: product.title || product.name || 'Product',
     name: product.title || product.name || 'Product',
     brand: product.brand || '',
@@ -54,8 +64,8 @@ export const mapProductForCard = (product, fallbackImage = '') => {
     img: getProductImage(product, fallbackImage),
     discount: product.discount || calcDiscountLabel(price, mrp),
     off: product.off || product.discount || calcDiscountLabel(price, mrp),
-    delivery: product.delivery || 'Tomorrow',
-    stock: product.stock,
+    delivery: product.deliveryLabel || product.delivery || 'Tomorrow',
+    stock: product.stock ?? product.availableStock,
     categoryId: product.categoryId,
   };
 };
@@ -118,8 +128,11 @@ export const mapOrderForList = (order) => ({
 
 export const mapOrderDetail = (data) => {
   const order = data?.order || data;
+  const addr = order?.address || order?.addressSnapshot || {};
   const items = (data?.items || order?.items || []).map((item) => ({
     id: getEntityId(item),
+    orderItemId: getEntityId(item),
+    productId: item.productId || getEntityId(item),
     name: item.name || item.title || 'Product',
     price: formatDisplayPrice(item.unitPrice ?? item.lineTotal ?? item.price),
     oldPrice: item.mrp ? formatDisplayPrice(item.mrp) : undefined,
@@ -127,10 +140,14 @@ export const mapOrderDetail = (data) => {
     quantity: item.quantity ?? 1,
   }));
 
+  const formatStatus = (status) => (status || 'pending').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
   return {
     id: order.orderNumber || getEntityId(order),
+    mongoId: getEntityId(order),
     orderNumber: order.orderNumber || getEntityId(order),
-    status: order.status || 'Pending',
+    status: formatStatus(order.status),
+    rawStatus: order.status || 'pending',
     date: order.createdAt
       ? new Date(order.createdAt).toLocaleDateString('en-GB', {
           day: 'numeric',
@@ -139,8 +156,23 @@ export const mapOrderDetail = (data) => {
         })
       : '',
     total: order.total,
+    deliveryCharge: order.deliveryCharge ?? 0,
+    subtotal: order.subtotal,
+    discount: order.discount ?? order.couponDiscount ?? 0,
+    tax: order.tax ?? 0,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
+    fulfilmentType: order.fulfilmentType,
+    address: {
+      name: addr.name || '',
+      phone: addr.phone || '',
+      line1: addr.line1 || addr.addressLine || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      pincode: addr.pincode || '',
+      lat: addr.lat ?? addr.latitude ?? null,
+      lng: addr.lng ?? addr.longitude ?? null,
+    },
     items: items.length
       ? items
       : (order.sellerSubOrders || [])
@@ -152,6 +184,10 @@ export const mapOrderDetail = (data) => {
             quantity: item.quantity ?? 1,
           })),
     tracking: data?.tracking || [],
+    shipment: order.shipment || data?.shipment || null,
+    assignment: data?.assignment || null,
+    partnerLocation: data?.partnerLocation || null,
+    destination: data?.destination || null,
   };
 };
 
@@ -206,7 +242,8 @@ export const mapReview = (review) => ({
   id: getEntityId(review),
   product: review.productTitle || review.product?.title || review.productName || 'Product',
   rating: review.rating ?? 0,
-  comment: review.comment || review.text || '',
+  comment: review.body || review.comment || review.text || '',
+  title: review.title || '',
   date: review.createdAt
     ? new Date(review.createdAt).toLocaleDateString('en-GB', {
         day: 'numeric',
@@ -215,6 +252,7 @@ export const mapReview = (review) => ({
       })
     : review.date || '',
   likes: review.likes ?? review.helpfulCount ?? 0,
+  userName: review.userName || review.user?.name || 'Customer',
 });
 
 export const mapQuestion = (q) => ({
@@ -338,5 +376,89 @@ export const mapHomeBanners = (banners, fallbackBanners = []) => {
     image: banner.imageUrl || banner.image,
     title: banner.title || '',
     link: banner.linkUrl,
+  }));
+};
+
+const SHOP_DISPLAY_NAMES = {
+  Beauty: 'Beauty & Care',
+  Gifting: 'Gifts & Hampers',
+  Electronics: 'Smart Gadgets',
+  Jewellery: 'Art Jewellery',
+  Toys: 'Toys & Games',
+  Stationery: 'Office & Books',
+  Fashion: 'Trendy Fashion',
+  Electrical: 'Electricals',
+};
+
+const NAV_CHIP_ICON_KEYS = {
+  'You Buy': 'for-you',
+  Beauty: 'beauty',
+  Gifting: 'gifting',
+  Electronics: 'electronics',
+  Jewellery: 'jewellery',
+  Toys: 'toys',
+  Stationery: 'stationery',
+  Fashion: 'fashion',
+  Electrical: 'electrical',
+};
+
+export const mapNavChips = (chips, fallback = []) => {
+  const list = extractList(chips);
+  if (!list.length) return fallback;
+
+  return list.map((chip) => ({
+    id: NAV_CHIP_ICON_KEYS[chip.label] || slugifyLabel(chip.label),
+    label: chip.label,
+    categoryId: chip.categoryId,
+    imageUrl: chip.imageUrl,
+  }));
+};
+
+const slugifyLabel = (label) =>
+  String(label || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+export const mapShopCategoryCards = (categories) => {
+  const list = extractList(categories);
+  if (!list.length) return [];
+
+  const navSlugs = new Set([
+    'beauty',
+    'gifting',
+    'electronics',
+    'jewellery',
+    'toys',
+    'stationery',
+    'fashion',
+    'electrical',
+  ]);
+
+  return list
+    .filter((cat) => navSlugs.has(cat.slug))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((cat, index) => ({
+      id: getEntityId(cat),
+      name: SHOP_DISPLAY_NAMES[cat.name] || cat.name,
+      img: cat.imageUrl || cat.iconUrl || '',
+      path:
+        cat.name === 'Toys'
+          ? '/vendor/toys'
+          : `/vendor/category-products?category=${encodeURIComponent(cat.name)}`,
+      hasImage: index < 4,
+    }));
+};
+
+export const mapMithilaCategoryCards = (categories) => {
+  const list = extractList(categories);
+  const parent = list.find((cat) => cat.slug === 'mithila-specialities') || list[0];
+  const children = parent?.children || [];
+
+  return children.map((cat) => ({
+    id: getEntityId(cat),
+    name: cat.name,
+    img: cat.imageUrl || cat.iconUrl || '',
+    path: `/vendor/mithilak/category?category=${encodeURIComponent(cat.name)}`,
   }));
 };

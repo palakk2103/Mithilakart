@@ -19,6 +19,9 @@ const useAccountStore = create((set) => ({
   isDarkMode: false,
 
   setSelectedAddress: (id) => set({ selectedAddressId: id }),
+
+  setSavedAddresses: (savedAddresses) => set({ savedAddresses }),
+
   toggleDarkMode: () => set({ isDarkMode: false }),
 
   updateProfile: (newData) =>

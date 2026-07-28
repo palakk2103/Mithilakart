@@ -60,6 +60,10 @@ class CustomerAuthService extends BaseService {
         throw AppError.forbidden('Account is not active');
       }
 
+      if (name?.trim()) {
+        user.name = name.trim();
+      }
+
       user.isVerified = true;
       await user.save();
     }

@@ -110,7 +110,23 @@ const { AddressService } = require('../services/address/AddressService');
 const { PaymentMethodService } = require('../services/payment-method/PaymentMethodService');
 const { NotificationService } = require('../services/notifications/NotificationService');
 const { GeocodingService } = require('../services/maps/GeocodingService');
+const { NearbyService } = require('../services/maps/NearbyService');
+const { MapsController } = require('../controllers/maps/MapsController');
+const { createMapsRoutes } = require('../routes/v1/maps.routes');
 const { SearchService } = require('../services/search/SearchService');
+const { CourierShipmentService } = require('../services/shipping/CourierShipmentService');
+const { ShippingController } = require('../controllers/shipping/ShippingController');
+const { createShippingRoutes } = require('../routes/v1/shipping.routes');
+const { MarketplaceListingRepository } = require('../repositories/MarketplaceListingRepository');
+const { MarketplaceConfigRepository } = require('../repositories/MarketplaceConfigRepository');
+const { MarketplaceEngineService } = require('../services/marketplace/MarketplaceEngineService');
+const { MarketplaceListingService } = require('../services/marketplace/MarketplaceListingService');
+const { MarketplaceController } = require('../controllers/marketplace/MarketplaceController');
+const { SellerListingController } = require('../controllers/marketplace/SellerListingController');
+const { AdminListingController } = require('../controllers/marketplace/AdminListingController');
+const { createMarketplaceRoutes } = require('../routes/v1/marketplace.routes');
+const { createSellerListingRoutes } = require('../routes/v1/seller.listings.routes');
+const { createAdminListingRoutes } = require('../routes/v1/admin.listings.routes');
 
 const { CustomerAuthService } = require('../services/auth/CustomerAuthService');
 const { SellerAuthService } = require('../services/auth/SellerAuthService');
@@ -144,6 +160,8 @@ const { SellerEarningsController } = require('../controllers/seller/SellerEarnin
 const { SellerSettingsController } = require('../controllers/seller/SellerSettingsController');
 const { SellerNotificationController } = require('../controllers/seller/SellerNotificationController');
 const { SellerReviewController } = require('../controllers/seller/SellerReviewController');
+const { SellerQnaController } = require('../controllers/seller/SellerQnaController');
+const { AdminEngagementController } = require('../controllers/admin/AdminEngagementController');
 const { DeliveryDashboardController } = require('../controllers/delivery/DeliveryDashboardController');
 const { DeliveryOrderController } = require('../controllers/delivery/DeliveryOrderController');
 const { DeliveryEarningsController } = require('../controllers/delivery/DeliveryEarningsController');
@@ -173,6 +191,7 @@ const { createCatalogRoutes } = require('../routes/v1/catalog.routes');
 const { createStorefrontRoutes } = require('../routes/v1/storefront.routes');
 const { createCmsRoutes } = require('../routes/v1/cms.routes');
 const { createAdminCatalogRoutes, createAdminCmsRoutes } = require('../routes/v1/admin.catalog.routes');
+const { createAdminContentRoutes } = require('../routes/v1/admin.content.routes');
 const { createUploadRoutes } = require('../routes/v1/upload.routes');
 const { createCartRoutes } = require('../routes/v1/cart.routes');
 const { createOrdersRoutes } = require('../routes/v1/orders.routes');
@@ -252,9 +271,10 @@ function buildContainer() {
   const deliveryChargeRuleRepository = new DeliveryChargeRuleRepository();
   const notificationTemplateRepository = new NotificationTemplateRepository();
   const userNotificationRepository = new UserNotificationRepository();
+  const marketplaceListingRepository = new MarketplaceListingRepository();
+  const marketplaceConfigRepository = new MarketplaceConfigRepository();
 
   const couponService = new CouponService({ couponRepository, couponUsageRepository });
-  const pricingService = new PricingService({ couponService });
 
   const passwordService = new PasswordService();
   const permissionService = new PermissionService();
@@ -262,12 +282,30 @@ function buildContainer() {
   const tokenService = new TokenService(refreshTokenRepository, redisClient, config);
   const sessionService = new SessionService(refreshTokenRepository, userDeviceRepository);
   const cacheService = new CacheService(redisClient);
+  const { PlatformConfigService } = require('../services/platform/PlatformConfigService');
+  const platformConfigService = new PlatformConfigService({
+    platformSettingRepository,
+    deliveryChargeRuleRepository,
+    cacheService,
+  });
+  const pricingService = new PricingService({ couponService, platformConfigService });
   const uploadService = new UploadService(config);
+  const geocodingService = new GeocodingService();
+
+  const marketplaceEngineService = new MarketplaceEngineService({ marketplaceConfigRepository });
+  const marketplaceListingService = new MarketplaceListingService({
+    marketplaceListingRepository,
+    marketplaceEngineService,
+    productRepository,
+    categoryRepository,
+    sellerRepository,
+  });
 
   const cartService = new CartService({
     redisClient,
     productRepository,
     pricingService,
+    marketplaceListingService,
   });
 
   const cartMergeService = new CartMergeService({
@@ -290,6 +328,7 @@ function buildContainer() {
     tokenService,
     sessionService,
     otpService,
+    geocodingService,
   });
 
   const adminAuthService = new AdminAuthService({
@@ -306,6 +345,7 @@ function buildContainer() {
     otpService,
     tokenService,
     sessionService,
+    geocodingService,
   });
 
   const categoryService = new CategoryService(categoryRepository, cacheService);
@@ -313,7 +353,8 @@ function buildContainer() {
     productRepository,
     productVariantRepository,
     categoryRepository,
-    cacheService
+    cacheService,
+    marketplaceListingService
   );
 
   const storefrontService = new StorefrontService({
@@ -323,6 +364,7 @@ function buildContainer() {
     productRepository,
     categoryService,
     cacheService,
+    platformConfigService,
   });
 
   const cmsService = new CmsService({
@@ -334,7 +376,11 @@ function buildContainer() {
     cacheService,
   });
 
-  const middleware = createAuthMiddleware({ tokenService });
+  const middleware = createAuthMiddleware({
+    tokenService,
+    sellerRepository,
+    deliveryPartnerRepository,
+  });
 
   const categoryController = new CategoryController(categoryService);
   const productController = new ProductController(productService);
@@ -350,6 +396,24 @@ function buildContainer() {
     orderStatusHistoryRepository,
   });
 
+  const geocodingServiceRef = geocodingService;
+  const nearbyService = new NearbyService({
+    sellerRepository,
+    productRepository,
+    marketplaceListingRepository,
+    geocodingService: geocodingServiceRef,
+  });
+  const mapsController = new MapsController(nearbyService);
+
+  const courierShipmentService = new CourierShipmentService({
+    orderRepository,
+    orderItemRepository,
+    orderTrackingRepository,
+    orderStatusHistoryRepository,
+    productRepository,
+    sellerRepository,
+  });
+
   const orderService = new OrderService({
     cartService,
     productRepository,
@@ -363,8 +427,17 @@ function buildContainer() {
     cartRepository,
     cartItemRepository,
     userAddressRepository,
-    geocodingService: new GeocodingService(),
+    geocodingService: geocodingServiceRef,
+    courierShipmentService,
   });
+
+  const shippingController = new ShippingController({ courierShipmentService });
+  const marketplaceController = new MarketplaceController({
+    marketplaceEngineService,
+    marketplaceListingService,
+  });
+  const sellerListingController = new SellerListingController({ marketplaceListingService });
+  const adminListingController = new AdminListingController({ marketplaceListingService });
 
   paymentService.setOrderService(orderService);
 
@@ -373,6 +446,7 @@ function buildContainer() {
     productVariantRepository,
     categoryRepository,
     cacheService,
+    sellerRepository,
   });
 
   const sellerDashboardService = new SellerDashboardService({
@@ -423,6 +497,8 @@ function buildContainer() {
     deliveryEarningRepository,
     deliveryOtpService,
     orderRepository,
+    orderItemRepository,
+    sellerRepository,
     orderTrackingRepository,
     orderStatusHistoryRepository,
     userDeviceRepository,
@@ -458,6 +534,7 @@ function buildContainer() {
     productRepository,
     couponRepository,
   });
+  productService.setPromotionService(promotionService);
 
   const auditService = new AuditService({ auditLogRepository });
   const adminDashboardService = new AdminDashboardService({ orderRepository, cacheService });
@@ -474,6 +551,7 @@ function buildContainer() {
   const adminPlatformSettingsService = new AdminPlatformSettingsService({
     platformSettingRepository,
     commissionRuleRepository,
+    platformConfigService,
   });
   const adminFinanceService = new AdminFinanceService({
     commissionRuleRepository,
@@ -481,6 +559,7 @@ function buildContainer() {
     deliveryChargeRuleRepository,
     sellerEarningRepository,
     sellerPayoutRepository,
+    platformConfigService,
   });
   const adminReportService = new AdminReportService();
   const adminPromotionService = new AdminPromotionService({
@@ -497,9 +576,9 @@ function buildContainer() {
     passwordService,
   });
   const userProfileService = new UserProfileService({ userRepository });
-  const addressService = new AddressService({ userAddressRepository });
+  const addressService = new AddressService({ userAddressRepository, geocodingService });
   const paymentMethodService = new PaymentMethodService({ userPaymentMethodRepository });
-  const searchService = new SearchService({ productRepository, categoryRepository, cacheService });
+  const searchService = new SearchService({ productService, categoryRepository, cacheService });
   const notificationService = new NotificationService({
     userNotificationRepository,
     notificationTemplateRepository,
@@ -567,7 +646,10 @@ function buildContainer() {
     settings: new SellerSettingsController(sellerSettingsService),
     notifications: new SellerNotificationController(sellerNotificationService),
     reviews: new SellerReviewController(reviewService),
+    questions: new SellerQnaController(qnaService),
   };
+
+  const adminEngagementController = new AdminEngagementController(reviewService, qnaService);
 
   return {
     config,
@@ -737,6 +819,7 @@ function buildContainer() {
         middleware
       ),
       adminCms: createAdminCmsRoutes(cmsController, middleware),
+      adminContent: createAdminContentRoutes(adminEngagementController, middleware),
       uploads: createUploadRoutes(uploadController, middleware),
       cart: createCartRoutes(cartController, middleware),
       orders: createOrdersRoutes({ orderController, returnController }, middleware),
@@ -763,6 +846,7 @@ function buildContainer() {
         qnaController,
         couponController,
         notificationController: customerNotificationController,
+        returnController,
       }, middleware),
       notifications: createNotificationsRoutes(customerNotificationController, middleware),
       support: createSupportRoutes(customerNotificationController, middleware),
@@ -772,6 +856,11 @@ function buildContainer() {
       deals: createDealsRoutes(promotionController),
       engagement: createEngagementRoutes({ reviewController, qnaController }, middleware),
       payments: createPaymentsRoutes(paymentController, middleware),
+      shipping: createShippingRoutes(shippingController, middleware),
+      marketplace: createMarketplaceRoutes(marketplaceController),
+      sellerListings: createSellerListingRoutes(sellerListingController, middleware),
+      adminListings: createAdminListingRoutes(adminListingController, middleware),
+      maps: createMapsRoutes(mapsController),
     },
   };
 }

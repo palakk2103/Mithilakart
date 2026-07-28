@@ -121,6 +121,57 @@ class ReviewService extends BaseService {
       reportReason: reason || null,
     });
   }
+
+  async listForAdmin(query = {}) {
+    const pagination = parsePagination(query);
+    const filter = { deletedAt: null };
+    if (query.status) filter.status = query.status;
+
+    const [items, total] = await Promise.all([
+      this.reviewRepository.find(filter, {
+        sort: '-createdAt',
+        skip: pagination.skip,
+        limit: pagination.limit,
+      }),
+      this.reviewRepository.count(filter),
+    ]);
+
+    const productIds = [...new Set(items.map((r) => String(r.productId)))];
+    const products = productIds.length
+      ? await this.productRepository.find({ _id: { $in: productIds } })
+      : [];
+    const productMap = new Map(products.map((p) => [String(p._id), p]));
+
+    const enriched = items.map((review) => {
+      const product = productMap.get(String(review.productId));
+      return {
+        ...review.toObject?.() || review,
+        productName: product?.title || product?.name || 'Product',
+      };
+    });
+
+    return { items: enriched, meta: buildPaginationMeta(pagination.page, pagination.limit, total) };
+  }
+
+  async moderateReview(reviewId, action, adminId, note = null) {
+    const review = await this.reviewRepository.findById(reviewId);
+    if (!review) throw AppError.notFound('Review not found');
+
+    const statusMap = {
+      approve: REVIEW_STATUS.APPROVED,
+      reject: REVIEW_STATUS.REJECTED,
+      hide: REVIEW_STATUS.HIDDEN,
+    };
+    const status = statusMap[action];
+    if (!status) throw AppError.validation('Invalid moderation action');
+
+    return this.reviewRepository.updateById(reviewId, {
+      status,
+      moderatedBy: adminId,
+      moderatedAt: new Date(),
+      moderationNote: note,
+    });
+  }
 }
 
 module.exports = { ReviewService };

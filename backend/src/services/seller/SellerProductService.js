@@ -1,19 +1,22 @@
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { assertSellerResource } = require('../../helpers/sellerScope');
-const { PRODUCT_STATUS } = require('../../constants/catalog');
+const { PRODUCT_STATUS, COMMERCE_FLOWS } = require('../../constants/catalog');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
 const { buildListFilters } = require('../../utils/filter');
 const { buildSortQuery } = require('../../utils/sort');
 const { eventBus } = require('../../events/EventBus');
 
+const LOCAL_COMMERCE_FLOWS = new Set([COMMERCE_FLOWS.QUICK_SHOP, COMMERCE_FLOWS.FRESH_GROCERY]);
+
 class SellerProductService extends BaseService {
-  constructor({ productRepository, productVariantRepository, categoryRepository, cacheService }) {
+  constructor({ productRepository, productVariantRepository, categoryRepository, cacheService, sellerRepository = null }) {
     super();
     this.productRepository = productRepository;
     this.productVariantRepository = productVariantRepository;
     this.categoryRepository = categoryRepository;
     this.cacheService = cacheService;
+    this.sellerRepository = sellerRepository;
   }
 
   async list(sellerId, query = {}) {
@@ -44,10 +47,26 @@ class SellerProductService extends BaseService {
     const category = await this.categoryRepository.findById(data.categoryId);
     if (!category || category.deletedAt) throw AppError.notFound('Category not found');
 
+    const flows = Array.isArray(data.commerceFlows) && data.commerceFlows.length
+      ? data.commerceFlows
+      : [];
+
+    const isLocalCommerce = flows.some((flow) => LOCAL_COMMERCE_FLOWS.has(flow));
+    if (isLocalCommerce && this.sellerRepository) {
+      const seller = await this.sellerRepository.findById(sellerId);
+      if (seller?.latitude == null || seller?.longitude == null) {
+        throw AppError.validation(
+          'Store location (latitude/longitude) is required before listing Quick Commerce products'
+        );
+      }
+    }
+
     const product = await this.productRepository.create({
       ...data,
       sellerId,
       status: PRODUCT_STATUS.PENDING,
+      masterStatus: PRODUCT_STATUS.PENDING,
+      commerceFlows: flows.length ? flows : ['standard'],
     });
 
     eventBus.publish('product.created', { productId: product._id, sellerId });

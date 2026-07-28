@@ -35,7 +35,7 @@ class ProductController extends BaseController {
   });
 
   getById = asyncHandler(async (req, res) => {
-    const data = await this.service.getPublicById(req.params.id);
+    const data = await this.service.getPublicById(req.params.id, req.query);
     return ApiResponse.success(res, data);
   });
 

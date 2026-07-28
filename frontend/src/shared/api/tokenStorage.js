@@ -39,6 +39,9 @@ export function setTokens(portal, { accessToken, refreshToken }) {
   if (accessToken) localStorage.setItem(keys.access, accessToken);
   if (refreshToken) localStorage.setItem(keys.refresh, refreshToken);
   if (keys.legacyAuth) localStorage.setItem(keys.legacyAuth, 'true');
+  if (portal === 'customer') {
+    window.dispatchEvent(new Event('customer-auth-changed'));
+  }
 }
 
 export function clearTokens(portal) {
@@ -48,6 +51,9 @@ export function clearTokens(portal) {
   localStorage.removeItem(keys.refresh);
   localStorage.removeItem(keys.user);
   if (keys.legacyAuth) localStorage.removeItem(keys.legacyAuth);
+  if (portal === 'customer') {
+    window.dispatchEvent(new Event('customer-auth-changed'));
+  }
 }
 
 export function getUser(portal) {

@@ -5,6 +5,8 @@ import { Eye, EyeOff, Lock, Mail, X, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { registerSeller, sendSellerPhoneOtp } from '../../services/sellerApi';
+import { applyOtpSendResult } from '../../../../shared/utils/otpResponse';
+import { useLocation } from '../../../../shared/context/LocationContext';
 
 const SellerLogin = () => {
   const navigate = useNavigate();
@@ -18,7 +20,12 @@ const SellerLogin = () => {
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [otpHint, setOtpHint] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [city, setCity] = useState('');
+  const [addressLine, setAddressLine] = useState('');
+  const [pincode, setPincode] = useState('');
+  const { location: liveLocation, refreshLiveLocation } = useLocation();
 
   const handleSendOtp = async () => {
     if (!/^\d{10}$/.test(phone)) {
@@ -27,10 +34,17 @@ const SellerLogin = () => {
     }
 
     setIsLoading(true);
+    setOtpHint('');
     try {
-      await sendSellerPhoneOtp('+91', phone);
+      const result = await sendSellerPhoneOtp('+91', phone);
       setOtpSent(true);
-      toast.success('OTP sent to your phone');
+      let hint = 'OTP sent to your phone';
+      applyOtpSendResult(result, {
+        setOtp,
+        setSuccess: (msg) => { hint = msg; setOtpHint(msg); },
+        setOtpSent,
+      });
+      toast.success(hint, { duration: result?.devOtp ? 10000 : 4000 });
     } catch (err) {
       toast.error(err.message || 'Failed to send OTP');
     } finally {
@@ -67,6 +81,10 @@ const SellerLogin = () => {
       toast.error('Enter the 6-digit OTP');
       return;
     }
+    if (!city.trim()) {
+      toast.error('Store city/location is required');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -78,6 +96,13 @@ const SellerLogin = () => {
         countryCode: '+91',
         password,
         otp,
+        city: city.trim(),
+        addressLine: addressLine.trim() || liveLocation?.formattedAddress || undefined,
+        state: liveLocation?.state || undefined,
+        pincode: pincode.trim() || liveLocation?.pincode || undefined,
+        latitude: liveLocation?.latitude,
+        longitude: liveLocation?.longitude,
+        placeId: liveLocation?.placeId,
       });
       toast.success('Registration submitted. Await admin KYC approval, then login.');
       setMode('login');
@@ -168,6 +193,44 @@ const SellerLogin = () => {
                   required
                 />
               </div>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Store city *"
+                className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
+                required
+              />
+              <input
+                type="text"
+                value={addressLine}
+                onChange={(e) => setAddressLine(e.target.value)}
+                placeholder="Store address / area"
+                className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
+              />
+              <input
+                type="text"
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="Pincode"
+                className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const loc = await refreshLiveLocation({ silent: false });
+                    if (loc?.city) setCity(loc.city);
+                    if (loc?.formattedAddress) setAddressLine(loc.formattedAddress);
+                    if (loc?.pincode) setPincode(loc.pincode);
+                  } catch {
+                    // toast shown in hook
+                  }
+                }}
+                className="w-full py-2.5 rounded-[16px] border border-[#0c5c20]/20 text-[#0c5c20] text-sm font-bold"
+              >
+                Use my live location
+              </button>
             </>
           )}
 
@@ -202,6 +265,10 @@ const SellerLogin = () => {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+
+          {mode === 'register' && otpHint && (
+            <p className="text-xs text-center text-[#0c5c20] font-bold">{otpHint}</p>
+          )}
 
           {mode === 'register' && otpSent && (
             <input

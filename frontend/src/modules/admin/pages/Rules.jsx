@@ -1,153 +1,162 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Key, Percent, Plus, Edit2, Trash2, 
-  CheckCircle2, Info, Layers, Save, X,
-  ShieldCheck, AlertCircle
-} from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit2, Trash2, Save, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { financeApi } from '../services/api';
+import { financeApi, settingsApi } from '../services/api';
 import { extractList, mapCommissionRule } from '../utils/mappers';
+import Modal from '../components/ui/Modal';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import toast from 'react-hot-toast';
 
 const CommissionRules = () => {
   const [rules, setRules] = useState([]);
-  const [isAdding, setIsAdding] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [baseRate, setBaseRate] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: '', rate: 10, isActive: true });
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      const { data, error } = await financeApi.getCommissionRules();
-      if (cancelled) return;
-      if (!error) {
-        setRules(extractList(data).map(mapCommissionRule));
-      } else {
-        setRules([]);
-      }
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [rulesRes, settingsRes] = await Promise.all([
+      financeApi.getCommissionRules(),
+      settingsApi.getAll(),
+    ]);
+    if (!rulesRes.error) setRules(extractList(rulesRes.data).map(mapCommissionRule).filter((r) => !r.isDefault));
+    if (!settingsRes.error && settingsRes.data?.commission?.rate != null) {
+      setBaseRate(Math.round(settingsRes.data.commission.rate * 100));
+    }
+    setLoading(false);
   }, []);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  useEffect(() => { load(); }, [load]);
+
+  const saveBaseRate = async () => {
+    const { error } = await settingsApi.updateCommission({ rate: Number(baseRate) / 100 });
+    if (error) toast.error(error);
+    else toast.success('Global commission rate updated');
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ name: '', rate: 10, isActive: true });
+    setModalOpen(true);
+  };
+
+  const openEdit = (rule) => {
+    setEditing(rule);
+    setForm({
+      name: rule.category || rule.name || '',
+      rate: parseFloat(String(rule.rate).replace('%', '')) || 10,
+      isActive: rule.status === 'Active',
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast.error('Rule name is required');
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      name: form.name.trim(),
+      rate: Number(form.rate) / 100,
+      isActive: form.isActive,
+      isDefault: false,
+    };
+    const result = editing
+      ? await financeApi.updateCommissionRule(editing.id, payload)
+      : await financeApi.createCommissionRule(payload);
+    setSaving(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(editing ? 'Rule updated' : 'Rule created');
+    setModalOpen(false);
+    load();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await financeApi.deleteCommissionRule(deleteTarget.id);
+    if (error) toast.error(error);
+    else {
+      toast.success('Rule deleted');
+      setDeleteTarget(null);
+      load();
+    }
   };
 
   return (
-    <div className="space-y-6 pb-10 animate-in fade-in duration-700">
-      {/* Header */}
+    <div className="space-y-6 pb-10">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight font-montserrat uppercase">Commission Policy</h1>
-          <p className="text-slate-500 text-[11px] font-medium mt-0.5 font-raleway">Define and manage revenue sharing rules for various product categories.</p>
+          <h1 className="text-2xl font-bold text-slate-900 uppercase">Commission Policy</h1>
+          <p className="text-slate-500 text-[11px] mt-1">Category-specific rules override the global base rate</p>
         </div>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:scale-105 active:scale-95 transition-all"
-        >
-          <Plus size={14} />
-          Create Rule
+        <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 text-white rounded-lg text-[10px] font-black uppercase">
+          <Plus size={14} /> Create Rule
         </button>
       </div>
 
-      {/* Info Warning */}
-      <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-3">
-        <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center flex-shrink-0">
-           <AlertCircle size={16} />
-        </div>
+      <div className="bg-slate-900 rounded-2xl p-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-           <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest">Policy Impact Notice</p>
-           <p className="text-[10px] text-amber-600 font-medium mt-0.5 leading-tight">
-             Any changes to commission rates will take effect on **new orders only**. Active subscriptions or past transactions will not be retroactively updated.
-           </p>
+          <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Global Base Rate</p>
+          <p className="text-lg font-black mt-1">Applied when no category rule matches</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={baseRate}
+            onChange={(e) => setBaseRate(e.target.value)}
+            className="w-20 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm font-black text-center outline-none"
+          />
+          <span className="text-sm font-black">%</span>
+          <button onClick={saveBaseRate} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-[9px] font-black uppercase">Update Base</button>
         </div>
       </div>
 
-      {/* Rules Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AnimatePresence>
-          {loading ? (
-            <div className="col-span-full p-8 text-center text-slate-400 text-sm font-bold">Loading commission rules...</div>
-          ) : rules.length === 0 ? (
-            <div className="col-span-full p-8 text-center text-slate-400 text-sm font-bold">No commission rules found</div>
-          ) : rules.map((rule, i) => (
-            <motion.div
-              key={rule.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-              className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all group"
-            >
-              <div className="flex justify-between items-start mb-3">
-                 <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center font-black shadow-inner">
-                    <Layers size={20} />
-                 </div>
-                 <div className="flex gap-1.5">
-                    <button className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-blue-50 hover:text-blue-500 transition-all">
-                       <Edit2 size={12} />
-                    </button>
-                    <button className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-red-50 hover:text-red-500 transition-all">
-                       <Trash2 size={12} />
-                    </button>
-                 </div>
-              </div>
-
-              <div>
-                 <h3 className="text-[13px] font-black text-slate-900 font-montserrat uppercase tracking-tight">{rule.category}</h3>
-                 <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-xl font-black text-blue-600 font-roboto">{rule.rate}</span>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                       {rule.type === 'Percentage' ? '%' : 'FIXED'}
-                    </span>
-                 </div>
-              </div>
-
-              <div className="mt-3 pt-3 border-t border-slate-50 space-y-1.5">
-                 <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400">
-                    <span>Threshold</span>
-                    <span className="text-slate-900">{rule.minSale}</span>
-                 </div>
-                 <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400">
-                    <span>Status</span>
-                    <span className={`px-2 py-0.5 rounded-lg ${rule.status === 'Active' ? 'bg-green-50 text-green-500' : 'bg-slate-50 text-slate-400'}`}>
-                       {rule.status}
-                    </span>
-                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {/* Global Rule Card */}
-        <div className="bg-slate-900 rounded-2xl p-5 flex flex-col justify-between text-white relative overflow-hidden">
-           <div className="absolute top-0 right-0 p-5 opacity-10">
-              <ShieldCheck size={80} />
-           </div>
-           <div>
-              <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Global Policy</p>
-              <h3 className="text-lg font-black mt-1 font-montserrat">Base Rate: 10%</h3>
-              <p className="text-[10px] opacity-60 mt-2 leading-tight font-medium">
-                Applied to all categories without specific custom rules.
-              </p>
-           </div>
-           <button className="mt-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
-              Update Base
-           </button>
+      {loading ? (
+        <div className="flex justify-center py-12 text-slate-400 gap-2"><Loader2 className="animate-spin" /> Loading...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <AnimatePresence>
+            {rules.map((rule, i) => (
+              <motion.div key={rule.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-[13px] font-black uppercase">{rule.category || rule.name}</h3>
+                  <div className="flex gap-1">
+                    <button onClick={() => openEdit(rule)} className="p-1.5 bg-slate-50 rounded-lg"><Edit2 size={12} /></button>
+                    <button onClick={() => setDeleteTarget(rule)} className="p-1.5 bg-red-50 text-red-500 rounded-lg"><Trash2 size={12} /></button>
+                  </div>
+                </div>
+                <p className="text-xl font-black text-blue-600">{rule.rate}</p>
+                <p className="text-[9px] font-black text-slate-400 uppercase mt-2">{rule.status}</p>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
-      </div>
+      )}
 
-      {/* Save Button */}
-      <div className="flex justify-center pt-6">
-         <button 
-           onClick={handleSave}
-           className={`flex items-center gap-2 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all shadow-xl ${saved ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:scale-105 shadow-blue-200'}`}
-         >
-            {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {saved ? 'Policy Published!' : 'Apply Global Changes'}
-         </button>
-      </div>
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Rule' : 'Create Rule'}>
+        <div className="space-y-4">
+          <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Rule name / category" className="w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none" />
+          <input type="number" min="0" max="100" value={form.rate} onChange={(e) => setForm((p) => ({ ...p, rate: e.target.value }))} placeholder="Rate %" className="w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none" />
+          <label className="flex items-center gap-2 text-sm font-bold">
+            <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} /> Active
+          </label>
+          <button onClick={handleSave} disabled={saving} className="w-full py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2">
+            {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save Rule
+          </button>
+        </div>
+      </Modal>
+
+      <ConfirmDialog isOpen={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} type="delete" message="Delete this commission rule?" />
     </div>
   );
 };

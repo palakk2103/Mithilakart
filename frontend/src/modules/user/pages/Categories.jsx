@@ -203,11 +203,13 @@ const Categories = () => {
     };
   }, [isMithilakFlow, isQuickShopFlow, isFreshGroceryFlow]);
 
-  const sectionsList = isMithilakFlow
-    ? MITHILA_CATEGORIES
-    : isQuickShopFlow
-      ? QUICK_SHOP_CATEGORIES
-      : apiSections || SECTIONS;
+  const sectionsList = apiSections?.length
+    ? apiSections
+    : isMithilakFlow
+      ? MITHILA_CATEGORIES
+      : isQuickShopFlow
+        ? QUICK_SHOP_CATEGORIES
+        : SECTIONS;
   const pageBg = isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
   const headerBg = isMithilakFlow ? 'bg-[#6FAE4A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow) ? 'text-white' : 'text-[#3C2415]';

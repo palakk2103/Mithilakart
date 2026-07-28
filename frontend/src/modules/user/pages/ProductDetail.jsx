@@ -4,12 +4,17 @@ import {
   Share2, ChevronRight, X, MapPin, Truck, RotateCcw, IndianRupee
 } from 'lucide-react';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation as useRouterLocation, useNavigate, Link } from 'react-router-dom';
 import useAccountStore from '../../../store/useAccountStore';
+import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
+import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
 import { useTranslation } from 'react-i18next';
-import { getProductById, getProductReviews } from '../services/catalogApi';
+import { getProductById, getProductReviews, getProductQuestions, createProductReview, askProductQuestion } from '../services/catalogApi';
+import { getOrders } from '../services/ordersApi';
 import { addToWishlist, removeFromWishlist as removeWishlistItem } from '../services/userApi';
-import { mapProductForDetail, extractList } from '../utils/mappers';
+import { mapProductForDetail, extractList, mapReview, mapQuestion } from '../utils/mappers';
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import { toast } from 'react-hot-toast';
 import { addProductToCart, fetchCartCount } from '../utils/cartUtils';
 
 // Import Assets
@@ -27,7 +32,11 @@ import TowerFan from '../../../assets/products/product09.jpg';
 
 const ProductDetail = () => {
   const { t } = useTranslation();
-  const location = useLocation();
+  const location = useRouterLocation();
+  const { location: liveLocation } = useLiveLocation();
+  const { savedAddresses, selectedAddressId } = useAccountStore();
+  useHydrateAddresses();
+  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
   const navigate = useNavigate();
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -49,6 +58,10 @@ const ProductDetail = () => {
   const { wishlist, addToWishlist: addToWishlistStore, removeFromWishlist } = useAccountStore();
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [questions, setQuestions] = useState([]);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, body: '' });
+  const [questionText, setQuestionText] = useState('');
+  const [engagementLoading, setEngagementLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -80,6 +93,80 @@ const ProductDetail = () => {
     }
   };
 
+  const resolvedProductId = product?.id || location.state?.product?.id;
+
+  const findDeliveredOrderId = async (pid) => {
+    const data = await getOrders({ status: 'delivered', limit: 30 });
+    const orders = extractList(data);
+    for (const order of orders) {
+      const subs = order.sellerSubOrders || [];
+      const hasProduct = subs.some((sub) =>
+        (sub.items || []).some((item) => String(item.productId) === String(pid))
+      );
+      if (hasProduct) return order.id || order._id;
+    }
+    return null;
+  };
+
+  const handleSubmitReview = async () => {
+    if (!isAuthenticated('customer')) {
+      navigate('/login');
+      return;
+    }
+    if (!reviewForm.body.trim()) {
+      toast.error('Please write a review');
+      return;
+    }
+    setEngagementLoading(true);
+    try {
+      const orderId = await findDeliveredOrderId(resolvedProductId);
+      if (!orderId) {
+        toast.error('You need a delivered order for this product to review');
+        return;
+      }
+      await createProductReview(resolvedProductId, {
+        orderId,
+        rating: Number(reviewForm.rating),
+        body: reviewForm.body.trim(),
+      });
+      toast.success('Review submitted for moderation');
+      setReviewForm({ rating: 5, body: '' });
+      const reviewData = await getProductReviews(resolvedProductId).catch(() => []);
+      setReviews(extractList(reviewData).map(mapReview));
+    } catch (err) {
+      toast.error(err?.message || 'Failed to submit review');
+    } finally {
+      setEngagementLoading(false);
+    }
+  };
+
+  const handleAskQuestion = async () => {
+    if (!isAuthenticated('customer')) {
+      navigate('/login');
+      return;
+    }
+    if (!questionText.trim()) {
+      toast.error('Enter your question');
+      return;
+    }
+    setEngagementLoading(true);
+    try {
+      await askProductQuestion(resolvedProductId, { question: questionText.trim() });
+      toast.success('Question submitted');
+      setQuestionText('');
+      const questionData = await getProductQuestions(resolvedProductId).catch(() => []);
+      setQuestions(extractList(questionData?.items || questionData).map(mapQuestion));
+    } catch (err) {
+      toast.error(err?.message || 'Failed to submit question');
+    } finally {
+      setEngagementLoading(false);
+    }
+  };
+
+  const avgRating = reviews.length
+    ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
+    : product?.rating || '4.2';
+
   useEffect(() => {
     let cancelled = false;
     const productId = location.state?.product?.id;
@@ -89,13 +176,15 @@ const ProductDetail = () => {
       setError(null);
       try {
         if (productId) {
-          const [detail, reviewData] = await Promise.all([
+          const [detail, reviewData, questionData] = await Promise.all([
             getProductById(productId),
             getProductReviews(productId).catch(() => []),
+            getProductQuestions(productId).catch(() => []),
           ]);
           if (!cancelled) {
             setProduct(mapProductForDetail(detail, PlumShampoo));
-            setReviews(extractList(reviewData));
+            setReviews(extractList(reviewData).map(mapReview));
+            setQuestions(extractList(questionData?.items || questionData).map(mapQuestion));
           }
         } else if (location.state?.product) {
           if (!cancelled) {
@@ -154,17 +243,8 @@ const ProductDetail = () => {
     };
   }, [product]);
 
-  if (!product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-cream">
-        <p className="text-sm text-slate-600">{loading ? 'Loading product...' : error || 'Product not found'}</p>
-      </div>
-    );
-  }
-
-  const images = product.images?.length ? product.images : [product.image, product.image, product.image];
-
   useEffect(() => {
+    if (!product) return;
     window.scrollTo(0, 0);
     setIsWishlisted(wishlist.some(item => item.id === product.id));
 
@@ -178,6 +258,7 @@ const ProductDetail = () => {
   }, [product, wishlist]);
 
   const toggleWishlist = useCallback(async () => {
+    if (!product) return;
     try {
       if (isWishlisted) {
         await removeWishlistItem(product.id);
@@ -195,6 +276,39 @@ const ProductDetail = () => {
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2000);
   }, [product, isWishlisted, addToWishlistStore, removeFromWishlist]);
+
+  const handleAddToCart = useCallback(async () => {
+    if (!product) return;
+    try {
+      await addProductToCart(product);
+      setToastMessage('Added to cart');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    } catch {
+      setToastMessage('Could not add to cart');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    }
+  }, [product]);
+
+  const handleBuyNow = useCallback(() => {
+    if (!product) return;
+    if (localStorage.getItem('isAuthenticated') !== 'true') {
+      navigate('/login', { state: { from: '/vendor/checkout', checkoutProduct: product } });
+    } else {
+      navigate('/vendor/checkout', { state: { product } });
+    }
+  }, [product, navigate]);
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-cream">
+        <p className="text-sm text-slate-600">{loading ? 'Loading product...' : error || 'Product not found'}</p>
+      </div>
+    );
+  }
+
+  const images = product.images?.length ? product.images : [product.image, product.image, product.image];
 
   const handleShare = async () => {
     const shareData = {
@@ -231,27 +345,6 @@ const ProductDetail = () => {
       }
     }
   };
-
-  const handleAddToCart = useCallback(async () => {
-    try {
-      await addProductToCart(product);
-      setToastMessage('Added to cart');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2000);
-    } catch {
-      setToastMessage('Could not add to cart');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2000);
-    }
-  }, [product]);
-
-  const handleBuyNow = useCallback(() => {
-    if (localStorage.getItem('isAuthenticated') !== 'true') {
-      navigate('/login', { state: { from: '/vendor/checkout', checkoutProduct: product } });
-    } else {
-      navigate('/vendor/checkout', { state: { product } });
-    }
-  }, [product, navigate]);
 
   return (
     <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative ${
@@ -335,10 +428,10 @@ const ProductDetail = () => {
 
               {/* Rating Badge */}
               <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-full border border-gray-100 flex items-center gap-1 shadow-sm z-10">
-                <span className="text-[11px] font-black text-slate-800">{product.rating}</span>
+                <span className="text-[11px] font-black text-slate-800">{avgRating}</span>
                 <Star size={9} fill="#e2a750" className="text-[var(--color-gold)]" />
                 <div className="w-[1px] h-2.5 bg-gray-200 mx-0.5" />
-                <span className="text-[9.5px] font-bold text-slate-400">{product.ratingCount || 12} reviews</span>
+                <span className="text-[9.5px] font-bold text-slate-400">{reviews.length || product.ratingCount || 0} reviews</span>
               </div>
             </div>
 
@@ -476,7 +569,7 @@ const ProductDetail = () => {
             <MapPin size={18} className="text-[#3E5A44]" />
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider leading-none">Deliver to Home</p>
-              <p className="text-[12px] text-slate-500 font-medium truncate mt-1">83 Kishan Pura Mataji Mandir, Sector N...</p>
+              <p className="text-[12px] text-slate-500 font-medium truncate mt-1">{deliverTo.label}</p>
             </div>
             <ChevronRight size={16} className="text-gray-400" />
           </div>
@@ -583,6 +676,87 @@ const ProductDetail = () => {
       </div>
     </div>
   </div>
+
+      {/* Reviews & Q&A */}
+      <div className="mt-4 px-4 md:max-w-6xl md:mx-auto md:w-full space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900 mb-4">Customer Reviews</h3>
+          {reviews.length === 0 ? (
+            <p className="text-sm text-slate-400 font-medium mb-4">No reviews yet. Be the first to review!</p>
+          ) : (
+            <div className="space-y-4 mb-5">
+              {reviews.slice(0, 5).map((review) => (
+                <div key={review.id} className="border-b border-slate-50 pb-4 last:border-0">
+                  <div className="flex items-center gap-1 mb-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star key={n} size={10} className={n <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'} />
+                    ))}
+                    <span className="text-[10px] text-slate-400 ml-2">{review.userName} · {review.date}</span>
+                  </div>
+                  <p className="text-[12px] text-slate-700 leading-relaxed">{review.comment}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="space-y-3 border-t border-slate-50 pt-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Write a review</p>
+            <select
+              value={reviewForm.rating}
+              onChange={(e) => setReviewForm((f) => ({ ...f, rating: e.target.value }))}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold"
+            >
+              {[5, 4, 3, 2, 1].map((n) => (
+                <option key={n} value={n}>{n} Stars</option>
+              ))}
+            </select>
+            <textarea
+              value={reviewForm.body}
+              onChange={(e) => setReviewForm((f) => ({ ...f, body: e.target.value }))}
+              rows={3}
+              placeholder="Share your experience..."
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"
+            />
+            <button
+              onClick={handleSubmitReview}
+              disabled={engagementLoading}
+              className={`w-full py-3 rounded-xl text-white text-[12px] font-black uppercase tracking-wider ${primaryBg} disabled:opacity-60`}
+            >
+              Submit Review
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900 mb-4">Questions & Answers</h3>
+          {questions.length === 0 ? (
+            <p className="text-sm text-slate-400 font-medium mb-4">No questions yet.</p>
+          ) : (
+            <div className="space-y-4 mb-5">
+              {questions.slice(0, 5).map((q) => (
+                <div key={q.id} className="border-b border-slate-50 pb-3 last:border-0">
+                  <p className="text-[12px] font-bold text-slate-800">Q: {q.question}</p>
+                  {q.answer && <p className="text-[12px] text-slate-600 mt-1">A: {q.answer}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2 border-t border-slate-50 pt-4">
+            <input
+              value={questionText}
+              onChange={(e) => setQuestionText(e.target.value)}
+              placeholder="Ask about this product..."
+              className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+            />
+            <button
+              onClick={handleAskQuestion}
+              disabled={engagementLoading}
+              className={`px-4 py-2.5 rounded-xl text-white ${primaryBg} disabled:opacity-60`}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Similar Products */}
       <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-2xl md:border md:my-6 md:p-6">

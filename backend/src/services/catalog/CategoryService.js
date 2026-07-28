@@ -1,6 +1,7 @@
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { CACHE_KEYS, CACHE_TTL } = require('../../constants/catalog');
+const { resolveTabFromQuery, toLegacyCommerceFlow } = require('../../utils/marketplaceTab');
 
 class CategoryService extends BaseService {
   constructor(categoryRepository, cacheService) {
@@ -9,13 +10,20 @@ class CategoryService extends BaseService {
     this.cacheService = cacheService;
   }
 
-  async listPublicTree(commerceFlow) {
-    const cacheKey = CACHE_KEYS.categoriesTree(commerceFlow || 'all');
+  async listPublicTree(commerceFlow, marketplaceTab = null) {
+    const tab = resolveTabFromQuery({ marketplaceTab, commerceFlow }) || marketplaceTab || commerceFlow;
+    const cacheKey = CACHE_KEYS.categoriesTree(tab || 'all');
     const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
 
     const filter = { isActive: true };
-    if (commerceFlow) {
+    if (tab) {
+      const legacy = toLegacyCommerceFlow(tab);
+      filter.$or = [
+        { visibleTabs: tab },
+        ...(legacy ? [{ commerceFlows: legacy }] : []),
+      ];
+    } else if (commerceFlow) {
       filter.commerceFlows = commerceFlow;
     }
 
@@ -45,10 +53,14 @@ class CategoryService extends BaseService {
       throw AppError.conflict('Category slug already exists');
     }
 
-    const category = await this.categoryRepository.create({
-      ...data,
-      slug: data.slug.toLowerCase(),
-    });
+    const payload = { ...data, slug: data.slug.toLowerCase() };
+    if (payload.visibleTabs?.length && !payload.commerceFlows?.length) {
+      payload.commerceFlows = payload.visibleTabs
+        .map((tab) => toLegacyCommerceFlow(tab))
+        .filter(Boolean);
+    }
+
+    const category = await this.categoryRepository.create(payload);
 
     await this._invalidateCache();
     return category;
@@ -74,6 +86,21 @@ class CategoryService extends BaseService {
     await this.getById(id);
     await this.categoryRepository.softDelete(id);
     await this._invalidateCache();
+  }
+
+  async reorder(items = []) {
+    if (!Array.isArray(items) || items.length === 0) {
+      throw AppError.validation('Reorder payload must be a non-empty array');
+    }
+
+    await Promise.all(
+      items.map(({ id, sortOrder }) =>
+        this.categoryRepository.updateById(id, { sortOrder: Number(sortOrder) || 0 })
+      )
+    );
+
+    await this._invalidateCache();
+    return this.listAdmin();
   }
 
   _buildTree(categories) {

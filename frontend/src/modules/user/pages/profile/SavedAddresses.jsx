@@ -5,9 +5,10 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress,
+import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress,
 } from '../../services/userApi';
+import useAccountStore from '../../../../store/useAccountStore';
+import { useLocation } from '../../../../shared/context/LocationContext';
 import { extractList } from '../../utils/mappers';
 import toast from 'react-hot-toast';
 
@@ -16,34 +17,52 @@ const mapAddressFromApi = (addr) => ({
   name: addr.name || '',
   phone: addr.phone || '',
   address: addr.address || addr.addressLine || '',
+  city: addr.city || '',
+  state: addr.state || '',
   type: addr.type || 'HOME',
   pincode: addr.pincode || '',
+  latitude: addr.latitude,
+  longitude: addr.longitude,
   isDefault: Boolean(addr.isDefault),
 });
 
-const toAddressPayload = (formData) => ({
+const toAddressPayload = (formData, liveLocation) => ({
   type: formData.type || 'HOME',
   name: formData.name.trim(),
   phone: formData.phone.trim(),
   addressLine: formData.address.trim(),
-  pincode: formData.pincode || '000000',
+  city: formData.city?.trim() || liveLocation?.city || undefined,
+  state: formData.state?.trim() || liveLocation?.state || undefined,
+  pincode: formData.pincode || liveLocation?.pincode || '000000',
+  latitude: formData.latitude ?? liveLocation?.latitude,
+  longitude: formData.longitude ?? liveLocation?.longitude,
+  placeId: formData.placeId ?? liveLocation?.placeId,
 });
 
 const SavedAddresses = () => {
   const navigate = useNavigate();
-  const [savedAddresses, setSavedAddresses] = useState([]);
+  const { setSavedAddresses, setSelectedAddress } = useAccountStore();
+  const { location: liveLocation, refreshLiveLocation } = useLocation();
+  const [savedAddresses, setSavedAddressesLocal] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', type: 'HOME', pincode: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', type: 'HOME', pincode: '', city: '', state: '' });
+
+  const syncStore = (items, selectedId) => {
+    setSavedAddressesLocal(items);
+    setSavedAddresses(items);
+    if (selectedId) {
+      setSelectedAddressId(selectedId);
+      setSelectedAddress(selectedId);
+    }
+  };
 
   const loadAddresses = async () => {
     try {
       const data = await getAddresses();
       const items = extractList(data).map(mapAddressFromApi);
-      setSavedAddresses(items);
-      const defaultAddr = items.find((a) => a.isDefault);
-      setSelectedAddressId((prev) => prev || defaultAddr?.id || items[0]?.id || null);
+      syncStore(items, items.find((a) => a.isDefault)?.id || items[0]?.id || null);
     } catch (err) {
       toast.error(err?.message || 'Failed to load addresses');
     }
@@ -62,10 +81,12 @@ const SavedAddresses = () => {
         address: addr.address,
         type: addr.type,
         pincode: addr.pincode || '',
+        city: addr.city || '',
+        state: addr.state || '',
       });
     } else {
       setEditingAddress(null);
-      setFormData({ name: '', phone: '', address: '', type: 'HOME', pincode: '' });
+      setFormData({ name: '', phone: '', address: '', type: 'HOME', pincode: '', city: '', state: '' });
     }
     setIsModalOpen(true);
   };
@@ -77,7 +98,7 @@ const SavedAddresses = () => {
     }
 
     try {
-      const payload = toAddressPayload(formData);
+      const payload = toAddressPayload(formData, liveLocation);
       if (editingAddress) {
         await updateAddress(editingAddress.id, payload);
         toast.success('Address updated');

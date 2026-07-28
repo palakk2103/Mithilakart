@@ -8,6 +8,7 @@ class AdminFinanceService extends BaseService {
     deliveryChargeRuleRepository,
     sellerEarningRepository,
     sellerPayoutRepository,
+    platformConfigService = null,
   }) {
     super();
     this.commissionRuleRepository = commissionRuleRepository;
@@ -15,6 +16,13 @@ class AdminFinanceService extends BaseService {
     this.deliveryChargeRuleRepository = deliveryChargeRuleRepository;
     this.sellerEarningRepository = sellerEarningRepository;
     this.sellerPayoutRepository = sellerPayoutRepository;
+    this.platformConfigService = platformConfigService;
+  }
+
+  async _invalidatePricingCache() {
+    if (this.platformConfigService) {
+      await this.platformConfigService.invalidateCache();
+    }
   }
 
   async listCommissionRules() {
@@ -22,17 +30,23 @@ class AdminFinanceService extends BaseService {
   }
 
   async createCommissionRule(data) {
-    return this.commissionRuleRepository.create(data);
+    const rule = await this.commissionRuleRepository.create(data);
+    await this._invalidatePricingCache();
+    return rule;
   }
 
   async updateCommissionRule(id, data) {
     const rule = await this.commissionRuleRepository.findById(id);
     if (!rule) throw AppError.notFound('Commission rule not found');
-    return this.commissionRuleRepository.updateById(id, data);
+    const updated = await this.commissionRuleRepository.updateById(id, data);
+    await this._invalidatePricingCache();
+    return updated;
   }
 
   async deleteCommissionRule(id) {
-    return this.commissionRuleRepository.updateById(id, { deletedAt: new Date() });
+    const result = await this.commissionRuleRepository.updateById(id, { deletedAt: new Date() });
+    await this._invalidatePricingCache();
+    return result;
   }
 
   async listTaxConfigs() {
@@ -56,15 +70,21 @@ class AdminFinanceService extends BaseService {
   }
 
   async createDeliveryChargeRule(data) {
-    return this.deliveryChargeRuleRepository.create(data);
+    const rule = await this.deliveryChargeRuleRepository.create(data);
+    await this._invalidatePricingCache();
+    return rule;
   }
 
   async updateDeliveryChargeRule(id, data) {
-    return this.deliveryChargeRuleRepository.updateById(id, data);
+    const updated = await this.deliveryChargeRuleRepository.updateById(id, data);
+    await this._invalidatePricingCache();
+    return updated;
   }
 
   async deleteDeliveryChargeRule(id) {
-    return this.deliveryChargeRuleRepository.updateById(id, { deletedAt: new Date(), isActive: false });
+    const result = await this.deliveryChargeRuleRepository.updateById(id, { deletedAt: new Date(), isActive: false });
+    await this._invalidatePricingCache();
+    return result;
   }
 
   async getPlatformEarnings() {

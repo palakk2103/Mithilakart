@@ -7,6 +7,7 @@ import {
 import { motion } from 'framer-motion';
 import { getDashboard, getOrders, getEarnings } from '../services/deliveryApi';
 import useDeliveryStore from '../../../store/useDeliveryStore';
+import useDeliverySocket from '../hooks/useDeliverySocket';
 
 const formatAddress = (addr) => {
   if (!addr) return '';
@@ -16,11 +17,12 @@ const formatAddress = (addr) => {
 
 const mapOrderRow = (assignment = {}) => {
   const order = assignment.order || assignment.orderId || {};
-  const shipping = order.shippingAddress || assignment.shippingAddress || {};
+  const shipping = order.shippingAddress || order.addressSnapshot || assignment.shippingAddress || {};
   return {
-    id: order._id || assignment.orderId || assignment._id,
+    id: order.id || order._id || assignment.orderId || assignment._id,
+    orderNumber: order.orderNumber,
     customer: shipping.name || order.customerName || assignment.customerName || 'Customer',
-    address: formatAddress(shipping) || assignment.address || '—',
+    address: formatAddress(shipping) || order.address || assignment.address || '—',
     items: order.itemCount || assignment.items || 1,
     distance: assignment.distance || '—',
     earning: assignment.earningAmount ?? assignment.earning ?? 0,
@@ -160,51 +162,66 @@ const DeliveryDashboard = () => {
   const { profile, fetchProfile } = useDeliveryStore();
   const [dashboard, setDashboard] = React.useState(null);
   const [activeOrder, setActiveOrder] = React.useState(null);
+  const [pendingOrders, setPendingOrders] = React.useState([]);
   const [recentDeliveries, setRecentDeliveries] = React.useState([]);
   const [weeklyValues, setWeeklyValues] = React.useState([0, 0, 0, 0, 0, 0, 0]);
+
+  const loadDashboardData = React.useCallback(async () => {
+    try {
+      const [dashResult, ordersResult, earningsResult] = await Promise.allSettled([
+        getDashboard(),
+        getOrders(),
+        getEarnings(),
+      ]);
+
+      const dash = dashResult.status === 'fulfilled' ? dashResult.value : {};
+      const ordersRes = ordersResult.status === 'fulfilled' ? ordersResult.value : null;
+      const earningsRes = earningsResult.status === 'fulfilled' ? earningsResult.value : null;
+
+      setDashboard(dash || {});
+
+      if (ordersRes) {
+        const pending = (ordersRes?.available || []).map(mapOrderRow);
+        const assigned = (ordersRes?.assigned || []).map(mapOrderRow);
+        const inProgress = assigned.find((o) => ['accepted', 'picked_up', 'assigned'].includes(o.status));
+
+        setPendingOrders(pending);
+        setActiveOrder(inProgress || null);
+      }
+
+      const earningsItems = Array.isArray(earningsRes) ? earningsRes : (earningsRes?.items || []);
+      setWeeklyValues(buildWeeklyFromEarnings(earningsItems));
+      setRecentDeliveries(
+        earningsItems.slice(0, 3).map((item) => ({
+          id: item.orderId?._id || item.orderId || item._id,
+          customer: item.orderId?.shippingAddress?.name || 'Customer',
+          address: formatAddress(item.orderId?.shippingAddress) || '—',
+          earning: item.amount || 0,
+          time: item.creditedAt ? new Date(item.creditedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+          status: 'delivered',
+        }))
+      );
+    } catch {
+      // keep UI defaults on error
+    }
+  }, []);
 
   React.useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
 
   React.useEffect(() => {
-    const load = async () => {
-      try {
-        const [dash, ordersRes, earningsRes] = await Promise.all([
-          getDashboard(),
-          getOrders(),
-          getEarnings(),
-        ]);
+    loadDashboardData();
+  }, [loadDashboardData, isOnline]);
 
-        setDashboard(dash || {});
-
-        const assigned = (ordersRes?.assigned || []).map(mapOrderRow);
-        const inProgress = assigned.find((o) => ['accepted', 'picked_up', 'assigned'].includes(o.status));
-        setActiveOrder(inProgress || null);
-
-        const earningsItems = Array.isArray(earningsRes) ? earningsRes : (earningsRes?.items || []);
-        setWeeklyValues(buildWeeklyFromEarnings(earningsItems));
-        setRecentDeliveries(
-          earningsItems.slice(0, 3).map((item) => ({
-            id: item.orderId?._id || item.orderId || item._id,
-            customer: item.orderId?.shippingAddress?.name || 'Customer',
-            address: formatAddress(item.orderId?.shippingAddress) || '—',
-            earning: item.amount || 0,
-            time: item.creditedAt ? new Date(item.creditedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
-            status: 'delivered',
-          }))
-        );
-      } catch {
-        // keep UI defaults on error
-      }
-    };
-    load();
-  }, []);
+  useDeliverySocket(() => {
+    loadDashboardData();
+  });
 
   const stats = [
     { label: "Today's Earnings", value: `₹${dashboard?.totalEarnings ?? 0}`, sub: activeOrder ? `+₹${activeOrder.earning} active` : '—', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
     { label: 'Avg. Time', value: '22 min', sub: 'per delivery', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Orders Left', value: String(dashboard?.activeDeliveries ?? 0), sub: 'pending nearby', icon: Package, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Orders Left', value: String(pendingOrders.length), sub: 'new nearby', icon: Package, color: 'text-purple-600', bg: 'bg-purple-50' },
   ];
 
   const weeklyTotal = weeklyValues.reduce((sum, v) => sum + v, 0);
@@ -243,6 +260,42 @@ const DeliveryDashboard = () => {
       </div>
 
       <CircularProgress current={dashboard?.completedDeliveries ?? 0} total={10} label="Daily Goal Progress" />
+
+      {isOnline && pendingOrders.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">New Orders</h2>
+            <button
+              onClick={() => navigate('/delivery/orders')}
+              className="text-blue-600 text-[10px] font-black uppercase tracking-wider flex items-center gap-1"
+            >
+              View All <ChevronRight size={14} />
+            </button>
+          </div>
+          {pendingOrders.slice(0, 3).map((order) => (
+            <motion.button
+              key={order.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => navigate('/delivery/orders')}
+              className="w-full bg-white rounded-3xl p-4 text-left border border-amber-100 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">New Assignment</p>
+                  <p className="text-base font-black text-slate-900">{order.customer}</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-0.5">#{order.orderNumber || order.id}</p>
+                </div>
+                <p className="text-lg font-black text-green-600">+₹{order.earning}</p>
+              </div>
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
+                <MapPin size={13} />
+                <span className="truncate">{order.address}</span>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      )}
 
       {isOnline && activeOrder && (
         <motion.button

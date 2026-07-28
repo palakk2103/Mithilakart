@@ -108,6 +108,7 @@ export const categoriesApi = {
   create: (data) => asyncHandler(() => api.post('/categories', data)),
   update: (id, data) => asyncHandler(() => api.put(`/categories/${id}`, data)),
   delete: (id) => asyncHandler(() => api.delete(`/categories/${id}`)),
+  reorder: (items) => asyncHandler(() => api.patch('/categories/reorder', { items })),
 };
 
 // Banners / CMS
@@ -127,7 +128,7 @@ export const chipsApi = {
 
 export const sectionsApi = {
   getAll: () => asyncHandler(() => api.get('/sections')),
-  update: (sectionKey, data) => asyncHandler(() => api.put(`/sections/${sectionKey}`, data)),
+  update: (sectionKey, data, params = {}) => asyncHandler(() => api.put(`/sections/${sectionKey}`, data, { params })),
   reorder: (data) => asyncHandler(() => api.patch('/sections/reorder', data)),
 };
 
@@ -176,6 +177,9 @@ export const financeApi = {
   updateDeliveryCharge: (id, data) => asyncHandler(() => api.put(`/finance/delivery-charges/${id}`, data)),
   deleteDeliveryCharge: (id) => asyncHandler(() => api.delete(`/finance/delivery-charges/${id}`)),
   getCommissionRules: () => asyncHandler(() => api.get('/finance/commission-rules')),
+  createCommissionRule: (data) => asyncHandler(() => api.post('/finance/commission-rules', data)),
+  updateCommissionRule: (id, data) => asyncHandler(() => api.put(`/finance/commission-rules/${id}`, data)),
+  deleteCommissionRule: (id) => asyncHandler(() => api.delete(`/finance/commission-rules/${id}`)),
 };
 
 // Delivery partners
@@ -252,6 +256,14 @@ export const cmsApi = {
   updateLegal: (type, data) => asyncHandler(() => api.put(`/cms/legal/${type}`, data)),
 };
 
+// Content moderation
+export const contentApi = {
+  getReviews: (params) => asyncHandler(() => api.get('/content/reviews', { params })),
+  moderateReview: (id, action, note) => asyncHandler(() => api.patch(`/content/reviews/${id}`, { action, note })),
+  getQuestions: (params) => asyncHandler(() => api.get('/content/qna', { params })),
+  moderateQuestion: (id, action) => asyncHandler(() => api.patch(`/content/qna/${id}`, { action })),
+};
+
 const adminApi = {
   auth: authApi,
   dashboard: dashboardApi,
@@ -275,6 +287,7 @@ const adminApi = {
   audit: auditApi,
   support: supportApi,
   cms: cmsApi,
+  content: contentApi,
   coupons: couponsApi,
   flashSales: flashSalesApi,
   featured: featuredApi,

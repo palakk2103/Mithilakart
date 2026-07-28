@@ -10,7 +10,10 @@ class SearchController extends BaseController {
 
   search = asyncHandler(async (req, res) => {
     const result = await this.service.searchProducts(req.query);
-    return ApiResponse.paginated(res, result.items, result.meta, { query: result.query });
+    return ApiResponse.paginated(res, result.items, {
+      ...result.meta,
+      query: result.query,
+    });
   });
 }
 

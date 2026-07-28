@@ -198,7 +198,12 @@ class CmsService extends BaseService {
   }
 
   async _invalidateStorefrontCache(commerceFlow = 'standard') {
-    await this.cacheService.del(`cache:storefront:home:${commerceFlow}`);
+    const flows = commerceFlow
+      ? [commerceFlow]
+      : ['standard', 'mithilak', 'quick_shop', 'fresh_grocery'];
+    await Promise.all(
+      flows.map((flow) => this.cacheService.del(`cache:storefront:home:${flow}`))
+    );
   }
 }
 

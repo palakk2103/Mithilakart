@@ -5,9 +5,9 @@ const { parsePagination, buildPaginationMeta } = require('../../utils/pagination
 const { CACHE_KEYS, CACHE_TTL } = require('../../constants/catalog');
 
 class SearchService extends BaseService {
-  constructor({ productRepository, categoryRepository, cacheService }) {
+  constructor({ productService, categoryRepository, cacheService }) {
     super();
-    this.productRepository = productRepository;
+    this.productService = productService;
     this.categoryRepository = categoryRepository;
     this.cacheService = cacheService;
   }
@@ -39,25 +39,24 @@ class SearchService extends BaseService {
       }
     }
 
-    const [items, total] = await Promise.all([
-      this.productRepository.searchPublic(term, { status: 'approved', deletedAt: null }, {
-        skip: pagination.skip,
-        limit: pagination.limit,
-      }),
-      this.productRepository.countPublic({ $text: { $search: term }, status: 'approved', deletedAt: null }),
-    ]);
+    const result = await this.productService.searchPublic({
+      ...query,
+      q: term,
+      page: pagination.page,
+      limit: pagination.limit,
+    });
 
-    const result = {
-      items,
-      meta: buildPaginationMeta(pagination.page, pagination.limit, total),
+    const payload = {
+      items: result.items,
+      meta: result.meta,
       query: term,
     };
 
     if (this.cacheService) {
-      await this.cacheService.set(cacheKey, result, ttl);
+      await this.cacheService.set(cacheKey, payload, ttl);
     }
 
-    return result;
+    return payload;
   }
 }
 

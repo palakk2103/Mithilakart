@@ -120,14 +120,14 @@ class OtpService {
       }
     }
 
-    if (this.config.auth.exposeOtpInDev && !smsSent) {
-      logger.info({ portal, identifier }, `DEV OTP: ${otp}`);
+    if (this.config.auth.exposeOtpInDev) {
+      logger.info({ portal, identifier, smsSent }, `DEV OTP: ${otp}`);
     }
 
     return {
       expiresInSeconds: OTP.EXPIRY_SECONDS,
       smsSent,
-      ...(this.config.auth.exposeOtpInDev && !smsSent ? { devOtp: otp } : {}),
+      ...(this.config.auth.exposeOtpInDev ? { devOtp: otp } : {}),
     };
   }
 

@@ -16,6 +16,9 @@ const addressSchema = Joi.object({
   city: Joi.string().trim().optional().allow(null, ''),
   state: Joi.string().trim().optional().allow(null, ''),
   pincode: Joi.string().trim().pattern(/^\d{6}$/).required(),
+  latitude: Joi.number().optional(),
+  longitude: Joi.number().optional(),
+  placeId: Joi.string().trim().optional(),
   isDefault: Joi.boolean().optional(),
 });
 

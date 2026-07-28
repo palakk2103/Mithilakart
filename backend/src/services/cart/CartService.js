@@ -1,13 +1,15 @@
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { CART } = require('../../constants/commerce');
+const { resolveTabFromQuery, toLegacyCommerceFlow } = require('../../utils/marketplaceTab');
 
 class CartService extends BaseService {
-  constructor({ redisClient, productRepository, pricingService }) {
+  constructor({ redisClient, productRepository, pricingService, marketplaceListingService = null }) {
     super();
     this.redis = redisClient;
     this.productRepository = productRepository;
     this.pricingService = pricingService;
+    this.marketplaceListingService = marketplaceListingService;
   }
 
   _cartKey({ userId, sessionId }) {
@@ -28,14 +30,69 @@ class CartService extends BaseService {
     }
   }
 
-  async getCart({ userId, sessionId, commerceFlow = 'standard', couponCode = null }) {
+  async _hydrateCartItems(items = []) {
+    if (!items.length) return [];
+
+    return Promise.all(
+      items.map(async (item) => {
+        if (item.listingId && this.marketplaceListingService) {
+          try {
+            const { listing, product } = await this.marketplaceListingService.resolveListingForCart(item.listingId);
+            const availableStock = this.productRepository.getAvailableStock(product);
+            const imageUrl = product.images?.[0]?.url || null;
+            return {
+              ...item,
+              productId: String(product._id),
+              listingId: String(listing._id),
+              name: product.title,
+              title: product.title,
+              brand: product.brand || '',
+              mrp: listing.mrp,
+              unitPrice: listing.price,
+              price: listing.price,
+              deliveryPromiseMinutes: listing.deliveryPromiseMinutes,
+              marketplaceTab: listing.marketplaceTab,
+              image: imageUrl,
+              imageUrl,
+              availableStock,
+            };
+          } catch {
+            return { ...item, name: 'Product', title: 'Product' };
+          }
+        }
+
+        const product = await this.productRepository.findPublicById(item.productId);
+        if (!product) {
+          return { ...item, name: 'Product', title: 'Product' };
+        }
+
+        const availableStock = this.productRepository.getAvailableStock(product);
+        const imageUrl = product.images?.[0]?.url || null;
+
+        return {
+          ...item,
+          name: product.title,
+          title: product.title,
+          brand: product.brand || '',
+          mrp: product.mrp,
+          image: imageUrl,
+          imageUrl,
+          availableStock,
+        };
+      })
+    );
+  }
+
+  async getCart({ userId, sessionId, commerceFlow = 'standard', marketplaceTab = null, couponCode = null }) {
+    const tab = marketplaceTab || resolveTabFromQuery({ commerceFlow }) || null;
     const key = this._cartKey({ userId, sessionId });
     const raw = await this.redis.get(key);
     const state = this._deserialize(raw);
 
-    const items = state?.items || [];
+    const rawItems = state?.items || [];
+    const items = await this._hydrateCartItems(rawItems);
     const pricing = await this.pricingService.calculateTotals({
-      items,
+      items: rawItems,
       couponCode: couponCode || state?.couponCode || null,
       userId,
     });
@@ -44,19 +101,95 @@ class CartService extends BaseService {
       userId: userId || null,
       sessionId: sessionId || null,
       commerceFlow: state?.commerceFlow || commerceFlow,
+      marketplaceTab: state?.marketplaceTab || tab,
       couponCode: couponCode || state?.couponCode || null,
       items,
       ...pricing,
     };
   }
 
-  async addItem({ userId, sessionId, commerceFlow = 'standard', productId, variantId = null, quantity }) {
+  async addItem({
+    userId,
+    sessionId,
+    commerceFlow = 'standard',
+    marketplaceTab = null,
+    productId,
+    listingId = null,
+    variantId = null,
+    quantity,
+  }) {
+    const tab = marketplaceTab || resolveTabFromQuery({ commerceFlow });
+
+    if (listingId && this.marketplaceListingService) {
+      const { listing, product } = await this.marketplaceListingService.resolveListingForCart(listingId);
+
+      if (tab && listing.marketplaceTab !== tab) {
+        throw AppError.conflict('Listing does not belong to active marketplace tab', [
+          { code: 'CART_TAB_MISMATCH' },
+        ]);
+      }
+
+      const availableStock = this.productRepository.getAvailableStock(product);
+      if (availableStock < quantity) {
+        throw AppError.conflict('Insufficient stock', [
+          { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
+        ]);
+      }
+
+      const key = this._cartKey({ userId, sessionId });
+      const raw = await this.redis.get(key);
+      const state = this._deserialize(raw) || { items: [] };
+
+      if (state.marketplaceTab && state.marketplaceTab !== listing.marketplaceTab) {
+        throw AppError.conflict('Cart contains items from a different marketplace tab', [
+          { code: 'CART_TAB_MISMATCH' },
+        ]);
+      }
+
+      const itemKey = `listing:${listingId}`;
+      const existing = state.items.find((it) => it.itemKey === itemKey);
+      const nextQty = existing ? existing.quantity + quantity : quantity;
+
+      if (availableStock < nextQty) {
+        throw AppError.conflict('Insufficient stock', [
+          { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
+        ]);
+      }
+
+      const line = {
+        itemKey,
+        listingId: String(listing._id),
+        productId: String(product._id),
+        variantId: variantId || null,
+        sellerId: String(product.sellerId),
+        quantity: nextQty,
+        unitPrice: listing.price,
+        deliveryPromiseMinutes: listing.deliveryPromiseMinutes,
+        marketplaceTab: listing.marketplaceTab,
+      };
+
+      if (existing) {
+        Object.assign(existing, line);
+      } else {
+        state.items.push(line);
+      }
+
+      state.marketplaceTab = listing.marketplaceTab;
+      state.commerceFlow = toLegacyCommerceFlow(listing.marketplaceTab) || commerceFlow;
+      state.updatedAt = new Date().toISOString();
+
+      await this.redis.set(key, this._serialize(state), 'EX', CART.CART_KEY_TTL_SECONDS);
+      return this.getCart({ userId, sessionId, marketplaceTab: listing.marketplaceTab, couponCode: state.couponCode });
+    }
+
     const product = await this.productRepository.findPublicById(productId);
     if (!product) throw AppError.notFound('Product not found');
 
-    if (product.stock < quantity) {
+    const availableStock = this.productRepository.getAvailableStock(product);
+
+    if (availableStock < quantity) {
       throw AppError.conflict('Requested quantity exceeds available stock', [
-        { field: 'quantity', message: 'Insufficient stock', availableQuantity: product.stock },
+        { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
       ]);
     }
 
@@ -68,9 +201,9 @@ class CartService extends BaseService {
     const existing = state.items.find((it) => it.itemKey === itemKey);
     const nextQty = existing ? existing.quantity + quantity : quantity;
 
-    if (product.stock < nextQty) {
+    if (availableStock < nextQty) {
       throw AppError.conflict('Insufficient stock', [
-        { field: 'quantity', message: 'Insufficient stock', availableQuantity: product.stock },
+        { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
       ]);
     }
 
@@ -94,6 +227,7 @@ class CartService extends BaseService {
     }
 
     state.commerceFlow = commerceFlow;
+    if (tab) state.marketplaceTab = tab;
     state.updatedAt = new Date().toISOString();
 
     await this.redis.set(key, this._serialize(state), 'EX', CART.CART_KEY_TTL_SECONDS);
@@ -113,9 +247,11 @@ class CartService extends BaseService {
     const item = state.items.find((it) => it.itemKey === itemKey);
     if (!item) throw AppError.notFound('Cart item not found');
 
-    if (quantity > product.stock) {
+    const availableStock = this.productRepository.getAvailableStock(product);
+
+    if (quantity > availableStock) {
       throw AppError.conflict('Requested quantity exceeds available stock', [
-        { field: 'quantity', message: 'Insufficient stock', availableQuantity: product.stock },
+        { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
       ]);
     }
 
@@ -125,6 +261,7 @@ class CartService extends BaseService {
     item.variantId = variantId || null;
 
     state.commerceFlow = commerceFlow;
+    if (tab) state.marketplaceTab = tab;
     state.updatedAt = new Date().toISOString();
 
     await this.redis.set(key, this._serialize(state), 'EX', CART.CART_KEY_TTL_SECONDS);

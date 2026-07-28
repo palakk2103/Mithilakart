@@ -22,7 +22,7 @@ export const registerPushToken = async (portal = 'customer') => {
     deviceId,
     fcmToken: token,
     platform: 'web',
-  });
+  }, { skipAuthLogout: true });
 };
 
 export const initPushNotifications = async (portal = 'customer', onNotify) => {

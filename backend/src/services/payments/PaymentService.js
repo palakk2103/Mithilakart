@@ -52,6 +52,19 @@ class PaymentService extends BaseService {
       };
     }
 
+    if (existing && existing.status === PAYMENT_STATUS.PENDING) {
+      return {
+        paymentTransactionId: existing._id,
+        providerPaymentId: existing.providerPaymentId,
+        paymentStatus: existing.status,
+        provider: existing.provider,
+        providerOrderId: existing.rawResponse?.providerOrderId || existing.providerPaymentId,
+        keyId: existing.rawResponse?.keyId || null,
+        amountInPaise: existing.rawResponse?.amountInPaise || Math.round(Number(amount) * 100),
+        currency: currency || 'INR',
+      };
+    }
+
     const provider = this.paymentProvider?.providerName || 'mock';
 
     const tx = await this.paymentTransactionRepository.create(
@@ -91,6 +104,31 @@ class PaymentService extends BaseService {
       currency,
       paymentMethod,
     });
+
+    if (provider === 'mock') {
+      const mockPaymentId = `mock_pay_${orderId}_${Date.now()}`;
+      await this.paymentTransactionRepository.updateStatus(
+        tx._id,
+        PAYMENT_STATUS.PAID,
+        { ...providerOrder, providerPaymentId: mockPaymentId, sessionMeta },
+        session
+      );
+      await this.paymentTransactionRepository.updateById(
+        tx._id,
+        { providerPaymentId: mockPaymentId, rawResponse: { ...providerOrder, providerPaymentId: mockPaymentId } },
+        session
+      );
+      await this.orderRepository.updateById(orderId, { paymentStatus: PAYMENT_STATUS.PAID }, session);
+
+      return {
+        paymentTransactionId: tx._id,
+        providerPaymentId: mockPaymentId,
+        provider,
+        paymentStatus: PAYMENT_STATUS.PAID,
+        providerOrderId: providerOrder.providerOrderId,
+        mockPayment: true,
+      };
+    }
 
     await this.paymentTransactionRepository.updateStatus(
       tx._id,
@@ -147,6 +185,10 @@ class PaymentService extends BaseService {
 
     await this.paymentTransactionRepository.updateStatus(paymentTx._id, status, verified, session);
     await this.orderRepository.updateById(orderId, { paymentStatus: status }, session);
+
+    if (status === PAYMENT_STATUS.FAILED && this.orderService) {
+      await this.orderService.releaseOrderReservations(orderId, session);
+    }
 
     if (status === PAYMENT_STATUS.PAID && this.orderService) {
       await this.orderService.confirmOrder(orderId, userId, session);

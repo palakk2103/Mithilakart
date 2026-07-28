@@ -5,11 +5,12 @@ const { ApiResponse } = require('../../utils/ApiResponse');
 class CategoryController extends BaseController {
   constructor(categoryService) {
     super(categoryService);
-    this.bindMethods(['list', 'listAdmin', 'getById', 'create', 'update', 'delete']);
+    this.bindMethods(['list', 'listAdmin', 'getById', 'create', 'update', 'delete', 'reorder']);
   }
 
   list = asyncHandler(async (req, res) => {
-    const data = await this.service.listPublicTree(req.query.commerceFlow);
+    const tab = req.query.marketplaceTab || req.query.commerceFlow;
+    const data = await this.service.listPublicTree(tab, req.query.marketplaceTab);
     return ApiResponse.success(res, data);
   });
 
@@ -36,6 +37,11 @@ class CategoryController extends BaseController {
   delete = asyncHandler(async (req, res) => {
     await this.service.delete(req.params.id);
     return ApiResponse.noContent(res);
+  });
+
+  reorder = asyncHandler(async (req, res) => {
+    const data = await this.service.reorder(req.body.items);
+    return ApiResponse.success(res, data);
   });
 }
 

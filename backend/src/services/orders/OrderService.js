@@ -5,6 +5,11 @@ const { parsePagination, buildPaginationMeta } = require('../../utils/pagination
 const { CART, ORDER_STATUS, PAYMENT_STATUS } = require('../../constants/commerce');
 const { randomUuid } = require('../../utils/cryptoHelper');
 const { eventBus } = require('../../events/EventBus');
+const { getProvider } = require('../../core/providers.registry');
+const { logger } = require('../../utils/logger');
+
+const { resolveTabFromQuery, toLegacyCommerceFlow, deliveryTypeForTab, isQuickCommerceTab } = require('../../utils/marketplaceTab');
+const LOCAL_DELIVERY_FLOWS = new Set(['quick_shop', 'fresh_grocery']);
 
 class OrderService extends BaseService {
   constructor({
@@ -21,6 +26,7 @@ class OrderService extends BaseService {
     cartItemRepository,
     userAddressRepository = null,
     geocodingService = null,
+    courierShipmentService = null,
   }) {
     super();
     this.cartService = cartService;
@@ -36,7 +42,12 @@ class OrderService extends BaseService {
     this.cartItemRepository = cartItemRepository;
     this.userAddressRepository = userAddressRepository;
     this.geocodingService = geocodingService;
+    this.courierShipmentService = courierShipmentService;
     this.deliveryOrderService = null;
+  }
+
+  setCourierShipmentService(courierShipmentService) {
+    this.courierShipmentService = courierShipmentService;
   }
 
   setDeliveryOrderService(deliveryOrderService) {
@@ -59,7 +70,22 @@ class OrderService extends BaseService {
   }) {
     if (!userId) throw AppError.unauthorized('User required');
 
+    if (idempotencyKey) {
+      const existing = await this.orderRepository.findByIdempotencyKey(idempotencyKey, userId);
+      if (existing) {
+        return {
+          orderId: existing._id,
+          orderNumber: existing.orderNumber,
+          status: existing.status,
+          paymentStatus: existing.paymentStatus,
+          idempotent: true,
+        };
+      }
+    }
+
     return withTransaction(async (session) => {
+      await this._releaseStalePendingOrders(userId, session);
+
       const cart = items
         ? await this._buildCartFromItems({ items, commerceFlow, couponCode, userId })
         : await this.cartService.getCart({ userId, sessionId: null, commerceFlow, couponCode });
@@ -68,16 +94,35 @@ class OrderService extends BaseService {
         throw AppError.validation('Cart is empty');
       }
 
+      for (const it of cart.items) {
+        await this.productRepository.reserveStock(it.productId, it.quantity, session);
+      }
+
       const orderNumber = this._generateOrderNumber();
       const sellerSubOrders = this.pricingService.buildSellerSubOrders(cart.items, ORDER_STATUS.PENDING);
       const addressSnapshot = await this._buildAddressSnapshot(userId, addressId);
+
+      const marketplaceTab = cart.marketplaceTab || resolveTabFromQuery({ commerceFlow }) || null;
+      const legacyFlow = marketplaceTab ? toLegacyCommerceFlow(marketplaceTab) : commerceFlow;
+      const deliveryType = marketplaceTab ? deliveryTypeForTab(marketplaceTab) : null;
+      const promiseMinutes = cart.items.reduce(
+        (max, it) => Math.max(max, Number(it.deliveryPromiseMinutes) || 0),
+        0
+      ) || null;
+      const estimatedDeliveryAt = promiseMinutes
+        ? new Date(Date.now() + promiseMinutes * 60 * 1000)
+        : null;
 
       const order = await this.orderRepository.create(
         {
           userId,
           orderNumber,
           status: ORDER_STATUS.PENDING,
-          commerceFlow,
+          commerceFlow: legacyFlow || commerceFlow,
+          marketplaceTab,
+          deliveryType,
+          deliveryPromiseMinutes: promiseMinutes || null,
+          estimatedDeliveryAt,
           subtotal: cart.subtotal,
           discount: cart.discount || cart.couponDiscount || 0,
           couponDiscount: cart.couponDiscount || 0,
@@ -90,6 +135,7 @@ class OrderService extends BaseService {
           couponCode,
           sellerSubOrders,
           inventoryDeducted: false,
+          idempotencyKey: idempotencyKey || null,
           cancelledAt: null,
           deliveredAt: null,
         },
@@ -101,10 +147,17 @@ class OrderService extends BaseService {
         userId,
         sellerId: it.sellerId,
         productId: it.productId,
+        listingId: it.listingId || null,
         variantId: it.variantId || null,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
         lineTotal: it.unitPrice * it.quantity,
+        listingSnapshot: it.listingId ? {
+          listingId: it.listingId,
+          marketplaceTab: it.marketplaceTab || marketplaceTab,
+          deliveryPromiseMinutes: it.deliveryPromiseMinutes || null,
+          unitPrice: it.unitPrice,
+        } : null,
       }));
 
       await this.orderItemRepository.createMany(orderItems, session);
@@ -171,11 +224,38 @@ class OrderService extends BaseService {
     });
   }
 
+  async releaseOrderReservations(orderId, session = null) {
+    const order = await this.orderRepository.findById(orderId, { session });
+    if (!order || order.inventoryDeducted) return;
+
+    const orderItems = await this.orderItemRepository.listByOrderId(orderId);
+    for (const it of orderItems) {
+      await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
+    }
+  }
+
+  async _releaseStalePendingOrders(userId, session = null) {
+    const staleOrders = await this.orderRepository.findUnpaidPendingByUser(userId, { session });
+
+    for (const order of staleOrders) {
+      await this.releaseOrderReservations(order._id, session);
+      await this.orderRepository.updateById(
+        order._id,
+        {
+          status: ORDER_STATUS.CANCELLED,
+          paymentStatus: PAYMENT_STATUS.FAILED,
+          cancelledAt: new Date(),
+        },
+        session
+      );
+    }
+  }
+
   async confirmOrder(orderId, changedById, session = null) {
     const order = await this.orderRepository.findById(orderId, { session });
     if (!order) throw AppError.notFound('Order not found');
 
-    if (order.status === ORDER_STATUS.CONFIRMED || order.inventoryDeducted) {
+    if (order.status === ORDER_STATUS.PLACED || order.status === ORDER_STATUS.CONFIRMED || order.inventoryDeducted) {
       return order;
     }
 
@@ -187,24 +267,24 @@ class OrderService extends BaseService {
     await this.orderRepository.updateById(
       orderId,
       {
-        status: ORDER_STATUS.CONFIRMED,
+        status: ORDER_STATUS.PLACED,
         inventoryDeducted: true,
         sellerSubOrders: (order.sellerSubOrders || []).map((sub) => ({
           sellerId: sub.sellerId,
           items: sub.items,
           subtotal: sub.subtotal,
-          status: ORDER_STATUS.CONFIRMED,
+          status: ORDER_STATUS.PLACED,
         })),
       },
       session
     );
 
-    await this.orderTrackingRepository.createInitial(orderId, ORDER_STATUS.CONFIRMED, 'Order confirmed', {}, session);
+    await this.orderTrackingRepository.createInitial(orderId, ORDER_STATUS.PLACED, 'Order placed — awaiting seller acceptance', {}, session);
     await this.orderStatusHistoryRepository.addTransition(
       {
         orderId,
         fromStatus: order.status,
-        toStatus: ORDER_STATUS.CONFIRMED,
+        toStatus: ORDER_STATUS.PLACED,
         changedBy: 'system',
         changedById: changedById,
         note: 'Payment completed',
@@ -214,7 +294,7 @@ class OrderService extends BaseService {
 
     const updated = await this.orderRepository.findById(orderId, { session });
     if (updated) {
-      this._emitStatusChange(updated, ORDER_STATUS.CONFIRMED);
+      this._emitStatusChange(updated, ORDER_STATUS.PLACED);
       await this._afterOrderConfirmed(updated, session);
     }
 
@@ -275,12 +355,48 @@ class OrderService extends BaseService {
   }
 
   async _afterOrderConfirmed(order, session = null) {
-    if (this.deliveryOrderService) {
-      await this.deliveryOrderService.ensureAssignmentForOrder(order._id, session);
-      eventBus.publish('delivery.order_available', {
-        orderId: order._id,
-        orderNumber: order.orderNumber,
-      });
+    const tab = order.marketplaceTab || null;
+    const flow = tab ? toLegacyCommerceFlow(tab) : (order.commerceFlow || 'standard');
+    const useLocalDelivery = tab
+      ? isQuickCommerceTab(tab)
+      : LOCAL_DELIVERY_FLOWS.has(flow);
+
+    if (useLocalDelivery && this.deliveryOrderService) {
+      await this.orderRepository.updateById(
+        order._id,
+        { fulfilmentType: 'local_delivery' },
+        session
+      );
+    } else {
+      try {
+        const shipment = this.courierShipmentService
+          ? await this.courierShipmentService.createForOrder(order, session)
+          : await getProvider('shipping').createShipment({
+              orderId: order._id,
+              orderNumber: order.orderNumber,
+              address: order.addressSnapshot || {},
+            });
+        await this.orderRepository.updateById(
+          order._id,
+          { fulfilmentType: 'courier', shipment },
+          session
+        );
+        logger.info({ orderId: order._id, awb: shipment.awb }, 'Courier shipment created for e-commerce order');
+        eventBus.publish('order.shipment_created', {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          userId: order.userId,
+          shipment,
+        });
+      } catch (error) {
+        logger.error({ err: error, orderId: order._id }, 'Courier shipment failed');
+        eventBus.publish('order.shipment_failed', {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          userId: order.userId,
+          error: error.message,
+        });
+      }
     }
 
     const sellerIds = [...new Set((order.sellerSubOrders || []).map((sub) => String(sub.sellerId)))];
@@ -304,9 +420,11 @@ class OrderService extends BaseService {
       const product = await this.productRepository.findPublicById(line.productId);
       if (!product) throw AppError.notFound('Product not found');
 
-      if (product.stock < line.quantity) {
+      const availableStock = this.productRepository.getAvailableStock(product);
+
+      if (availableStock < line.quantity) {
         throw AppError.conflict('Requested quantity exceeds available stock', [
-          { field: 'quantity', message: 'Insufficient stock', availableQuantity: product.stock },
+          { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
         ]);
       }
 
@@ -391,8 +509,22 @@ class OrderService extends BaseService {
       ? await this.orderRepository.find({ _id: { $in: orderIds } }, { sort: '-createdAt' })
       : [];
 
+    const items = await Promise.all(
+      orders.map(async (order) => {
+        const sellerItems = (await this.orderItemRepository.listByOrderId(order._id)).filter(
+          (it) => String(it.sellerId) === String(sellerId)
+        );
+        const productIds = sellerItems.map((it) => it.productId);
+        const products = productIds.length
+          ? await this.productRepository.find({ _id: { $in: productIds } })
+          : [];
+        const productMap = new Map(products.map((product) => [String(product._id), product]));
+        return this._serializeSellerOrder(order, sellerItems, productMap);
+      })
+    );
+
     return {
-      items: orders.map((o) => this._serializeOrder(o)),
+      items,
       meta: buildPaginationMeta(pagination.page, pagination.limit, total),
     };
   }
@@ -408,10 +540,29 @@ class OrderService extends BaseService {
     if (!order) throw AppError.notFound('Order not found');
 
     const items = await this.orderItemRepository.listByOrderId(order._id);
-    const hasSellerItem = items.some((it) => String(it.sellerId) === String(sellerId));
-    if (!hasSellerItem) throw AppError.forbidden('Seller cannot access this order');
+    const sellerItems = items.filter((it) => String(it.sellerId) === String(sellerId));
+    if (!sellerItems.length) throw AppError.forbidden('Seller cannot access this order');
 
-    return this._buildOrderDetail(order, sellerId);
+    const productIds = sellerItems.map((it) => it.productId);
+    const products = productIds.length
+      ? await this.productRepository.find({ _id: { $in: productIds } })
+      : [];
+    const productMap = new Map(products.map((product) => [String(product._id), product]));
+
+    const tracking = await this.orderTrackingRepository.find(
+      { orderId: order._id },
+      { sort: { createdAt: 1 } }
+    );
+
+    return {
+      ...this._serializeSellerOrder(order, sellerItems, productMap),
+      tracking: tracking.map((entry) => ({
+        id: entry._id,
+        status: entry.status,
+        note: entry.note,
+        createdAt: entry.createdAt,
+      })),
+    };
   }
 
   async _buildOrderDetail(order, sellerId = null) {
@@ -420,32 +571,74 @@ class OrderService extends BaseService {
       orderItems = orderItems.filter((it) => String(it.sellerId) === String(sellerId));
     }
 
+    const productIds = [...new Set(orderItems.map((it) => it.productId).filter(Boolean))];
+    const products = productIds.length
+      ? await this.productRepository.find({ _id: { $in: productIds } })
+      : [];
+    const productMap = new Map(products.map((p) => [String(p._id), p]));
+
     const tracking = await this.orderTrackingRepository.find({ orderId: order._id }, { sort: { createdAt: 1 } });
 
     return {
       order: this._serializeOrder(order),
-      items: orderItems.map((it) => ({
-        id: it._id,
-        productId: it.productId,
-        sellerId: it.sellerId,
-        quantity: it.quantity,
-        unitPrice: it.unitPrice,
-        lineTotal: it.lineTotal,
-      })),
+      items: orderItems.map((it) => {
+        const product = productMap.get(String(it.productId));
+        return {
+          id: it._id,
+          productId: it.productId,
+          sellerId: it.sellerId,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          lineTotal: it.lineTotal,
+          name: product?.name || product?.title || it.name || 'Product',
+          image: product?.images?.[0]?.url || product?.imageUrl || product?.image || null,
+        };
+      }),
       tracking: tracking.map((t) => ({ id: t._id, status: t.status, note: t.note, createdAt: t.createdAt })),
     };
   }
 
   async getTracking(orderId, userId) {
-    const order = await this.orderRepository.findActiveById(orderId, userId);
+    let order = await this.orderRepository.findActiveById(orderId, userId);
     if (!order) throw AppError.notFound('Order not found');
+
+    if (order.fulfilmentType === 'courier' && order.shipment && this.courierShipmentService) {
+      try {
+        const synced = await this.courierShipmentService.syncTrackingForOrder(order);
+        order = synced.order || order;
+      } catch (error) {
+        logger.warn({ err: error, orderId }, 'Courier tracking sync failed');
+      }
+    }
 
     const tracking = await this.orderTrackingRepository.listByOrderId(order._id);
     const history = await this.orderStatusHistoryRepository.listByOrderId(order._id);
 
+    let assignment = null;
+    let partnerLocation = null;
+    if (this.deliveryOrderService) {
+      const trackingMeta = await this.deliveryOrderService.getTrackingMeta(order._id);
+      assignment = trackingMeta.assignment;
+      partnerLocation = trackingMeta.partnerLocation;
+    }
+
+    const addr = order.addressSnapshot || {};
+
     return {
       orderId: order._id,
       status: order.status,
+      orderNumber: order.orderNumber,
+      fulfilmentType: order.fulfilmentType,
+      shipment: order.shipment || null,
+      destination: {
+        lat: addr.lat ?? addr.latitude ?? null,
+        lng: addr.lng ?? addr.longitude ?? null,
+        line1: addr.line1 || addr.addressLine || '',
+        city: addr.city || '',
+        pincode: addr.pincode || '',
+      },
+      assignment,
+      partnerLocation,
       tracking: tracking.map((t) => ({
         id: t._id,
         status: t.status,
@@ -482,6 +675,19 @@ class OrderService extends BaseService {
         for (const it of orderItems) {
           await this.productRepository.incrementStock(it.productId, it.quantity, session);
         }
+      } else {
+        const orderItems = await this.orderItemRepository.listByOrderId(order._id);
+        for (const it of orderItems) {
+          await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
+        }
+      }
+
+      if (order.fulfilmentType === 'courier' && order.shipment && this.courierShipmentService) {
+        try {
+          await this.courierShipmentService.cancelCourierShipment(order);
+        } catch (error) {
+          logger.warn({ err: error, orderId: order._id }, 'Courier shipment cancellation failed');
+        }
       }
 
       await this.orderRepository.updateById(
@@ -513,6 +719,7 @@ class OrderService extends BaseService {
     if (toStatus === ORDER_STATUS.CANCELLED) return fromStatus !== ORDER_STATUS.DELIVERED;
     const chain = [
       ORDER_STATUS.PENDING,
+      ORDER_STATUS.PLACED,
       ORDER_STATUS.CONFIRMED,
       ORDER_STATUS.PACKED,
       ORDER_STATUS.SHIPPED,
@@ -539,7 +746,10 @@ class OrderService extends BaseService {
       }
 
       const previousStatus = order.status;
-      await this.orderRepository.updateStatus(order._id, toStatus, session);
+      const updated = await this.orderRepository.updateStatusOptimistic(order._id, previousStatus, toStatus, session);
+      if (!updated) {
+        throw AppError.conflict('Order status was changed by another actor — please retry');
+      }
 
       await this.orderTrackingRepository.createInitial(order._id, toStatus, note, { source: 'seller', sellerId }, session);
       await this.orderStatusHistoryRepository.addTransition(
@@ -556,6 +766,14 @@ class OrderService extends BaseService {
 
       this._emitStatusChange(order, toStatus);
 
+      if (
+        toStatus === ORDER_STATUS.PACKED
+        && this.deliveryOrderService
+        && (order.fulfilmentType === 'local_delivery' || LOCAL_DELIVERY_FLOWS.has(order.commerceFlow))
+      ) {
+        await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
+      }
+
       return { orderId: order._id, status: toStatus };
     });
   }
@@ -570,7 +788,10 @@ class OrderService extends BaseService {
       }
 
       const previousStatus = order.status;
-      await this.orderRepository.updateStatus(order._id, toStatus, session);
+      const updated = await this.orderRepository.updateStatusOptimistic(order._id, previousStatus, toStatus, session);
+      if (!updated) {
+        throw AppError.conflict('Order status was changed by another actor — please retry');
+      }
 
       await this.orderTrackingRepository.createInitial(order._id, toStatus, note, { source: 'admin', adminId }, session);
       await this.orderStatusHistoryRepository.addTransition(
@@ -591,7 +812,53 @@ class OrderService extends BaseService {
     });
   }
 
+  _serializeSellerOrder(order, sellerItems = [], productMap = new Map()) {
+    const addr = order.addressSnapshot || {};
+    const trackingDates = (status) =>
+      order[`${status}At`] || null;
+
+    return {
+      id: String(order._id),
+      orderNumber: order.orderNumber,
+      status: order.status,
+      placedAt: order.createdAt,
+      confirmedAt: trackingDates('confirmed'),
+      packedAt: trackingDates('packed'),
+      shippedAt: trackingDates('shipped'),
+      deliveredAt: order.deliveredAt,
+      customer: {
+        name: addr.name || 'Customer',
+        email: addr.email || '',
+        phone: addr.phone || '',
+      },
+      address: {
+        line1: addr.line1 || addr.addressLine || '',
+        city: addr.city || '',
+        state: addr.state || '',
+        pincode: addr.pincode || '',
+      },
+      products: sellerItems.map((item) => ({
+        id: String(item._id),
+        productId: item.productId,
+        title: productMap.get(String(item.productId))?.title || 'Product',
+        price: item.unitPrice,
+        qty: item.quantity,
+        quantity: item.quantity,
+      })),
+      payment: {
+        method: order.paymentMethod,
+        status: order.paymentStatus,
+      },
+      totalAmount: order.subtotal,
+      finalAmount: order.total,
+      shippingCharge: order.deliveryCharge,
+      discount: order.discount || order.couponDiscount || 0,
+      commerceFlow: order.commerceFlow,
+    };
+  }
+
   _serializeOrder(order) {
+    const addr = order.addressSnapshot || {};
     return {
       id: order._id,
       orderNumber: order.orderNumber,
@@ -599,6 +866,7 @@ class OrderService extends BaseService {
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       commerceFlow: order.commerceFlow,
+      fulfilmentType: order.fulfilmentType,
       subtotal: order.subtotal,
       couponDiscount: order.couponDiscount,
       discount: order.discount,
@@ -606,6 +874,17 @@ class OrderService extends BaseService {
       deliveryCharge: order.deliveryCharge,
       total: order.total,
       sellerSubOrders: order.sellerSubOrders,
+      addressSnapshot: order.addressSnapshot,
+      address: {
+        name: addr.name || '',
+        phone: addr.phone || '',
+        line1: addr.line1 || addr.addressLine || '',
+        city: addr.city || '',
+        state: addr.state || '',
+        pincode: addr.pincode || '',
+        lat: addr.lat ?? addr.latitude ?? null,
+        lng: addr.lng ?? addr.longitude ?? null,
+      },
       createdAt: order.createdAt,
       cancelledAt: order.cancelledAt,
       deliveredAt: order.deliveredAt,

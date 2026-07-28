@@ -17,6 +17,7 @@ const placeOrderSchema = Joi.object({
   paymentMethod: Joi.string().valid(...PAYMENT_METHOD_VALUES).required(),
   couponCode: Joi.string().trim().optional().allow(null, ''),
   commerceFlow: Joi.string().valid(...Array.from(COMMERCE_FLOW_VALUES_SET)).optional(),
+  idempotencyKey: Joi.string().trim().min(1).max(128).optional(),
 });
 
 const cancelOrderSchema = Joi.object({});

@@ -2,6 +2,7 @@ import SearchInput from '../../../../shared/components/SearchInput';
 import React, { useState, useEffect } from 'react';
 import { refundsApi } from '../../services/api';
 import { extractList, mapRefund } from '../../utils/mappers';
+import { toast } from 'react-hot-toast';
 import { 
   RotateCcw, Search, Filter, MoreVertical, 
   CheckCircle2, XCircle, Clock, Truck, 
@@ -61,22 +62,20 @@ const Refunds = () => {
   };
 
   const handleConfirm = async () => {
+    if (!selectedRefund?.returnId || selectedRefund.returnId === '—') {
+      toast.error('Missing return ID for this refund');
+      setIsConfirmOpen(false);
+      return;
+    }
+
     setLoading(true);
     const { error: apiError } = await refundsApi.process({
-      refundId: selectedRefund.id,
-      action: confirmType === 'approve' ? 'approve' : 'reject',
+      returnId: selectedRefund.returnId,
+      method: confirmType === 'approve' ? 'wallet' : 'wallet',
     });
 
     if (!apiError) {
-      setRefundsList(prev => prev.map(ref => {
-        if (ref.id === selectedRefund.id) {
-          return {
-            ...ref,
-            status: confirmType === 'approve' ? 'Approved' : 'Rejected'
-          };
-        }
-        return ref;
-      }));
+      await fetchRefunds();
     }
 
     setLoading(false);
@@ -203,7 +202,7 @@ const Refunds = () => {
                       <StatusBadge status={ref.status} />
                     </td>
                     <td className="px-6 py-5 text-right">
-                      {ref.status === 'Pending' ? (
+                      {['Pending', 'Processing'].includes(ref.status) && ref.returnId && ref.returnId !== '—' ? (
                         <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => handleActionClick(ref, 'approve')}

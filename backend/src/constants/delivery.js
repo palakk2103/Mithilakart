@@ -5,6 +5,8 @@ const ASSIGNMENT_STATUS = {
   PICKED_UP: 'picked_up',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled',
+  FAILED: 'failed',
+  REJECTED: 'rejected',
 };
 
 const ASSIGNMENT_STATUS_VALUES = Object.values(ASSIGNMENT_STATUS);

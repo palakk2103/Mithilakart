@@ -23,6 +23,12 @@ function createAdminCatalogRoutes(controllers, middleware) {
   router.get('/categories/:id', requirePermission('categories.view'), validateParams(Joi.object({ id: objectIdSchema })), categoryController.getById);
   router.put('/categories/:id', requirePermission('categories.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(categoryUpdateSchema), categoryController.update);
   router.delete('/categories/:id', requirePermission('categories.delete'), validateParams(Joi.object({ id: objectIdSchema })), categoryController.delete);
+  router.patch('/categories/reorder', requirePermission('categories.edit'), validateBody(Joi.object({
+    items: Joi.array().items(Joi.object({
+      id: objectIdSchema.required(),
+      sortOrder: Joi.number().integer().min(0).required(),
+    })).min(1).required(),
+  })), categoryController.reorder);
 
   router.get('/products', requirePermission('products.view'), validateQuery(listProductsQuerySchema), productController.listAdmin);
   router.get('/products/:id', requirePermission('products.view'), validateParams(Joi.object({ id: objectIdSchema })), productController.getAdminById);

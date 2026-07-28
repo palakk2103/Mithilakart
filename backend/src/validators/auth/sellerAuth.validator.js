@@ -23,6 +23,13 @@ const sellerRegisterSchema = Joi.object({
   password: Joi.string().min(8).required(),
   otp: Joi.string().length(6).pattern(/^\d+$/).required(),
   deviceId: Joi.string().trim().max(100).optional(),
+  addressLine: Joi.string().trim().min(5).max(300).optional(),
+  city: Joi.string().trim().min(2).max(100).required(),
+  state: Joi.string().trim().min(2).max(100).optional(),
+  pincode: Joi.string().trim().pattern(/^\d{6}$/).optional(),
+  latitude: Joi.number().optional(),
+  longitude: Joi.number().optional(),
+  placeId: Joi.string().trim().optional(),
 });
 
 const refreshTokenSchema = Joi.object({

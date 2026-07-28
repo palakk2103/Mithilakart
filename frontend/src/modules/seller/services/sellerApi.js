@@ -1,7 +1,7 @@
 /**
  * Seller Module — Live API Service Layer
  */
-import { sellerApiClient, customerApi } from '../../../shared/api/client';
+import { sellerApiClient, customerApi, createApiClient } from '../../../shared/api/client';
 import { setTokens, setUser } from '../../../shared/api/tokenStorage';
 
 const api = sellerApiClient;
@@ -11,6 +11,23 @@ function mapListResponse(data, itemsKey, fallbackKey = 'items') {
   const items = data?.[itemsKey] ?? data?.[fallbackKey] ?? data?.data ?? [];
   const total = data?.meta?.total ?? data?.total ?? items.length;
   return { [itemsKey]: items, total };
+}
+
+function withId(record) {
+  if (!record || typeof record !== 'object') return record;
+  return {
+    ...record,
+    id: record.id || record._id,
+  };
+}
+
+function mapSellerNotification(note) {
+  if (!note) return note;
+  return {
+    ...withId(note),
+    body: note.message || note.body || '',
+    read: note.isRead ?? note.read ?? false,
+  };
 }
 
 // AUTH
@@ -27,12 +44,7 @@ export const sendSellerPhoneOtp = (countryCode, phone) =>
   customerApi.post('/seller/auth/send-phone-otp', { countryCode, phone });
 
 export const registerSeller = async (data) => {
-  const result = await customerApi.post('/seller/auth/register', data);
-  if (result?.tokens) {
-    setTokens('seller', result.tokens);
-    setUser('seller', result.seller);
-  }
-  return result;
+  return customerApi.post('/seller/auth/register', data);
 };
 
 export const logoutSeller = async () => {
@@ -86,18 +98,58 @@ export const toggleProductStatus = async (id, status) =>
 // ORDERS
 export const getOrders = async (params) => {
   const data = await api.get('/orders', { params });
-  return mapListResponse(data, 'orders');
+  const mapped = mapListResponse(data, 'orders');
+  return {
+    ...mapped,
+    orders: (mapped.orders || []).map(withId),
+  };
 };
 
-export const getOrder = async (id) => api.get(`/orders/${id}`);
+export const getOrder = async (id) => withId(await api.get(`/orders/${id}`));
 
 export const updateOrderStatus = async (id, status) =>
   api.patch(`/orders/${id}/status`, { status });
 
+const shippingApiClient = createApiClient({
+  portal: 'seller',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+});
+
+export const getShipmentLabel = async (orderId) =>
+  shippingApiClient.get(`/shipping/orders/${orderId}/label`);
+
+function mapSellerReturn(record) {
+  const statusMap = {
+    requested: 'pending',
+    seller_approved: 'approved',
+    admin_approved: 'approved',
+    refunded: 'approved',
+    seller_rejected: 'rejected',
+    admin_rejected: 'rejected',
+    cancelled: 'rejected',
+  };
+  const item = withId(record);
+  return {
+    ...item,
+    status: statusMap[item.status] || item.status,
+    rawStatus: item.status,
+    orderId: item.orderId,
+    productTitle: item.productName || item.productTitle || 'Product',
+    customerName: item.customerName || item.userName || 'Customer',
+    customer: { name: item.customerName || item.userName || 'Customer' },
+    refundAmount: item.refundAmount ?? item.amount ?? 0,
+    requestedAt: item.createdAt,
+  };
+}
+
 // RETURNS
 export const getReturns = async (params) => {
   const data = await api.get('/returns', { params });
-  return mapListResponse(data, 'returns');
+  const mapped = mapListResponse(data, 'returns');
+  return {
+    ...mapped,
+    returns: (mapped.returns || []).map(mapSellerReturn),
+  };
 };
 
 export const approveReturn = async (id) => api.patch(`/returns/${id}/approve`);
@@ -115,8 +167,9 @@ export const getCustomer = async (id) => api.get(`/customers/${id}`);
 // INVENTORY
 export const getInventory = async () => {
   const data = await api.get('/inventory');
+  const products = (data?.products ?? (Array.isArray(data) ? data : [])).map(withId);
   return {
-    products: data?.products ?? data?.items ?? [],
+    products,
     alerts: data?.alerts ?? [],
     history: data?.history ?? [],
   };
@@ -164,7 +217,18 @@ export const getCategoryAnalytics = async () => api.get('/analytics/categories')
 export const getCustomerAnalytics = async () => api.get('/analytics/customers');
 
 // EARNINGS
-export const getEarnings = async () => api.get('/earnings');
+export const getEarnings = async () => {
+  const data = await api.get('/earnings');
+  return {
+    ...data,
+    availableBalance: data?.balance ?? data?.availableBalance ?? 0,
+    walletBalance: data?.balance ?? data?.walletBalance ?? 0,
+    totalWithdrawn: data?.totalWithdrawn ?? 0,
+    totalEarnings: data?.totalEarnings ?? 0,
+    bankDetails: data?.bankDetails || {},
+    recentTransactions: data?.recentTransactions || [],
+  };
+};
 
 export const getTransactions = async (params) => {
   const data = await api.get('/earnings/transactions', { params });
@@ -179,10 +243,26 @@ export const getSettlements = async () => {
 export const requestPayout = async (amount) =>
   api.post('/earnings/payout', { amount });
 
+// MARKETPLACE LISTINGS (CR-001)
+export const getSellerListings = (params) => api.get('/listings', { params });
+
+export const createProductListing = (productId, data) =>
+  api.post(`/products/${productId}/listings`, data);
+
+export const getProductListings = (productId) =>
+  api.get(`/products/${productId}/listings`);
+
+export const updateProductListing = (listingId, data) =>
+  api.put(`/listings/${listingId}`, data);
+
+export const publishProductListing = (listingId) =>
+  api.patch(`/listings/${listingId}/publish`);
+
 // NOTIFICATIONS
 export const getNotifications = async () => {
   const data = await api.get('/notifications');
-  const notifications = data?.notifications ?? data?.items ?? [];
+  const raw = data?.notifications ?? data?.items ?? (Array.isArray(data) ? data : []);
+  const notifications = raw.map(mapSellerNotification);
   return {
     notifications,
     unreadCount: data?.unreadCount ?? notifications.filter((n) => !n.read).length,

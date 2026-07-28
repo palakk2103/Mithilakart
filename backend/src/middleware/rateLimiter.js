@@ -1,5 +1,6 @@
 const config = require('../config');
 const { getRedisClient } = require('../config/redis');
+const { MemoryRedisClient } = require('../core/redis/MemoryRedisClient');
 const { RateLimitService } = require('../services/RateLimitService');
 const { resolveRateLimitRule } = require('../constants/rateLimit');
 const { AppError } = require('../utils/AppError');
@@ -29,9 +30,9 @@ function createRateLimiterMiddleware(options = {}) {
       return next();
     }
 
-    const redis = getRedisClient();
+    let redis = getRedisClient();
     if (!redis) {
-      return next();
+      redis = new MemoryRedisClient();
     }
 
     try {
