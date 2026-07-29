@@ -1,18 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Camera, Mic, ScanLine, MapPin, ChevronDown, Zap, X, Star, Clock } from 'lucide-react';
+import { Search, Camera, Mic, ScanLine, MapPin, ChevronDown, Zap, X, Star } from 'lucide-react';
 import LanguageSelector from './LanguageSelector';
 import { useTranslation } from 'react-i18next';
 import SearchInput from '../../../../shared/components/SearchInput';
 import toast from 'react-hot-toast';
-import useVendorStore from '../../../../store/useVendorStore';
 
 /**
  * SearchBar — Address selector (top) + Search input (bottom)
  * Styled exactly like the reference image
  */
-const SearchBar = ({ selectedAddress }) => {
+const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,87 +26,12 @@ const SearchBar = ({ selectedAddress }) => {
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
 
-  const { selectedCategory, activeFlow } = useVendorStore();
-
-  const isMithilakActive = activeFlow === 'mithilak';
-  const isFreshGroceryActive = activeFlow === 'freshgrocery';
-  const isQuickShopActive = activeFlow === 'quickshop';
+  const isMithilakActive = location.pathname.includes('/mithilak');
+  const isFreshGroceryActive = location.pathname.includes('/fresh-grocery');
+  const isQuickShopActive = location.pathname.includes('/quick-shop') && !isMithilakActive;
 
   const isDarkHeader = isMithilakActive || isQuickShopActive;
   const isMithilakartFlow = !isMithilakActive && !isFreshGroceryActive && !isQuickShopActive;
-
-  const getThemeStyles = () => {
-    if (isMithilakActive) {
-      return {
-        addressBg: 'bg-[#18606B] border border-white/10 text-white',
-        starBg: 'bg-[#18606B] border border-white/10 text-white font-extrabold text-[12px]',
-      };
-    }
-    if (isFreshGroceryActive) {
-      return {
-        addressBg: 'bg-[#A6750D] border border-white/10 text-white',
-        starBg: 'bg-[#A6750D] border border-white/10 text-white font-extrabold text-[12px]',
-      };
-    }
-    if (isQuickShopActive) {
-      return {
-        addressBg: 'bg-[#C54E13] border border-white/10 text-white',
-        starBg: 'bg-[#C54E13] border border-white/10 text-white font-extrabold text-[11px]',
-      };
-    }
-    
-    // Mithilakart Flow Categories
-    switch (selectedCategory) {
-      case 'Beauty':
-        return {
-          addressBg: 'bg-[#DF88B5] border border-white/15 text-white',
-          starBg: 'bg-[#DF88B5] border border-white/15 text-white font-extrabold text-[12px]',
-        };
-      case 'Gifting':
-        return {
-          addressBg: 'bg-[#BE99E5] border border-white/15 text-white',
-          starBg: 'bg-[#BE99E5] border border-white/15 text-white font-extrabold text-[12px]',
-        };
-      case 'Electronics':
-        return {
-          addressBg: 'bg-[#76A7DE] border border-white/15 text-white',
-          starBg: 'bg-[#76A7DE] border border-white/15 text-white font-extrabold text-[12px]',
-        };
-      case 'Jewellery':
-        return {
-          addressBg: 'bg-[#E09D59] border border-white/15 text-white',
-          starBg: 'bg-[#E09D59] border border-white/15 text-white font-extrabold text-[12px]',
-        };
-      case 'Toys':
-        return {
-          addressBg: 'bg-[#7CD7C5] border border-white/15 text-white',
-          starBg: 'bg-[#7CD7C5] border border-white/15 text-white font-extrabold text-[12px]',
-        };
-      case 'Stationery':
-        return {
-          addressBg: 'bg-[#A8B2E0] border border-white/15 text-white',
-          starBg: 'bg-[#A8B2E0] border border-white/15 text-white font-extrabold text-[12px]',
-        };
-      case 'Fashion':
-        return {
-          addressBg: 'bg-[#DD8585] border border-white/15 text-white',
-          starBg: 'bg-[#DD8585] border border-white/15 text-white font-extrabold text-[12px]',
-        };
-      case 'Electrical':
-        return {
-          addressBg: 'bg-[#DDD26E] border border-white/15 text-white',
-          starBg: 'bg-[#DDD26E] border border-white/15 text-white font-extrabold text-[12px]',
-        };
-      case 'You Buy':
-      default:
-        return {
-          addressBg: 'bg-[#4E8F2C] border border-white/10 text-white',
-          starBg: 'bg-[#4E8F2C] border border-white/10 text-white font-extrabold text-[12px]',
-        };
-    }
-  };
-
-  const themedStyles = getThemeStyles();
 
   const handleSubmit = (e) => {
     e?.preventDefault();
@@ -214,12 +138,11 @@ const SearchBar = ({ selectedAddress }) => {
     };
   }, [stream]);
 
-  const displayAddress = selectedAddress?.address
-    ? selectedAddress.address.slice(0, 32)
-    : '83 Kishan Pura Mataji Mandir, Indore';
+  const displayAddress = deliverTo?.label
+    || (selectedAddress?.address ? selectedAddress.address.slice(0, 32) : 'Set delivery location');
 
   return (
-    <div className="px-3 pb-2.5 flex flex-col gap-2.5 md:px-4 md:pb-3 md:flex-col md:gap-3">
+    <div className="px-3 pb-2 flex flex-col gap-1.5 md:px-4 md:pb-3 md:flex-col md:gap-3">
       {/* Hidden file input for camera upload */}
       <input 
         type="file" 
@@ -230,43 +153,66 @@ const SearchBar = ({ selectedAddress }) => {
       />
 
 
-      <div className="flex items-center justify-between py-1.5 md:py-2.5">
-        <Link
-          to="/profile/addresses"
-          className={`flex items-center gap-1.5 min-w-0 rounded-lg px-3.5 py-1.5 shadow-xs transition-all duration-300 ${themedStyles.addressBg}`}
-        >
-          <MapPin size={15} strokeWidth={2.5} className="w-[15px] h-[15px] flex-shrink-0" />
-          <span className="text-[12px] md:text-[13px] font-extrabold truncate max-w-[140px] xs:max-w-[170px] md:max-w-[220px]">
-            {displayAddress}
-          </span>
-          <ChevronDown size={13} strokeWidth={3} className="w-[13px] h-[13px] flex-shrink-0" />
-        </Link>
+      <div className="flex items-center justify-between py-0.5 md:py-2">
+        {isFreshGroceryActive ? (
+          <button
+            type="button"
+            onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
+            className="flex items-center gap-1 min-w-0 text-white hover:text-white/95 text-left"
+          >
+            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] flex-shrink-0 text-white" />
+            <span className="text-[10px] md:text-[11px] font-bold truncate max-w-[170px] md:max-w-[220px]">
+              {displayAddress}
+            </span>
+            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
+          </button>
+        ) : isMithilakActive ? (
+          <button
+            type="button"
+            onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
+            className="flex items-center gap-1 min-w-0 text-white/95 hover:text-white text-left"
+          >
+            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] md:w-[14px] md:h-[14px] flex-shrink-0" />
+            <span className="text-[11.5px] font-bold truncate max-w-[180px] md:max-w-[220px]">
+              {displayAddress}
+            </span>
+            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] md:w-[12px] md:h-[12px] flex-shrink-0" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
+            className="flex items-center gap-1.5 min-w-0 text-white/95 hover:opacity-85 transition-opacity text-left"
+          >
+            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] md:w-[14px] md:h-[14px] flex-shrink-0" />
+            <span className="text-[10px] md:text-[11px] font-bold truncate max-w-[170px] md:max-w-[220px]">
+              {displayAddress}
+            </span>
+            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] md:w-[12px] md:h-[12px] flex-shrink-0" />
+          </button>
+        )}
 
         {/* Language Pill + Coin/Star Badge */}
-        <div className="flex items-center gap-2.5 ml-3 flex-shrink-0">
+        <div className="flex items-center gap-2">
           {/* Functional language selector button */}
           <LanguageSelector isDarkHeader={false} variant={isMithilakActive ? "mithila" : ""} compact={true} />
           
-          {/* Custom Coins/Stars or Delivery Time Badge */}
+          {/* Custom Coins/Stars Badge */}
           {isFreshGroceryActive ? (
-            <div className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg shadow-xs whitespace-nowrap flex-shrink-0 ${themedStyles.starBg}`}>
-              <Clock size={13} className="text-white" />
-              <span>15 Mins</span>
+            <div className="flex items-center gap-0.5 px-2 py-0.5 bg-white/20 border border-white/10 rounded-full text-white font-bold text-[10.5px] shadow-xs">
+              <span className="flex items-center gap-0.5">✦ 3</span>
             </div>
           ) : isMithilakActive ? (
-            <div className={`flex items-center gap-0.5 px-3.5 py-1.5 rounded-lg shadow-xs whitespace-nowrap flex-shrink-0 ${themedStyles.starBg}`}>
-              <Star size={13} className="text-yellow-300 fill-yellow-300" />
+            <div className="flex items-center gap-0.5 px-2 py-0.5 bg-[#207C8A] border border-white/20 rounded-full text-white font-extrabold text-[11px] shadow-xs">
+              <Star size={11} className="text-yellow-300 fill-yellow-300" />
               <span>3</span>
-            </div>
-          ) : isQuickShopActive ? (
-            <div className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg shadow-xs whitespace-nowrap flex-shrink-0 ${themedStyles.starBg}`}>
-              <Clock size={13} className="text-white" />
-              <span>15 Mins</span>
             </div>
           ) : (
-            <div className={`flex items-center gap-0.5 px-3.5 py-1.5 rounded-lg shadow-xs whitespace-nowrap flex-shrink-0 ${themedStyles.starBg}`}>
-              <Star size={13} className="text-yellow-300 fill-yellow-300" />
-              <span>3</span>
+            <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white border border-[#FFF8EE]/20 shadow-xs ${
+              isQuickShopActive ? 'bg-[#D45014]' : 'bg-[#3E5A44]'
+            }`}>
+              <Star size={11} className="text-yellow-300 fill-yellow-300" />
+              <span className="text-[11px] font-extrabold">3</span>
             </div>
           )}
         </div>
@@ -293,14 +239,14 @@ const SearchBar = ({ selectedAddress }) => {
               <div className="flex items-center gap-2.5 md:gap-4 pr-1 text-[#3F2A20]/60">
                 {!isFreshGroceryActive && (
                   <Camera 
-                    size={18} 
+                    size={16} 
                     strokeWidth={2.2} 
                     onClick={handleCameraClick}
                     className="cursor-pointer hover:text-[#3F2A20] transition-colors" 
                   />
                 )}
                 <Mic 
-                  size={18} 
+                  size={16} 
                   strokeWidth={2.2} 
                   onClick={handleVoiceSearch}
                   className={`cursor-pointer hover:text-[#3F2A20] transition-colors ${

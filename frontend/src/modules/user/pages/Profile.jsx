@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   ShoppingBag, 
   Heart, 
@@ -13,20 +13,80 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import useAccountStore from '../../../store/useAccountStore';
+import { getUser, isAuthenticated, clearTokens, setUser } from '../../../shared/api/tokenStorage';
+import { getProfile } from '../services/userApi';
+import { logoutCustomer } from '../services/authApi';
 import { useTranslation } from 'react-i18next';
 import footerBorder from '../../../assets/footer-border.png';
+
+const mapStoredUser = (stored) => ({
+  name: stored?.name || '',
+  email: stored?.email || '',
+  phone: stored?.phone || '',
+  countryCode: stored?.countryCode || '+91',
+  gender: stored?.gender || '',
+  dob: stored?.dob || stored?.dateOfBirth || '',
+  avatar: stored?.avatar || stored?.avatarUrl || stored?.profileImage || null,
+});
+
+const formatContact = (profile) => {
+  if (profile.email) return profile.email;
+  if (profile.phone) {
+    const code = profile.countryCode || '+91';
+    return `${code} ${profile.phone}`;
+  }
+  return '';
+};
 
 const VendorProfile = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { userProfile } = useAccountStore();
-  const isAuthenticated = localStorage.getItem('isAuthenticated') !== 'false';
+  const { userProfile, updateProfile } = useAccountStore();
+  const [authed, setAuthed] = useState(() => isAuthenticated('customer'));
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    const syncAuth = () => setAuthed(isAuthenticated('customer'));
+    window.addEventListener('customer-auth-changed', syncAuth);
+    window.addEventListener('storage', syncAuth);
+    return () => {
+      window.removeEventListener('customer-auth-changed', syncAuth);
+      window.removeEventListener('storage', syncAuth);
+    };
+  }, []);
+
+  useEffect(() => {
+    const stored = getUser('customer');
+    if (stored) {
+      updateProfile(mapStoredUser(stored));
+    }
+
+    if (!authed) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      setLoadingProfile(true);
+      try {
+        const profile = await getProfile();
+        if (cancelled) return;
+        const mapped = mapStoredUser(profile);
+        updateProfile(mapped);
+        setUser('customer', profile);
+      } catch {
+        // keep stored profile if API fails
+      } finally {
+        if (!cancelled) setLoadingProfile(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [authed, updateProfile]);
+
+  const handleLogout = async () => {
+    await logoutCustomer();
+    clearTokens('customer');
+    updateProfile({ name: '', email: '', phone: '', gender: '', dob: '', avatar: null });
     localStorage.removeItem('userWishlist');
-    localStorage.removeItem('userToken');
-    localStorage.setItem('isAuthenticated', 'false');
-    sessionStorage.clear();
     navigate('/home', { replace: true });
   };
 
@@ -65,7 +125,7 @@ const VendorProfile = () => {
               : 'bg-[#FCF7EE]/90 border-[#F3E3CD]/60 backdrop-blur-md'
       }`}>
         <motion.button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/home', { replace: false })}
           whileTap={{ scale: 0.88 }}
           className="p-1 rounded-full hover:bg-white/10 transition-colors"
           aria-label="Go back"
@@ -93,10 +153,12 @@ const VendorProfile = () => {
             </div>
             <div>
               <h1 className="text-[18px] font-black tracking-tight">
-                {isAuthenticated ? userProfile.name : 'Guest User'}
+                {authed ? (userProfile.name || (loadingProfile ? 'Loading...' : 'User')) : 'Guest User'}
               </h1>
               <p className="text-[11px] font-medium opacity-90 mt-1 leading-normal">
-                {isAuthenticated ? (userProfile.email || 'mithilakart.user@gmail.com') : 'Please login to access all features'}
+                {authed
+                  ? (formatContact(userProfile) || 'Add email in Edit Profile')
+                  : 'Please login to access all features'}
               </p>
             </div>
           </div>
@@ -105,10 +167,10 @@ const VendorProfile = () => {
             <div>
               <p className="text-[9px] font-black opacity-80 uppercase tracking-widest leading-none">Status</p>
               <p className="text-[13px] font-black text-yellow-400 mt-1 flex items-center gap-1.5">
-                {isAuthenticated ? '★ PRIME MEMBER' : 'GUEST'}
+                {authed ? '★ VERIFIED MEMBER' : 'GUEST'}
               </p>
             </div>
-            {isAuthenticated && (
+            {authed && (
               <button className="bg-white/15 hover:bg-white/20 active:scale-95 transition-all text-white border border-white/10 px-4.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider">
                 {t('profile.loyaltyPoints') || 'Points'}
               </button>
@@ -192,7 +254,7 @@ const VendorProfile = () => {
 
         {/* Centered Login / Logout */}
         <div className="flex justify-center mt-2">
-          {isAuthenticated ? (
+          {authed ? (
             <button
               onClick={handleLogout}
               className={`font-black text-[15px] flex items-center gap-1.5 active:scale-95 transition-transform ${

@@ -1,26 +1,49 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Star, TrendingUp, Search, Plus, 
   Trash2, GripVertical, ShoppingBag, CheckCircle2,
   AlertCircle, LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const MOCK_FEATURED = [
-  { id: 1, name: 'Premium Leather Satchel', category: 'Fashion', price: '₹4,500', img: 'https://via.placeholder.com/80' },
-  { id: 2, name: 'Wireless Earbuds Pro', category: 'Electronics', price: '₹8,900', img: 'https://via.placeholder.com/80' },
-];
-
-const MOCK_TRENDING = [
-  { id: 3, name: 'Biotique Face Wash', category: 'Beauty', price: '₹250', img: 'https://via.placeholder.com/80' },
-  { id: 4, name: 'Summer Floral Dress', category: 'Fashion', price: '₹2,100', img: 'https://via.placeholder.com/80' },
-];
+import { featuredApi } from '../../services/api';
+import { extractList, mapFeaturedProduct } from '../../utils/mappers';
 
 const FeaturedProducts = () => {
-  const [featured, setFeatured] = useState(MOCK_FEATURED);
-  const [trending, setTrending] = useState(MOCK_TRENDING);
+  const [featured, setFeatured] = useState([]);
+  const [trending, setTrending] = useState([]);
   const [activeTab, setActiveTab] = useState('Featured');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await featuredApi.getAll();
+      if (cancelled) return;
+      if (!error && data) {
+        const products = extractList(data.products || data);
+        const featuredRows = extractList(data.featured || data);
+        const productById = new Map(products.map((p) => [String(p._id || p.id), p]));
+        const items = featuredRows
+          .map((row) => {
+            const product = productById.get(String(row.productId)) || row.product || row;
+            return {
+              ...mapFeaturedProduct(product),
+              featuredId: row._id || row.id,
+            };
+          })
+          .filter((item) => item.name);
+        setFeatured(items);
+        setTrending([]);
+      } else {
+        setFeatured([]);
+        setTrending([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-700">
@@ -50,7 +73,11 @@ const FeaturedProducts = () => {
                   <SearchInput type="text" placeholder="Search product..." />
                </div>
                <div className="divide-y divide-slate-50">
-                  {featured.map((item) => (
+                  {loading ? (
+                    <div className="p-8 text-center text-slate-400 text-sm font-bold">Loading products...</div>
+                  ) : featured.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-sm font-bold">No featured products found</div>
+                  ) : featured.map((item) => (
                     <div key={item.id} className="p-4 flex items-center gap-4 group hover:bg-slate-50/50 transition-colors">
                        <GripVertical size={16} className="text-slate-200 cursor-grab active:cursor-grabbing" />
                        <div className="w-14 h-14 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
@@ -85,7 +112,11 @@ const FeaturedProducts = () => {
                   <SearchInput type="text" placeholder="Search product..." />
                </div>
                <div className="divide-y divide-slate-50">
-                  {trending.map((item) => (
+                  {loading ? (
+                    <div className="p-8 text-center text-slate-400 text-sm font-bold">Loading products...</div>
+                  ) : trending.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-sm font-bold">No trending products found</div>
+                  ) : trending.map((item) => (
                     <div key={item.id} className="p-4 flex items-center gap-4 group hover:bg-slate-50/50 transition-colors">
                        <GripVertical size={16} className="text-slate-200 cursor-grab active:cursor-grabbing" />
                        <div className="w-14 h-14 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">

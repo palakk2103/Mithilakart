@@ -4,6 +4,7 @@ import { X, User, Mail, Phone, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { sendPhoneOtp, verifyPhoneOtp, sendEmailOtp, verifyEmailOtp } from '../services/authApi';
+import { applyOtpSendResult } from '../../../shared/utils/otpResponse';
 
 const FlowerIcon = ({ className = "w-5 h-5" }) => (
   <svg viewBox="0 0 24 24" className={`${className} inline-block`} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -102,10 +103,8 @@ const Signup = () => {
       
       setIsSendingOtp(true);
       try {
-        await sendPhoneOtp(countryCode, phoneNumber);
-        setOtpSent(true);
-        setTimer(60);
-        setSuccess('OTP sent successfully to your phone');
+        const result = await sendPhoneOtp(countryCode, phoneNumber);
+        applyOtpSendResult(result, { setOtp, setSuccess, setOtpSent, setTimer });
       } catch (err) {
         setError(err.message || 'Failed to send OTP');
       } finally {
@@ -135,14 +134,13 @@ const Signup = () => {
     try {
       let response;
       if (useEmail) {
-        response = await verifyEmailOtp(email.trim(), otp);
+        response = await verifyEmailOtp(email.trim(), otp, name.trim());
       } else {
-        response = await verifyPhoneOtp(countryCode, phoneNumber, otp);
+        response = await verifyPhoneOtp(countryCode, phoneNumber, otp, name.trim());
       }
       
       if (response && response.success) {
         setSuccess('Account created successfully! Logging in...');
-        localStorage.setItem('isAuthenticated', 'true');
         setTimeout(() => {
           const redirectTo = location.state?.from || '/home';
           const redirectState = location.state?.checkoutProduct ? { product: location.state.checkoutProduct } : undefined;

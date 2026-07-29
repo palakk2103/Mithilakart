@@ -66,9 +66,10 @@ import RoleManagement from '../pages/system/RoleManagement';
 // Vendors
 import SellerDetail from '../pages/vendors/SellerDetail';
 
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
+
 const AdminProtectedRoute = () => {
-  const isAdminAuthenticated = localStorage.getItem('isAdminAuthenticated') === 'true';
-  if (!isAdminAuthenticated) {
+  if (!isAuthenticated('admin')) {
     return <Navigate to="/admin/auth" replace />;
   }
   return <AdminLayout />;

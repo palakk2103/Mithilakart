@@ -1,26 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Mail, Smartphone, MapPin, 
   ShoppingBag, Star, MessageSquare, Wallet,
   Clock, ArrowLeft, ShieldAlert, CheckCircle2,
-  ChevronRight, Calendar, ExternalLink
+  ChevronRight, Calendar, ExternalLink, LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usersApi } from '../../services/api';
+import { mapUser } from '../../utils/mappers';
 
 const CustomerDetail = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Orders');
+  const [customer, setCustomer] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      const { data, error } = await usersApi.getById(userId);
+      if (cancelled) return;
+      if (!error && data) {
+        setCustomer(mapUser(data.user || data));
+      } else {
+        setCustomer(null);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const tabs = ['Orders', 'Wishlist', 'Reviews', 'Support', 'Wallet'];
 
   const stats = [
-    { label: 'Total Orders', value: '24', icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'LTV (Revenue)', value: '₹42,500', icon: Wallet, color: 'text-green-500', bg: 'bg-green-50' },
-    { label: 'Avg Rating', value: '4.8', icon: Star, color: 'text-amber-500', bg: 'bg-amber-50' },
-    { label: 'Returns', value: '02', icon: Clock, color: 'text-red-500', bg: 'bg-red-50' },
+    { label: 'Total Orders', value: String(customer?.orders ?? 0), icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'LTV (Revenue)', value: customer?.totalSpent ?? '₹0', icon: Wallet, color: 'text-green-500', bg: 'bg-green-50' },
+    { label: 'Status', value: customer?.status ?? 'Active', icon: Star, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { label: 'Member Since', value: customer?.joined ?? '—', icon: Clock, color: 'text-red-500', bg: 'bg-red-50' },
   ];
+
+  if (loading) {
+    return (
+      <div className="p-12 text-center text-slate-400 text-sm font-bold">Loading customer details...</div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-700">
@@ -32,14 +62,14 @@ const CustomerDetail = () => {
            </button>
            <div className="flex items-center gap-5">
               <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl font-black shadow-xl shadow-blue-100 uppercase">
-                 RS
+                 {(customer?.name || 'U').charAt(0)}
               </div>
               <div>
                  <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-black text-slate-900 font-montserrat uppercase tracking-tight">Rahul Sharma</h1>
-                    <span className="px-3 py-1 bg-green-50 text-green-600 border border-green-100 rounded-full text-[9px] font-black uppercase tracking-widest">VIP Customer</span>
+                    <h1 className="text-2xl font-black text-slate-900 font-montserrat uppercase tracking-tight">{customer?.name || 'Customer'}</h1>
+                    <span className="px-3 py-1 bg-green-50 text-green-600 border border-green-100 rounded-full text-[9px] font-black uppercase tracking-widest">{customer?.status || 'Active'}</span>
                  </div>
-                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Customer ID: #{userId || 'USR1024'} • Member since Jan 2024</p>
+                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Customer ID: #{userId || customer?.id || '—'} • Member since {customer?.joined || '—'}</p>
               </div>
            </div>
         </div>
@@ -67,7 +97,7 @@ const CustomerDetail = () => {
                      </div>
                      <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email Address</p>
-                        <p className="text-xs font-bold text-slate-900 mt-0.5">rahul.sharma@example.com</p>
+                        <p className="text-xs font-bold text-slate-900 mt-0.5">{customer?.email || '—'}</p>
                      </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -76,7 +106,7 @@ const CustomerDetail = () => {
                      </div>
                      <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Phone Number</p>
-                        <p className="text-xs font-bold text-slate-900 mt-0.5">+91 98765 43210</p>
+                        <p className="text-xs font-bold text-slate-900 mt-0.5">{customer?.phone || '—'}</p>
                      </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -85,7 +115,7 @@ const CustomerDetail = () => {
                      </div>
                      <div>
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Primary Address</p>
-                        <p className="text-xs font-bold text-slate-900 mt-0.5 leading-relaxed">123, Sector 44, Gurgaon, Haryana - 122003</p>
+                        <p className="text-xs font-bold text-slate-900 mt-0.5 leading-relaxed">Address not available</p>
                      </div>
                   </div>
                </div>

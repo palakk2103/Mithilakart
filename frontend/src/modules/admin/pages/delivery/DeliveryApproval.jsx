@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { deliveryApi } from '../../services/api';
+import { extractList, mapDeliveryApplication } from '../../utils/mappers';
 import { 
   UserCheck, ShieldCheck, FileText, CheckCircle2, 
   XCircle, Clock, Search, Filter, Mail, Phone,
@@ -6,13 +8,39 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_APPLICATIONS = [
-  { id: 'APP001', name: 'Rajesh Tyagi', zone: 'East Delhi', date: '2026-05-09', vehicle: 'Own Bike', license: 'DL-8C-4587', status: 'Pending' },
-  { id: 'APP002', name: 'Manish Pandey', zone: 'South Delhi', date: '2026-05-09', vehicle: 'Scooter', license: 'DL-4S-2144', status: 'Reviewing' },
-  { id: 'APP003', name: 'Kunal Gahlot', zone: 'Noida Sec 62', date: '2026-05-08', vehicle: 'Electric Bike', license: 'UP-16-9852', status: 'Pending' },
-];
-
 const DeliveryOnboarding = () => {
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await deliveryApi.getAll({ status: 'pending' });
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setApplications([]);
+      } else {
+        setError(null);
+        setApplications(extractList(data).map(mapDeliveryApplication));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleApprove = async (id) => {
+    const { error: apiError } = await deliveryApi.approve(id);
+    if (!apiError) setApplications((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleReject = async (id) => {
+    const { error: apiError } = await deliveryApi.reject(id);
+    if (!apiError) setApplications((prev) => prev.filter((a) => a.id !== id));
+  };
+
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-700">
       {/* Header */}
@@ -53,7 +81,7 @@ const DeliveryOnboarding = () => {
         <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-montserrat px-1">Recent Applications</h3>
         
         <AnimatePresence>
-          {MOCK_APPLICATIONS.map((app, i) => (
+          {applications.map((app, i) => (
             <motion.div
               key={app.id}
               initial={{ opacity: 0, x: -20 }}
@@ -94,11 +122,17 @@ const DeliveryOnboarding = () => {
                     <Eye size={16} />
                     View Docs
                  </button>
-                 <button className="flex items-center gap-2 px-5 py-3 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-sm">
+                 <button
+                   onClick={() => handleReject(app.id)}
+                   className="flex items-center gap-2 px-5 py-3 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                 >
                     <XCircle size={16} />
                     Reject
                  </button>
-                 <button className="flex items-center gap-2 px-5 py-3 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-green-100">
+                 <button
+                   onClick={() => handleApprove(app.id)}
+                   className="flex items-center gap-2 px-5 py-3 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-green-100"
+                 >
                     <CheckCircle2 size={16} />
                     Approve
                  </button>

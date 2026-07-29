@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Heart, CheckCircle, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { allCategoryProducts } from '../../../../data/categoryData';
-import { getCurrentMarketplaceTab, productBelongsToTab } from '../../../../shared/utils/marketplaceHelpers';
+import { getCategories, getCategoryProducts } from '../../services/catalogApi';
+import { findCategoryByName, extractList, mapProductForCard } from '../../utils/mappers';
+import { addProductToCart } from '../../utils/cartUtils';
 
 const CornerFlower = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px] opacity-85 select-none pointer-events-none">
     {/* Green leaves/petals */}
-    <path d="M12 2C13 4.5 13 4.5 12 7C11 4.5 11 4.5 12 2Z" fill="#6FAE4A" />
-    <path d="M12 22C13 19.5 13 19.5 12 17C11 19.5 11 19.5 12 22Z" fill="#6FAE4A" />
-    <path d="M2 12C4.5 13 4.5 13 7 12C4.5 11 4.5 11 2 12Z" fill="#6FAE4A" />
-    <path d="M22 12C19.5 13 19.5 13 17 12C19.5 11 19.5 11 22 12Z" fill="#6FAE4A" />
+    <path d="M12 2C13 4.5 13 4.5 12 7C11 4.5 11 4.5 12 2Z" fill="#3E5A44" />
+    <path d="M12 22C13 19.5 13 19.5 12 17C11 19.5 11 19.5 12 22Z" fill="#3E5A44" />
+    <path d="M2 12C4.5 13 4.5 13 7 12C4.5 11 4.5 11 2 12Z" fill="#3E5A44" />
+    <path d="M22 12C19.5 13 19.5 13 17 12C19.5 11 19.5 11 22 12Z" fill="#3E5A44" />
     {/* Orange petals */}
     <circle cx="12" cy="8.5" r="2.2" fill="#E67E22" />
     <circle cx="12" cy="15.5" r="2.2" fill="#E67E22" />
@@ -26,12 +27,12 @@ const CardBottomDivider = () => (
   <div className="w-full flex items-center justify-center my-0.5 md:my-1 select-none pointer-events-none">
     <svg viewBox="0 0 120 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[65px] md:w-[85px] h-auto">
       {/* Left branch */}
-      <path d="M45 12 C35 14, 20 15, 10 12" stroke="#6FAE4A" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-      <path d="M35 13 C34 11, 31 11, 30 12.5" fill="#6FAE4A" />
+      <path d="M45 12 C35 14, 20 15, 10 12" stroke="#3E5A44" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <path d="M35 13 C34 11, 31 11, 30 12.5" fill="#3E5A44" />
       <circle cx="32" cy="14.5" r="1.2" fill="#D35400" />
       {/* Right branch */}
-      <path d="M75 12 C85 14, 100 15, 110 12" stroke="#6FAE4A" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-      <path d="M85 13 C86 11, 89 11, 90 12.5" fill="#6FAE4A" />
+      <path d="M75 12 C85 14, 100 15, 110 12" stroke="#3E5A44" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <path d="M85 13 C86 11, 89 11, 90 12.5" fill="#3E5A44" />
       <circle cx="88" cy="14.5" r="1.2" fill="#D35400" />
       {/* Central Flower */}
       <circle cx="60" cy="12" r="3.5" fill="#E67E22" />
@@ -54,7 +55,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
 
   return (
     <div
-      className="flex flex-col cursor-pointer group w-full md:w-[240px] md:flex-shrink-0 relative bg-[#FFFDF9] border border-[#EADCC9]/70 rounded-[18px] md:rounded-[24px] p-1.5 md:p-2.5 shadow-[0_2px_8px_rgba(61,35,20,0.015)] hover:shadow-[0_6px_18px_rgba(61,35,20,0.04)] hover:border-[#6FAE4A]/35 transition-all duration-300 transform select-none"
+      className="flex flex-col cursor-pointer group w-full md:w-[240px] md:flex-shrink-0 relative bg-[#FFFDF9] border border-[#EADCC9]/70 rounded-[18px] md:rounded-[24px] p-1.5 md:p-2.5 shadow-[0_2px_8px_rgba(61,35,20,0.015)] hover:shadow-[0_6px_18px_rgba(61,35,20,0.04)] hover:border-[#3E5A44]/35 transition-all duration-300 transform select-none"
       onClick={() => onProductClick(product)}
     >
       {/* Inner Decorative Dashed Border */}
@@ -94,7 +95,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
         {/* Rating Badge on Image */}
         <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 md:gap-1 bg-white/95 backdrop-blur-xs px-1 py-0.2 md:px-1.5 md:py-0.5 rounded-[4px] md:rounded-[6px] shadow-xs border border-[#EADCC9]/30">
           <span className="text-[8px] md:text-[9.5px] font-black text-slate-800">{product.rating || '4.8'}</span>
-          <Star size={7} fill="currentColor" className="text-[#6FAE4A] stroke-none" />
+          <Star size={7} fill="currentColor" className="text-[#3E5A44] stroke-none" />
           <div className="w-[1px] h-2 bg-gray-300 mx-0.5" />
           <span className="text-[7.5px] md:text-[8.5px] font-semibold text-gray-500">({ratingCount})</span>
         </div>
@@ -115,7 +116,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
                 {Math.round(((parseInt((product.oldPrice || '1999').toString().replace(/,/g, '')) - parseInt(product.price?.toString().replace(/,/g, ''))) / parseInt((product.oldPrice || '1999').toString().replace(/,/g, ''))) * 100)}% OFF
               </span>
             </div>
-            <p className="text-[8.5px] md:text-[9.5px] font-extrabold text-[#6FAE4A] tracking-tight mt-0.5">
+            <p className="text-[8.5px] md:text-[9.5px] font-extrabold text-[#3E5A44] tracking-tight mt-0.5">
               ₹{Math.round(product.price * 0.9)} with UPI offer + more
             </p>
           </div>
@@ -132,34 +133,58 @@ const CategoryProductsSection = ({ selectedCategory }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [displayCount, setDisplayCount] = useState(6);
+  const [allProducts, setAllProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const loaderRef = React.useRef(null);
 
-  const currentTab = useMemo(() => getCurrentMarketplaceTab(), []);
+  useEffect(() => {
+    if (!selectedCategory) return;
 
-  const allProducts = useMemo(() => {
-    const raw = allCategoryProducts[selectedCategory] || [];
-    return raw.filter(p => productBelongsToTab(p, currentTab));
-  }, [selectedCategory, currentTab]);
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const categories = await getCategories();
+        const match = findCategoryByName(categories, selectedCategory);
+        if (!match) {
+          if (!cancelled) setAllProducts([]);
+          return;
+        }
+        const data = await getCategoryProducts(match.id, { limit: 24 });
+        if (!cancelled) {
+          setAllProducts(extractList(data).map((p) => mapProductForCard(p)));
+        }
+      } catch {
+        if (!cancelled) setAllProducts([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCategory]);
+
   const products = useMemo(() => allProducts.slice(0, displayCount), [allProducts, displayCount]);
 
-  const handleAddToCart = useCallback((product, e) => {
+  const handleAddToCart = useCallback(async (product, e) => {
     e.stopPropagation();
-    const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-    const existing = cart.find(item => item.id === product.id || item.name === product.name);
-    if (existing) {
-      existing.quantity = (existing.quantity || 1) + 1;
-    } else {
-      cart.push({ ...product, quantity: 1, image: product.image, price: product.price });
+    try {
+      await addProductToCart(product);
+      setToastMessage('Item added to cart');
+      setTimeout(() => setToastMessage(''), 3000);
+    } catch {
+      setToastMessage('Could not add to cart');
+      setTimeout(() => setToastMessage(''), 3000);
     }
-    localStorage.setItem('userCart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('cartUpdated'));
-    setToastMessage('Item added to cart');
-    setTimeout(() => setToastMessage(''), 3000);
   }, []);
 
   const handleProductClick = useCallback((product) => {
-    navigate('/product-detail', {
+    navigate('/vendor/product-detail', {
       state: {
         product: {
           ...product,

@@ -17,15 +17,35 @@ const AdminLayout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/v1/admin/dashboard/activities', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('adminToken') || ''}` },
+        });
+        const body = await res.json();
+        const items = body?.data?.activities || body?.data || [];
+        if (!cancelled && Array.isArray(items)) {
+          setNotifications(items.slice(0, 5).map((item, idx) => ({
+            id: item.id || idx,
+            title: item.message || item.title || 'Activity',
+            time: item.time || item.createdAt || '',
+            type: item.type || 'info',
+            read: Boolean(item.read),
+          })));
+        }
+      } catch {
+        if (!cancelled) setNotifications([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const location = useLocation();
   const navigate = useNavigate();
-
-  const mockNotifications = [
-    { id: 1, title: 'New Vendor Request', time: '5m ago', type: 'info', read: false },
-    { id: 2, title: 'Low Stock Alert: Organic Honey', time: '12m ago', type: 'warning', read: false },
-    { id: 3, title: 'Payout Processed: #TRX9021', time: '1h ago', type: 'success', read: true },
-  ];
 
   const quickLinks = [
     { name: 'Banner Manager', path: '/admin/storefront/banners' },
@@ -407,7 +427,7 @@ const AdminLayout = () => {
                            <span className="bg-slate-100 text-slate-600 text-[9px] font-black px-2 py-0.5 rounded-full">3 New</span>
                         </div>
                         <div className="max-h-[400px] overflow-y-auto no-scrollbar">
-                           {mockNotifications.map(n => (
+                           {notifications.map(n => (
                              <button key={n.id} className="w-full p-5 flex gap-4 hover:bg-slate-50 transition-all text-left border-b border-slate-50 last:border-0">
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${n.type === 'warning' ? 'bg-amber-100 text-amber-600' : n.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-600'}`}>
                                    {n.type === 'warning' ? <AlertCircle size={18} /> : n.type === 'success' ? <CheckCircle2 size={18} /> : <Bell size={18} />}

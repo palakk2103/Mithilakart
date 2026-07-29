@@ -1,24 +1,60 @@
 /**
  * Inventory Manager Page
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Package, AlertTriangle, TrendingDown, Archive, ArrowUpDown } from 'lucide-react';
 import { PageHeader, StatCard, SearchFilter, DataTable, StatusBadge } from '../../components/common';
 import { Card, Button } from '../../components/ui';
-import { products, inventoryAlerts, stockHistory } from '../../utils/dummyData';
+import { getInventory, updateStock } from '../../services/sellerApi';
 import { formatDate } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const InventoryManager = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const inStock = products.filter((p) => p.stock > 10).length;
-  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= 10).length;
-  const outOfStock = products.filter((p) => p.stock === 0).length;
+  const [products, setProducts] = useState([]);
+  const [inventoryAlerts, setInventoryAlerts] = useState([]);
+  const [stockHistory, setStockHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getInventory();
+      setProducts(data?.products || []);
+      setInventoryAlerts(data?.alerts || []);
+      setStockHistory(data?.history || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load inventory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const inStock = products.filter((p) => (p.stock || 0) > 10).length;
+  const lowStock = products.filter((p) => (p.stock || 0) > 0 && (p.stock || 0) <= 10).length;
+  const outOfStock = products.filter((p) => (p.stock || 0) === 0).length;
 
   const filtered = searchQuery
-    ? products.filter((p) => p.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? products.filter((p) => p.title?.toLowerCase().includes(searchQuery.toLowerCase()))
     : products;
+
+  const handleRestock = async (row) => {
+    try {
+      const newQty = (row.stock || 0) + 10;
+      await updateStock(row.id, newQty);
+      toast.success(`Stock updated for ${row.title}`);
+      fetchInventory();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update stock');
+    }
+  };
 
   const columns = [
     { key: 'title', label: 'Product', render: (_, row) => (
@@ -32,21 +68,21 @@ const InventoryManager = () => {
     )},
     { key: 'stock', label: 'Stock', render: (val) => (
       <div className="flex items-center gap-2">
-        <span className={`text-sm font-bold ${val === 0 ? 'text-red-500' : val < 10 ? 'text-amber-500' : 'text-green-600'}`}>{val}</span>
+        <span className={`text-sm font-bold ${val === 0 ? 'text-red-500' : val < 10 ? 'text-amber-500' : 'text-green-600'}`}>{val || 0}</span>
         <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
           <div className={`h-full rounded-full ${val === 0 ? 'bg-red-500' : val < 10 ? 'bg-amber-400' : 'bg-green-500'}`}
-               style={{ width: `${Math.min((val / 200) * 100, 100)}%` }} />
+               style={{ width: `${Math.min(((val || 0) / 200) * 100, 100)}%` }} />
         </div>
       </div>
     )},
     { key: 'status', label: 'Status', align: 'center', render: (val, row) => {
-      if (row.stock === 0) return <StatusBadge status="out_of_stock" size="sm" />;
-      if (row.stock < 10) return <StatusBadge status="warning" size="sm" />;
+      if ((row.stock || 0) === 0) return <StatusBadge status="out_of_stock" size="sm" />;
+      if ((row.stock || 0) < 10) return <StatusBadge status="warning" size="sm" />;
       return <StatusBadge status="active" size="sm" />;
     }},
-    { key: 'sales', label: 'Sold', render: (val) => <span className="text-sm text-gray-600">{val}</span> },
+    { key: 'sales', label: 'Sold', render: (val) => <span className="text-sm text-gray-600">{val || 0}</span> },
     { key: 'actions', label: '', sortable: false, render: (_, row) => (
-      <Button size="xs" variant="outline" onClick={() => toast.success(`Stock updated for ${row.title}`)}>Restock</Button>
+      <Button size="xs" variant="outline" onClick={() => handleRestock(row)}>Restock</Button>
     )},
   ];
 
@@ -65,12 +101,12 @@ const InventoryManager = () => {
         <Card title="⚠️ Inventory Alerts" subtitle={`${inventoryAlerts.length} items need attention`}>
           <div className="space-y-2 mt-4">
             {inventoryAlerts.map((alert) => (
-              <div key={alert.productId} className={`flex items-center justify-between p-3 rounded-xl ${alert.status === 'out' ? 'bg-red-50' : 'bg-amber-50'}`}>
+              <div key={alert.productId || alert.id} className={`flex items-center justify-between p-3 rounded-xl ${alert.status === 'out' ? 'bg-red-50' : 'bg-amber-50'}`}>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{alert.title}</p>
-                  <p className="text-xs text-gray-500">{alert.stock === 0 ? 'Out of stock' : `${alert.stock} units left (threshold: ${alert.threshold})`}</p>
+                  <p className="text-sm font-medium text-gray-900">{alert.title || alert.name}</p>
+                  <p className="text-xs text-gray-500">{alert.stock === 0 ? 'Out of stock' : `${alert.stock} units left (threshold: ${alert.threshold || 10})`}</p>
                 </div>
-                <Button size="xs" variant={alert.status === 'out' ? 'danger' : 'primary'} onClick={() => toast.success('Restock request sent')}>Restock</Button>
+                <Button size="xs" variant={alert.status === 'out' ? 'danger' : 'primary'} onClick={() => handleRestock({ id: alert.productId, title: alert.title, stock: alert.stock || 0 })}>Restock</Button>
               </div>
             ))}
           </div>

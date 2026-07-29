@@ -1,13 +1,47 @@
 import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Package, IndianRupee, User, WifiOff, Wifi } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getDashboard, setOnlineStatus } from '../services/deliveryApi';
+import toast from 'react-hot-toast';
 
 const DeliveryLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadStatus = async () => {
+      try {
+        const dashboard = await getDashboard();
+        if (!cancelled) setIsOnline(Boolean(dashboard?.isOnline));
+      } catch {
+        if (!cancelled) setIsOnline(false);
+      } finally {
+        if (!cancelled) setStatusLoading(false);
+      }
+    };
+
+    loadStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleToggleOnline = async () => {
+    const next = !isOnline;
+    setIsOnline(next);
+    try {
+      await setOnlineStatus(next);
+    } catch (err) {
+      setIsOnline(!next);
+      toast.error(err?.message || 'Could not update online status');
+    }
+  };
 
   const navItems = [
     { label: 'Home', path: '/delivery/dashboard', icon: Home },
@@ -40,7 +74,8 @@ const DeliveryLayout = () => {
 
           {/* Online / Offline Toggle */}
           <button
-            onClick={() => setIsOnline(!isOnline)}
+            onClick={handleToggleOnline}
+            disabled={statusLoading}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${
               isOnline
                 ? 'bg-green-50 text-green-600 border border-green-200'

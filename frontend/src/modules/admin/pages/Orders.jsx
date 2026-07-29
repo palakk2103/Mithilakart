@@ -1,5 +1,7 @@
 import SearchInput from '../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ordersApi } from '../services/api';
+import { extractList, mapOrder } from '../utils/mappers';
 import { 
   Search, Filter, ChevronRight, Eye, 
   Package, Truck, CheckCircle2, Clock, 
@@ -8,14 +10,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_ORDERS = [
-  { id: 'OD87459', customer: 'Rahul Sharma', email: 'rahul@example.com', total: 4500, status: 'Pending', date: '2026-05-09 10:30 AM', items: 3, payment: 'Paid' },
-  { id: 'OD87460', customer: 'Priyanka Das', email: 'priyanka@example.com', total: 1250, status: 'Processing', date: '2026-05-09 11:15 AM', items: 1, payment: 'COD' },
-  { id: 'OD87461', customer: 'Amit Verma', email: 'amit@example.com', total: 8900, status: 'Delivered', date: '2026-05-08 04:20 PM', items: 5, payment: 'Paid' },
-  { id: 'OD87462', customer: 'Sneha Kapur', email: 'sneha@example.com', total: 2300, status: 'Cancelled', date: '2026-05-08 02:10 PM', items: 2, payment: 'Refunded' },
-  { id: 'OD87463', customer: 'Vikram Singh', email: 'vikram@example.com', total: 15600, status: 'Pending', date: '2026-05-08 01:45 PM', items: 8, payment: 'Paid' },
-  { id: 'OD87464', customer: 'Anjali Gupta', email: 'anjali@example.com', total: 3200, status: 'Processing', date: '2026-05-08 12:30 PM', items: 2, payment: 'Paid' },
-];
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -39,10 +33,31 @@ const StatusBadge = ({ status }) => {
 const Orders = () => {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [ordersList, setOrdersList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await ordersApi.getAll();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setOrdersList([]);
+      } else {
+        setError(null);
+        setOrdersList(extractList(data).map((o) => mapOrder(o)));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const tabs = ['All', 'Pending', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Returned', 'Refunded', 'Cancelled'];
 
-  const filteredOrders = MOCK_ORDERS.filter(order => {
+  const filteredOrders = ordersList.filter(order => {
     const matchesTab = activeTab === 'All' || order.status === activeTab;
     const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          order.customer.toLowerCase().includes(searchQuery.toLowerCase());

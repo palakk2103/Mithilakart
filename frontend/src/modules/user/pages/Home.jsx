@@ -49,31 +49,63 @@ import ImageBanner4 from '../../../assets/TopBanner/ImageBanner4.jpg';
 
 import useVendorStore from '../../../store/useVendorStore';
 import toast from 'react-hot-toast';
+import { addProductToCart } from '../utils/cartUtils';
+import { mapHomeBanners, mapNavChips } from '../utils/mappers';
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState('You Buy');
   const navigate = useNavigate();
-  const { selectedCategory, homeSections } = useVendorStore();
+  const { selectedCategory, homeSections, homeBanners, homeChips, fetchHomeSections } = useVendorStore();
+
+  useEffect(() => {
+    fetchHomeSections('standard');
+  }, [fetchHomeSections]);
 
   const categoryBanners = useMemo(() => {
-    const homeBanners = [
-      { id: 1, image: FashionSaleBannerImg, title: 'Fashion Sale Special Offer' },
-      { id: 2, image: '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png', title: 'Mithila Splendor' },
-      { id: 3, image: '/Gemini_Generated_Image_rhy76srhy76srhy7.png', title: 'Cultural Heritage' },
-      { id: 4, image: '/Gemini_Generated_Image_unwuxnunwuxnunwu.png', title: 'Festive Handlooms' },
-      { id: 5, image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: 'Exclusive Masterpieces' }
+    const fallbackBanners = [
+      { id: 1, image: ImageBanner1, title: 'Summer Sale' },
+      { id: 2, image: ImageBanner2, title: 'New Arrivals' },
+      { id: 3, image: ImageBanner3, title: 'Electronics Deal' },
+      { id: 4, image: ImageBanner4, title: 'Grocery Offers' }
     ];
 
+    const homeBannerList = mapHomeBanners(homeBanners, fallbackBanners);
+
     return {
-      'Home': homeBanners,
-      'Toys': homeBanners,
-      'Beauty': homeBanners,
-      'Art. Jewellery': homeBanners,
-      '1g Gold': homeBanners,
-      'Cosmetics': homeBanners,
-      'Fashion': homeBanners
+      'Home': homeBannerList,
+      'Toys': homeBannerList,
+      'Beauty': homeBannerList,
+      'Art. Jewellery': homeBannerList,
+      '1g Gold': homeBannerList,
+      'Cosmetics': homeBannerList,
+      'Fashion': homeBannerList
     };
-  }, []);
+  }, [homeBanners]);
+
+  const mainCategoriesList = useMemo(() => {
+    const iconMap = {
+      'You Buy': <ShoppingBag size={18} className="text-[#3E5A44]" />,
+      Fashion: <Shirt size={18} className="text-[#3E5A44]" />,
+      Beauty: <Sparkles size={18} className="text-[#3E5A44]" />,
+      Electronics: <Monitor size={18} className="text-[#3E5A44]" />,
+      Jewellery: <Gem size={18} className="text-[#3E5A44]" />,
+      Toys: <Gamepad2 size={18} className="text-[#3E5A44]" />,
+      Stationery: <BookOpen size={18} className="text-[#3E5A44]" />,
+      Gifting: <Gift size={18} className="text-[#3E5A44]" />,
+      Electrical: <Zap size={18} className="text-[#3E5A44]" />,
+    };
+
+    return mapNavChips(homeChips).map((chip) => ({
+      label: chip.label,
+      icon: iconMap[chip.label] || <ShoppingBag size={18} className="text-[#3E5A44]" />,
+      path:
+        chip.label === 'You Buy'
+          ? '/home'
+          : chip.label === 'Toys'
+            ? '/toys'
+            : `/category-products?category=${encodeURIComponent(chip.label)}`,
+    }));
+  }, [homeChips]);
 
   const data = useMemo(() => ({
     ratings: [
@@ -91,28 +123,17 @@ const Home = () => {
 
   const handleTabClick = useCallback((label) => {
     if (label === 'Toys') {
-      navigate('/toys');
+      navigate('/vendor/toys');
     } else {
       setActiveTab(label);
     }
   }, [navigate]);
 
-  // Main 9 horizontal category tabs on top (restored and compact)
-  const mainCategoriesList = [
-    { label: 'You Buy', icon: <ShoppingBag size={18} className="text-[#6FAE4A]" />, path: '/home' },
-    { label: 'Fashion', icon: <Shirt size={18} className="text-[#6FAE4A]" />, path: '/category-products?category=Fashion' },
-    { label: 'Beauty', icon: <Sparkles size={18} className="text-[#6FAE4A]" />, path: '/category-products?category=Beauty' },
-    { label: 'Electronics', icon: <Monitor size={18} className="text-[#6FAE4A]" />, path: '/category-products?category=Electronics' },
-    { label: 'Jewellery', icon: <Gem size={18} className="text-[#6FAE4A]" />, path: '/category-products?category=Jewellery' },
-    { label: 'Toys', icon: <Gamepad2 size={18} className="text-[#6FAE4A]" />, path: '/toys' },
-    { label: 'Stationery', icon: <BookOpen size={18} className="text-[#6FAE4A]" />, path: '/category-products?category=Stationery' },
-    { label: 'Gifting', icon: <Gift size={18} className="text-[#6FAE4A]" />, path: '/category-products?category=Gifting' },
-    { label: 'Electrical', icon: <Zap size={18} className="text-[#6FAE4A]" />, path: '/category-products?category=Electrical' },
-  ];
+  // Main horizontal category tabs (from admin category chips)
 
   return (
     <div
-      className="min-h-screen pb-2 overflow-x-hidden bg-transparent text-primary-dark"
+      className="min-h-screen pb-20 overflow-x-hidden bg-transparent text-primary-dark"
       style={{
         WebkitBackfaceVisibility: 'hidden',
         backfaceVisibility: 'hidden',
@@ -122,7 +143,7 @@ const Home = () => {
       }}
     >
       {/* 1. TOP HORIZONTAL CATEGORY ROW (Super Compact & Scrollable circles) - Always Visible */}
-      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar px-3 pt-5.5 pb-3 mb-3 md:mb-5">
+      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar px-3 pt-1 pb-3 mb-2">
         {mainCategoriesList.map((cat, idx) => {
           if (cat.label === 'You Buy') {
             return (
@@ -136,10 +157,10 @@ const Home = () => {
                 }}
               >
                 {/* Dashed Circle with Shopping Bag + Flowers */}
-                <div className="relative w-[36px] h-[36px] rounded-full border border-dashed border-[#6FAE4A]/75 bg-[#FFFBF7] flex items-center justify-center mt-1 shadow-3xs">
+                <div className="relative w-[36px] h-[36px] rounded-full border border-dashed border-[#3E5A44]/75 bg-[#FFFBF7] flex items-center justify-center mt-1 shadow-3xs">
                   
                   {/* Shopping Bag with White Heart Cutout */}
-                  <svg viewBox="0 0 24 24" className="w-[16px] h-[16px]" fill="#6FAE4A">
+                  <svg viewBox="0 0 24 24" className="w-[16px] h-[16px]" fill="#3E5A44">
                     {/* Handle */}
                     <path d="M12 2C9.5 2 7.5 4 7.5 6.5H9c0-1.7 1.3-3 3-3s3 1.3 3 3h1.5C16.5 4 14.5 2 12 2z" />
                     {/* Bag body */}
@@ -156,30 +177,30 @@ const Home = () => {
                       <circle cx="12" cy="19" r="5.5" fill="#E26D22" />
                       <circle cx="5" cy="12" r="5.5" fill="#E26D22" />
                       <circle cx="19" cy="12" r="5.5" fill="#E26D22" />
-                      <circle cx="12" cy="12" r="2.2" fill="#6FAE4A" />
+                      <circle cx="12" cy="12" r="2.2" fill="#3E5A44" />
                     </svg>
                   </div>
 
                   {/* Bottom-Left small flower stem decoration */}
                   <div className="absolute -left-[5px] bottom-[3px] flex items-center gap-0.5">
                     <span className="w-1.2 h-1.2 rounded-full bg-[#E26D22] shadow-3xs" />
-                    <span className="w-1.2 h-[1.2px] bg-[#6FAE4A] rotate-12" />
+                    <span className="w-1.2 h-[1.2px] bg-[#3E5A44] rotate-12" />
                   </div>
 
                   {/* Bottom-Right small flower stem decoration */}
                   <div className="absolute -right-[5px] bottom-[3px] flex items-center gap-0.5">
-                    <span className="w-1.2 h-[1.2px] bg-[#6FAE4A] -rotate-12" />
+                    <span className="w-1.2 h-[1.2px] bg-[#3E5A44] -rotate-12" />
                     <span className="w-1.2 h-1.2 rounded-full bg-[#E26D22] shadow-3xs" />
                   </div>
                 </div>
 
                 {/* Category Label at bottom */}
-                <span className="text-[9.5px] font-black text-center text-[#6FAE4A] mt-1.5 leading-none">
+                <span className="text-[9.5px] font-black text-center text-[#3E5A44] mt-1.5 leading-none">
                   {cat.label}
                 </span>
 
                 {/* Thick bottom line indicator */}
-                <div className="w-6 h-[2px] bg-[#6FAE4A] rounded-full mt-1.5" />
+                <div className="w-6 h-[2px] bg-[#3E5A44] rounded-full mt-1.5" />
               </div>
             );
           }
@@ -190,7 +211,7 @@ const Home = () => {
               onClick={() => navigate(cat.path)}
               className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
             >
-              <div className="w-[50px] h-[50px] rounded-full bg-[#EADCC9]/20 border border-[#EADCC9]/55 flex items-center justify-center shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] text-[#6FAE4A]">
+              <div className="w-[50px] h-[50px] rounded-full bg-[#EADCC9]/20 border border-[#EADCC9]/55 flex items-center justify-center shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] text-[#3E5A44]">
                 {cat.icon}
               </div>
               <span className="text-[10px] font-bold text-[#3F2A20] mt-1.5 leading-none">
@@ -201,98 +222,108 @@ const Home = () => {
         })}
       </div>
 
-      {/* 2. PROMOTIONAL FASHION SALE BANNER CAROUSEL */}
+      {/* 2. PROMOTIONAL FASHION SALE BANNER (With Mithila Decorative Border) */}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
-        <div className="px-2 md:px-3 mb-3 md:mb-5 mt-0">
+        <div className="px-3 mb-5 md:mb-8">
           <div 
-            className="w-full rounded-xl md:rounded-2xl shadow-xs border-[6px] md:border-[10px] border-solid p-1 md:p-1.5 bg-[#FFF8EE]"
+            onClick={() => navigate('/category-products?category=Fashion')}
+            className="w-full h-[185px] sm:h-[215px] md:h-[350px] rounded-2xl overflow-hidden shadow-xs cursor-pointer active:scale-99 transition-transform"
             style={{
+              borderWidth: '10px',
+              borderStyle: 'solid',
               borderImageSource: "url('/border_1-removebg-preview.png')",
               borderImageSlice: '24',
               borderImageRepeat: 'round',
+              padding: '14px',
+              backgroundColor: '#FFF8EE'
             }}
           >
-            <BannerCarousel banners={categoryBanners.Home} />
+            <img
+              src={FashionSaleBannerImg}
+              alt="Fashion Sale Special Offer"
+              className="w-full h-full object-cover rounded-md"
+            />
           </div>
         </div>
       )}
 
       {/* 3. SHOP BY CATEGORIES SECTION */}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
-        <div className="mb-3 md:mb-5">
+        <div className="mb-5 md:mb-8">
           <SubCategoryGrid />
         </div>
       )}
 
       {/* 4. TRENDING THIS WEEK SECTION */}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
-        <div className="mb-3 md:mb-5">
+        <div className="mb-5 md:mb-8">
           <TrendingThisWeek />
         </div>
       )}
 
       {/* 5. TODAY'S SPECIAL DEALS SECTION */}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
-        <div className="py-2 px-3 w-full max-w-[1600px] mx-auto select-none mb-3 md:mb-5">
+        <div className="py-2 px-3 w-full max-w-[1600px] mx-auto select-none mb-5 md:mb-8">
           <div className="flex justify-between items-center mb-3.5 px-1">
             <h2 className="text-[15.5px] font-black text-[#3F2A20] tracking-tight">
               Today's Special Deals
             </h2>
             <span
               onClick={() => navigate('/deals')}
-              className="text-[11.5px] font-bold text-[#6FAE4A] hover:underline cursor-pointer flex items-center gap-0.5"
+              className="text-[11.5px] font-bold text-[#3E5A44] hover:underline cursor-pointer flex items-center gap-0.5"
             >
               View All <ChevronRight size={13} strokeWidth={2.5} className="inline-block" />
             </span>
           </div>
 
           <div className="grid grid-cols-3 gap-2.5">
-            {[
-              { id: 'd1', name: 'Fresh Potatoes', price: 35, oldPrice: 50, tag: 'UP TO 60% OFF', img: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=80', unit: '1 kg' },
-              { id: 'd2', name: 'Healthy Salad Bowl', price: 119, oldPrice: 199, tag: 'UP TO 60% OFF', img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300&auto=format&fit=crop&q=80', unit: '1 Bowl' },
-              { id: 'd3', name: 'Premium Espresso Maker', price: 2499, oldPrice: 3999, tag: 'UP TO 60% OFF', img: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=300&auto=format&fit=crop&q=80', unit: '1 Unit' }
-            ].map((deal) => (
+            {(homeSections.brandsSpotlight || []).slice(0, 3).map((deal) => (
               <div
                 key={deal.id}
-                onClick={() => navigate('/product-detail', { state: { product: { name: deal.name, price: deal.price, image: deal.img, qty: 1 } } })}
+                onClick={() => navigate('/product-detail', { state: { productId: deal.id, product: deal.product } })}
                 className="bg-white border border-[#EADCC9]/55 rounded-2xl p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform shadow-[0_2px_8px_rgba(0,0,0,0.015)]"
               >
-                {/* Discount Tag */}
-                <div className="absolute top-2 left-2 bg-[#6FAE4A] text-white text-[7.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
-                  {deal.tag}
+                <div className="absolute top-2 left-2 bg-[#3E5A44] text-white text-[7.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
+                  {deal.product?.discount || 'DEAL'}
                 </div>
 
-                {/* Image Wrapper */}
                 <div className="w-full aspect-square bg-[#FAF9F5] border border-slate-100 rounded-xl overflow-hidden flex items-center justify-center p-1.5 mt-4 mb-2">
                   <img
                     src={deal.img}
-                    alt={deal.name}
+                    alt={deal.title || deal.name}
                     className="max-h-full max-w-full object-cover rounded-lg"
                   />
                 </div>
 
-                {/* Details & Button */}
                 <div>
-                  <span className="text-slate-450 text-[8.5px] font-black block">{deal.unit}</span>
-                  <h3 className="text-[10px] font-black text-[#3F2A20] leading-tight mt-0.5 truncate">{deal.name}</h3>
+                  <span className="text-slate-450 text-[8.5px] font-black block">{deal.product?.brand || 'Seller'}</span>
+                  <h3 className="text-[10px] font-black text-[#3F2A20] leading-tight mt-0.5 truncate">{deal.title || deal.name}</h3>
                   
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-[9px] text-slate-400 line-through">₹{deal.oldPrice}</span>
-                      <span className="text-[11.5px] font-black text-slate-900">₹{deal.price}</span>
+                      {deal.product?.mrp ? (
+                        <span className="text-[9px] text-slate-400 line-through">₹{deal.product.mrp}</span>
+                      ) : null}
+                      <span className="text-[11.5px] font-black text-slate-900">₹{deal.product?.price ?? deal.price}</span>
                     </div>
                     
                     <button 
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-                        cart.push({ name: deal.name, price: deal.price, image: deal.img, cartId: Date.now(), qty: 1 });
-                        localStorage.setItem('userCart', JSON.stringify(cart));
-                        window.dispatchEvent(new Event('cartUpdated'));
-                        toast.success(`${deal.name} added to cart!`);
+                        try {
+                          await addProductToCart({
+                            id: deal.id,
+                            name: deal.title || deal.name,
+                            price: deal.product?.price ?? deal.price,
+                            image: deal.img,
+                          });
+                          toast.success(`${deal.title || deal.name} added to cart!`);
+                        } catch {
+                          toast.error('Could not add to cart');
+                        }
                       }}
-                      className="p-1.5 bg-white border border-[#6FAE4A]/30 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer active:scale-90"
+                      className="p-1.5 bg-white border border-[#3E5A44]/30 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer active:scale-90"
                     >
                       <svg className="w-3.5 h-3.5 text-[#3F2A20]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -310,25 +341,25 @@ const Home = () => {
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
         <>
 
-          <div className="mb-3 md:mb-5">
+          <div className="mb-5 md:mb-8">
             <LazySection height="400px">
               <TopSelection items={homeSections.topSelection} />
             </LazySection>
           </div>
 
-          <div className="mb-3 md:mb-5">
+          <div className="mb-5 md:mb-8">
             <LazySection height="350px">
               <BrandsSpotlight items={homeSections.brandsSpotlight} />
             </LazySection>
           </div>
 
-          <div className="mb-3 md:mb-5">
+          <div className="mb-5 md:mb-8">
             <LazySection height="500px">
               <BestQuality items={homeSections.bestQuality} />
             </LazySection>
           </div>
 
-          <div className="mb-3 md:mb-5">
+          <div className="mb-5 md:mb-8">
             <LazySection height="150px">
               <CategoryTabs
                 tabs={data.tabs}
@@ -339,7 +370,7 @@ const Home = () => {
           </div>
 
           {/* Dynamic Products Section based on Bottom Tabs */}
-          <div className="mb-6 md:mb-10">
+          <div className="pb-20 mb-5 md:mb-8">
             <CategoryProductsSection selectedCategory={activeTab} />
           </div>
         </>

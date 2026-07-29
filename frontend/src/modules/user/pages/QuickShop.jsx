@@ -1,7 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight } from 'lucide-react';
 import CategoryCard from '../components/vendor/CategoryCard';
+import useVendorStore from '../../../store/useVendorStore';
+import { getCategories, getNearbyProducts } from '../services/catalogApi';
+import { mapCategorySections, extractList, mapProductForCard } from '../utils/mappers';
+import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
+
+const parseQuickShopPrice = (value) => {
+  const n = parseInt(String(value ?? '').replace(/,/g, ''), 10);
+  return Number.isFinite(n) ? n : 0;
+};
 
 // Import Assets
 import SamsungS24 from '../../../assets/products/product01.jpg';
@@ -112,67 +121,86 @@ const HouseholdIcon = () => (
   </svg>
 );
 
-const CATEGORIES_DATA = [
-  {
-    title: 'Grocery',
-    items: [
-      { name: 'Fruits & Vegetables', img: BeautyTab },
-      { name: 'Atta, Rice & Dal', img: ForYouProduct },
-      { name: 'Oil, Ghee & Masala', img: LorealShampoo },
-      { name: 'Dairy, Bread & Eggs', img: FashionTabProduct },
-      { name: 'Cereals & Dry Fruits', img: PlumShampoo },
-      { name: 'Chicken, Meat & Fish', img: ElectronicsHero },
-      { name: 'Instant & Frozen Food', img: EarbudsDeal },
-    ]
-  },
-  {
-    title: 'Snacks & Drinks',
-    items: [
-      { name: 'Chips & Namkeens', img: EarbudsDeal },
-      { name: 'Ice Creams', img: LipGloss },
-      { name: 'Drinks & Juices', img: ForYouProduct },
-      { name: 'Sweets & Chocolates', img: LorealShampoo },
-      { name: 'Tea, Coffee & Milk Drinks', img: FashionTabProduct },
-      { name: 'Bakery & Biscuits', img: PlumShampoo },
-      { name: 'Sauces & Spreads', img: LipGloss },
-    ]
-  },
-  {
-    title: 'Beauty & Personal Care',
-    items: [
-      { name: 'Bath, Body & Grooming', img: LorealShampoo },
-      { name: 'Baby Care', img: ToysTab },
-      { name: 'Hair Care', img: PlumShampoo },
-      { name: 'Healthcare & Pharma', img: MakeupHero },
-      { name: 'Wellness & Hygiene', img: BeautyTab },
-      { name: 'Beauty & Fragrances', img: LipGloss },
-    ]
-  },
-  {
-    title: 'Household, Stationery & Lifestyle',
-    items: [
-      { name: 'Cleaning Essentials', img: LorealShampoo },
-      { name: 'Stationery Supplies', img: StationeryTab },
-      { name: 'Toys & Games', img: ToysTab },
-      { name: 'Sports & Fitness', img: ClothesImg },
-      { name: 'Home & Kitchen', img: FashionTabProduct },
-      { name: 'Electricals & Tools', img: ElectronicsHero },
-      { name: 'Fashion Accessories', img: FashionHero },
-      { name: 'Pet Supplies', img: ToysTab },
-    ]
-  },
-  {
-    title: 'Mobiles & Electronics',
-    items: [
-      { name: 'Mobiles', img: SamsungS24 },
-      { name: 'Electronics & Gadgets', img: ElectronicsHero },
-      { name: 'Audio & Smart Watches', img: EarbudsDeal },
-    ]
-  }
-];
-
 const QuickShop = () => {
   const navigate = useNavigate();
+  const { fetchHomeSections } = useVendorStore();
+  const [categorySections, setCategorySections] = React.useState([]);
+  const { location: liveLocation, setPromptOpen } = useLiveLocation();
+  const [nearbyProducts, setNearbyProducts] = React.useState([]);
+  const [nearbyLoading, setNearbyLoading] = React.useState(false);
+  const [notDeliverable, setNotDeliverable] = React.useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('isQuickShopFlow', 'true');
+    fetchHomeSections('quick_shop');
+  }, [fetchHomeSections]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getCategories({ commerceFlow: 'quick_shop' })
+      .then((data) => {
+        if (!cancelled) {
+          setCategorySections(mapCategorySections(data, []));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCategorySections([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (liveLocation?.latitude == null || liveLocation?.longitude == null) {
+      setNearbyProducts([]);
+      setNotDeliverable(true);
+      return undefined;
+    }
+
+    setNearbyLoading(true);
+    getNearbyProducts({
+      lat: liveLocation.latitude,
+      lng: liveLocation.longitude,
+      commerceFlow: 'quick_shop',
+      limit: 6,
+    })
+      .then((response) => {
+        const payload = response?.data ?? response;
+        const items = extractList(payload).map((p) => {
+          const card = mapProductForCard(p);
+          return {
+            id: card.id,
+            name: card.name || card.title,
+            price: parseQuickShopPrice(card.price),
+            oldPrice: parseQuickShopPrice(card.oldPrice || card.mrp),
+            image: card.image,
+            distanceKm: p.distanceKm,
+          };
+        });
+        if (!cancelled) {
+          setNearbyProducts(items);
+          setNotDeliverable(payload?.deliverable === false || items.length === 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNearbyProducts([]);
+          setNotDeliverable(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setNearbyLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [liveLocation?.latitude, liveLocation?.longitude]);
 
   // Simulated active tab for the filters
   const [activeFilter, setActiveFilter] = React.useState('All');
@@ -582,7 +610,7 @@ const QuickShop = () => {
 
           {/* ── RESTORED CATEGORY SECTIONS (Mobile View) ── */}
           <div className="md:hidden px-4 space-y-8">
-            {CATEGORIES_DATA.map((section, sIdx) => (
+            {categorySections.map((section, sIdx) => (
               <div key={sIdx} className="mb-6">
                 <h2 className="text-[15px] font-extrabold text-[#D9A21B] mb-3 tracking-tight pl-1">
                   {section.title}
@@ -605,7 +633,7 @@ const QuickShop = () => {
 
           {/* ── RESTORED CATEGORY SECTIONS (Desktop View) ── */}
           <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-4 md:py-6 space-y-8">
-            {CATEGORIES_DATA.map((section, sIdx) => (
+            {categorySections.map((section, sIdx) => (
               <div key={sIdx} className="flex flex-col">
                 {/* Header Banner */}
                 <div className="px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[#D9A21B]">
@@ -698,97 +726,62 @@ const QuickShop = () => {
           </div>
         </div>
 
-        {/* Flash Deals Cards grid */}
-        <div className="grid grid-cols-3 gap-2">
-          {/* Product 1: L'Oreal Shampoo */}
-          <div 
-            onClick={() => navigate('/product-detail', { state: { product: { name: "L'Oreal Paris Hyaluron Moisture", price: 225, oldPrice: 230, rating: '4.3' } } })}
-            className="bg-white rounded-xl border border-slate-100 p-1.5 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-          >
-            <div className="absolute top-1 left-1 bg-[#FF5C00] text-white text-[7.5px] font-black px-1.2 py-0.3 rounded-xs shadow-2xs leading-none z-10">
-              12% OFF
-            </div>
-            
-            <div className="h-14 flex items-center justify-center my-1.5">
-              <img 
-                src="https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=300&auto=format&fit=crop&q=60" 
-                alt="L'Oreal Shampoo" 
-                className="max-h-full object-contain mix-blend-multiply" 
-              />
-            </div>
-
-            <div>
-              <span className="text-slate-400 text-[8px] font-bold">200 ml</span>
-              <h3 className="text-[10px] font-black text-slate-850 leading-tight mt-0.5">L'Oreal Paris</h3>
-              <p className="text-[8.5px] text-slate-500 font-semibold leading-tight truncate">Hyaluron Moisture</p>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-[9px] text-slate-400 line-through">₹230</span>
-                <span className="text-[11px] font-black text-slate-900">₹225</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Product 2: Wellcore Creatine */}
-          <div 
-            onClick={() => navigate('/product-detail', { state: { product: { name: "Wellcore Creatine", price: 530, oldPrice: 699, rating: '4.5' } } })}
-            className="bg-white rounded-xl border border-slate-100 p-1.5 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-          >
-            <div className="absolute top-1 left-1 bg-[#FF5C00] text-white text-[7.5px] font-black px-1.2 py-0.3 rounded-xs shadow-2xs leading-none z-10">
-              12% OFF
-            </div>
-
-            <div className="h-14 flex items-center justify-center my-1.5">
-              <img 
-                src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300&auto=format&fit=crop&q=60" 
-                alt="Wellcore Creatine" 
-                className="max-h-full object-contain mix-blend-multiply" 
-              />
-            </div>
-
-            <div>
-              <span className="text-slate-400 text-[8px] font-bold">122 g</span>
-              <h3 className="text-[10px] font-black text-slate-850 leading-tight mt-0.5">Wellcore</h3>
-              <p className="text-[8.5px] text-slate-500 font-semibold leading-tight truncate">Creatine</p>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-[9px] text-slate-400 line-through">₹699</span>
-                <span className="text-[11px] font-black text-slate-900">₹530</span>
-              </div>
-              <div className="mt-0.5 bg-[#FFF2EB] text-[#FF5C00] border border-[#FFD9C7]/30 rounded-xs text-[7.5px] font-black text-center py-0.2 leading-none">
-                ₹400 with UPI
-              </div>
-            </div>
-          </div>
-
-          {/* Product 3: Pilgrim Face Serum */}
-          <div 
-            onClick={() => navigate('/product-detail', { state: { product: { name: "Pilgrim 10% Niacinamide", price: 202, oldPrice: 249, rating: '4.4' } } })}
-            className="bg-white rounded-xl border border-slate-100 p-1.5 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-          >
-            <div className="absolute top-1 left-1 bg-[#FF5C00] text-white text-[7.5px] font-black px-1.2 py-0.3 rounded-xs shadow-2xs leading-none z-10">
-              20% OFF
-            </div>
-
-            <div className="h-14 flex items-center justify-center my-1.5">
-              <img 
-                src="https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&auto=format&fit=crop&q=60" 
-                alt="Pilgrim Face Serum" 
-                className="max-h-full object-contain mix-blend-multiply" 
-              />
-            </div>
-
-            <div>
-              <span className="text-slate-400 text-[8px] font-bold">10 ml</span>
-              <h3 className="text-[10px] font-black text-slate-850 leading-tight mt-0.5">Pilgrim 10%</h3>
-              <p className="text-[8.5px] text-slate-500 font-semibold leading-tight truncate">Niacinamide</p>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-[9px] text-slate-400 line-through">₹249</span>
-                <span className="text-[11px] font-black text-slate-900">₹202</span>
-              </div>
-              <button className="mt-0.5 w-full bg-white text-slate-700 border border-slate-200 rounded-full text-[8px] font-black py-0.2 text-center shadow-3xs active:scale-95 transition-transform">
-                SaveExtra
+        {/* Flash Deals Cards grid — nearby Quick Commerce products */}
+        {notDeliverable && (
+          <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
+            <p className="text-[11px] font-bold text-amber-900">
+              {liveLocation?.latitude == null
+                ? 'Share your location to see products from nearby sellers.'
+                : 'Quick Commerce is not available at this address yet.'}
+            </p>
+            {liveLocation?.latitude == null && (
+              <button
+                type="button"
+                onClick={() => setPromptOpen(true)}
+                className="mt-2 px-3 py-1.5 rounded-lg bg-[#FF5C00] text-white text-[10px] font-black"
+              >
+                Share Location
               </button>
-            </div>
+            )}
           </div>
+        )}
+        <div className="grid grid-cols-3 gap-2">
+          {nearbyLoading && (
+            <p className="col-span-3 text-center text-[10px] text-slate-500 py-4">Loading nearby products…</p>
+          )}
+          {!nearbyLoading && nearbyProducts.slice(0, 3).map((product) => {
+            const discount = product.oldPrice > product.price
+              ? `${Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}% OFF`
+              : null;
+            return (
+              <div
+                key={product.id}
+                onClick={() => navigate(`/product-detail/${product.id}`)}
+                className="bg-white rounded-xl border border-slate-100 p-1.5 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
+              >
+                {discount && (
+                  <div className="absolute top-1 left-1 bg-[#FF5C00] text-white text-[7.5px] font-black px-1.2 py-0.3 rounded-xs shadow-2xs leading-none z-10">
+                    {discount}
+                  </div>
+                )}
+                <div className="h-14 flex items-center justify-center my-1.5">
+                  <img src={product.image} alt={product.name} className="max-h-full object-contain mix-blend-multiply" />
+                </div>
+                <div>
+                  {product.distanceKm != null && (
+                    <span className="text-slate-400 text-[8px] font-bold">{product.distanceKm.toFixed(1)} km</span>
+                  )}
+                  <h3 className="text-[10px] font-black text-slate-850 leading-tight mt-0.5 line-clamp-2">{product.name}</h3>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    {product.oldPrice > product.price && (
+                      <span className="text-[9px] text-slate-400 line-through">₹{product.oldPrice}</span>
+                    )}
+                    <span className="text-[11px] font-black text-slate-900">₹{product.price}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -798,7 +791,11 @@ const QuickShop = () => {
           <span className="text-[12.5px] font-extrabold text-slate-800 leading-snug">
             Share your location to access QuickShop & explore offers
           </span>
-          <button className="bg-[#FF5C00] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs">
+          <button
+            type="button"
+            onClick={() => setPromptOpen(true)}
+            className="bg-[#FF5C00] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs"
+          >
             Share Location
           </button>
         </div>
@@ -899,7 +896,7 @@ const QuickShop = () => {
 
       {/* ── RESTORED CATEGORY SECTIONS (Mobile View) ── */}
       <div className="md:hidden px-4 space-y-8">
-        {CATEGORIES_DATA.map((section, sIdx) => (
+        {categorySections.map((section, sIdx) => (
           <div key={sIdx} className="mb-6">
             <h2 className="text-[15px] font-extrabold text-[#F26522] mb-3 tracking-tight pl-1">
               {section.title}
@@ -922,7 +919,7 @@ const QuickShop = () => {
 
       {/* ── RESTORED CATEGORY SECTIONS (Desktop View) ── */}
       <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-4 md:py-6 space-y-8">
-        {CATEGORIES_DATA.map((section, sIdx) => (
+        {categorySections.map((section, sIdx) => (
           <div key={sIdx} className="flex flex-col">
             {/* Header Banner */}
             <div className={`px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[#F26522]`}>

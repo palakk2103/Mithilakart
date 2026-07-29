@@ -1,0 +1,30 @@
+const SUPPORT_TICKET_STATUS = {
+  OPEN: 'open',
+  IN_PROGRESS: 'in_progress',
+  RESOLVED: 'resolved',
+  CLOSED: 'closed',
+};
+
+const SUPPORT_TICKET_STATUS_VALUES = Object.values(SUPPORT_TICKET_STATUS);
+
+const NOTIFICATION_CHANNEL = {
+  PUSH: 'push',
+  SMS: 'sms',
+  EMAIL: 'email',
+  IN_APP: 'in_app',
+};
+
+const NOTIFICATION_CHANNEL_VALUES = Object.values(NOTIFICATION_CHANNEL);
+
+const SUPPORTED_LOCALES = ['en', 'hi', 'bn', 'mai'];
+
+const PAYOUT_DUAL_APPROVAL_THRESHOLD = 50000;
+
+module.exports = {
+  SUPPORT_TICKET_STATUS,
+  SUPPORT_TICKET_STATUS_VALUES,
+  NOTIFICATION_CHANNEL,
+  NOTIFICATION_CHANNEL_VALUES,
+  SUPPORTED_LOCALES,
+  PAYOUT_DUAL_APPROVAL_THRESHOLD,
+};

@@ -1,5 +1,7 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supportApi } from '../../services/api';
+import { extractList, mapTicket } from '../../utils/mappers';
 import { 
   HelpCircle, Search, Filter, MoreVertical, 
   CheckCircle2, Clock, AlertCircle, MessageSquare,
@@ -7,15 +9,29 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_TICKETS = [
-  { id: 'TIC-9842', user: 'Rahul Sharma', subject: 'Payment Deduction Failed', category: 'Payments', status: 'Open', priority: 'High', date: '2026-05-10' },
-  { id: 'TIC-9843', user: 'Priyanka Das', subject: 'Wrong size delivered', category: 'Returns', status: 'In-Progress', priority: 'Medium', date: '2026-05-09' },
-  { id: 'TIC-9844', user: 'Amit Verma', subject: 'How to use wallet balance?', category: 'General', status: 'Closed', priority: 'Low', date: '2026-05-08' },
-];
-
 const Tickets = () => {
-  const [tickets, setTickets] = useState(MOCK_TICKETS);
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('All');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await supportApi.getAll();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setTickets([]);
+      } else {
+        setError(null);
+        setTickets(extractList(data).map(mapTicket));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const tabs = ['All', 'Open', 'In-Progress', 'Closed'];
 

@@ -1,30 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MessageSquare, ChevronRight, HelpCircle, User, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getMyQuestions } from '../../services/userApi';
+import { extractList, mapQuestion } from '../../utils/mappers';
 
 const QuestionsAnswers = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
+  const [qaData, setQaData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const qaData = [
-    {
-      id: 1,
-      product: 'Premium Gold Finish Watch',
-      question: 'Is this watch water resistant?',
-      answer: 'Yes, it is 5ATM water resistant.',
-      status: 'Answered',
-      date: '20 Apr 2026'
-    },
-    {
-      id: 2,
-      product: 'Geometric Pendant',
-      question: 'Does the gold fade over time?',
-      answer: null,
-      status: 'Pending',
-      date: '25 Apr 2026'
-    }
-  ];
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getMyQuestions();
+        if (!cancelled) {
+          setQaData(extractList(data).map(mapQuestion));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load questions');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredQA = qaData.filter(item => {
     if (activeTab === 'All') return true;
@@ -78,6 +88,8 @@ const QuestionsAnswers = () => {
         </div>
 
         <div className="space-y-4">
+          {loading && <p className="text-sm text-gray-500">Loading questions...</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
            <AnimatePresence mode="popLayout">
              {filteredQA.map((item) => (
                <motion.div 

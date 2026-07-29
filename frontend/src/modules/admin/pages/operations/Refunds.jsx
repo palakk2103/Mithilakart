@@ -1,5 +1,8 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { refundsApi } from '../../services/api';
+import { extractList, mapRefund } from '../../utils/mappers';
+import { toast } from 'react-hot-toast';
 import { 
   RotateCcw, Search, Filter, MoreVertical, 
   CheckCircle2, XCircle, Clock, Truck, 
@@ -7,11 +10,10 @@ import {
   Wallet, Landmark
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_REFUNDS } from '../../constants/dummyData';
 import { StatusBadge, Pagination, ConfirmDialog } from '../../components/ui';
 
 const Refunds = () => {
-  const [refundsList, setRefundsList] = useState(MOCK_REFUNDS);
+  const [refundsList, setRefundsList] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -19,6 +21,25 @@ const Refunds = () => {
   const [confirmType, setConfirmType] = useState(null); // 'approve' | 'reject'
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchRefunds = async () => {
+    setFetchLoading(true);
+    const { data, error: apiError } = await refundsApi.getAll();
+    if (apiError) {
+      setError(apiError);
+      setRefundsList([]);
+    } else {
+      setError(null);
+      setRefundsList(extractList(data).map(mapRefund));
+    }
+    setFetchLoading(false);
+  };
+
+  useEffect(() => {
+    fetchRefunds();
+  }, []);
 
   const itemsPerPage = 10;
   const tabs = ['All', 'Pending', 'Approved', 'Processing', 'Completed', 'Rejected'];
@@ -41,19 +62,21 @@ const Refunds = () => {
   };
 
   const handleConfirm = async () => {
+    if (!selectedRefund?.returnId || selectedRefund.returnId === '—') {
+      toast.error('Missing return ID for this refund');
+      setIsConfirmOpen(false);
+      return;
+    }
+
     setLoading(true);
-    // Simulate API Call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setRefundsList(prev => prev.map(ref => {
-      if (ref.id === selectedRefund.id) {
-        return {
-          ...ref,
-          status: confirmType === 'approve' ? 'Approved' : 'Rejected'
-        };
-      }
-      return ref;
-    }));
+    const { error: apiError } = await refundsApi.process({
+      returnId: selectedRefund.returnId,
+      method: confirmType === 'approve' ? 'wallet' : 'wallet',
+    });
+
+    if (!apiError) {
+      await fetchRefunds();
+    }
 
     setLoading(false);
     setIsConfirmOpen(false);
@@ -179,7 +202,7 @@ const Refunds = () => {
                       <StatusBadge status={ref.status} />
                     </td>
                     <td className="px-6 py-5 text-right">
-                      {ref.status === 'Pending' ? (
+                      {['Pending', 'Processing'].includes(ref.status) && ref.returnId && ref.returnId !== '—' ? (
                         <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => handleActionClick(ref, 'approve')}

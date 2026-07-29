@@ -1,15 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Download, CheckCircle2, XCircle, Clock, Truck } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { motion } from 'framer-motion';
-import { ORDER_REPORT_DATA } from '../../constants/dummyData';
+import { reportsApi } from '../../services/api';
+import { mapOrderReportData } from '../../utils/mappers';
 
 const OrderReport = () => {
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await reportsApi.getOrderReport({ days: 180 });
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setReportData([]);
+      } else {
+        setError(null);
+        setReportData(mapOrderReportData(data));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const stats = [
-    { label: 'Total Orders', value: '9,820', icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'Completed', value: '8,650', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
-    { label: 'Cancelled', value: '635', icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
-    { label: 'Returned', value: '535', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { label: 'Total Orders', value: reportData.reduce((s, r) => s + (r.total || 0), 0).toLocaleString() || '0', icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Completed', value: reportData.reduce((s, r) => s + (r.completed || 0), 0).toLocaleString() || '0', icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
+    { label: 'Cancelled', value: reportData.reduce((s, r) => s + (r.cancelled || 0), 0).toLocaleString() || '0', icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
+    { label: 'Returned', value: reportData.reduce((s, r) => s + (r.returned || 0), 0).toLocaleString() || '0', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
   ];
 
   return (
@@ -38,7 +61,7 @@ const OrderReport = () => {
         <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight font-montserrat mb-8">Order Status Distribution</h3>
         <div className="h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={ORDER_REPORT_DATA}>
+            <BarChart data={reportData.length ? reportData : [{ month: '—', completed: 0, cancelled: 0, returned: 0 }]}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dy={10} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dx={-10} />
@@ -58,7 +81,7 @@ const OrderReport = () => {
           <table className="w-full text-left">
             <thead><tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-6 py-4">Month</th><th className="px-6 py-4">Total</th><th className="px-6 py-4">Completed</th><th className="px-6 py-4">Cancelled</th><th className="px-6 py-4">Returned</th><th className="px-6 py-4">Completion Rate</th></tr></thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {ORDER_REPORT_DATA.map((row, i) => (
+              {reportData.map((row, i) => (
                 <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-5 font-bold text-slate-900 font-montserrat">{row.month}</td>
                   <td className="px-6 py-5 font-black text-slate-900 font-roboto">{row.total.toLocaleString()}</td>

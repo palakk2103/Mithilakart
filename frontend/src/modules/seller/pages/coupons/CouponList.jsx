@@ -1,25 +1,69 @@
 /**
  * Coupon Management Page (List + Create inline)
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { Plus, Ticket, Edit3, Trash2, Calendar, Percent, DollarSign, X } from 'lucide-react';
 import { PageHeader, ConfirmModal, StatusBadge } from '../../components/common';
 import { Card, Button, Badge } from '../../components/ui';
-import { coupons } from '../../utils/dummyData';
+import { getCoupons, createCoupon, updateCoupon, deleteCoupon } from '../../services/sellerApi';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const CouponList = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ open: false, coupon: null });
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
-  const onCreateCoupon = (data) => {
-    toast.success(`Coupon "${data.code}" created successfully!`);
-    setShowCreateForm(false);
-    reset();
+  const fetchCoupons = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getCoupons();
+      setCoupons(data?.coupons || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load coupons');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCoupons();
+  }, []);
+
+  const onCreateCoupon = async (data) => {
+    try {
+      await createCoupon({
+        ...data,
+        code: data.code?.toUpperCase(),
+        value: Number(data.value),
+        minOrder: data.minOrder ? Number(data.minOrder) : 0,
+        maxDiscount: data.maxDiscount ? Number(data.maxDiscount) : 0,
+        usageLimit: data.usageLimit ? Number(data.usageLimit) : 100,
+      });
+      toast.success(`Coupon "${data.code}" created successfully!`);
+      setShowCreateForm(false);
+      reset();
+      fetchCoupons();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to create coupon');
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteCoupon(deleteModal.coupon?.id);
+      toast.success('Coupon deleted');
+      setDeleteModal({ open: false, coupon: null });
+      fetchCoupons();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to delete coupon');
+    }
   };
 
   const inputClass = "w-full px-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all";
@@ -100,9 +144,9 @@ const CouponList = () => {
               </div>
 
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-400">Min Order</span><span className="text-gray-700 font-medium">{formatCurrency(coupon.minOrder)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Max Discount</span><span className="text-gray-700 font-medium">{formatCurrency(coupon.maxDiscount)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Usage</span><span className="text-gray-700 font-medium">{coupon.usageCount}/{coupon.usageLimit}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Min Order</span><span className="text-gray-700 font-medium">{formatCurrency(coupon.minOrder || 0)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Max Discount</span><span className="text-gray-700 font-medium">{formatCurrency(coupon.maxDiscount || 0)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Usage</span><span className="text-gray-700 font-medium">{coupon.usageCount || 0}/{coupon.usageLimit || 0}</span></div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 flex items-center gap-1"><Calendar size={12} /> Expires</span>
                   <span className="text-gray-700 font-medium">{formatDate(coupon.expiryDate)}</span>
@@ -112,7 +156,7 @@ const CouponList = () => {
               {/* Usage Bar */}
               <div className="mt-4">
                 <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#2563EB] rounded-full transition-all" style={{ width: `${(coupon.usageCount / coupon.usageLimit) * 100}%` }} />
+                  <div className="h-full bg-[#2563EB] rounded-full transition-all" style={{ width: `${coupon.usageLimit ? ((coupon.usageCount || 0) / coupon.usageLimit) * 100 : 0}%` }} />
                 </div>
               </div>
 
@@ -130,7 +174,7 @@ const CouponList = () => {
       <ConfirmModal
         isOpen={deleteModal.open}
         onClose={() => setDeleteModal({ open: false, coupon: null })}
-        onConfirm={() => { toast.success('Coupon deleted'); setDeleteModal({ open: false, coupon: null }); }}
+        onConfirm={handleDelete}
         type="delete" title="Delete Coupon"
         message={`Delete coupon "${deleteModal.coupon?.code}"? This cannot be undone.`}
         confirmLabel="Delete Coupon"

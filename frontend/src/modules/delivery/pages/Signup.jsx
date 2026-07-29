@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { User, Phone, Mail, Lock, Truck, MapPin, ArrowRight, ChevronLeft, ShieldCheck, Camera, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-
-import useDeliveryStore from '../../../store/useDeliveryStore';
+import { signupDelivery, sendOtp } from '../services/deliveryApi';
+import { useLocation } from '../../../shared/context/LocationContext';
+import { applyOtpSendResult, mapDeliveryVehicleType } from '../../../shared/utils/otpResponse';
 
 const SectionTitle = ({ title }) => (
   <div className="border-b border-[#c6e9d0] pb-1.5 mb-4 mt-6">
@@ -80,8 +81,11 @@ const FileUpload = ({ label, required = false, value, onChange }) => {
 
 const DeliverySignup = () => {
   const navigate = useNavigate();
-  const addDeliveryPartner = useDeliveryStore((state) => state.addDeliveryPartner);
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpHint, setOtpHint] = useState('');
+  const { location: liveLocation, refreshLiveLocation } = useLocation();
   const [formData, setFormData] = useState({
     fullName: '',
     mobile: '',
@@ -127,15 +131,96 @@ const DeliverySignup = () => {
     setFormData(prev => ({ ...prev, [field]: base64 }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSendPhoneOtp = async () => {
+    const digits = formData.mobile.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      toast.error('Enter a valid 10-digit mobile number');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const result = await sendOtp('+91', digits);
+      setOtpSent(true);
+      let hint = 'OTP sent to your phone';
+      applyOtpSendResult(result, {
+        setOtp,
+        setSuccess: (msg) => { hint = msg; setOtpHint(msg); },
+        setOtpSent,
+      });
+      toast.success(hint, { duration: result?.devOtp ? 10000 : 4000 });
+    } catch (err) {
+      toast.error(err.message || 'Failed to send OTP');
+    } finally {
       setLoading(false);
-      addDeliveryPartner(formData);
-      toast.success('Registration request submitted successfully!');
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const mobile = formData.mobile.replace(/\D/g, '');
+    if (mobile.length !== 10) {
+      toast.error('Enter a valid 10-digit mobile number');
+      return;
+    }
+    if (!formData.fullName.trim()) {
+      toast.error('Full name is required');
+      return;
+    }
+    if (!/^\d{12}$/.test(formData.aadhaar.replace(/\D/g, ''))) {
+      toast.error('Enter a valid 12-digit Aadhaar number');
+      return;
+    }
+    if (!formData.vehicleType) {
+      toast.error('Select vehicle type');
+      return;
+    }
+    if (!formData.licenseNumber.trim() || !formData.vehicleNumber.trim()) {
+      toast.error('Driving license and vehicle number are required');
+      return;
+    }
+
+    if (!formData.city.trim()) {
+      toast.error('City is required');
+      return;
+    }
+
+    if (!otpSent) {
+      await handleSendPhoneOtp();
+      return;
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+      toast.error('Enter the 6-digit OTP');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signupDelivery({
+        name: formData.fullName.trim(),
+        countryCode: '+91',
+        phone: mobile,
+        vehicleType: mapDeliveryVehicleType(formData.vehicleType),
+        aadharNumber: formData.aadhaar.replace(/\D/g, ''),
+        drivingLicenseNumber: formData.licenseNumber.trim(),
+        vehicleRegistrationNumber: formData.vehicleNumber.trim(),
+        addressLine: formData.currAddress.trim() || liveLocation?.formattedAddress || undefined,
+        city: formData.city.trim(),
+        state: formData.state.trim() || liveLocation?.state || undefined,
+        pincode: formData.pinCode.replace(/\D/g, '') || liveLocation?.pincode || undefined,
+        latitude: liveLocation?.latitude,
+        longitude: liveLocation?.longitude,
+        placeId: liveLocation?.placeId,
+        otp,
+      });
+      toast.success('Application submitted! Login after admin approval.');
       navigate('/delivery/auth');
-    }, 2000);
+    } catch (err) {
+      toast.error(err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Inline SVG pattern for background
@@ -188,6 +273,30 @@ const DeliverySignup = () => {
           <div className="space-y-3.5">
             <InputField label="Full Name" name="fullName" placeholder="Full name" required value={formData.fullName} onChange={handleChange} />
             <InputField label="Mobile Number" name="mobile" type="tel" placeholder="Mobile" required value={formData.mobile} onChange={handleChange} />
+            {otpSent && (
+              <div>
+                <label className="text-[11px] font-bold text-[#1f592c] mb-1 block">OTP from SMS</label>
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit OTP"
+                  className="w-full bg-[#e8fced] border-2 border-transparent focus:border-[#42c585] rounded-[16px] px-4 py-2.5 text-[13px] font-semibold tracking-widest text-center"
+                  required
+                />
+                {otpHint && <p className="text-[11px] text-[#0c5c20] font-bold mt-2 text-center">{otpHint}</p>}
+              </div>
+            )}
+            {!otpSent && (
+              <button
+                type="button"
+                onClick={handleSendPhoneOtp}
+                disabled={loading}
+                className="w-full py-3 bg-[#0c5c20]/90 text-white rounded-[16px] text-sm font-bold"
+              >
+                Send OTP to Mobile
+              </button>
+            )}
             <InputField label="Alt Mobile" name="altMobile" type="tel" placeholder="Optional" value={formData.altMobile} onChange={handleChange} />
             <InputField label="Email ID" name="email" type="email" placeholder="Email" required value={formData.email} onChange={handleChange} />
             <InputField label="Date of Birth" name="dob" type="date" required value={formData.dob} onChange={handleChange} />
@@ -196,6 +305,26 @@ const DeliverySignup = () => {
             <InputField label="Current Address" name="currAddress" placeholder="Full address" required value={formData.currAddress} onChange={handleChange} />
             <InputField label="Permanent Address" name="permAddress" placeholder="Permanent address" value={formData.permAddress} onChange={handleChange} />
             <InputField label="City" name="city" placeholder="City" required value={formData.city} onChange={handleChange} />
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const loc = await refreshLiveLocation({ silent: false });
+                  setFormData((prev) => ({
+                    ...prev,
+                    city: loc?.city || prev.city,
+                    state: loc?.state || prev.state,
+                    pinCode: loc?.pincode || prev.pinCode,
+                    currAddress: loc?.formattedAddress || prev.currAddress,
+                  }));
+                } catch {
+                  // handled in hook
+                }
+              }}
+              className="w-full py-2.5 rounded-xl border border-[#0c5c20]/20 text-[#0c5c20] text-sm font-bold"
+            >
+              Use my live location
+            </button>
             <InputField label="State" name="state" placeholder="State" value={formData.state} onChange={handleChange} />
             <InputField label="PIN Code" name="pinCode" placeholder="PIN" required value={formData.pinCode} onChange={handleChange} />
             <InputField label="Emergency Contact" name="emergencyContact" type="tel" placeholder="Emergency #" value={formData.emergencyContact} onChange={handleChange} />
@@ -277,8 +406,10 @@ const DeliverySignup = () => {
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
+            ) : otpSent ? (
               'Submit Application'
+            ) : (
+              'Send OTP & Continue'
             )}
           </button>
         </form>

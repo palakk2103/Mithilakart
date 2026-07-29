@@ -1,5 +1,5 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Ticket, Plus, Search, Filter, MoreVertical, 
   Download, CheckCircle2, XCircle, Clock, 
@@ -7,18 +7,52 @@ import {
   ArrowUpRight, Users, DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { couponsApi } from '../../services/api';
+import { extractList, formatDate, titleCaseStatus } from '../../utils/mappers';
 
-const MOCK_COUPONS = [
-  { id: 1, code: 'WELCOME50', type: 'Percentage', value: '50%', minOrder: '₹500', expiry: '2026-12-31', status: 'Active', usage: 1250 },
-  { id: 2, code: 'FLAT200', type: 'Flat Amount', value: '₹200', minOrder: '₹1200', expiry: '2026-06-30', status: 'Active', usage: 450 },
-  { id: 3, code: 'FESTIVE10', type: 'Percentage', value: '10%', minOrder: '₹0', expiry: '2026-05-20', status: 'Expiring', usage: 890 },
-  { id: 4, code: 'SAVEBIG', type: 'Percentage', value: '25%', minOrder: '₹2000', expiry: '2026-01-15', status: 'Paused', usage: 0 },
-];
+const mapAdminCoupon = (coupon = {}) => {
+  const now = Date.now();
+  const expiresAt = coupon.expiresAt ? new Date(coupon.expiresAt).getTime() : null;
+  let status = 'Active';
+  if (!coupon.isActive) status = 'Paused';
+  else if (expiresAt && expiresAt < now) status = 'Expiring';
+  else if (expiresAt && expiresAt - now < 7 * 24 * 60 * 60 * 1000) status = 'Expiring';
+
+  return {
+    id: coupon._id || coupon.id,
+    code: coupon.code || '—',
+    type: titleCaseStatus(coupon.type || 'percentage'),
+    value: coupon.type === 'percentage' || coupon.type === 'percent'
+      ? `${coupon.value}%`
+      : `₹${Number(coupon.value || 0).toLocaleString('en-IN')}`,
+    minOrder: coupon.minOrderAmount ? `₹${Number(coupon.minOrderAmount).toLocaleString('en-IN')}` : '₹0',
+    expiry: formatDate(coupon.expiresAt),
+    usage: coupon.usageCount ?? 0,
+    status,
+  };
+};
 
 const Coupons = () => {
-  const [coupons, setCoupons] = useState(MOCK_COUPONS);
+  const [coupons, setCoupons] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await couponsApi.getAll({ limit: 50 });
+      if (cancelled) return;
+      if (!error) {
+        setCoupons(extractList(data).map(mapAdminCoupon));
+      } else {
+        setCoupons([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const StatusBadge = ({ status }) => {
     const styles = {
@@ -106,7 +140,18 @@ const Coupons = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {coupons.map((coupon, i) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400 text-sm font-bold">Loading coupons...</td>
+                </tr>
+              ) : coupons.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <p className="text-sm font-black text-slate-500 uppercase tracking-widest">No coupons found</p>
+                    <p className="text-xs text-slate-400 mt-2">Create a coupon to start offering discounts.</p>
+                  </td>
+                </tr>
+              ) : coupons.filter((coupon) => !searchQuery || coupon.code.toLowerCase().includes(searchQuery.toLowerCase())).map((coupon) => (
                 <tr key={coupon.id} className="group hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">

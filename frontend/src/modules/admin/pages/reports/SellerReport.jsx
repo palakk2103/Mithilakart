@@ -1,19 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Store, Download, Calendar, TrendingUp, ShoppingBag, RotateCcw, Star } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
-import { SELLER_REPORT_DATA } from '../../constants/dummyData';
+import { reportsApi } from '../../services/api';
+import { mapSellerReportData } from '../../utils/mappers';
 import { StatusBadge } from '../../components/ui';
 
 const SellerReport = () => {
+  const [sellerData, setSellerData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await reportsApi.getSellerReport();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setSellerData([]);
+      } else {
+        setError(null);
+        setSellerData(mapSellerReportData(data));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const stats = [
-    { label: 'Total Sellers', value: '125', icon: Store, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Total Sellers', value: sellerData.length.toString(), icon: Store, color: 'text-blue-500', bg: 'bg-blue-50' },
     { label: 'Avg Seller Revenue', value: '₹2.8L', icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-50' },
     { label: 'Avg Orders/Seller', value: '243', icon: ShoppingBag, color: 'text-indigo-500', bg: 'bg-indigo-50' },
     { label: 'Avg Rating', value: '4.2', icon: Star, color: 'text-amber-500', bg: 'bg-amber-50' },
   ];
 
-  const chartData = SELLER_REPORT_DATA.map(s => ({ name: s.name, sales: parseInt(s.totalSales.replace(/[₹,]/g, '')), orders: s.orders }));
+  const chartData = sellerData.map(s => ({ name: s.name, sales: parseInt(String(s.totalSales).replace(/[₹,]/g, ''), 10) || 0, orders: s.orders }));
 
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-700">
@@ -62,7 +85,7 @@ const SellerReport = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {SELLER_REPORT_DATA.map((seller, i) => (
+              {sellerData.map((seller, i) => (
                 <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-5"><div className="flex items-center gap-3"><div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500 font-black text-xs">{seller.name.charAt(0)}</div><div><p className="font-bold text-slate-900 font-montserrat">{seller.name}</p><p className="text-[10px] text-slate-400 font-bold">{seller.id}</p></div></div></td>
                   <td className="px-6 py-5 font-black text-slate-900 font-roboto">{seller.totalSales}</td>

@@ -2,275 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Share2, ChevronDown, Heart } from 'lucide-react';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
-import { getCurrentMarketplaceTab, productBelongsToTab } from '../../../shared/utils/marketplaceHelpers';
 import closedShutter from '../../../assets/closed_shutter.png';
-import { handleImageError, getProductImage, DEFAULT_PRODUCT_IMAGE as FALLBACK_IMAGE } from '../../../shared/utils/imageUtils';
+import { getCategories, getCategoryProducts, getNearbyProducts } from '../services/catalogApi';
+import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
+import { formatLocationLabel } from '../../../shared/services/locationService';
+import { findCategoryByName, extractList, mapProductForCard } from '../utils/mappers';
+import { addProductToCart } from '../utils/cartUtils';
 
+const FALLBACK_IMAGE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="%23fdfbf7" rx="12"/><text x="75" y="80" font-size="12" font-family="sans-serif" font-weight="bold" fill="%23d3a075" text-anchor="middle">Mithilakart</text></svg>`;
 
-const DYNAMIC_DATA = {
-  'Fruits & Vegetables': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?w=100&auto=format&fit=crop&q=60' },
-      { id: 'veg', name: 'Fresh Vegetables', icon: 'https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=100&auto=format&fit=crop&q=60' },
-      { id: 'fruits', name: 'Fresh Fruits', icon: 'https://images.unsplash.com/photo-1610832958506-ee5633619144?w=100&auto=format&fit=crop&q=60' },
-      { id: 'exotics', name: 'Exotics', icon: 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?w=100&auto=format&fit=crop&q=60' },
-    ],
-    products: [
-      { id: 'fv1', name: 'Jumbo Indian Cherry', img: 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?w=300&auto=format&fit=crop&q=60', brand: 'Fresho', weight: '200 g', price: 227, oldPrice: 290, eta: '14 mins', stock: '2 left', tags: ['Carbide Free', 'Pulp-Rich Sweet'], category: 'fruits' },
-      { id: 'fv2', name: 'Safeda / Banganapalli Mango', img: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=300&auto=format&fit=crop&q=60', brand: 'Fresho', weight: '750 - 850 g', subText: '2 pcs', price: 96, oldPrice: 120, eta: '14 mins', tags: ['Carbide Free', 'Pulp-Rich Sweet'], category: 'fruits' },
-      { id: 'fv3', name: 'Litchi', img: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=300&auto=format&fit=crop&q=60', brand: 'Fresho', weight: '500 g', price: 209, oldPrice: 257, eta: '14 mins', stock: '1 left', badge: "Season's Best", tags: ['Fresh & Juicy'], category: 'fruits' },
-      { id: 'fv4', name: 'Jamun', img: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=300&auto=format&fit=crop&q=60', brand: 'Fresho', weight: '250 g', price: 132, oldPrice: 153, eta: '14 mins', stock: '2 left', tags: ['Rich in iron'], category: 'fruits' },
-      { id: 'fv5', name: 'Fresh Tomato Hybrid', img: 'https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60', brand: 'Organic Farms', weight: '500 g', price: 24, oldPrice: 32, eta: '14 mins', tags: ['Freshly Picked'], category: 'veg' },
-      { id: 'fv6', name: 'New Potato (Aloo)', img: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60', brand: 'Organic Farms', weight: '1 kg', price: 38, oldPrice: 48, eta: '14 mins', tags: ['Daily Essentials'], category: 'veg' },
-      { id: 'fv7', name: 'Hybrid Broccoli', img: 'https://images.unsplash.com/photo-1584270354949-c26b0d5b4a0c?w=300&auto=format&fit=crop&q=60', brand: 'Exotic Farms', weight: '1 pc', subText: 'approx 300g', price: 89, oldPrice: 110, eta: '14 mins', badge: 'Exotic', tags: ['High Fiber'], category: 'exotics' }
-    ]
-  },
-  'Atta, Rice & Dal': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100&auto=format&fit=crop&q=60' },
-      { id: 'atta', name: 'Atta & Flours', icon: 'https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?w=100&auto=format&fit=crop&q=60' },
-      { id: 'rice', name: 'Rice & Rice Products', icon: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=100&auto=format&fit=crop&q=60' },
-      { id: 'dal', name: 'Dals & Pulses', icon: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'ard1', name: 'Aashirvaad Shudh Chakki Atta', img: 'https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?w=300&auto=format&fit=crop&q=60', brand: 'Aashirvaad', weight: '5 kg', price: 260, oldPrice: 295, eta: '14 mins', tags: ['100% Whole Wheat'], category: 'atta' },
-      { id: 'ard2', name: 'Fortune Premium Basmati Rice', img: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&auto=format&fit=crop&q=60', brand: 'Fortune', weight: '1 kg', price: 115, oldPrice: 145, eta: '14 mins', tags: ['Super Long Grain'], category: 'rice' },
-      { id: 'ard3', name: 'Tata Sampann Unpolished Toor Dal', img: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=300&auto=format&fit=crop&q=60', brand: 'Tata Sampann', weight: '1 kg', price: 189, oldPrice: 220, eta: '14 mins', tags: ['Unpolished & Natural'], category: 'dal' },
-      { id: 'ard4', name: 'Tata Sampann Moong Dal', img: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=300&auto=format&fit=crop&q=60', brand: 'Tata Sampann', weight: '500 g', price: 95, oldPrice: 115, eta: '14 mins', tags: ['Protein Rich'], category: 'dal' }
-    ]
-  },
-  'Oil, Ghee & Masala': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100&auto=format&fit=crop&q=60' },
-      { id: 'oil', name: 'Cooking Oils', icon: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100&auto=format&fit=crop&q=60' },
-      { id: 'ghee', name: 'Ghee & Vanaspati', icon: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=100&auto=format&fit=crop&q=60' },
-      { id: 'spices', name: 'Spices & Masalas', icon: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'ogm1', name: 'Fortune Mustard Oil Kachi Ghani', img: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&auto=format&fit=crop&q=60', brand: 'Fortune', weight: '1 L', price: 175, oldPrice: 195, eta: '14 mins', tags: ['Cold Pressed'], category: 'oil' },
-      { id: 'ogm2', name: 'Amul Pure Ghee Tin', img: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&auto=format&fit=crop&q=60', brand: 'Amul', weight: '1 L', price: 690, oldPrice: 720, eta: '14 mins', tags: ['Pure Cow Ghee'], category: 'ghee' },
-      { id: 'ogm3', name: 'Everest Garam Masala Powder', img: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=300&auto=format&fit=crop&q=60', brand: 'Everest', weight: '100 g', price: 92, oldPrice: 105, eta: '14 mins', tags: ['Rich Aroma'], category: 'spices' }
-    ]
-  },
-  'Dairy, Bread & Eggs': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=100&auto=format&fit=crop&q=60' },
-      { id: 'milk', name: 'Milk', icon: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=100&auto=format&fit=crop&q=60' },
-      { id: 'bread', name: 'Bread & Buns', icon: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=100&auto=format&fit=crop&q=60' },
-      { id: 'eggs', name: 'Eggs', icon: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'dbe1', name: 'Amul Taaza Fresh Toned Milk', img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60', brand: 'Amul', weight: '1 L', price: 66, oldPrice: 68, eta: '14 mins', tags: ['Pasteurised Toned'], category: 'milk' },
-      { id: 'dbe2', name: 'Harvest Gold Brown Bread', img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60', brand: 'Harvest Gold', weight: '400 g', price: 45, oldPrice: 50, eta: '14 mins', tags: ['High Fiber'], category: 'bread' },
-      { id: 'dbe3', name: 'Fresh White Eggs Pack', img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60', brand: 'Fresho', weight: '6 pcs', price: 42, oldPrice: 55, eta: '14 mins', tags: ['Rich in Protein'], category: 'eggs' }
-    ]
-  },
-  'Chips & Namkeens': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1599490659273-e3a728591176?w=100&auto=format&fit=crop&q=60' },
-      { id: 'chips', name: 'Potato Chips', icon: 'https://images.unsplash.com/photo-1599490659273-e3a728591176?w=100&auto=format&fit=crop&q=60' },
-      { id: 'namkeen', name: 'Namkeens & Bhujia', icon: 'https://images.unsplash.com/photo-1599490659273-e3a728591176?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'cn1', name: 'Lays Classic Salted Potato Chips', img: 'https://images.unsplash.com/photo-1599490659273-e3a728591176?w=300&auto=format&fit=crop&q=60', brand: 'Lays', weight: '50 g', price: 20, oldPrice: 20, eta: '14 mins', tags: ['Crisp & Salty'], category: 'chips' },
-      { id: 'cn2', name: 'Haldirams Aloo Bhujia Namkeen', img: 'https://images.unsplash.com/photo-1599490659273-e3a728591176?w=300&auto=format&fit=crop&q=60', brand: 'Haldirams', weight: '150 g', price: 45, oldPrice: 50, eta: '14 mins', tags: ['Spicy Potato Strings'], category: 'namkeen' }
-    ]
-  },
-  'Ice Creams': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1501443762811-c52940c6a2c3?w=100&auto=format&fit=crop&q=60' },
-      { id: 'tub', name: 'Tubs', icon: 'https://images.unsplash.com/photo-1501443762811-c52940c6a2c3?w=100&auto=format&fit=crop&q=60' },
-      { id: 'cone', name: 'Cones & Cups', icon: 'https://images.unsplash.com/photo-1501443762811-c52940c6a2c3?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'ic1', name: 'Kwality Walls Butterscotch Tub', img: 'https://images.unsplash.com/photo-1501443762811-c52940c6a2c3?w=300&auto=format&fit=crop&q=60', brand: 'Kwality Walls', weight: '700 ml', price: 160, oldPrice: 190, eta: '14 mins', tags: ['Butterscotch Crunch'], category: 'tub' },
-      { id: 'ic2', name: 'Amul Chocolate Cone', img: 'https://images.unsplash.com/photo-1501443762811-c52940c6a2c3?w=300&auto=format&fit=crop&q=60', brand: 'Amul', weight: '120 ml', price: 40, oldPrice: 45, eta: '14 mins', tags: ['Rich Chocolate'], category: 'cone' }
-    ]
-  },
-  'Drinks & Juices': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=100&auto=format&fit=crop&q=60' },
-      { id: 'soft', name: 'Soft Drinks', icon: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=100&auto=format&fit=crop&q=60' },
-      { id: 'juice', name: 'Fruit Juices', icon: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'dj1', name: 'Coca-Cola Soft Drink Can', img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300&auto=format&fit=crop&q=60', brand: 'Coca-Cola', weight: '330 ml', price: 40, oldPrice: 40, eta: '14 mins', tags: ['Refreshing Fizz'], category: 'soft' },
-      { id: 'dj2', name: 'Real Mixed Fruit Juice Pack', img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300&auto=format&fit=crop&q=60', brand: 'Real', weight: '1 L', price: 110, oldPrice: 125, eta: '14 mins', tags: ['100% Fruit Juice'], category: 'juice' }
-    ]
-  },
-  'Sweets & Chocolates': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=100&auto=format&fit=crop&q=60' },
-      { id: 'choc', name: 'Chocolates', icon: 'https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=100&auto=format&fit=crop&q=60' },
-      { id: 'sweets', name: 'Indian Sweets', icon: 'https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'sc1', name: 'Cadbury Dairy Milk Silk Chocolate', img: 'https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=300&auto=format&fit=crop&q=60', brand: 'Cadbury', weight: '150 g', price: 175, oldPrice: 190, eta: '14 mins', tags: ['Smooth & Creamy'], category: 'choc' },
-      { id: 'sc2', name: 'Amul Fruit & Nut Dark Chocolate', img: 'https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=300&auto=format&fit=crop&q=60', brand: 'Amul', weight: '150 g', price: 100, oldPrice: 120, eta: '14 mins', tags: ['Rich Cocoa'], category: 'choc' },
-      { id: 'sc3', name: 'Haldiram Gulab Jamun Tin', img: 'https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=300&auto=format&fit=crop&q=60', brand: 'Haldirams', weight: '1 kg', price: 220, oldPrice: 250, eta: '14 mins', tags: ['Festive Sweet'], category: 'sweets' }
-    ]
-  },
-  'Tea, Coffee & Milk Drinks': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=100&auto=format&fit=crop&q=60' },
-      { id: 'tea', name: 'Tea', icon: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=100&auto=format&fit=crop&q=60' },
-      { id: 'coffee', name: 'Coffee', icon: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'tcm1', name: 'Brooke Bond Red Label Tea', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=300&auto=format&fit=crop&q=60', brand: 'Brooke Bond', weight: '500 g', price: 190, oldPrice: 220, eta: '14 mins', tags: ['Healthy Flavonoids'], category: 'tea' },
-      { id: 'tcm2', name: 'Nescafe Classic Instant Coffee', img: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=300&auto=format&fit=crop&q=60', brand: 'Nescafe', weight: '100 g', price: 280, oldPrice: 310, eta: '14 mins', tags: ['100% Pure Coffee'], category: 'coffee' }
-    ]
-  },
-  'Bakery & Biscuits': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=100&auto=format&fit=crop&q=60' },
-      { id: 'biscuits', name: 'Biscuits & Cookies', icon: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=100&auto=format&fit=crop&q=60' },
-      { id: 'bread', name: 'Fresh Breads', icon: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'bb1', name: 'Britannia Good Day Cashew Cookies', img: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=300&auto=format&fit=crop&q=60', brand: 'Britannia', weight: '100 g', price: 20, oldPrice: 25, eta: '14 mins', tags: ['Cashew Rich'], category: 'biscuits' },
-      { id: 'bb2', name: 'Britannia Bourbon Biscuit Pack', img: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=300&auto=format&fit=crop&q=60', brand: 'Britannia', weight: '150 g', price: 30, oldPrice: 35, eta: '14 mins', tags: ['Chocolate Creamy'], category: 'biscuits' }
-    ]
-  },
-  'Sauces & Spreads': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=100&auto=format&fit=crop&q=60' },
-      { id: 'ketchup', name: 'Tomato Ketchup', icon: 'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=100&auto=format&fit=crop&q=60' },
-      { id: 'jam', name: 'Fruit Jams', icon: 'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'ss1', name: 'Kissan Fresh Tomato Ketchup', img: 'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=300&auto=format&fit=crop&q=60', brand: 'Kissan', weight: '950 g', price: 120, oldPrice: 145, eta: '14 mins', tags: ['100% Real Tomatoes'], category: 'ketchup' },
-      { id: 'ss2', name: 'Kissan Mixed Fruit Jam Jar', img: 'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=300&auto=format&fit=crop&q=60', brand: 'Kissan', weight: '500 g', price: 160, oldPrice: 185, eta: '14 mins', tags: ['Real Fruit Pulps'], category: 'jam' }
-    ]
-  },
-  'Mithila Festival & Cultural': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1605647540924-852290f6b0d5?w=100&auto=format&fit=crop&q=60' },
-      { id: 'festival', name: 'Mithila Festival Packages', icon: 'https://images.unsplash.com/photo-1609137144813-7d722edbd48e?w=100&auto=format&fit=crop&q=60' },
-      { id: 'marriage', name: 'Mithila Marriage Packages', icon: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=100&auto=format&fit=crop&q=60' },
-      { id: 'cultural', name: 'Mithila Cultural Packages', icon: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=100&auto=format&fit=crop&q=60' },
-      { id: 'arts', name: 'Mithila Arts', icon: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=100&auto=format&fit=crop&q=60' },
-      { id: 'm5', name: 'M5', icon: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&auto=format&fit=crop&q=60' },
-      { id: 'm6', name: 'M6', icon: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100&auto=format&fit=crop&q=60' },
-      { id: 'm7', name: 'M7', icon: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=100&auto=format&fit=crop&q=60' },
-      { id: 'm8', name: 'M8', icon: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'mfc1', name: 'Framed Madhubani Painting (Radha Krishna)', img: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Kala', weight: '1 Unit', price: 1200, oldPrice: 1500, eta: '14 mins', badge: 'Authentic', tags: ['Handpainted', 'Traditional'], category: 'arts' },
-      { id: 'mfc2', name: 'Handcrafted Madhubani Bookmark Set', img: 'https://images.unsplash.com/photo-1605647540924-852290f6b0d5?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Kala', weight: '5 pcs', price: 150, oldPrice: 200, eta: '14 mins', tags: ['Handmade', 'Paper Art'], category: 'arts' },
-      { id: 'mfc3', name: 'Cultural Wall Hanging Ganesha', img: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Decor', weight: '1 pc', price: 349, oldPrice: 450, eta: '14 mins', tags: ['Sikki Grass', 'Eco Friendly'], category: 'cultural' },
-      { id: 'mfc4', name: 'Mithila Kojagari Pooja Festival Package', img: 'https://images.unsplash.com/photo-1609137144813-7d722edbd48e?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Rasoi', weight: '1 Kit', price: 899, oldPrice: 1199, eta: '14 mins', badge: 'Festive', tags: ['Pooja Needs', 'Festival Special'], category: 'festival' },
-      { id: 'mfc5', name: 'Madhubani Wedding Rituals Marriage Set', img: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Shringar', weight: '1 Kit', price: 2499, oldPrice: 2999, eta: '14 mins', badge: 'Wedding', tags: ['Shringar', 'Marriage Kit'], category: 'marriage' }
-    ]
-  },
-  'Mithila Paridhan': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=100&auto=format&fit=crop&q=60' },
-      { id: 'sarees', name: 'Sarees', icon: 'https://images.unsplash.com/photo-1610030470343-a55099abf3ac?w=100&auto=format&fit=crop&q=60' },
-      { id: 'kurtas', name: 'Kurtas & Dupattas', icon: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'mp1', name: 'Tussar Silk Madhubani Saree', img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Weaves', weight: '1 Unit', price: 4500, oldPrice: 5500, eta: '14 mins', badge: 'Premium', tags: ['100% Pure Silk', 'Handpainted'], category: 'sarees' },
-      { id: 'mp2', name: 'Hand-painted Cotton Kurta', img: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Weaves', weight: '1 Unit', price: 850, oldPrice: 1200, eta: '14 mins', tags: ['Pure Cotton', 'Unisex'], category: 'kurtas' },
-      { id: 'mp3', name: 'Premium Madhubani Painted Dupatta', img: 'https://images.unsplash.com/photo-1610030470343-a55099abf3ac?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Weaves', weight: '1 Unit', price: 650, oldPrice: 850, eta: '14 mins', tags: ['Cotton-Silk', 'Ethnic Wear'], category: 'kurtas' }
-    ]
-  },
-  'Mithila Special Cuisines': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&auto=format&fit=crop&q=60' },
-      { id: 'makhana', name: 'Phool Makhana', icon: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&auto=format&fit=crop&q=60' },
-      { id: 'snacks', name: 'Traditional Snacks', icon: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'msc1', name: 'Organic Premium Phool Makhana', img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Farms', weight: '250 g', price: 199, oldPrice: 250, eta: '14 mins', badge: 'Fresh', tags: ['Gluten Free', 'High Protein'], category: 'makhana' },
-      { id: 'msc2', name: 'Spicy Roasted Makhana Snacks', img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Farms', weight: '100 g', price: 120, oldPrice: 150, eta: '14 mins', tags: ['Crispy', 'Healthy'], category: 'makhana' },
-      { id: 'msc3', name: 'Mithila Homemade Anarsa Sweets', img: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Rasoi', weight: '500 g', price: 250, oldPrice: 300, eta: '14 mins', tags: ['Homemade', 'Sugar Glazed'], category: 'snacks' }
-    ]
-  },
-  'Mithila Lac Bangles': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=100&auto=format&fit=crop&q=60' },
-      { id: 'bridal', name: 'Bridal Lahathi', icon: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=100&auto=format&fit=crop&q=60' },
-      { id: 'daily', name: 'Daily Wear', icon: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'mlb1', name: 'Traditional Mithila Bridal Lahathi Set', img: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Shringar', weight: '1 Set', price: 599, oldPrice: 799, eta: '14 mins', badge: 'Bridal Special', tags: ['Pure Lac', 'Stone Work'], category: 'bridal' },
-      { id: 'mlb2', name: 'Multicolored Daily Wear Lac Bangles', img: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Shringar', weight: '12 pcs', price: 299, oldPrice: 399, eta: '14 mins', tags: ['Lightweight', 'Durable'], category: 'daily' },
-      { id: 'mlb3', name: 'Premium Designer Lac Kada Pair', img: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Shringar', weight: '2 pcs', price: 399, oldPrice: 499, eta: '14 mins', tags: ['Designer Kada', 'Gold Accents'], category: 'daily' }
-    ]
-  },
-  'Mithila Handcrafted Items': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=100&auto=format&fit=crop&q=60' },
-      { id: 'sikki', name: 'Sikki Crafts', icon: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=100&auto=format&fit=crop&q=60' },
-      { id: 'terracotta', name: 'Terracotta & Clay', icon: 'https://images.unsplash.com/photo-1609137144813-7d722edbd48e?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'mhi1', name: 'Handwoven Sikki Grass Basket (Mauni)', img: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=300&auto=format&fit=crop&q=60', brand: 'Sikki Art', weight: '1 Unit', price: 349, oldPrice: 450, eta: '14 mins', badge: 'Handmade', tags: ['Eco-friendly', 'Traditional'], category: 'sikki' },
-      { id: 'mhi2', name: 'Sikki Grass Sun God Wall Hanging', img: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=300&auto=format&fit=crop&q=60', brand: 'Sikki Art', weight: '1 Unit', price: 299, oldPrice: 399, eta: '14 mins', tags: ['Vibrant Colors', 'Decorative'], category: 'sikki' },
-      { id: 'mhi3', name: 'Terracotta Mithila Painted Diya Pot', img: 'https://images.unsplash.com/photo-1609137144813-7d722edbd48e?w=300&auto=format&fit=crop&q=60', brand: 'Clay & Colors', weight: '1 pc', price: 199, oldPrice: 299, eta: '14 mins', tags: ['Handpainted', 'Festive'], category: 'terracotta' }
-    ]
-  },
-  'Mithila Pooja Needs': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1609137144813-7d722edbd48e?w=100&auto=format&fit=crop&q=60' },
-      { id: 'samagri', name: 'Pooja Samagri', icon: 'https://images.unsplash.com/photo-1609137144813-7d722edbd48e?w=100&auto=format&fit=crop&q=60' },
-      { id: 'dhoop', name: 'Dhoop & Incense', icon: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'mpn1', name: 'Mithila Traditional Pooja Samagri Kit', img: 'https://images.unsplash.com/photo-1609137144813-7d722edbd48e?w=300&auto=format&fit=crop&q=60', brand: 'Punya Pooja', weight: '1 Kit', price: 499, oldPrice: 599, eta: '14 mins', badge: 'Devotional', tags: ['Complete Kit', 'Pure Materials'], category: 'samagri' },
-      { id: 'mpn2', name: 'Handmade Cow Dung Dhoop Batti', img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=300&auto=format&fit=crop&q=60', brand: 'Punya Pooja', weight: '50 sticks', price: 99, oldPrice: 120, eta: '14 mins', tags: ['Natural Aroma', 'Chemical Free'], category: 'dhoop' },
-      { id: 'mpn3', name: 'Pure Brass Aarti Diya with Handle', img: 'https://images.unsplash.com/photo-1609137144813-7d722edbd48e?w=300&auto=format&fit=crop&q=60', brand: 'Brass Crafts', weight: '1 Unit', price: 180, oldPrice: 250, eta: '14 mins', tags: ['High Quality', 'Heavy Base'], category: 'samagri' }
-    ]
-  },
-  'Mithila Books & Panchang': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100&auto=format&fit=crop&q=60' },
-      { id: 'panchang', name: 'Panchangs', icon: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100&auto=format&fit=crop&q=60' },
-      { id: 'books', name: 'Literature & Poetry', icon: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'mbp1', name: 'Vidyapati Mithila Panchang (Latest)', img: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&auto=format&fit=crop&q=60', brand: 'Vidyapati Press', weight: '1 Book', price: 80, oldPrice: 100, eta: '14 mins', badge: 'Must Have', tags: ['Latest Edition', 'Accurate'], category: 'panchang' },
-      { id: 'mbp2', name: 'Maithili Folk Tales Book', img: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Academy', weight: '1 Book', price: 150, oldPrice: 180, eta: '14 mins', tags: ['Illustrated', 'Children Friendly'], category: 'books' },
-      { id: 'mbp3', name: 'Mahakavi Vidyapati Geetanjali', img: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Academy', weight: '1 Book', price: 200, oldPrice: 250, eta: '14 mins', tags: ['Poetry', 'Maithili Classics'], category: 'books' }
-    ]
-  },
-  'Mithila Achaar': {
-    subcategories: [
-      { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=100&auto=format&fit=crop&q=60' },
-      { id: 'mango', name: 'Mango Pickle', icon: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=100&auto=format&fit=crop&q=60' },
-      { id: 'chilli', name: 'Chilli & Garlic', icon: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=100&auto=format&fit=crop&q=60' }
-    ],
-    products: [
-      { id: 'ma1', name: 'Mithila Special Sun-dried Mango Pickle', img: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Rasoi', weight: '400 g', price: 249, oldPrice: 299, eta: '14 mins', badge: 'Homemade', tags: ['Spicy & Tangy', 'Traditional Method'], category: 'mango' },
-      { id: 'ma2', name: 'Spicy Mithila Lal Mirch (Stuffed Red Chilli) Achaar', img: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Rasoi', weight: '350 g', price: 199, oldPrice: 249, eta: '14 mins', tags: ['Stuffed', 'Very Spicy'], category: 'chilli' },
-      { id: 'ma3', name: 'Traditional Garlic-Ginger Homemade Pickle', img: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Rasoi', weight: '400 g', price: 180, oldPrice: 220, eta: '14 mins', tags: ['Rich Taste', 'Digestive'], category: 'chilli' }
-    ]
-  }
+const handleImageError = (e) => {
+  e.target.onerror = null;
+  e.target.src = FALLBACK_IMAGE;
 };
 
-const getCategoryData = (categoryName) => {
-  if (DYNAMIC_DATA[categoryName]) {
-    return DYNAMIC_DATA[categoryName];
-  }
 
-  // Generates generic fallback elements matching the styling system perfectly
-  const defaultSubcategories = [
-    { id: 'all', name: 'All', icon: 'https://images.unsplash.com/photo-1610832958506-ee5633619144?w=100&auto=format&fit=crop&q=60' },
-    { id: 'premium', name: 'Premium Range', icon: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=100&auto=format&fit=crop&q=60' },
-    { id: 'standard', name: 'Standard Range', icon: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=100&auto=format&fit=crop&q=60' }
-  ];
-
-  const generatedProducts = [
-    { id: `gen-${categoryName}-1`, name: `Premium ${categoryName} Pack`, img: 'https://images.unsplash.com/photo-1610832958506-ee5633619144?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Brand', weight: '1 Unit', price: 199, oldPrice: 249, eta: '14 mins', tags: ['Bestseller'], category: 'premium' },
-    { id: `gen-${categoryName}-2`, name: `Standard ${categoryName} Pack`, img: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=300&auto=format&fit=crop&q=60', brand: 'Mithila Brand', weight: '1 Unit', price: 99, oldPrice: 129, eta: '14 mins', tags: ['Value Buy'], category: 'standard' }
-  ];
-
-  return {
-    subcategories: defaultSubcategories,
-    products: generatedProducts
-  };
+const EMPTY_CATEGORY = {
+  subcategories: [{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }],
+  products: [],
 };
+
+const getCategoryData = () => EMPTY_CATEGORY;
 
 const QuickShopSubcategory = () => {
   const navigate = useNavigate();
@@ -293,20 +45,142 @@ const QuickShopSubcategory = () => {
   
   const primaryText = isFreshGroceryFlow ? 'text-[#D9A21B]' : isMithilakFlow ? 'text-[#207C8A]' : 'text-[#F26522]';
   const primaryBg = isFreshGroceryFlow ? 'bg-[#D9A21B]' : isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#F26522]';
-  const primaryBgHover = isFreshGroceryFlow ? 'hover:bg-[#FFF8EE] bg-white' : isMithilakFlow ? 'hover:bg-[#e0f2f1] bg-white' : 'hover:bg-orange-50 bg-white';
+  const primaryBgHover = isFreshGroceryFlow ? 'hover:bg-[#FFF8EE] bg-white' : isMithilakFlow ? 'hover:bg-[#F5F9FA] bg-white' : 'hover:bg-orange-50 bg-white';
   const primaryBorder = isFreshGroceryFlow ? 'border-[#D9A21B]' : isMithilakFlow ? 'border-[#207C8A]' : 'border-[#F26522]';
   const primaryBorderLight = isFreshGroceryFlow ? 'border-[#D9A21B]/25' : isMithilakFlow ? 'border-[#207C8A]/25' : 'border-[#F26522]/25';
-  const primaryLightBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#e0f2f1]/40' : 'bg-[#FFF5EE]';
+  const primaryLightBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : 'bg-[#FFF5EE]';
   const primarySidebarAccent = isFreshGroceryFlow ? 'bg-[#D9A21B]' : isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#F26522]';
   
-  const rightGridBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#e0f2f1]/10' : 'bg-orange-50/15';
-  const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[#D9A21B]/15' : isMithilakFlow ? 'bg-[#e0f2f1]/40 border border-[#207C8A]/15' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
+  const rightGridBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]/20' : 'bg-orange-50/15';
+  const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[#D9A21B]/15' : isMithilakFlow ? 'bg-[#F5F9FA]/65 border border-[#207C8A]/15' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
 
-  // Get dynamic category structure
-  const categoryData = getCategoryData(categoryName);
-  
-  const subCategories = categoryData.subcategories;
-  const productsList = categoryData.products;
+  const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
+  const [productsList, setProductsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notDeliverable, setNotDeliverable] = useState(false);
+
+  const { location: liveLocation, setPromptOpen } = useLiveLocation();
+  const deliverLabel = formatLocationLabel(liveLocation);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setNotDeliverable(false);
+      try {
+        const commerceFlow = isFreshGroceryFlow ? 'fresh_grocery' : 'quick_shop';
+
+        if (liveLocation?.latitude == null || liveLocation?.longitude == null) {
+          if (!cancelled) {
+            setNotDeliverable(true);
+            setProductsList([]);
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (liveLocation?.latitude != null && liveLocation?.longitude != null) {
+          try {
+            const nearby = await getNearbyProducts({
+              lat: liveLocation.latitude,
+              lng: liveLocation.longitude,
+              commerceFlow,
+              limit: 40,
+            });
+            const nearbyPayload = nearby?.data ?? nearby;
+            const deliverable = nearbyPayload?.deliverable !== false;
+            const nearbyItems = extractList(nearbyPayload).map((p) => {
+              const card = mapProductForCard(p);
+              return {
+                id: card.id,
+                name: card.name,
+                img: card.image,
+                brand: card.brand || 'Nearby Seller',
+                weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
+                price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
+                oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
+                eta: p.deliveryPromiseMinutes
+                  ? `${p.deliveryPromiseMinutes} mins`
+                  : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
+                tags: ['Nearby'],
+                category: 'all',
+              };
+            });
+            if (!cancelled) {
+              if (!deliverable || !nearbyItems.length) {
+                setNotDeliverable(true);
+                setProductsList([]);
+              } else {
+                setProductsList(nearbyItems);
+              }
+              setLoading(false);
+              return;
+            }
+          } catch {
+            if (!cancelled) {
+              setNotDeliverable(true);
+              setProductsList([]);
+              setLoading(false);
+            }
+            return;
+          }
+        }
+
+        const categories = await getCategories({ commerceFlow });
+        const match = findCategoryByName(categories, categoryName);
+        if (!match) {
+          if (!cancelled) {
+            setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
+            setProductsList([]);
+          }
+          return;
+        }
+
+        const data = await getCategoryProducts(match.id, { limit: 40 });
+        const mapped = extractList(data).map((p) => {
+          const card = mapProductForCard(p);
+          return {
+            id: card.id,
+            name: card.name,
+            img: card.image,
+            brand: card.brand || 'Mithila Brand',
+            weight: '1 Unit',
+            price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
+            oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
+            eta: p.deliveryPromiseMinutes ? `${p.deliveryPromiseMinutes} mins` : '14 mins',
+            tags: ['Fresh'],
+            category: 'all',
+          };
+        });
+
+        if (!cancelled) {
+          setSubCategories(
+            (match.children || []).length
+              ? [{ id: 'all', name: 'All', icon: match.imageUrl || FALLBACK_IMAGE }, ...match.children.map((child) => ({
+                  id: child.id,
+                  name: child.name,
+                  icon: child.imageUrl || child.iconUrl || FALLBACK_IMAGE,
+                }))]
+              : [{ id: 'all', name: 'All', icon: match.imageUrl || FALLBACK_IMAGE }]
+          );
+          setProductsList(mapped.length ? mapped : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
+          setProductsList([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryName, liveLocation?.latitude, liveLocation?.longitude, isFreshGroceryFlow]);
 
   const [activeSub, setActiveSub] = useState('all');
   const [favorites, setFavorites] = useState([]);
@@ -326,7 +200,7 @@ const QuickShopSubcategory = () => {
 
   const handleProductClick = (product) => {
     const discountPct = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) + '% OFF';
-    navigate('/product-detail', {
+    navigate('/vendor/product-detail', {
       state: {
         product: {
           ...product,
@@ -340,12 +214,9 @@ const QuickShopSubcategory = () => {
     });
   };
 
-  const currentTab = React.useMemo(() => getCurrentMarketplaceTab(), []);
-
-  const filteredProducts = productsList.filter(p => {
-    if (activeSub !== 'all' && p.category !== activeSub) return false;
-    return productBelongsToTab(p, currentTab);
-  });
+  const filteredProducts = activeSub === 'all' 
+    ? productsList 
+    : productsList.filter(p => p.category === activeSub);
 
   const isQuickShopHeader = !isFreshGroceryFlow && !isMithilakFlow;
 
@@ -378,10 +249,14 @@ const QuickShopSubcategory = () => {
             <h1 className={`text-[16px] font-bold leading-tight ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white' : 'text-gray-900'}`}>
               {categoryName}
             </h1>
-            <span className={`text-[10px] font-bold flex items-center gap-0.5 ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white/95' : primaryText}`}>
-              Delivering to : <span className={`font-medium truncate max-w-[150px] ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white/80' : 'text-gray-500'}`}>Indrapuri Colony, Indore</span>
+            <button
+              type="button"
+              onClick={() => setPromptOpen(true)}
+              className={`text-[10px] font-bold flex items-center gap-0.5 ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white/95' : primaryText}`}
+            >
+              Delivering to : <span className={`font-medium truncate max-w-[150px] ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white/80' : 'text-gray-500'}`}>{deliverLabel}</span>
               <ChevronDown size={10} />
-            </span>
+            </button>
           </div>
         </div>
 
@@ -628,7 +503,31 @@ const QuickShopSubcategory = () => {
             />
           </div>
 
+          {/* Undeliverable / location banner */}
+          {notDeliverable && (
+            <div className="mx-3 mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
+              <p className="text-sm font-bold text-amber-900">
+                {liveLocation?.latitude == null
+                  ? 'Turn on location to see Quick Commerce products near you.'
+                  : 'Quick Commerce is not available at this delivery address yet.'}
+              </p>
+              <p className="text-xs text-amber-800 mt-1">
+                Try a different address or check back when a nearby seller is online.
+              </p>
+              {liveLocation?.latitude == null && (
+                <button
+                  type="button"
+                  onClick={() => setPromptOpen(true)}
+                  className="mt-3 px-4 py-2 rounded-full bg-amber-600 text-white text-xs font-bold"
+                >
+                  Enable Location
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Grid list */}
+          {!notDeliverable && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {filteredProducts.map((product) => {
               const isFav = favorites.includes(product.id);
@@ -718,11 +617,7 @@ const QuickShopSubcategory = () => {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Add to cart local storage flow
-                        const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-                        cart.push({ ...product, image: product.img, cartId: Date.now(), qty: 1 });
-                        localStorage.setItem('userCart', JSON.stringify(cart));
-                        window.dispatchEvent(new Event('cartUpdated'));
+                        addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
                       }}
                       className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
                     >
@@ -746,6 +641,7 @@ const QuickShopSubcategory = () => {
               );
             })}
           </div>
+          )}
 
         </div>
 

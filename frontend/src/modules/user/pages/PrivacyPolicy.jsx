@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Footer from '../../../shared/components/Footer';
+import useLegalPage from '../hooks/useLegalPage';
 
 const PrivacyPolicy = () => {
   const navigate = useNavigate();
+  const { page, loading, error } = useLegalPage('privacy');
 
   return (
     <div className="min-h-screen bg-white">
@@ -22,7 +24,17 @@ const PrivacyPolicy = () => {
 
       {/* Content */}
       <div className="px-6 py-6 space-y-6">
-        {/* Last Updated */}
+        {loading && <p className="text-sm text-gray-500">Loading...</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {page?.content ? (
+          <>
+            <div className="text-[11px] text-gray-400">
+              Last Updated: {page.updatedAt ? new Date(page.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+            </div>
+            <div className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap">{page.content}</div>
+          </>
+        ) : (
+          <>
         <div className="text-[11px] text-gray-400">
           Last Updated: May 8, 2026
         </div>
@@ -215,6 +227,8 @@ const PrivacyPolicy = () => {
             </p>
           </div>
         </section>
+          </>
+        )}
         <Footer />
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   AlertTriangle, Search, Filter, MoreVertical, 
   RefreshCcw, Package, AlertCircle, TrendingDown,
@@ -6,16 +6,33 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SearchInput from '../../../../shared/components/SearchInput';
-
-const MOCK_ALERTS = [
-  { id: 1, name: 'Premium Leather Satchel', category: 'Fashion', stock: 2, threshold: 5, status: 'Critical', vendor: 'Fashion Hub' },
-  { id: 2, name: 'Biotique Face Wash', category: 'Beauty', stock: 12, threshold: 20, status: 'Low', vendor: 'Glow Cosmetics' },
-  { id: 3, name: 'Wireless Earbuds Pro', category: 'Electronics', stock: 0, threshold: 10, status: 'Out of Stock', vendor: 'Elite Electronics' },
-  { id: 4, name: 'Summer Floral Dress', category: 'Fashion', stock: 4, threshold: 10, status: 'Low', vendor: 'Fashion Hub' },
-];
+import { reportsApi } from '../../services/api';
+import { extractList, mapStockAlert } from '../../utils/mappers';
 
 const StockAlerts = () => {
-  const [alerts, setAlerts] = useState(MOCK_ALERTS);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await reportsApi.getInventoryReport({ lowStock: true });
+      if (cancelled) return;
+      if (!error) {
+        const rows = extractList(data.items || data.products || data);
+        setAlerts(rows.map(mapStockAlert));
+      } else {
+        setAlerts([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const outOfStock = alerts.filter((item) => item.status === 'Out of Stock').length;
+  const critical = alerts.filter((item) => item.status === 'Critical').length;
+  const low = alerts.filter((item) => item.status === 'Low').length;
 
   const StatusBadge = ({ status }) => {
     const styles = {
@@ -47,9 +64,9 @@ const StockAlerts = () => {
       {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
          {[
-           { label: 'Out of Stock', value: '03', icon: AlertCircle, color: 'text-slate-900', bg: 'bg-slate-100' },
-           { label: 'Critical Level', value: '08', icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
-           { label: 'Low Stock Items', value: '14', icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-50' },
+           { label: 'Out of Stock', value: String(outOfStock).padStart(2, '0'), icon: AlertCircle, color: 'text-slate-900', bg: 'bg-slate-100' },
+           { label: 'Critical Level', value: String(critical).padStart(2, '0'), icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-50' },
+           { label: 'Low Stock Items', value: String(low).padStart(2, '0'), icon: TrendingDown, color: 'text-amber-500', bg: 'bg-amber-50' },
          ].map((stat, i) => (
            <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-5">
               <div className={`w-14 h-14 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center shadow-inner`}>
@@ -89,7 +106,15 @@ const StockAlerts = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {alerts.map((item, i) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-sm font-bold">Loading inventory alerts...</td>
+                </tr>
+              ) : alerts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-sm font-bold">No stock alerts found</td>
+                </tr>
+              ) : alerts.map((item, i) => (
                 <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">

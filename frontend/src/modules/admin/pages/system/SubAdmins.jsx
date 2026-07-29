@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, UserPlus, Search, Filter, 
   MoreVertical, CheckCircle2, XCircle, Trash2, 
@@ -7,17 +7,38 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchInput from '../../../../shared/components/SearchInput';
+import { subAdminsApi } from '../../services/api';
+import { extractList, formatDate, titleCaseStatus } from '../../utils/mappers';
 
-const MOCK_ADMINS = [
-  { id: 1, name: 'Prachi Gupta', email: 'prachi@admin.com', role: 'Super Admin', lastLogin: '2 mins ago', status: 'Active' },
-  { id: 2, name: 'John Miller', email: 'john@cocia.com', role: 'Catalog Manager', lastLogin: '2 hours ago', status: 'Active' },
-  { id: 3, name: 'Sarah Lee', email: 'sarah@support.com', role: 'Support Agent', lastLogin: '1 day ago', status: 'Active' },
-  { id: 4, name: 'Michael Chen', email: 'mike@finance.com', role: 'Finance Manager', lastLogin: '3 days ago', status: 'Paused' },
-];
+const mapSubAdmin = (admin = {}) => ({
+  id: admin.id || admin._id,
+  name: admin.name || 'Admin',
+  email: admin.email || '—',
+  role: admin.roleName || admin.role || '—',
+  lastLogin: formatDate(admin.lastLoginAt || admin.updatedAt || admin.createdAt),
+  status: admin.status === 'active' || admin.status === 'Active' ? 'Active' : titleCaseStatus(admin.status || 'inactive'),
+});
 
 const SubAdmins = () => {
-  const [admins, setAdmins] = useState(MOCK_ADMINS);
+  const [admins, setAdmins] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await subAdminsApi.getAll();
+      if (cancelled) return;
+      if (!error) {
+        setAdmins(extractList(data).map(mapSubAdmin));
+      } else {
+        setAdmins([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-700">
@@ -39,9 +60,9 @@ const SubAdmins = () => {
       {/* Stats row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
          {[
-           { label: 'Total Admins', value: '08', icon: ShieldCheck, color: 'text-blue-500', bg: 'bg-blue-50' },
-           { label: 'Roles Defined', value: '04', icon: Key, color: 'text-green-500', bg: 'bg-green-50' },
-           { label: 'Active Sessions', value: '03', icon: Activity, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+           { label: 'Total Admins', value: String(admins.length).padStart(2, '0'), icon: ShieldCheck, color: 'text-blue-500', bg: 'bg-blue-50' },
+           { label: 'Roles Defined', value: String(admins.length).padStart(2, '0'), icon: Key, color: 'text-green-500', bg: 'bg-green-50' },
+           { label: 'Active Sessions', value: String(admins.filter((a) => a.status === 'Active').length).padStart(2, '0'), icon: Activity, color: 'text-indigo-500', bg: 'bg-indigo-50' },
            { label: 'Security Alerts', value: '00', icon: Lock, color: 'text-slate-400', bg: 'bg-slate-50' },
          ].map((stat, i) => (
            <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
@@ -76,7 +97,15 @@ const SubAdmins = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {admins.map((admin) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm font-bold">Loading sub-admins...</td>
+                </tr>
+              ) : admins.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm font-bold">No sub-admins found</td>
+                </tr>
+              ) : admins.map((admin) => (
                 <tr key={admin.id} className="group hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">

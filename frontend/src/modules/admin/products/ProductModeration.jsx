@@ -1,6 +1,6 @@
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { approveProduct, deleteProduct } from '../../../store/slices/productSlice';
+import React, { useState, useEffect } from 'react';
+import { productsApi } from '../services/api';
+import { extractList, mapProduct } from '../utils/mappers';
 import { 
   CheckCircle2, XCircle, ShoppingBag, Eye, 
   Tag, Layers, ArrowRight, AlertCircle, Trash2
@@ -8,9 +8,40 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ProductModeration = () => {
-  const { allProducts } = useSelector(state => state.products);
-  const pendingProducts = allProducts.filter(p => p.status === 'Pending');
-  const dispatch = useDispatch();
+  const [pendingProducts, setPendingProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchPending = async () => {
+    setLoading(true);
+    const { data, error: apiError } = await productsApi.getAll({ status: 'pending' });
+    if (apiError) {
+      setError(apiError);
+      setPendingProducts([]);
+    } else {
+      setError(null);
+      setPendingProducts(extractList(data).map(mapProduct).filter((p) => p.status === 'Pending'));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchPending();
+  }, []);
+
+  const handleApprove = async (id) => {
+    const { error: apiError } = await productsApi.approve(id);
+    if (!apiError) {
+      setPendingProducts((prev) => prev.filter((p) => p.id !== id));
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const { error: apiError } = await productsApi.delete(id);
+    if (!apiError) {
+      setPendingProducts((prev) => prev.filter((p) => p.id !== id));
+    }
+  };
 
   return (
     <div className="space-y-8 pb-10">
@@ -67,13 +98,13 @@ const ProductModeration = () => {
 
                    <div className="flex gap-3 pt-2">
                       <button 
-                        onClick={() => dispatch(deleteProduct(product.id))}
+                        onClick={() => handleDelete(product.id)}
                         className="p-4 border border-red-100 text-red-500 rounded-2xl hover:bg-red-50 transition-all flex items-center justify-center flex-1"
                       >
                          <Trash2 size={18} />
                       </button>
                       <button 
-                        onClick={() => dispatch(approveProduct(product.id))}
+                        onClick={() => handleApprove(product.id)}
                         className="flex-[3] py-4 bg-black text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-black/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                       >
                          <CheckCircle2 size={18} />

@@ -11,9 +11,10 @@ import {
 } from 'lucide-react';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { notifications as dummyNotifications } from '../../utils/dummyData';
+import { getNotifications } from '../../services/sellerApi';
 import { getRelativeTime } from '../../utils/formatters';
 import { SIDEBAR_MENU } from '../../constants';
+import useSellerOrderStream from '../../hooks/useSellerOrderStream';
 
 const Topbar = ({ onMenuClick }) => {
   const { seller, logout } = useSellerAuth();
@@ -25,11 +26,34 @@ const Topbar = ({ onMenuClick }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const notifRef = useRef(null);
   const profileRef = useRef(null);
 
-  const unreadCount = dummyNotifications.filter((n) => !n.read).length;
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const data = await getNotifications();
+        setNotifications(data?.notifications || []);
+        setUnreadCount(data?.unreadCount ?? (data?.notifications || []).filter((n) => !n.read).length);
+      } catch {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    };
+    fetchNotifications();
+  }, []);
+
+  useSellerOrderStream(() => {
+    getNotifications()
+      .then((data) => {
+        setNotifications(data?.notifications || []);
+        setUnreadCount(data?.unreadCount ?? 0);
+      })
+      .catch(() => {});
+  });
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -185,7 +209,7 @@ const Topbar = ({ onMenuClick }) => {
                   </span>
                 </div>
                 <div className="max-h-[360px] overflow-y-auto">
-                  {dummyNotifications.slice(0, 5).map((n) => (
+                  {notifications.slice(0, 5).map((n) => (
                     <div
                       key={n.id}
                       className={`px-5 py-3.5 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer ${

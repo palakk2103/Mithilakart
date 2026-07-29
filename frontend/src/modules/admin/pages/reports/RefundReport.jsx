@@ -1,16 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, Download, Wallet, CreditCard, TrendingUp, RotateCcw } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { motion } from 'framer-motion';
-import { REFUND_REPORT_DATA } from '../../constants/dummyData';
+import { reportsApi } from '../../services/api';
+import { mapRefundReportData } from '../../utils/mappers';
 
 const COLORS = ['#3b82f6', '#8b5cf6'];
 
 const RefundReport = () => {
-  const totalRefunds = REFUND_REPORT_DATA.reduce((s, r) => s + r.total, 0);
-  const totalAmount = REFUND_REPORT_DATA.reduce((s, r) => s + r.amount, 0);
-  const totalWallet = REFUND_REPORT_DATA.reduce((s, r) => s + r.wallet, 0);
-  const totalSource = REFUND_REPORT_DATA.reduce((s, r) => s + r.source, 0);
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await reportsApi.getRefundReport();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setReportData([]);
+      } else {
+        setError(null);
+        setReportData(mapRefundReportData(data));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const totalRefunds = reportData.reduce((s, r) => s + r.total, 0);
+  const totalAmount = reportData.reduce((s, r) => s + r.amount, 0);
+  const totalWallet = reportData.reduce((s, r) => s + r.wallet, 0);
+  const totalSource = reportData.reduce((s, r) => s + r.source, 0);
   const pieData = [{ name: 'Wallet', value: totalWallet }, { name: 'Source', value: totalSource }];
 
   const stats = [
@@ -47,7 +70,7 @@ const RefundReport = () => {
           <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight font-montserrat mb-8">Refund Amount Trend</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={REFUND_REPORT_DATA}>
+              <AreaChart data={reportData.length ? reportData : [{ month: '—', amount: 0 }]}>
                 <defs><linearGradient id="refAmtGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/><stop offset="95%" stopColor="#ef4444" stopOpacity={0}/></linearGradient></defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dy={10} />
@@ -88,7 +111,7 @@ const RefundReport = () => {
           <table className="w-full text-left">
             <thead><tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-6 py-4">Month</th><th className="px-6 py-4">Total</th><th className="px-6 py-4">Wallet</th><th className="px-6 py-4">Source</th><th className="px-6 py-4">Amount</th></tr></thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {REFUND_REPORT_DATA.map((row, i) => (
+              {reportData.map((row, i) => (
                 <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-5 font-bold text-slate-900 font-montserrat">{row.month}</td>
                   <td className="px-6 py-5 font-black text-slate-900 font-roboto">{row.total}</td>

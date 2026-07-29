@@ -1,12 +1,12 @@
 /**
  * Review List Page
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Star, MessageSquare, Flag, EyeOff, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PageHeader, SearchFilter } from '../../components/common';
 import { Card, Button, Badge } from '../../components/ui';
-import { reviews } from '../../utils/dummyData';
+import { getReviews, replyToReview } from '../../services/sellerApi';
 import { getRelativeTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
@@ -15,25 +15,57 @@ const ReviewList = () => {
   const [ratingFilter, setRatingFilter] = useState('all');
   const [replyBoxId, setReplyBoxId] = useState(null);
   const [replyText, setReplyText] = useState('');
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getReviews();
+      setReviews(data?.reviews || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load reviews');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...reviews];
     if (ratingFilter !== 'all') result = result.filter((r) => r.rating === parseInt(ratingFilter));
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter((r) => r.customer.toLowerCase().includes(q) || r.productTitle.toLowerCase().includes(q) || r.text.toLowerCase().includes(q));
+      result = result.filter((r) =>
+        (r.customer || r.customerName || '').toLowerCase().includes(q) ||
+        r.productTitle?.toLowerCase().includes(q) ||
+        r.text?.toLowerCase().includes(q)
+      );
     }
     return result;
-  }, [searchQuery, ratingFilter]);
+  }, [reviews, searchQuery, ratingFilter]);
 
-  const avgRating = (reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1);
+  const avgRating = reviews.length
+    ? (reviews.reduce((a, r) => a + (r.rating || 0), 0) / reviews.length).toFixed(1)
+    : '0.0';
   const ratingDist = [5, 4, 3, 2, 1].map((r) => ({ rating: r, count: reviews.filter((rv) => rv.rating === r).length }));
 
-  const handleReply = (id) => {
+  const handleReply = async (id) => {
     if (!replyText.trim()) return;
-    toast.success('Reply posted successfully');
-    setReplyBoxId(null);
-    setReplyText('');
+    try {
+      await replyToReview(id, replyText.trim());
+      toast.success('Reply posted successfully');
+      setReplyBoxId(null);
+      setReplyText('');
+      fetchReviews();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to post reply');
+    }
   };
 
   return (
@@ -56,7 +88,7 @@ const ReviewList = () => {
                 <span className="text-xs text-gray-500 w-3">{d.rating}</span>
                 <Star size={10} className="text-amber-400 fill-amber-400" />
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-400 rounded-full" style={{ width: `${(d.count / reviews.length) * 100}%` }} />
+                  <div className="h-full bg-amber-400 rounded-full" style={{ width: `${reviews.length ? (d.count / reviews.length) * 100 : 0}%` }} />
                 </div>
                 <span className="text-xs text-gray-400 w-4">{d.count}</span>
               </div>
@@ -90,7 +122,7 @@ const ReviewList = () => {
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed">{review.text}</p>
                   <div className="flex items-center gap-2 mt-3">
-                    <span className="text-xs font-semibold text-gray-900">{review.customer}</span>
+                    <span className="text-xs font-semibold text-gray-900">{review.customer || review.customerName}</span>
                     <span className="text-xs text-gray-300">•</span>
                     <span className="text-xs text-gray-400">{review.productTitle}</span>
                   </div>
