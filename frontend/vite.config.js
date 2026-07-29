@@ -77,6 +77,8 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,jpg,jpeg,gif,webp,woff,woff2,ttf,ico}"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api/],
+        // SPA routes (/admin, /seller, /home, etc.) — not only /
+        navigateFallbackAllowlist: [/^(?!\/api(?:\/|$)).*/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -111,7 +113,8 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true
+        enabled: true,
+        navigateFallbackAllowlist: [/^(?!\/api(?:\/|$)).*/],
       }
     }),
     {
@@ -151,9 +154,28 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      "/api": {
-        target: "http://localhost:5000",
+      "/api/v1": {
+        target: "http://127.0.0.1:5000",
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            if (err.code === 'ECONNRESET' || err.code === 'ECONNABORTED') return;
+          });
+        },
+      },
+      "/uploads": {
+        target: "http://127.0.0.1:5000",
+        changeOrigin: true,
+      },
+      "/socket.io": {
+        target: "http://127.0.0.1:5000",
+        changeOrigin: true,
+        ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            if (err.code === 'ECONNRESET' || err.code === 'ECONNABORTED') return;
+          });
+        },
       },
     },
   },

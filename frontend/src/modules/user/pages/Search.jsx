@@ -4,16 +4,10 @@ import { Search as SearchIcon, Filter, ArrowLeft, LayoutGrid, List, Mic } from '
 import ProductCard from '../components/common/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchInput from '../../../shared/components/SearchInput';
-import NoSearchResults from '../components/common/NoSearchResults';
+import { search } from '../services/userApi';
+import { extractList, mapProductForCard } from '../utils/mappers';
 
-
-// Import local assets for search page
 import SamsungImg from '../../../assets/products/product01.jpg';
-import LaptopImg from '../../../assets/products/product02.jpg';
-import EarbudsImg from '../../../assets/products/product03.jpg';
-import ElectronicsImg from '../../../assets/products/product04.jpg';
-import ShoesImg from '../../../assets/products/product07.jpg';
-import JewelleryImg from '../../../assets/products/product12.jpg';
 
 const Search = () => {
   const [searchParams] = useSearchParams();
@@ -23,9 +17,41 @@ const Search = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [isListening, setIsListening] = useState(false);
   const [searchValue, setSearchValue] = useState(query);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setSearchValue(query);
+  }, [query]);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setProducts([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await search({ q: query, limit: 40 });
+        if (!cancelled) {
+          setProducts(extractList(data).map((p) => mapProductForCard(p, SamsungImg)));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Search failed');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [query]);
 
   const handleVoiceSearch = () => {
@@ -67,25 +93,11 @@ const Search = () => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#e0f2f1]/60 via-[#f2faf9] to-[#ffffff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-[#eaf5ee]');
-  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-gradient-to-r from-[#F5B014] to-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#6FAE4A]');
-  const textPrimary = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#7A3E17]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
-  const borderPrimary = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#7A3E17]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#6FAE4A]');
+  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-gradient-to-r from-[#F5B014] to-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#ff2a5f] to-[#ff7e5f]' : 'bg-[#3E5A44]');
+  const textPrimary = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#7A3E17]' : (isQuickShopFlow ? 'text-[#d6186d]' : 'text-[#3E5A44]');
+  const borderPrimary = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#7A3E17]' : (isQuickShopFlow ? 'border-[#d6186d]' : 'border-[#3E5A44]');
 
-  const allProducts = [
-    { id: 1, name: 'Apple iPhone 15 (Blue, 128 GB)', price: '69,999', oldPrice: '79,900', rating: '4.6', reviews: '2,450', image: SamsungImg, brand: 'APPLE' },
-    { id: 2, name: 'Sony WH-1000XM5 Wireless Headphones', price: '29,990', oldPrice: '34,990', rating: '4.8', reviews: '1,120', image: EarbudsImg, brand: 'SONY' },
-    { id: 3, name: 'Samsung Galaxy Watch 6 (44mm)', price: '18,499', oldPrice: '29,999', rating: '4.5', reviews: '890', image: ElectronicsImg, brand: 'SAMSUNG' },
-    { id: 4, name: 'Dell Inspiron 15 Laptop', price: '45,990', oldPrice: '58,000', rating: '4.3', reviews: '560', image: LaptopImg, brand: 'DELL' },
-    { id: 5, name: 'Nike Air Max Pulse', price: '12,995', oldPrice: '14,995', rating: '4.7', reviews: '320', image: ShoesImg, brand: 'NIKE' },
-    { id: 6, name: 'Adidas Ultraboost Light', price: '16,199', oldPrice: '18,999', rating: '4.6', reviews: '450', image: ShoesImg, brand: 'ADIDAS' },
-    { id: 7, name: 'Premium Gold Finish Watch', price: '4,499', oldPrice: '5,999', rating: '4.9', reviews: '1.2k', image: JewelleryImg, brand: 'MITHILAKART' },
-    { id: 8, name: 'Sleek Geometric Pendant', price: '3,499', oldPrice: '4,499', rating: '4.8', reviews: '850', image: JewelleryImg, brand: 'MITHILAKART' },
-  ];
-
-  const filteredProducts = allProducts.filter(p => 
-    p.name.toLowerCase().includes(query.toLowerCase()) || 
-    p.brand.toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredProducts = products;
 
   return (
     <motion.div 
@@ -134,13 +146,13 @@ const Search = () => {
               <div className="flex bg-white p-1 rounded-lg border border-slate-150 shadow-sm">
                  <button 
                    onClick={() => setViewMode('grid')}
-                   className={`p-1 rounded-md transition-all ${viewMode === 'grid' ? 'bg-[#6FAE4A] text-white' : 'text-slate-400'}`}
+                   className={`p-1 rounded-md transition-all ${viewMode === 'grid' ? 'bg-[#3E5A44] text-white' : 'text-slate-400'}`}
                  >
                     <LayoutGrid size={14} />
                  </button>
                  <button 
                    onClick={() => setViewMode('list')}
-                   className={`p-1 rounded-md transition-all ${viewMode === 'list' ? 'bg-[#6FAE4A] text-white' : 'text-slate-400'}`}
+                   className={`p-1 rounded-md transition-all ${viewMode === 'list' ? 'bg-[#3E5A44] text-white' : 'text-slate-400'}`}
                  >
                     <List size={14} />
                  </button>
@@ -179,14 +191,17 @@ const Search = () => {
         </div>
 
         {filteredProducts.length === 0 && (
-          <NoSearchResults 
-            query={query}
-            onClearSearch={() => {
-              setSearchValue('');
-              navigate('/search?q=');
-            }}
-            onContinueShopping={() => navigate('/home')}
-          />
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm mt-8">
+             <SearchIcon size={40} className="mx-auto text-slate-300 mb-3 opacity-50" />
+             <h3 className={`text-base font-black uppercase tracking-widest ${textPrimary}`}>No results found</h3>
+             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 max-w-xs mx-auto">Try checking your spelling or use more general keywords</p>
+             <button 
+               onClick={() => navigate('/home')}
+               className={`mt-5 px-6 py-2.5 ${headerBg} ${isFreshGroceryFlow ? 'text-black' : 'text-white'} rounded-xl font-black uppercase tracking-widest text-[9px] shadow-md`}
+             >
+                Go Back Home
+             </button>
+          </div>
         )}
       </div>
     </motion.div>

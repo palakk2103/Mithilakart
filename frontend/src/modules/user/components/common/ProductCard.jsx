@@ -1,79 +1,49 @@
 import React from 'react';
 import { Heart } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { productBelongsToTab } from '../../../../shared/utils/marketplaceHelpers';
-import { getProductImage, handleImageError } from '../../../../shared/utils/imageUtils';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, onClick }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const getDeliveryBadge = () => {
-    if (product.listings && product.listings.length > 0) {
-      const quickListing = product.listings.find(
-        (l) => l.tab === 'quick_shop' || l.tab === 'groceries_fresh'
-      );
-      if (quickListing) {
-        return `${quickListing.quickDeliveryTime || 20} Min`;
-      }
-      const standardListing = product.listings.find(
-        (l) => l.tab === 'mithilakart' || l.tab === 'mithilak'
-      );
-      if (standardListing) {
-        return `Estimated Delivery ${standardListing.deliveryTime || '3 Days'}`;
-      }
+  const handleClick = () => {
+    if (onClick) {
+      onClick(product);
+      return;
     }
 
-    if (product.tab === 'quick_shop' || product.tab === 'groceries_fresh') {
-      return `${product.quickDeliveryTime || 20} Min`;
-    }
-    if (product.tab === 'mithilakart' || product.tab === 'mithilak') {
-      return `Estimated Delivery ${product.deliveryTime || '3 Days'}`;
-    }
-
-    if (productBelongsToTab(product, 'groceries_fresh')) {
-      return '25 Min';
-    }
-    if (productBelongsToTab(product, 'quick_shop')) {
-      return '20 Min';
-    }
-    if (productBelongsToTab(product, 'mithilak')) {
-      return 'Estimated Delivery 3 Days';
-    }
-    if (productBelongsToTab(product, 'mithilakart')) {
-      return 'Estimated Delivery 5 Days';
-    }
-
-    return null;
+    const prefix = location.pathname.startsWith('/vendor') ? '/vendor' : '';
+    navigate(`${prefix}/product-detail`, {
+      state: { product, productId: product.id },
+    });
   };
 
-  const deliveryBadge = getDeliveryBadge();
-
-  const isOutOfStock = product.stock === 0 || product.isOutOfStock === true || product.status === 'Out of Stock' || product.outOfStock === true;
-
   return (
-    <div className="bg-white rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer border border-slate-100 flex flex-col h-full">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
+      className="bg-white rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer border border-slate-100 flex flex-col h-full"
+    >
       <div className="relative aspect-square overflow-hidden bg-white p-2 md:p-4">
-        {deliveryBadge && !isOutOfStock && (
-          <span className={`absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-[8px] md:text-[9px] font-bold tracking-wide shadow-sm ${
-            deliveryBadge.includes('Min') 
-              ? 'bg-green-500 text-white' 
-              : 'bg-blue-600 text-white'
-          }`}>
-            {deliveryBadge}
-          </span>
-        )}
-        {isOutOfStock && (
-          <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-[8px] md:text-[9px] font-bold tracking-wide shadow-sm bg-red-600 text-white uppercase">
-            Out of Stock
-          </span>
-        )}
         <img
-          src={getProductImage(product.image || product.img)}
+          src={product.image || product.img || "https://via.placeholder.com/300x300"}
           alt={product.title || product.name}
-          onError={handleImageError}
           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
         />
-        <button className="absolute top-2 right-2 p-1.5 md:top-3 md:right-3 md:p-2 bg-white/80 backdrop-blur-sm rounded-full text-slate-300 hover:text-red-500 transition-colors shadow-sm">
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-2 right-2 p-1.5 md:top-3 md:right-3 md:p-2 bg-white/80 backdrop-blur-sm rounded-full text-slate-300 hover:text-red-500 transition-colors shadow-sm"
+        >
           <Heart size={15} className="md:w-[18px] md:h-[18px]" />
         </button>
       </div>
@@ -101,15 +71,9 @@ const ProductCard = ({ product }) => {
               </span>
             )}
           </div>
-          {deliveryBadge ? (
-            <p className="text-[9px] md:text-[10px] text-slate-600 mt-0.5 md:mt-1 flex items-center gap-1 font-semibold">
-              <span className="text-blue-500 font-bold">✓</span> {deliveryBadge}
-            </p>
-          ) : (
-            <p className="text-[9px] md:text-[10px] text-slate-500 mt-0.5 md:mt-1 flex items-center gap-1">
-              <span className="text-[#e47911] font-bold">Prime</span> {t('product.deliveryTomorrow')}
-            </p>
-          )}
+          <p className="text-[9px] md:text-[10px] text-slate-500 mt-0.5 md:mt-1 flex items-center gap-1">
+            <span className="text-[#e47911] font-bold">Prime</span> {t('product.deliveryTomorrow')}
+          </p>
         </div>
       </div>
     </div>

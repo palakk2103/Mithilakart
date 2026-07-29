@@ -2,20 +2,16 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Truck, MapPin, Clock, Package, CheckCircle, AlertCircle, IndianRupee } from 'lucide-react';
 import Footer from '../../../shared/components/Footer';
+import useLegalPage from '../hooks/useLegalPage';
 
 const ShippingPolicy = () => {
   const navigate = useNavigate();
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
-  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
-  const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#6FAE4A]');
+  const { page, loading, error } = useLegalPage('shipping');
 
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className={`sticky top-0 z-50 ${primaryBg} px-4 py-4 flex items-center gap-3 shadow-md`}>
+      <div className="sticky top-0 z-50 bg-[#3E5A44] px-4 py-4 flex items-center gap-3 shadow-md">
         <button 
           onClick={() => navigate(-1)}
           className="text-white active:scale-90 transition-transform"
@@ -27,7 +23,17 @@ const ShippingPolicy = () => {
 
       {/* Content */}
       <div className="px-6 py-6 space-y-6">
-        {/* Last Updated */}
+        {loading && <p className="text-sm text-gray-500">Loading...</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {page?.content ? (
+          <>
+            <div className="text-[11px] text-gray-400">
+              Last Updated: {page.updatedAt ? new Date(page.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+            </div>
+            <div className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap">{page.content}</div>
+          </>
+        ) : (
+          <>
         <div className="text-[11px] text-gray-400">
           Last Updated: May 8, 2026
         </div>
@@ -45,7 +51,7 @@ const ShippingPolicy = () => {
         {/* Quick Info Cards */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-primary-light border border-primary-green/30 rounded-xl p-3 text-center">
-            <Truck size={20} className={`${primaryText} mx-auto mb-1`} />
+            <Truck size={20} className="text-[#3E5A44] mx-auto mb-1" />
             <p className="text-[11px] font-bold text-slate-900">Fast Delivery</p>
             <p className="text-[9px] text-gray-500">2-7 Days</p>
           </div>
@@ -64,7 +70,7 @@ const ShippingPolicy = () => {
         {/* Shipping Coverage */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <MapPin size={20} className={primaryText} />
+            <MapPin size={20} className="text-[#3E5A44]" />
             <h2 className="text-[16px] font-bold text-slate-900">Shipping Coverage</h2>
           </div>
           <p className="text-[13px] text-gray-600 leading-relaxed mb-3">
@@ -72,7 +78,7 @@ const ShippingPolicy = () => {
             product page to check if delivery is available in your area.
           </p>
           
-          <div className={`bg-primary-light border-l-4 ${primaryBorder} p-4 rounded-r-lg`}>
+          <div className="bg-primary-light border-l-4 border-[#3E5A44] p-4 rounded-r-lg">
             <p className="text-[12px] font-bold text-slate-900 mb-2">Serviceable Areas:</p>
             <ul className="list-disc list-inside text-[12px] text-gray-600 space-y-1 ml-2">
               <li>All major cities and metro areas</li>
@@ -86,7 +92,7 @@ const ShippingPolicy = () => {
         {/* Delivery Timeline */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <Clock size={20} className={primaryText} />
+            <Clock size={20} className="text-[#3E5A44]" />
             <h2 className="text-[16px] font-bold text-slate-900">Delivery Timeline</h2>
           </div>
 
@@ -112,7 +118,7 @@ const ShippingPolicy = () => {
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-primary-green/20 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Truck size={20} className={primaryText} />
+                  <Truck size={20} className="text-[#3E5A44]" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-[14px] font-bold text-slate-900 mb-1">Quick Delivery</h3>
@@ -161,7 +167,7 @@ const ShippingPolicy = () => {
         {/* Shipping Charges */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <IndianRupee size={20} className={primaryText} />
+            <IndianRupee size={20} className="text-[#3E5A44]" />
             <h2 className="text-[16px] font-bold text-slate-900">Shipping Charges</h2>
           </div>
 
@@ -194,7 +200,7 @@ const ShippingPolicy = () => {
         {/* Order Processing */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <Package size={20} className={primaryText} />
+            <Package size={20} className="text-[#3E5A44]" />
             <h2 className="text-[16px] font-bold text-slate-900">Order Processing</h2>
           </div>
 
@@ -222,7 +228,7 @@ const ShippingPolicy = () => {
 
           <div className="space-y-3">
             <div className="flex gap-3">
-              <div className={`w-8 h-8 ${primaryBg} text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]`}>
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 1
               </div>
               <div>
@@ -231,7 +237,7 @@ const ShippingPolicy = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <div className={`w-8 h-8 ${primaryBg} text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]`}>
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 2
               </div>
               <div>
@@ -240,7 +246,7 @@ const ShippingPolicy = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <div className={`w-8 h-8 ${primaryBg} text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]`}>
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 3
               </div>
               <div>
@@ -249,7 +255,7 @@ const ShippingPolicy = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <div className={`w-8 h-8 ${primaryBg} text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]`}>
+              <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 4
               </div>
               <div>
@@ -326,6 +332,8 @@ const ShippingPolicy = () => {
             </div>
           </div>
         </section>
+          </>
+        )}
         <Footer />
       </div>
     </div>

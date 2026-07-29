@@ -1,5 +1,7 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { deliveryApi } from '../../services/api';
+import { extractList, mapDeliveryPartner } from '../../utils/mappers';
 import { 
   Truck, User, Star, MapPin, 
   Phone, Mail, CheckCircle2, XCircle,
@@ -8,16 +10,35 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_PARTNERS = [
-  { id: 'DP001', name: 'Amit Kumar', zone: 'South Delhi', phone: '+91 98765 43210', status: 'Active', rating: 4.8, orders: 1245, vehicle: 'Electric Bike' },
-  { id: 'DP002', name: 'Suresh Raina', zone: 'Gurgaon', phone: '+91 98765 43211', status: 'Active', rating: 4.5, orders: 850, vehicle: 'Scooter' },
-  { id: 'DP003', name: 'Vikram Batra', zone: 'Noida', phone: '+91 98765 43212', status: 'Busy', rating: 4.9, orders: 2100, vehicle: 'Bike' },
-  { id: 'DP004', name: 'Pankaj Singh', zone: 'West Delhi', phone: '+91 98765 43213', status: 'Inactive', rating: 4.2, orders: 420, vehicle: 'Scooter' },
-  { id: 'DP005', name: 'Rohit Sharma', zone: 'Faridabad', phone: '+91 98765 43214', status: 'Active', rating: 4.7, orders: 1560, vehicle: 'Electric Bike' },
-];
-
 const DeliveryPartners = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [partners, setPartners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await deliveryApi.getAll();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setPartners([]);
+      } else {
+        setError(null);
+        setPartners(extractList(data).map(mapDeliveryPartner));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const filteredPartners = partners.filter((partner) =>
+    partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    partner.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    partner.zone.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-700">
@@ -83,7 +104,7 @@ const DeliveryPartners = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {MOCK_PARTNERS.map((partner, i) => (
+              {filteredPartners.map((partner, i) => (
                 <tr key={partner.id} className="group hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">

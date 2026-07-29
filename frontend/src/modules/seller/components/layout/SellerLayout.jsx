@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import MobileMenu from './MobileMenu';
+import NewOrderModal from '../common/NewOrderModal';
 import { useTheme } from '../../context/ThemeContext';
 import '../../styles/seller.css';
 
@@ -20,6 +21,9 @@ const SellerLayout = () => {
   return (
     <div className={`seller-module min-h-screen flex`}
          style={{ backgroundColor: 'var(--seller-bg)' }}>
+      {/* Realtime New Order Alert Modal Popup */}
+      <NewOrderModal />
+
       {/* Desktop Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}

@@ -1,0 +1,648 @@
+{
+  "migratedAt": "2026-07-21T08:16:52.713Z",
+  "categories": {
+    "nav-beauty": {
+      "oldLabel": "Beauty",
+      "id": "6a5e15b4d069a283d6c1f99a",
+      "slug": "beauty",
+      "action": "existing"
+    },
+    "nav-gifting": {
+      "oldLabel": "Gifting",
+      "id": "6a5f2aa598a3d123c9afb374",
+      "slug": "gifting",
+      "action": "existing"
+    },
+    "nav-electronics": {
+      "oldLabel": "Electronics",
+      "id": "6a5f2aa598a3d123c9afb386",
+      "slug": "electronics",
+      "action": "existing"
+    },
+    "nav-jewellery": {
+      "oldLabel": "Jewellery",
+      "id": "6a5f2aa698a3d123c9afb38c",
+      "slug": "jewellery",
+      "action": "existing"
+    },
+    "nav-toys": {
+      "oldLabel": "Toys",
+      "id": "6a5e15b4d069a283d6c1f99b",
+      "slug": "toys",
+      "action": "existing"
+    },
+    "nav-stationery": {
+      "oldLabel": "Stationery",
+      "id": "6a5f2aa698a3d123c9afb391",
+      "slug": "stationery",
+      "action": "existing"
+    },
+    "nav-fashion": {
+      "oldLabel": "Fashion",
+      "id": "6a5f2aa698a3d123c9afb395",
+      "slug": "fashion",
+      "action": "existing"
+    },
+    "nav-electrical": {
+      "oldLabel": "Electrical",
+      "id": "6a5f2aa698a3d123c9afb399",
+      "slug": "electrical",
+      "action": "existing"
+    },
+    "mithila-specialities": {
+      "oldLabel": "Mithila Specialities",
+      "id": "6a5f2aa698a3d123c9afb39d",
+      "slug": "mithila-specialities",
+      "action": "existing"
+    },
+    "mithila-festival": {
+      "oldLabel": "Mithila Festival & Cultural",
+      "id": "6a5f2aa698a3d123c9afb3a1",
+      "slug": "mithila-festival-cultural",
+      "action": "existing"
+    },
+    "mithila-paridhan": {
+      "oldLabel": "Mithila Paridhan",
+      "id": "6a5f2aa698a3d123c9afb3a5",
+      "slug": "mithila-paridhan",
+      "action": "existing"
+    },
+    "mithila-cuisines": {
+      "oldLabel": "Mithila Special Cuisines",
+      "id": "6a5f2aa698a3d123c9afb3a9",
+      "slug": "mithila-special-cuisines",
+      "action": "existing"
+    },
+    "mithila-bangles": {
+      "oldLabel": "Mithila Lac Bangles",
+      "id": "6a5f2aa698a3d123c9afb3ad",
+      "slug": "mithila-lac-bangles",
+      "action": "existing"
+    },
+    "mithila-handcrafted": {
+      "oldLabel": "Mithila Handcrafted Items",
+      "id": "6a5f2aa698a3d123c9afb3b1",
+      "slug": "mithila-handcrafted-items",
+      "action": "existing"
+    },
+    "mithila-pooja": {
+      "oldLabel": "Mithila Pooja Needs",
+      "id": "6a5f2aa798a3d123c9afb3b5",
+      "slug": "mithila-pooja-needs",
+      "action": "existing"
+    },
+    "mithila-books": {
+      "oldLabel": "Mithila Books & Panchang",
+      "id": "6a5f2aa798a3d123c9afb3b9",
+      "slug": "mithila-books-panchang",
+      "action": "existing"
+    },
+    "mithila-achaar": {
+      "oldLabel": "Mithila Achaar",
+      "id": "6a5f2aa798a3d123c9afb3bd",
+      "slug": "mithila-achaar",
+      "action": "existing"
+    },
+    "qs-grocery": {
+      "oldLabel": "Grocery",
+      "id": "6a5f2aa798a3d123c9afb3c1",
+      "slug": "grocery",
+      "action": "existing"
+    },
+    "qs-grocery-fruits-vegetables": {
+      "oldLabel": "Fruits & Vegetables",
+      "id": "6a5f2aa798a3d123c9afb3c5",
+      "slug": "fruits-vegetables",
+      "action": "existing"
+    },
+    "qs-grocery-atta-rice-dal": {
+      "oldLabel": "Atta, Rice & Dal",
+      "id": "6a5f2aa798a3d123c9afb3c9",
+      "slug": "atta-rice-dal",
+      "action": "existing"
+    },
+    "qs-grocery-oil-ghee-masala": {
+      "oldLabel": "Oil, Ghee & Masala",
+      "id": "6a5f2aa798a3d123c9afb3cd",
+      "slug": "oil-ghee-masala",
+      "action": "existing"
+    },
+    "qs-grocery-dairy-bread-eggs": {
+      "oldLabel": "Dairy, Bread & Eggs",
+      "id": "6a5f2aa798a3d123c9afb3d1",
+      "slug": "dairy-bread-eggs",
+      "action": "existing"
+    },
+    "qs-grocery-cereals-dry-fruits": {
+      "oldLabel": "Cereals & Dry Fruits",
+      "id": "6a5f2aa798a3d123c9afb3d5",
+      "slug": "cereals-dry-fruits",
+      "action": "existing"
+    },
+    "qs-grocery-chicken-meat-fish": {
+      "oldLabel": "Chicken, Meat & Fish",
+      "id": "6a5f2aa798a3d123c9afb3d9",
+      "slug": "chicken-meat-fish",
+      "action": "existing"
+    },
+    "qs-grocery-instant-frozen-food": {
+      "oldLabel": "Instant & Frozen Food",
+      "id": "6a5f2aa898a3d123c9afb3dd",
+      "slug": "instant-frozen-food",
+      "action": "existing"
+    },
+    "qs-snacks-drinks": {
+      "oldLabel": "Snacks & Drinks",
+      "id": "6a5f2aa898a3d123c9afb3e1",
+      "slug": "snacks-drinks",
+      "action": "existing"
+    },
+    "qs-snacks-drinks-chips-namkeens": {
+      "oldLabel": "Chips & Namkeens",
+      "id": "6a5f2aa898a3d123c9afb3e5",
+      "slug": "chips-namkeens",
+      "action": "existing"
+    },
+    "qs-snacks-drinks-ice-creams": {
+      "oldLabel": "Ice Creams",
+      "id": "6a5f2aa898a3d123c9afb3e9",
+      "slug": "ice-creams",
+      "action": "existing"
+    },
+    "qs-snacks-drinks-drinks-juices": {
+      "oldLabel": "Drinks & Juices",
+      "id": "6a5f2aa898a3d123c9afb3ed",
+      "slug": "drinks-juices",
+      "action": "existing"
+    },
+    "qs-snacks-drinks-sweets-chocolates": {
+      "oldLabel": "Sweets & Chocolates",
+      "id": "6a5f2aa898a3d123c9afb3f1",
+      "slug": "sweets-chocolates",
+      "action": "existing"
+    },
+    "qs-snacks-drinks-tea-coffee-milk-drinks": {
+      "oldLabel": "Tea, Coffee & Milk Drinks",
+      "id": "6a5f2aa898a3d123c9afb3f5",
+      "slug": "tea-coffee-milk-drinks",
+      "action": "existing"
+    },
+    "qs-snacks-drinks-bakery-biscuits": {
+      "oldLabel": "Bakery & Biscuits",
+      "id": "6a5f2aa898a3d123c9afb3f9",
+      "slug": "bakery-biscuits",
+      "action": "existing"
+    },
+    "qs-snacks-drinks-sauces-spreads": {
+      "oldLabel": "Sauces & Spreads",
+      "id": "6a5f2aa898a3d123c9afb3fd",
+      "slug": "sauces-spreads",
+      "action": "existing"
+    },
+    "qs-beauty-personal": {
+      "oldLabel": "Beauty & Personal Care",
+      "id": "6a5f2aa898a3d123c9afb401",
+      "slug": "beauty-personal-care",
+      "action": "existing"
+    },
+    "qs-beauty-personal-bath-body-grooming": {
+      "oldLabel": "Bath, Body & Grooming",
+      "id": "6a5f2aa898a3d123c9afb405",
+      "slug": "bath-body-grooming",
+      "action": "existing"
+    },
+    "qs-beauty-personal-baby-care": {
+      "oldLabel": "Baby Care",
+      "id": "6a5f2aa898a3d123c9afb409",
+      "slug": "baby-care",
+      "action": "existing"
+    },
+    "qs-beauty-personal-hair-care": {
+      "oldLabel": "Hair Care",
+      "id": "6a5f2aa998a3d123c9afb40d",
+      "slug": "hair-care",
+      "action": "existing"
+    },
+    "qs-beauty-personal-healthcare-pharma": {
+      "oldLabel": "Healthcare & Pharma",
+      "id": "6a5f2aa998a3d123c9afb411",
+      "slug": "healthcare-pharma",
+      "action": "existing"
+    },
+    "qs-beauty-personal-wellness-hygiene": {
+      "oldLabel": "Wellness & Hygiene",
+      "id": "6a5f2aa998a3d123c9afb415",
+      "slug": "wellness-hygiene",
+      "action": "existing"
+    },
+    "qs-beauty-personal-beauty-fragrances": {
+      "oldLabel": "Beauty & Fragrances",
+      "id": "6a5f2aa998a3d123c9afb419",
+      "slug": "beauty-fragrances",
+      "action": "existing"
+    },
+    "qs-household": {
+      "oldLabel": "Household, Stationery & Lifestyle",
+      "id": "6a5f2aa998a3d123c9afb41d",
+      "slug": "household-stationery-lifestyle",
+      "action": "existing"
+    },
+    "qs-household-cleaning-essentials": {
+      "oldLabel": "Cleaning Essentials",
+      "id": "6a5f2aa998a3d123c9afb421",
+      "slug": "cleaning-essentials",
+      "action": "existing"
+    },
+    "qs-household-stationery-supplies": {
+      "oldLabel": "Stationery Supplies",
+      "id": "6a5f2aa998a3d123c9afb425",
+      "slug": "stationery-supplies",
+      "action": "existing"
+    },
+    "qs-household-toys-games": {
+      "oldLabel": "Toys & Games",
+      "id": "6a5f2aa998a3d123c9afb429",
+      "slug": "toys-games",
+      "action": "existing"
+    },
+    "qs-household-sports-fitness": {
+      "oldLabel": "Sports & Fitness",
+      "id": "6a5f2aa998a3d123c9afb42d",
+      "slug": "sports-fitness",
+      "action": "existing"
+    },
+    "qs-household-home-kitchen": {
+      "oldLabel": "Home & Kitchen",
+      "id": "6a5f2aa998a3d123c9afb431",
+      "slug": "home-kitchen",
+      "action": "existing"
+    },
+    "qs-household-electricals-tools": {
+      "oldLabel": "Electricals & Tools",
+      "id": "6a5f2aa998a3d123c9afb435",
+      "slug": "electricals-tools",
+      "action": "existing"
+    },
+    "qs-household-fashion-accessories": {
+      "oldLabel": "Fashion Accessories",
+      "id": "6a5f2aaa98a3d123c9afb439",
+      "slug": "fashion-accessories",
+      "action": "existing"
+    },
+    "qs-household-pet-supplies": {
+      "oldLabel": "Pet Supplies",
+      "id": "6a5f2aaa98a3d123c9afb43d",
+      "slug": "pet-supplies",
+      "action": "existing"
+    },
+    "qs-mobiles-electronics": {
+      "oldLabel": "Mobiles & Electronics",
+      "id": "6a5f2aaa98a3d123c9afb441",
+      "slug": "mobiles-electronics",
+      "action": "existing"
+    },
+    "qs-mobiles-electronics-mobiles": {
+      "oldLabel": "Mobiles",
+      "id": "6a5f2aaa98a3d123c9afb445",
+      "slug": "mobiles",
+      "action": "existing"
+    },
+    "qs-mobiles-electronics-electronics-gadgets": {
+      "oldLabel": "Electronics & Gadgets",
+      "id": "6a5f2aaa98a3d123c9afb449",
+      "slug": "electronics-gadgets",
+      "action": "existing"
+    },
+    "qs-mobiles-electronics-audio-smart-watches": {
+      "oldLabel": "Audio & Smart Watches",
+      "id": "6a5f2aaa98a3d123c9afb44d",
+      "slug": "audio-smart-watches",
+      "action": "existing"
+    }
+  },
+  "chips": {
+    "nav-you-buy": {
+      "oldLabel": "You Buy",
+      "id": "6a5f2aaa98a3d123c9afb450",
+      "categoryId": null,
+      "action": "existing"
+    },
+    "nav-beauty": {
+      "oldLabel": "Beauty",
+      "id": "6a5f2aaa98a3d123c9afb453",
+      "categoryId": "6a5e15b4d069a283d6c1f99a",
+      "action": "existing"
+    },
+    "nav-gifting": {
+      "oldLabel": "Gifting",
+      "id": "6a5f2aaa98a3d123c9afb456",
+      "categoryId": "6a5f2aa598a3d123c9afb374",
+      "action": "existing"
+    },
+    "nav-electronics": {
+      "oldLabel": "Electronics",
+      "id": "6a5f2aaa98a3d123c9afb459",
+      "categoryId": "6a5f2aa598a3d123c9afb386",
+      "action": "existing"
+    },
+    "nav-jewellery": {
+      "oldLabel": "Jewellery",
+      "id": "6a5f2aaa98a3d123c9afb45c",
+      "categoryId": "6a5f2aa698a3d123c9afb38c",
+      "action": "existing"
+    },
+    "nav-toys": {
+      "oldLabel": "Toys",
+      "id": "6a5f2aaa98a3d123c9afb45f",
+      "categoryId": "6a5e15b4d069a283d6c1f99b",
+      "action": "existing"
+    },
+    "nav-stationery": {
+      "oldLabel": "Stationery",
+      "id": "6a5f2aaa98a3d123c9afb462",
+      "categoryId": "6a5f2aa698a3d123c9afb391",
+      "action": "existing"
+    },
+    "nav-fashion": {
+      "oldLabel": "Fashion",
+      "id": "6a5f2aaa98a3d123c9afb465",
+      "categoryId": "6a5f2aa698a3d123c9afb395",
+      "action": "existing"
+    },
+    "nav-electrical": {
+      "oldLabel": "Electrical",
+      "id": "6a5f2aaa98a3d123c9afb468",
+      "categoryId": "6a5f2aa698a3d123c9afb399",
+      "action": "existing"
+    }
+  },
+  "banners": {
+    "banner-summer-sale": {
+      "oldLabel": "Summer Sale",
+      "id": "6a5f2aab98a3d123c9afb46b",
+      "action": "existing"
+    },
+    "banner-summer-sale-mithilak": {
+      "oldLabel": "Summer Sale",
+      "id": "6a5f2aab98a3d123c9afb46e",
+      "action": "existing"
+    },
+    "banner-summer-sale-quick-shop": {
+      "oldLabel": "Summer Sale",
+      "id": "6a5f2aab98a3d123c9afb471",
+      "action": "existing"
+    },
+    "banner-new-arrivals": {
+      "oldLabel": "New Arrivals",
+      "id": "6a5f2aab98a3d123c9afb474",
+      "action": "existing"
+    },
+    "banner-new-arrivals-mithilak": {
+      "oldLabel": "New Arrivals",
+      "id": "6a5f2aab98a3d123c9afb477",
+      "action": "existing"
+    },
+    "banner-new-arrivals-quick-shop": {
+      "oldLabel": "New Arrivals",
+      "id": "6a5f2aab98a3d123c9afb47a",
+      "action": "existing"
+    },
+    "banner-electronics-deal": {
+      "oldLabel": "Electronics Deal",
+      "id": "6a5f2aab98a3d123c9afb47d",
+      "action": "existing"
+    },
+    "banner-electronics-deal-mithilak": {
+      "oldLabel": "Electronics Deal",
+      "id": "6a5f2aab98a3d123c9afb480",
+      "action": "existing"
+    },
+    "banner-electronics-deal-quick-shop": {
+      "oldLabel": "Electronics Deal",
+      "id": "6a5f2aab98a3d123c9afb483",
+      "action": "existing"
+    },
+    "banner-grocery-offers": {
+      "oldLabel": "Grocery Offers",
+      "id": "6a5f2aab98a3d123c9afb486",
+      "action": "existing"
+    },
+    "banner-grocery-offers-mithilak": {
+      "oldLabel": "Grocery Offers",
+      "id": "6a5f2aab98a3d123c9afb489",
+      "action": "existing"
+    },
+    "banner-grocery-offers-quick-shop": {
+      "oldLabel": "Grocery Offers",
+      "id": "6a5f2aab98a3d123c9afb48c",
+      "action": "existing"
+    }
+  },
+  "products": {
+    "product-beauty-face-cream": {
+      "oldLabel": "Herbal Glow Face Cream",
+      "id": "6a5f2aab98a3d123c9afb490",
+      "sku": "MK-P3-BTY-001",
+      "categoryId": "6a5e15b4d069a283d6c1f99a",
+      "action": "existing"
+    },
+    "product-gift-hamper": {
+      "oldLabel": "Premium Gift Hamper",
+      "id": "6a5f2aac98a3d123c9afb499",
+      "sku": "MK-P3-GFT-001",
+      "categoryId": "6a5f2aa598a3d123c9afb374",
+      "action": "existing"
+    },
+    "product-wireless-earbuds": {
+      "oldLabel": "Wireless Earbuds Pro",
+      "id": "6a5f2aac98a3d123c9afb4a2",
+      "sku": "MK-P3-ELC-001",
+      "categoryId": "6a5f2aa598a3d123c9afb386",
+      "action": "existing"
+    },
+    "product-jewellery-set": {
+      "oldLabel": "Art Jewellery Set",
+      "id": "6a5f2aac98a3d123c9afb4ab",
+      "sku": "MK-P3-JWL-001",
+      "categoryId": "6a5f2aa698a3d123c9afb38c",
+      "action": "existing"
+    },
+    "product-wooden-puzzle": {
+      "oldLabel": "Wooden Learning Puzzle Set",
+      "id": "6a5f2aac98a3d123c9afb4b4",
+      "sku": "MK-P3-TYS-001",
+      "categoryId": "6a5e15b4d069a283d6c1f99b",
+      "action": "existing"
+    },
+    "product-notebook-set": {
+      "oldLabel": "Premium Notebook Set",
+      "id": "6a5f2aad98a3d123c9afb4bd",
+      "sku": "MK-P3-STN-001",
+      "categoryId": "6a5f2aa698a3d123c9afb391",
+      "action": "existing"
+    },
+    "product-cotton-kurta": {
+      "oldLabel": "Trendy Cotton Kurta",
+      "id": "6a5f2aad98a3d123c9afb4c6",
+      "sku": "MK-P3-FSH-001",
+      "categoryId": "6a5f2aa698a3d123c9afb395",
+      "action": "existing"
+    },
+    "product-led-lamp": {
+      "oldLabel": "LED Desk Lamp",
+      "id": "6a5f2aad98a3d123c9afb4cf",
+      "sku": "MK-P3-ELT-001",
+      "categoryId": "6a5f2aa698a3d123c9afb399",
+      "action": "existing"
+    },
+    "product-madhubani-wall-art": {
+      "oldLabel": "Madhubani Wall Art",
+      "id": "6a5f2af8206ee4b2774c526b",
+      "sku": "MK-P3-MTH-001",
+      "categoryId": "6a5f2aa698a3d123c9afb3b1",
+      "action": "created"
+    },
+    "product-handpainted-pot": {
+      "oldLabel": "Handpainted Pot",
+      "id": "6a5f2af9206ee4b2774c5274",
+      "sku": "MK-P3-MTH-002",
+      "categoryId": "6a5f2aa698a3d123c9afb3b1",
+      "action": "created"
+    },
+    "product-mithila-jewellery": {
+      "oldLabel": "Mithila Jewellery Set",
+      "id": "6a5f2af9206ee4b2774c527d",
+      "sku": "MK-P3-MTH-003",
+      "categoryId": "6a5f2aa698a3d123c9afb3ad",
+      "action": "created"
+    },
+    "product-basmati-rice": {
+      "oldLabel": "Organic Basmati Rice 5kg",
+      "id": "6a5f2af9206ee4b2774c5286",
+      "sku": "MK-P3-QS-001",
+      "categoryId": "6a5f2aa798a3d123c9afb3c9",
+      "action": "created"
+    },
+    "product-snacks-bundle": {
+      "oldLabel": "Instant Snacks Bundle",
+      "id": "6a5f2afa206ee4b2774c528f",
+      "sku": "MK-P3-QS-002",
+      "categoryId": "6a5f2aa898a3d123c9afb3e5",
+      "action": "created"
+    },
+    "product-veggies-pack": {
+      "oldLabel": "Fresh Seasonal Vegetables Pack",
+      "id": "6a5f2afa206ee4b2774c5298",
+      "sku": "MK-P3-QS-003",
+      "categoryId": "6a5f2aa798a3d123c9afb3c5",
+      "action": "created"
+    }
+  },
+  "homeSections": {
+    "standard:still-looking": {
+      "id": "6a5e15b5d069a283d6c1f9a3",
+      "sectionKey": "still-looking",
+      "commerceFlow": "standard",
+      "productCount": 9,
+      "action": "upserted"
+    },
+    "standard:top-selection": {
+      "id": "6a5e15b5d069a283d6c1f9a4",
+      "sectionKey": "top-selection",
+      "commerceFlow": "standard",
+      "productCount": 9,
+      "action": "upserted"
+    },
+    "standard:spotlight": {
+      "id": "6a5e15b5d069a283d6c1f9a5",
+      "sectionKey": "spotlight",
+      "commerceFlow": "standard",
+      "productCount": 9,
+      "action": "upserted"
+    },
+    "standard:best-quality": {
+      "id": "6a5e15b5d069a283d6c1f9a6",
+      "sectionKey": "best-quality",
+      "commerceFlow": "standard",
+      "productCount": 9,
+      "action": "upserted"
+    },
+    "standard:keep-shopping": {
+      "id": "6a5e15b5d069a283d6c1f9a7",
+      "sectionKey": "keep-shopping",
+      "commerceFlow": "standard",
+      "productCount": 9,
+      "action": "upserted"
+    },
+    "mithilak:still-looking": {
+      "id": "6a5e1f9dd069a283d6c20e15",
+      "sectionKey": "still-looking",
+      "commerceFlow": "mithilak",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "mithilak:top-selection": {
+      "id": "6a5e1f9dd069a283d6c20e16",
+      "sectionKey": "top-selection",
+      "commerceFlow": "mithilak",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "mithilak:spotlight": {
+      "id": "6a5e1f9ed069a283d6c20e17",
+      "sectionKey": "spotlight",
+      "commerceFlow": "mithilak",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "mithilak:best-quality": {
+      "id": "6a5e1f9ed069a283d6c20e18",
+      "sectionKey": "best-quality",
+      "commerceFlow": "mithilak",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "mithilak:keep-shopping": {
+      "id": "6a5e1f9ed069a283d6c20e19",
+      "sectionKey": "keep-shopping",
+      "commerceFlow": "mithilak",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "quick_shop:still-looking": {
+      "id": "6a5f2afb206ee4b2774c52b4",
+      "sectionKey": "still-looking",
+      "commerceFlow": "quick_shop",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "quick_shop:top-selection": {
+      "id": "6a5f2afb206ee4b2774c52b7",
+      "sectionKey": "top-selection",
+      "commerceFlow": "quick_shop",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "quick_shop:spotlight": {
+      "id": "6a5f2afb206ee4b2774c52ba",
+      "sectionKey": "spotlight",
+      "commerceFlow": "quick_shop",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "quick_shop:best-quality": {
+      "id": "6a5f2afb206ee4b2774c52bd",
+      "sectionKey": "best-quality",
+      "commerceFlow": "quick_shop",
+      "productCount": 3,
+      "action": "upserted"
+    },
+    "quick_shop:keep-shopping": {
+      "id": "6a5f2afb206ee4b2774c52c0",
+      "sectionKey": "keep-shopping",
+      "commerceFlow": "quick_shop",
+      "productCount": 3,
+      "action": "upserted"
+    }
+  }
+}

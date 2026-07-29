@@ -1,56 +1,141 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Plus, MapPin, Edit2, Trash2,
   Home, Building2, MoreVertical, X, Phone, User, CheckCircle2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress,
+} from '../../services/userApi';
 import useAccountStore from '../../../../store/useAccountStore';
+import { useLocation } from '../../../../shared/context/LocationContext';
+import { extractList } from '../../utils/mappers';
 import toast from 'react-hot-toast';
+
+const mapAddressFromApi = (addr) => ({
+  id: addr.id || addr._id,
+  name: addr.name || '',
+  phone: addr.phone || '',
+  address: addr.address || addr.addressLine || '',
+  city: addr.city || '',
+  state: addr.state || '',
+  type: addr.type || 'HOME',
+  pincode: addr.pincode || '',
+  latitude: addr.latitude,
+  longitude: addr.longitude,
+  isDefault: Boolean(addr.isDefault),
+});
+
+const toAddressPayload = (formData, liveLocation) => ({
+  type: formData.type || 'HOME',
+  name: formData.name.trim(),
+  phone: formData.phone.trim(),
+  addressLine: formData.address.trim(),
+  city: formData.city?.trim() || liveLocation?.city || undefined,
+  state: formData.state?.trim() || liveLocation?.state || undefined,
+  pincode: formData.pincode || liveLocation?.pincode || '000000',
+  latitude: formData.latitude ?? liveLocation?.latitude,
+  longitude: formData.longitude ?? liveLocation?.longitude,
+  placeId: formData.placeId ?? liveLocation?.placeId,
+});
 
 const SavedAddresses = () => {
   const navigate = useNavigate();
-  const {
-    savedAddresses, removeAddress, addAddress,
-    updateAddress, selectedAddressId, setSelectedAddress
-  } = useAccountStore();
-
-  const [isModalOpen, setIsModalOpen]   = useState(false);
+  const { setSavedAddresses, setSelectedAddress } = useAccountStore();
+  const { location: liveLocation, refreshLiveLocation } = useLocation();
+  const [savedAddresses, setSavedAddressesLocal] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', type: 'HOME' });
+  const [formData, setFormData] = useState({ name: '', phone: '', address: '', type: 'HOME', pincode: '', city: '', state: '' });
+
+  const syncStore = (items, selectedId) => {
+    setSavedAddressesLocal(items);
+    setSavedAddresses(items);
+    if (selectedId) {
+      setSelectedAddressId(selectedId);
+      setSelectedAddress(selectedId);
+    }
+  };
+
+  const loadAddresses = async () => {
+    try {
+      const data = await getAddresses();
+      const items = extractList(data).map(mapAddressFromApi);
+      syncStore(items, items.find((a) => a.isDefault)?.id || items[0]?.id || null);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to load addresses');
+    }
+  };
+
+  useEffect(() => {
+    loadAddresses();
+  }, []);
 
   const handleOpenModal = (addr = null) => {
     if (addr) {
       setEditingAddress(addr);
-      setFormData({ ...addr });
+      setFormData({
+        name: addr.name,
+        phone: addr.phone,
+        address: addr.address,
+        type: addr.type,
+        pincode: addr.pincode || '',
+        city: addr.city || '',
+        state: addr.state || '',
+      });
     } else {
       setEditingAddress(null);
-      setFormData({ name: '', phone: '', address: '', type: 'HOME' });
+      setFormData({ name: '', phone: '', address: '', type: 'HOME', pincode: '', city: '', state: '' });
     }
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.phone || !formData.address) {
       toast.error('All fields are required');
       return;
     }
-    if (editingAddress) {
-      updateAddress(formData);
-      toast.success('Address updated');
-    } else {
-      const newAddr = { ...formData, id: Date.now() };
-      addAddress(newAddr);
-      setSelectedAddress(newAddr.id);
-      toast.success('Address added & selected');
+
+    try {
+      const payload = toAddressPayload(formData, liveLocation);
+      if (editingAddress) {
+        await updateAddress(editingAddress.id, payload);
+        toast.success('Address updated');
+      } else {
+        const created = await createAddress(payload);
+        const mapped = mapAddressFromApi(created);
+        setSelectedAddressId(mapped.id);
+        toast.success('Address added & selected');
+      }
+      setIsModalOpen(false);
+      await loadAddresses();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to save address');
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id, e) => {
+  const handleDelete = async (id, e) => {
     e.stopPropagation();
-    removeAddress(id);
-    toast.success('Address removed');
+    try {
+      await deleteAddress(id);
+      if (selectedAddressId === id) setSelectedAddressId(null);
+      toast.success('Address removed');
+      await loadAddresses();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to delete address');
+    }
+  };
+
+  const handleSelectAddress = async (addr) => {
+    try {
+      await setDefaultAddress(addr.id);
+      setSelectedAddressId(addr.id);
+      toast.success(`Deliver to ${addr.type} selected`);
+      await loadAddresses();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to set default address');
+    }
   };
 
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
@@ -133,10 +218,7 @@ const SavedAddresses = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                onClick={() => {
-                  setSelectedAddress(addr.id);
-                  toast.success(`Deliver to ${addr.type} selected`);
-                }}
+                onClick={() => handleSelectAddress(addr)}
                 className={`bg-white rounded-2xl p-4 border cursor-pointer transition-all duration-200 ${
                   isSelected
                     ? `${primaryBorder} shadow-md scale-[1.01]`
@@ -168,7 +250,9 @@ const SavedAddresses = () => {
                 <h3 className={`text-[13px] font-black mb-1 ${isSelected ? primaryText : 'text-gray-800'}`}>
                   {addr.name}
                 </h3>
-                <p className="text-[12px] text-gray-500 font-medium leading-relaxed">{addr.address}</p>
+                <p className="text-[12px] text-gray-500 font-medium leading-relaxed">
+                  {addr.address}{addr.city ? `, ${addr.city}` : ''}{addr.pincode ? ` - ${addr.pincode}` : ''}
+                </p>
                 <p className="text-[12px] font-bold text-gray-700 mt-1.5">{addr.phone}</p>
 
                 {/* Actions */}
@@ -277,6 +361,31 @@ const SavedAddresses = () => {
                   </div>
                 </div>
 
+                {/* Pincode & City */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>Pincode</label>
+                    <input
+                      type="text"
+                      maxLength="6"
+                      placeholder="e.g. 847211"
+                      value={formData.pincode}
+                      onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                      className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-[13px] font-medium focus:outline-none ${focusBorder} transition-colors`}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>City</label>
+                    <input
+                      type="text"
+                      placeholder="City name"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-[13px] font-medium focus:outline-none ${focusBorder} transition-colors`}
+                    />
+                  </div>
+                </div>
+
                 {/* Type */}
                 <div className="space-y-1.5">
                   <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>Address Type</label>
@@ -317,5 +426,3 @@ const SavedAddresses = () => {
 };
 
 export default SavedAddresses;
-
-

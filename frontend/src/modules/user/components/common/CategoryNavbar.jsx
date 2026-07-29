@@ -81,9 +81,21 @@ const IconElectrical = ({ size = 24, active, className }) => (
 );
 
 /* ─────────────────────────────────────────────
-   Category list — project ki actual categories
-   ───────────────────────────────────────────── */
-const CATEGORIES = [
+   Icon map for nav chips (labels come from API)
+───────────────────────────────────────────── */
+const ICON_MAP = {
+  'for-you': IconForYou,
+  beauty: IconBeauty,
+  gifting: IconGifting,
+  electronics: IconElectronics,
+  jewellery: IconJewellery,
+  toys: IconToys,
+  stationery: IconStationery,
+  fashion: IconFashion,
+  electrical: IconElectrical,
+};
+
+const FALLBACK_NAV = [
   { id: 'for-you',     label: 'You Buy',     Svg: IconForYou     },
   { id: 'beauty',      label: 'Beauty',      Svg: IconBeauty     },
   { id: 'gifting',     label: 'Gifting',     Svg: IconGifting    },
@@ -143,11 +155,19 @@ const getMithilakartActiveTextColor = (category) => {
 };
 
 import { useTranslation } from 'react-i18next';
+import useVendorStore from '../../../../store/useVendorStore';
+import { mapNavChips } from '../../utils/mappers';
 
 const CategoryNavbar = ({ selectedCategory, setSelectedCategory }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { homeChips } = useVendorStore();
+
+  const navItems = mapNavChips(homeChips, FALLBACK_NAV).map((chip) => ({
+    ...chip,
+    Svg: ICON_MAP[chip.id] || IconForYou,
+  }));
 
   const handleSelect = (cat) => {
     setSelectedCategory(cat.label);
@@ -170,8 +190,9 @@ const CategoryNavbar = ({ selectedCategory, setSelectedCategory }) => {
       role="navigation"
       aria-label="Product categories"
     >
-      {CATEGORIES.map((cat) => {
+      {navItems.map((cat) => {
         const isActive = selectedCategory === cat.label;
+        const NavIcon = cat.Svg;
 
         return (
           <motion.button
@@ -192,7 +213,7 @@ const CategoryNavbar = ({ selectedCategory, setSelectedCategory }) => {
                 isActive ? getMithilakartActiveTextColor(selectedCategory) : 'text-primary-dark/80'
               }`}
             >
-              <cat.Svg size={18} active={isActive} className="w-[14px] h-[14px] md:w-[18px] md:h-[18px]" />
+              <NavIcon size={18} active={isActive} className="w-[14px] h-[14px] md:w-[18px] md:h-[18px]" />
             </div>
 
             {/* Label */}

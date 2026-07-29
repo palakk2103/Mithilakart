@@ -1,4 +1,0 @@
-- [x] Create custom corner ornament SVGs and bottom divider SVGs in CategoryProductsSection.jsx
-- [x] Refactor ProductCard component to apply cream background, border styles, corner ornaments, wishlist button, and divider
-- [x] Format rating, brand/name text, price structure, discount pill, and UPI text
-- [x] Test the interface to verify correctness color palette

@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAccountStore from '../../../../store/useAccountStore';
 import SearchInput from '../../../../shared/components/SearchInput';
+import { getOrders } from '../../services/ordersApi';
+import { extractList, mapOrderForList } from '../../utils/mappers';
 
 // Real Images from Assets
 // Real Images from Assets
@@ -140,11 +142,37 @@ const BannerCarousel = () => {
 
 const MyOrders = () => {
   const navigate = useNavigate();
-  const orders = useAccountStore((state) => state.orders);
+  const { orders, setOrders } = useAccountStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(null); 
-  const [ratings, setRatings] = useState({}); 
+  const [ratings, setRatings] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getOrders();
+        if (!cancelled) {
+          setOrders(extractList(data).map(mapOrderForList));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load orders');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [setOrders]); 
   
   const [activeFilters, setActiveFilters] = useState({
     status: 'All',

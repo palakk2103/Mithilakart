@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   ArrowLeft, Search, ShoppingCart, Star, Heart, Send,
-  Share2, ChevronRight, X, MapPin, Truck, RotateCcw, IndianRupee, AlertCircle
+  Share2, ChevronRight, X, MapPin, Truck, RotateCcw, IndianRupee
 } from 'lucide-react';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useLocation as useRouterLocation, useNavigate, Link } from 'react-router-dom';
 import useAccountStore from '../../../store/useAccountStore';
+import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
+import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
 import { useTranslation } from 'react-i18next';
-import ProductNotFound from '../components/common/ProductNotFound';
-import ShippingUnavailable from '../components/common/ShippingUnavailable';
-import { getProductImage, handleImageError } from '../../../shared/utils/imageUtils';
-
-
+import { getProductById, getProductReviews, getProductQuestions, createProductReview, askProductQuestion } from '../services/catalogApi';
+import { getOrders } from '../services/ordersApi';
+import { addToWishlist, removeFromWishlist as removeWishlistItem } from '../services/userApi';
+import { mapProductForDetail, extractList, mapReview, mapQuestion } from '../utils/mappers';
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import { toast } from 'react-hot-toast';
+import { addProductToCart, fetchCartCount } from '../utils/cartUtils';
 
 // Import Assets
 import PlumShampoo from '../../../assets/products/product05.jpg';
@@ -28,16 +32,20 @@ import TowerFan from '../../../assets/products/product09.jpg';
 
 const ProductDetail = () => {
   const { t } = useTranslation();
-  const location = useLocation();
+  const location = useRouterLocation();
+  const { location: liveLocation } = useLiveLocation();
+  const { savedAddresses, selectedAddressId } = useAccountStore();
+  useHydrateAddresses();
+  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
   const navigate = useNavigate();
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
-  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
-  const primaryBgHover = isMithilakFlow ? 'hover:bg-[#1a6874]' : isFreshGroceryFlow ? 'hover:bg-[#c49218]' : (isQuickShopFlow ? 'hover:bg-[#d45014]' : 'hover:bg-[#5b953d]');
-  const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#6FAE4A]');
+  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#3E5A44]');
+  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#3E5A44]');
+  const primaryBgHover = isMithilakFlow ? 'hover:bg-[#1a6672]' : isFreshGroceryFlow ? 'hover:bg-[#c49218]' : (isQuickShopFlow ? 'hover:bg-[#d45014]' : 'hover:bg-[#06331b]');
+  const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#3E5A44]');
   const primaryLightBg = isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : (isQuickShopFlow ? 'bg-[#FFF5EE]' : 'bg-primary-light');
   const shadowColor = isMithilakFlow ? 'shadow-[0_4px_16px_rgba(32,124,138,0.22)]' : isFreshGroceryFlow ? 'shadow-[0_4px_16px_rgba(217,162,27,0.15)]' : (isQuickShopFlow ? 'shadow-[0_4px_16px_rgba(242,101,34,0.22)]' : 'shadow-[0_4px_16px_rgba(8,66,36,0.22)]');
   const shadowColorLight = isMithilakFlow ? 'shadow-[0_10px_30px_rgba(32,124,138,0.08)]' : isFreshGroceryFlow ? 'shadow-[0_10px_30px_rgba(217,162,27,0.06)]' : (isQuickShopFlow ? 'shadow-[0_10px_30px_rgba(242,101,34,0.08)]' : 'shadow-[0_10px_30px_rgba(8,66,36,0.08)]');
@@ -47,7 +55,15 @@ const ProductDetail = () => {
   const accentBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-orange-500' : 'border-green-500');
 
   const [selectedSize, setSelectedSize] = useState('S');
-  const { wishlist, addToWishlist, removeFromWishlist } = useAccountStore();
+  const { wishlist, addToWishlist: addToWishlistStore, removeFromWishlist } = useAccountStore();
+  const [product, setProduct] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [questions, setQuestions] = useState([]);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, body: '' });
+  const [questionText, setQuestionText] = useState('');
+  const [engagementLoading, setEngagementLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -65,27 +81,6 @@ const ProductDetail = () => {
   const [touchStart, setTouchStart] = useState(0);
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isDeliveryUnavailable, setIsDeliveryUnavailable] = useState(false);
-  const [pincode, setPincode] = useState('');
-  const [isPincodeChecked, setIsPincodeChecked] = useState(false);
-  const [pincodeError, setPincodeError] = useState('');
-
-  const handlePincodeCheck = () => {
-    if (pincode.length < 6) {
-      setPincodeError('Please enter a valid 6-digit pincode');
-      setIsPincodeChecked(false);
-      return;
-    }
-    setPincodeError('');
-    setIsPincodeChecked(true);
-    if (pincode === '999999' || pincode.startsWith('9')) {
-      setIsDeliveryUnavailable(true);
-    } else {
-      setIsDeliveryUnavailable(false);
-    }
-  };
-
-
 
   const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientY);
   const handleTouchMove = (e, setExpanded, isExpanded) => {
@@ -98,24 +93,137 @@ const ProductDetail = () => {
     }
   };
 
-  const product = useMemo(() => location.state?.product || {
-    id: '1',
-    brand: 'Lounge Dreams',
-    name: 'Women Boxy Fit Checked Casual Shirt',
-    price: 1559,
-    oldPrice: 2999,
-    discount: '48% off',
-    rating: 4.2,
-    ratingCount: 4,
-    image: PlumShampoo,
-    category: 'Fashion'
+  const resolvedProductId = product?.id || location.state?.product?.id;
+
+  const findDeliveredOrderId = async (pid) => {
+    const data = await getOrders({ status: 'delivered', limit: 30 });
+    const orders = extractList(data);
+    for (const order of orders) {
+      const subs = order.sellerSubOrders || [];
+      const hasProduct = subs.some((sub) =>
+        (sub.items || []).some((item) => String(item.productId) === String(pid))
+      );
+      if (hasProduct) return order.id || order._id;
+    }
+    return null;
+  };
+
+  const handleSubmitReview = async () => {
+    if (!isAuthenticated('customer')) {
+      navigate('/login');
+      return;
+    }
+    if (!reviewForm.body.trim()) {
+      toast.error('Please write a review');
+      return;
+    }
+    setEngagementLoading(true);
+    try {
+      const orderId = await findDeliveredOrderId(resolvedProductId);
+      if (!orderId) {
+        toast.error('You need a delivered order for this product to review');
+        return;
+      }
+      await createProductReview(resolvedProductId, {
+        orderId,
+        rating: Number(reviewForm.rating),
+        body: reviewForm.body.trim(),
+      });
+      toast.success('Review submitted for moderation');
+      setReviewForm({ rating: 5, body: '' });
+      const reviewData = await getProductReviews(resolvedProductId).catch(() => []);
+      setReviews(extractList(reviewData).map(mapReview));
+    } catch (err) {
+      toast.error(err?.message || 'Failed to submit review');
+    } finally {
+      setEngagementLoading(false);
+    }
+  };
+
+  const handleAskQuestion = async () => {
+    if (!isAuthenticated('customer')) {
+      navigate('/login');
+      return;
+    }
+    if (!questionText.trim()) {
+      toast.error('Enter your question');
+      return;
+    }
+    setEngagementLoading(true);
+    try {
+      await askProductQuestion(resolvedProductId, { question: questionText.trim() });
+      toast.success('Question submitted');
+      setQuestionText('');
+      const questionData = await getProductQuestions(resolvedProductId).catch(() => []);
+      setQuestions(extractList(questionData?.items || questionData).map(mapQuestion));
+    } catch (err) {
+      toast.error(err?.message || 'Failed to submit question');
+    } finally {
+      setEngagementLoading(false);
+    }
+  };
+
+  const avgRating = reviews.length
+    ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
+    : product?.rating || '4.2';
+
+  useEffect(() => {
+    let cancelled = false;
+    const productId = location.state?.product?.id;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (productId) {
+          const [detail, reviewData, questionData] = await Promise.all([
+            getProductById(productId),
+            getProductReviews(productId).catch(() => []),
+            getProductQuestions(productId).catch(() => []),
+          ]);
+          if (!cancelled) {
+            setProduct(mapProductForDetail(detail, PlumShampoo));
+            setReviews(extractList(reviewData).map(mapReview));
+            setQuestions(extractList(questionData?.items || questionData).map(mapQuestion));
+          }
+        } else if (location.state?.product) {
+          if (!cancelled) {
+            setProduct(mapProductForDetail(location.state.product, PlumShampoo));
+          }
+        } else if (!cancelled) {
+          setProduct(mapProductForDetail({
+            id: '1',
+            brand: 'Lounge Dreams',
+            name: 'Women Boxy Fit Checked Casual Shirt',
+            price: 1559,
+            mrp: 2999,
+            rating: 4.2,
+            reviewCount: 4,
+            image: PlumShampoo,
+            category: 'Fashion',
+          }, PlumShampoo));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Failed to load product');
+          if (location.state?.product) {
+            setProduct(mapProductForDetail(location.state.product, PlumShampoo));
+          }
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [location.state]);
 
-  const isOutOfStock = useMemo(() => {
-    return product.stock === 0 || product.isOutOfStock === true || product.status === 'Out of Stock' || product.outOfStock === true;
-  }, [product]);
-
-  const detailsData = useMemo(() => ({
+  const detailsData = useMemo(() => {
+    if (!product) return { highlights: [], specs: [] };
+    return {
     highlights: [
       { label: 'Pack of', value: product.pack || '1' },
       { label: 'Fabric', value: product.fabric || 'Wool Blend' },
@@ -132,23 +240,16 @@ const ProductDetail = () => {
       { label: 'Suitable For', value: 'Western Wear' },
       { label: 'Hem', value: 'Curved' }
     ]
-  }), [product]);
-
-  const images = useMemo(() => {
-    const mainImg = getProductImage(product.image || product.img || (product.images && product.images[0]));
-    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-      return product.images.map(img => getProductImage(img));
-    }
-    return [mainImg, mainImg];
+    };
   }, [product]);
 
   useEffect(() => {
+    if (!product) return;
     window.scrollTo(0, 0);
     setIsWishlisted(wishlist.some(item => item.id === product.id));
 
-    const updateCount = () => {
-      const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-      const total = cart.reduce((acc, item) => acc + (item.qty || 1), 0);
+    const updateCount = async () => {
+      const total = await fetchCartCount();
       setCartCount(total);
     };
     updateCount();
@@ -156,17 +257,58 @@ const ProductDetail = () => {
     return () => window.removeEventListener('cartUpdated', updateCount);
   }, [product, wishlist]);
 
-  const toggleWishlist = useCallback(() => {
-    if (isWishlisted) {
-      removeFromWishlist(product.id);
-      setToastMessage('Removed from Wishlist');
-    } else {
-      addToWishlist(product);
-      setToastMessage('Added to Wishlist');
+  const toggleWishlist = useCallback(async () => {
+    if (!product) return;
+    try {
+      if (isWishlisted) {
+        await removeWishlistItem(product.id);
+        removeFromWishlist(product.id);
+        setToastMessage('Removed from Wishlist');
+      } else {
+        await addToWishlist(product.id);
+        addToWishlistStore(product);
+        setToastMessage('Added to Wishlist');
+      }
+      setIsWishlisted(!isWishlisted);
+    } catch {
+      setToastMessage('Could not update wishlist');
     }
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2000);
-  }, [product, isWishlisted, addToWishlist, removeFromWishlist]);
+  }, [product, isWishlisted, addToWishlistStore, removeFromWishlist]);
+
+  const handleAddToCart = useCallback(async () => {
+    if (!product) return;
+    try {
+      await addProductToCart(product);
+      setToastMessage('Added to cart');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    } catch {
+      setToastMessage('Could not add to cart');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    }
+  }, [product]);
+
+  const handleBuyNow = useCallback(() => {
+    if (!product) return;
+    if (localStorage.getItem('isAuthenticated') !== 'true') {
+      navigate('/login', { state: { from: '/vendor/checkout', checkoutProduct: product } });
+    } else {
+      navigate('/vendor/checkout', { state: { product } });
+    }
+  }, [product, navigate]);
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-cream">
+        <p className="text-sm text-slate-600">{loading ? 'Loading product...' : error || 'Product not found'}</p>
+      </div>
+    );
+  }
+
+  const images = product.images?.length ? product.images : [product.image, product.image, product.image];
 
   const handleShare = async () => {
     const shareData = {
@@ -204,75 +346,46 @@ const ProductDetail = () => {
     }
   };
 
-  const handleAddToCart = useCallback(() => {
-    const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-    cart.push({ ...product, cartId: Date.now(), qty: 1 });
-    localStorage.setItem('userCart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('cartUpdated'));
-    setToastMessage('Added to cart');
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
-  }, [product]);
-
-  const handleBuyNow = useCallback(() => {
-    if (localStorage.getItem('isAuthenticated') !== 'true') {
-      navigate('/login', { state: { from: '/checkout', checkoutProduct: product } });
-    } else {
-      navigate('/checkout', { state: { product } });
-    }
-  }, [product, navigate]);
-
-  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const isNotFound = useMemo(() => queryParams.get('notFound') === 'true' || location.state?.notFound, [queryParams, location.state]);
-
-  if (isNotFound) {
-    return (
-      <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative flex items-center justify-center ${
-        isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isQuickShopFlow ? 'bg-[#FFF9F5]' : 'bg-[#F6F8F3]'
-      }`}>
-        <ProductNotFound />
-      </div>
-    );
-  }
-
   return (
     <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative ${
-      isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isQuickShopFlow ? 'bg-[#FFF9F5]' : 'bg-[#F6F8F3]'
+      isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-bg-cream'
     }`}>
+      {/* Global Repeating Mithila Art Page Background Texture */}
+      {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (
+        <div 
+          className="fixed inset-0 pointer-events-none z-0 bg-repeat opacity-[0.03] select-none"
+          style={{
+            backgroundImage: "url('/Screenshot 2026-07-17 130906.png')",
+            backgroundSize: '360px',
+          }}
+        />
+      )}
 
       {/* Premium Boutique Header */}
-      <div className={`sticky top-0 z-50 px-4 py-3 flex items-center justify-between border-b transition-colors duration-300 relative z-10 ${
-        isMithilakFlow
-          ? 'bg-[#207C8A] border-transparent text-white shadow-sm'
-          : isFreshGroceryFlow
-            ? 'bg-[#D9A21B] border-transparent text-white shadow-sm'
-            : isQuickShopFlow
-              ? 'bg-[#F26522] border-transparent text-white shadow-sm'
-              : 'bg-[#FCF7EE]/90 border-[#F3E3CD]/60 backdrop-blur-md text-[#6FAE4A]'
+      <div className={`sticky top-0 z-50 px-4 py-3 flex items-center justify-between border-b border-gray-100 shadow-[0_1px_8px_rgba(0,0,0,0.01)] transition-colors duration-300 relative z-10 ${
+        isFreshGroceryFlow ? 'bg-[#D9A21B] text-white' : 'bg-[#FCF7EE]/90 border-[#F3E3CD]/60 backdrop-blur-md'
       }`}>
         <button onClick={() => navigate(-1)} className={`p-1.5 rounded-full transition-colors active:scale-90 ${
-          (isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-gray-50'
+          isFreshGroceryFlow ? 'text-white hover:bg-white/5' : 'text-slate-800 hover:bg-gray-50'
         }`}>
           <ArrowLeft size={20} strokeWidth={2.5} />
         </button>
-        <span className={`text-[12px] font-black tracking-[0.25em] uppercase pl-4 ${
-          (isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white' : primaryText
-        }`}>
+        <span className={`text-[12px] font-black tracking-[0.25em] ${isFreshGroceryFlow ? 'text-white' : primaryText} uppercase pl-4`}>
           Mithilakart
         </span>
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => navigate('/search')} 
+            onClick={() => navigate('/vendor/search')} 
             className={`p-1.5 rounded-full transition-colors active:scale-90 ${
-              (isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-gray-50'
+              isFreshGroceryFlow ? 'text-white hover:bg-white/5' : 'text-slate-800 hover:bg-gray-50'
             }`}
           >
             <Search size={20} />
           </button>
           <div 
-            onClick={() => navigate('/cart')} 
+            onClick={() => navigate('/vendor/cart')} 
             className={`relative p-1.5 rounded-full transition-colors active:scale-95 cursor-pointer ${
-              (isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white hover:bg-white/10' : 'text-slate-800 hover:bg-gray-50'
+              isFreshGroceryFlow ? 'text-white hover:bg-white/5' : 'text-slate-800 hover:bg-gray-50'
             }`}
           >
             <ShoppingCart size={20} className="text-current" />
@@ -294,7 +407,6 @@ const ProductDetail = () => {
               <img 
                 src={images[currentSlide]} 
                 alt={product.name} 
-                onError={handleImageError}
                 className="w-full h-full object-cover transition-all duration-500 ease-out" 
               />
 
@@ -316,10 +428,10 @@ const ProductDetail = () => {
 
               {/* Rating Badge */}
               <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-full border border-gray-100 flex items-center gap-1 shadow-sm z-10">
-                <span className="text-[11px] font-black text-slate-800">{product.rating}</span>
+                <span className="text-[11px] font-black text-slate-800">{avgRating}</span>
                 <Star size={9} fill="#e2a750" className="text-[var(--color-gold)]" />
                 <div className="w-[1px] h-2.5 bg-gray-200 mx-0.5" />
-                <span className="text-[9.5px] font-bold text-slate-400">{product.ratingCount || 12} reviews</span>
+                <span className="text-[9.5px] font-bold text-slate-400">{reviews.length || product.ratingCount || 0} reviews</span>
               </div>
             </div>
 
@@ -335,7 +447,7 @@ const ProductDetail = () => {
                       : 'border-transparent opacity-60'
                   }`}
                 >
-                  <img src={img} onError={handleImageError} className="w-full h-full object-cover" alt={`preview-${idx}`} />
+                  <img src={img} className="w-full h-full object-cover" alt={`preview-${idx}`} />
                 </button>
               ))}
             </div>
@@ -356,48 +468,20 @@ const ProductDetail = () => {
         {/* Strike Prices / Coupon Layout */}
         <div className="mt-2.5">
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="bg-[#FFD633] text-slate-900 text-[20px] font-black px-5 py-0.5 rounded-[4px] relative flex items-center shadow-[0_1px_3px_rgba(0,0,0,0.05)] select-none">
+            <div className="bg-[#FFD633] text-slate-900 text-[20px] font-black px-3 py-1.5 rounded-[4px] relative flex items-center shadow-[0_1px_3px_rgba(0,0,0,0.05)] select-none">
               {/* Coupon style side cutouts */}
               <div className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full border-r border-slate-100"></div>
               <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full border-l border-slate-100"></div>
               {formatPrice(product.price)}
             </div>
-            <span className="text-[14px] text-gray-400 font-semibold line-through">
+            <span className="text-[14px] text-gray-400 font-medium line-through">
               MRP {formatPrice(product.oldPrice)}
             </span>
-            {isOutOfStock && (
-              <span className="bg-red-100 text-red-600 border border-red-200 text-[10px] md:text-xs font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
-                <AlertCircle size={12} /> Out of Stock
-              </span>
-            )}
           </div>
           <div className="text-[12px] font-extrabold text-[#2b6cb0] mt-1.5 pl-0.5">
             {product.discount || 'Special Offer'}
           </div>
         </div>
-
-        {/* Out of Stock Banner */}
-        {isOutOfStock && (
-          <div className="mt-3 p-3 bg-red-50/90 border border-red-200/80 rounded-2xl flex items-center justify-between shadow-xs">
-            <div className="flex items-center gap-2 text-red-700">
-              <AlertCircle size={18} className="flex-shrink-0" />
-              <div>
-                <p className="text-xs font-bold leading-tight">Currently Out of Stock</p>
-                <p className="text-[10px] text-red-500 font-semibold mt-0.5">We will restock this item soon!</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => {
-                setToastMessage('We will notify you when back in stock!');
-                setShowToast(true);
-                setTimeout(() => setShowToast(false), 2000);
-              }}
-              className="text-[10px] font-black uppercase tracking-wider bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all flex-shrink-0"
-            >
-              Notify Me
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Variant Selector (Premium Circles) */}
@@ -481,73 +565,22 @@ const ProductDetail = () => {
           Delivery Details
         </span>
         <div className="bg-white border border-slate-100 rounded-2xl p-3.5 space-y-3.5 shadow-[0_4px_16px_rgba(0,0,0,0.01)]">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                maxLength={6}
-                value={pincode}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '');
-                  setPincode(val);
-                  setIsPincodeChecked(false);
-                  setPincodeError('');
-                }}
-                placeholder="Enter Pincode (e.g. 999999)" 
-                className={`border rounded-lg px-3 py-2 text-xs font-bold flex-1 focus:outline-none focus:ring-1 focus:ring-opacity-50 transition-colors ${
-                  pincodeError ? 'border-red-500 focus:ring-red-500' : `${primaryBorder} focus:ring-slate-500`
-                }`}
-              />
-              <button
-                type="button"
-                onClick={handlePincodeCheck}
-                className={`px-5 py-2 ${primaryBg} ${primaryBgHover} text-white font-black uppercase tracking-widest text-[10px] rounded-lg active:scale-95 transition-all shadow-xs`}
-              >
-                Check
-              </button>
+          <div className="flex items-center gap-3">
+            <MapPin size={18} className="text-[#3E5A44]" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider leading-none">Deliver to Home</p>
+              <p className="text-[12px] text-slate-500 font-medium truncate mt-1">{deliverTo.label}</p>
             </div>
-            {pincodeError && (
-              <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider pl-1">{pincodeError}</p>
-            )}
+            <ChevronRight size={16} className="text-gray-400" />
           </div>
-
-          {isPincodeChecked && (
-            isDeliveryUnavailable ? (
-              <ShippingUnavailable onChangeLocation={() => {
-                setIsDeliveryUnavailable(false);
-                setIsPincodeChecked(false);
-                setPincode('');
-              }} />
-            ) : (
-              <>
-                <div className="flex items-center gap-3 bg-emerald-50/30 p-2.5 rounded-xl border border-emerald-100/50 animate-in fade-in duration-200">
-                  <MapPin size={18} className="text-emerald-700" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-black text-emerald-800 uppercase tracking-wider leading-none">Deliverable to {pincode}</p>
-                    <p className="text-[11px] text-emerald-600 font-bold mt-1">Standard Delivery Available</p>
-                  </div>
-                </div>
-                <div className="h-[1px] bg-slate-100" />
-                <div className="flex items-center gap-3">
-                  <Truck size={18} className={primaryText} />
-                  <div>
-                    <p className="text-[12px] font-black text-slate-850">Delivery by Sat, 16 May</p>
-                    <p className="text-[10px] text-orange-600 font-bold mt-0.5">Order in 00h 00m 14s</p>
-                  </div>
-                </div>
-              </>
-            )
-          )}
-
-          {!isPincodeChecked && (
-            <div className="flex items-center gap-3">
-              <MapPin size={18} className="text-slate-400" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider leading-none">Deliver to Home</p>
-                <p className="text-[12px] text-slate-450 font-medium truncate mt-1">Please enter pincode to verify delivery availability</p>
-              </div>
+          <div className="h-[1px] bg-slate-100" />
+          <div className="flex items-center gap-3">
+            <Truck size={18} className="text-[#3E5A44]" />
+            <div>
+              <p className="text-[12px] font-black text-slate-850">Delivery by Sat, 16 May</p>
+              <p className="text-[10px] text-orange-600 font-bold mt-0.5">Order in 00h 00m 14s</p>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -644,11 +677,92 @@ const ProductDetail = () => {
     </div>
   </div>
 
+      {/* Reviews & Q&A */}
+      <div className="mt-4 px-4 md:max-w-6xl md:mx-auto md:w-full space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900 mb-4">Customer Reviews</h3>
+          {reviews.length === 0 ? (
+            <p className="text-sm text-slate-400 font-medium mb-4">No reviews yet. Be the first to review!</p>
+          ) : (
+            <div className="space-y-4 mb-5">
+              {reviews.slice(0, 5).map((review) => (
+                <div key={review.id} className="border-b border-slate-50 pb-4 last:border-0">
+                  <div className="flex items-center gap-1 mb-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star key={n} size={10} className={n <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'} />
+                    ))}
+                    <span className="text-[10px] text-slate-400 ml-2">{review.userName} · {review.date}</span>
+                  </div>
+                  <p className="text-[12px] text-slate-700 leading-relaxed">{review.comment}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="space-y-3 border-t border-slate-50 pt-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Write a review</p>
+            <select
+              value={reviewForm.rating}
+              onChange={(e) => setReviewForm((f) => ({ ...f, rating: e.target.value }))}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold"
+            >
+              {[5, 4, 3, 2, 1].map((n) => (
+                <option key={n} value={n}>{n} Stars</option>
+              ))}
+            </select>
+            <textarea
+              value={reviewForm.body}
+              onChange={(e) => setReviewForm((f) => ({ ...f, body: e.target.value }))}
+              rows={3}
+              placeholder="Share your experience..."
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"
+            />
+            <button
+              onClick={handleSubmitReview}
+              disabled={engagementLoading}
+              className={`w-full py-3 rounded-xl text-white text-[12px] font-black uppercase tracking-wider ${primaryBg} disabled:opacity-60`}
+            >
+              Submit Review
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900 mb-4">Questions & Answers</h3>
+          {questions.length === 0 ? (
+            <p className="text-sm text-slate-400 font-medium mb-4">No questions yet.</p>
+          ) : (
+            <div className="space-y-4 mb-5">
+              {questions.slice(0, 5).map((q) => (
+                <div key={q.id} className="border-b border-slate-50 pb-3 last:border-0">
+                  <p className="text-[12px] font-bold text-slate-800">Q: {q.question}</p>
+                  {q.answer && <p className="text-[12px] text-slate-600 mt-1">A: {q.answer}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2 border-t border-slate-50 pt-4">
+            <input
+              value={questionText}
+              onChange={(e) => setQuestionText(e.target.value)}
+              placeholder="Ask about this product..."
+              className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm"
+            />
+            <button
+              onClick={handleAskQuestion}
+              disabled={engagementLoading}
+              className={`px-4 py-2.5 rounded-xl text-white ${primaryBg} disabled:opacity-60`}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Similar Products */}
       <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-2xl md:border md:my-6 md:p-6">
         <div className="flex justify-between items-center px-4 mb-3 md:px-0">
           <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Similar Products</h3>
-          <span className={`text-[10px] font-black ${primaryText} tracking-widest uppercase`}>View All</span>
+          <span className="text-[10px] font-black text-[#3E5A44] tracking-widest uppercase">View All</span>
         </div>
         <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
           {[
@@ -658,7 +772,7 @@ const ProductDetail = () => {
           ].map((item, idx) => (
             <div 
               key={idx} 
-              onClick={() => navigate('/product-detail', { state: { product: { ...item, image: item.img, rating: 4.1, discount: '55% OFF' } } })}
+              onClick={() => navigate('/vendor/product-detail', { state: { product: { ...item, image: item.img, rating: 4.1, discount: '55% OFF' } } })}
               className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-sm"
             >
               <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
@@ -687,7 +801,7 @@ const ProductDetail = () => {
       <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-2xl md:border md:my-6 md:p-6">
         <div className="flex justify-between items-center px-4 mb-3 md:px-0">
           <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Bought Together</h3>
-          <span className={`text-[10px] font-black ${primaryText} tracking-widest uppercase`}>Explore</span>
+          <span className="text-[10px] font-black text-[#3E5A44] tracking-widest uppercase">Explore</span>
         </div>
         <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
           {[
@@ -900,15 +1014,15 @@ const ProductDetail = () => {
             <div className="sticky top-[53px] bg-white flex border-b border-gray-100 z-10">
               <button 
                 onClick={() => setActivePaymentTab('COD')}
-                className={`flex-1 flex flex-col items-center py-4 gap-1 relative transition-colors ${activePaymentTab === 'COD' ? primaryText : 'text-gray-400'}`}
+                className={`flex-1 flex flex-col items-center py-4 gap-1 relative transition-colors ${activePaymentTab === 'COD' ? 'text-[#3E5A44]' : 'text-gray-400'}`}
               >
-                <IndianRupee size={22} className={activePaymentTab === 'COD' ? primaryText : 'text-gray-400'} />
+                <IndianRupee size={22} className={activePaymentTab === 'COD' ? 'text-[#3E5A44]' : 'text-gray-400'} />
                 <span className="text-[13px] font-bold">COD</span>
-                {activePaymentTab === 'COD' && <div className={`absolute bottom-0 left-0 right-0 h-[2.5px] ${primaryBg}`} />}
+                {activePaymentTab === 'COD' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#3E5A44]" />}
               </button>
               <button 
                 onClick={() => setActivePaymentTab('UPI')}
-                className={`flex-1 flex flex-col items-center py-4 gap-1 relative transition-colors ${activePaymentTab === 'UPI' ? primaryText : 'text-gray-400'}`}
+                className={`flex-1 flex flex-col items-center py-4 gap-1 relative transition-colors ${activePaymentTab === 'UPI' ? 'text-[#3E5A44]' : 'text-gray-400'}`}
               >
                 <div className="w-5 h-7 flex items-center justify-center">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -916,7 +1030,7 @@ const ProductDetail = () => {
                   </svg>
                 </div>
                 <span className="text-[13px] font-bold">UPI</span>
-                {activePaymentTab === 'UPI' && <div className={`absolute bottom-0 left-0 right-0 h-[2.5px] ${primaryBg}`} />}
+                {activePaymentTab === 'UPI' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#3E5A44]" />}
               </button>
             </div>
 
@@ -1031,12 +1145,12 @@ const ProductDetail = () => {
             {product.pack || '1 unit'}
           </span>
           <div className="flex items-center gap-1.5">
-            <div className="bg-[#FFD633] text-slate-900 text-[14px] font-black px-3.5 py-0 rounded-[3px] relative flex items-center shadow-3xs">
+            <div className="bg-[#FFD633] text-slate-900 text-[14px] font-black px-2 py-0.5 rounded-[3px] relative flex items-center shadow-3xs">
               <div className="absolute left-[-2px] top-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full"></div>
               <div className="absolute right-[-2px] top-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full"></div>
               {formatPrice(product.price)}
             </div>
-            <span className="text-[11px] text-slate-400 font-semibold line-through leading-none">
+            <span className="text-[11px] text-slate-400 font-bold line-through leading-none">
               MRP {formatPrice(product.oldPrice)}
             </span>
           </div>
@@ -1045,22 +1159,13 @@ const ProductDetail = () => {
           </span>
         </div>
 
-        {/* Right Side: Add to Cart / Out of Stock Button */}
-        {isOutOfStock ? (
-          <button 
-            disabled
-            className="bg-slate-200 text-slate-400 font-extrabold px-6 py-2.5 rounded-[6px] text-[13px] flex items-center justify-center cursor-not-allowed border border-slate-300 select-none opacity-80"
-          >
-            Out of Stock
-          </button>
-        ) : (
-          <button 
-            onClick={handleAddToCart}
-            className={`${primaryBg} ${primaryBgHover} text-white font-extrabold px-6 py-2.5 rounded-[6px] active:scale-95 transition-all text-[13px] flex items-center justify-center cursor-pointer shadow-xs`}
-          >
-            {t('cart.addToCart') || 'Add to cart'}
-          </button>
-        )}
+        {/* Right Side: Add to Cart Button */}
+        <button 
+          onClick={handleAddToCart}
+          className={`${primaryBg} ${primaryBgHover} text-white font-extrabold px-6 py-2.5 rounded-[6px] active:scale-95 transition-all text-[13px] flex items-center justify-center cursor-pointer shadow-xs`}
+        >
+          {t('cart.addToCart') || 'Add to cart'}
+        </button>
       </div>
 
       {/* Toast Notification */}

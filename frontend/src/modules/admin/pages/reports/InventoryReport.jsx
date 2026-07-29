@@ -1,18 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, Download, AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { motion } from 'framer-motion';
-import { INVENTORY_REPORT_DATA } from '../../constants/dummyData';
+import { reportsApi } from '../../services/api';
+import { mapInventoryReportData } from '../../utils/mappers';
 import { StatusBadge } from '../../components/ui';
 
 const InventoryReport = () => {
-  const totalProducts = INVENTORY_REPORT_DATA.reduce((sum, c) => sum + c.totalProducts, 0);
-  const totalOOS = INVENTORY_REPORT_DATA.reduce((sum, c) => sum + c.outOfStock, 0);
-  const totalLow = INVENTORY_REPORT_DATA.reduce((sum, c) => sum + c.lowStock, 0);
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error: apiError } = await reportsApi.getInventoryReport();
+      if (cancelled) return;
+      if (apiError) {
+        setError(apiError);
+        setReportData([]);
+      } else {
+        setError(null);
+        setReportData(mapInventoryReportData(data));
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const totalProducts = reportData.reduce((sum, c) => sum + c.totalProducts, 0);
+  const totalOOS = reportData.reduce((sum, c) => sum + c.outOfStock, 0);
+  const totalLow = reportData.reduce((sum, c) => sum + c.lowStock, 0);
 
   const stats = [
     { label: 'Total Products', value: totalProducts.toString(), icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'In Stock', value: INVENTORY_REPORT_DATA.reduce((s, c) => s + c.inStock, 0).toString(), icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
+    { label: 'In Stock', value: reportData.reduce((s, c) => s + c.inStock, 0).toString(), icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
     { label: 'Low Stock', value: totalLow.toString(), icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50' },
     { label: 'Out of Stock', value: totalOOS.toString(), icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50' },
   ];
@@ -43,7 +66,7 @@ const InventoryReport = () => {
         <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight font-montserrat mb-8">Stock Distribution by Category</h3>
         <div className="h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={INVENTORY_REPORT_DATA}>
+            <BarChart data={reportData.length ? reportData : [{ category: '—', inStock: 0, lowStock: 0, outOfStock: 0 }]}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="category" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dy={10} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 700}} dx={-10} />
@@ -63,7 +86,7 @@ const InventoryReport = () => {
           <table className="w-full text-left">
             <thead><tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-6 py-4">Category</th><th className="px-6 py-4">Total</th><th className="px-6 py-4">In Stock</th><th className="px-6 py-4">Low Stock</th><th className="px-6 py-4">Out of Stock</th><th className="px-6 py-4">Health</th></tr></thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {INVENTORY_REPORT_DATA.map((row, i) => {
+              {reportData.map((row, i) => {
                 const healthPct = Math.round((row.inStock / row.totalProducts) * 100);
                 return (
                   <tr key={i} className="hover:bg-blue-50/30 transition-colors">

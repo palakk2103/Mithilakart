@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Package, Upload, Plus, X, 
   Save, CheckCircle2, ChevronRight,
@@ -7,12 +7,32 @@ import {
   Truck, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { productsApi, categoriesApi } from '../services/api';
+import { extractList, mapCategory } from '../utils/mappers';
 
 const AddProduct = () => {
   const [images, setImages] = useState([]);
   const [saved, setSaved] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
 
-  const categories = ['Fashion', 'Electronics', 'Beauty', 'Home Decor', 'Toys', 'Stationery', 'Jewellery'];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [categoriesRes, productsRes] = await Promise.all([
+        categoriesApi.getAll(),
+        productsApi.getAll({ limit: 10 }),
+      ]);
+      if (cancelled) return;
+      if (!categoriesRes.error) {
+        setCategories(extractList(categoriesRes.data).map(mapCategory));
+      }
+      if (!productsRes.error) {
+        setProducts(extractList(productsRes.data));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleAddImage = () => {
     const url = prompt('Enter Image URL');
@@ -75,7 +95,7 @@ const AddProduct = () => {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Category *</label>
                   <select className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-900 appearance-none">
                     <option value="">Select Category</option>
-                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>

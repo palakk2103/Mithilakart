@@ -1,29 +1,8 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { handleImageError, getProductImage } from '../../../../../shared/utils/imageUtils';
+import useVendorStore from '../../../../../store/useVendorStore';
+import { mapShopCategoryCards } from '../../../utils/mappers';
 
-// Import category images matching the mockup
-import beautyCareImg from '../../../../../assets/categories/beauty_red_blossom.png';
-import giftsHampersImg from '../../../../../assets/categories/gifts_green_package.png';
-import smartGadgetsImg from '../../../../../assets/categories/smart_gadgets.png';
-import artJewelleryImg from '../../../../../assets/categories/art_jewellery.png';
-import toysGamesImg from '../../../../../assets/categories/toys_games.png';
-import officeBooksImg from '../../../../../assets/products/product14.jpg';
-import trendyFashionImg from '../../../../../assets/products/product10.jpg';
-import electricalsImg from '../../../../../assets/products/product08.jpg';
-
-const categoriesData = [
-  { id: 1, name: 'Beauty & Care', img: beautyCareImg, path: '/category-products?category=Beauty' },
-  { id: 2, name: 'Gifts & Hampers', img: giftsHampersImg, path: '/category-products?category=Gifting' },
-  { id: 3, name: 'Smart Gadgets', img: smartGadgetsImg, path: '/category-products?category=Electronics' },
-  { id: 4, name: 'Art Jewellery', img: artJewelleryImg, path: '/category-products?category=Jewellery' },
-  { id: 5, name: 'Toys & Games', img: toysGamesImg, path: '/toys' },
-  { id: 6, name: 'Office & Books', img: officeBooksImg, path: '/category-products?category=Stationery' },
-  { id: 7, name: 'Trendy Fashion', img: trendyFashionImg, path: '/category-products?category=Fashion' },
-  { id: 8, name: 'Electricals', img: electricalsImg, path: '/category-products?category=Electrical' },
-];
-
-// Reusing same Header Flower SVG style from Trending section
 const HeaderFlower = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block align-middle mx-1">
     <path d="M12 2C13.5 6.5 13.5 6.5 12 11C10.5 6.5 10.5 6.5 12 2Z" fill="#4B6C36" />
@@ -48,63 +27,64 @@ const ViewAllIcon = () => (
 
 const KeepShopping = () => {
   const navigate = useNavigate();
+  const { homeCategories, homeSections } = useVendorStore();
+
+  const categoriesData = useMemo(() => {
+    const fromSections = (homeSections.keepShopping || []).map((item) => ({
+      id: item.id,
+      name: item.label || item.name,
+      img: item.img,
+      path: item.link || `/vendor/product-detail`,
+    }));
+
+    if (fromSections.length) return fromSections;
+    return mapShopCategoryCards(homeCategories);
+  }, [homeCategories, homeSections.keepShopping]);
 
   const handleCardClick = useCallback((item) => {
     navigate(item.path);
   }, [navigate]);
 
+  if (!categoriesData.length) return null;
+
   return (
     <div className="py-2 px-3 w-full max-w-[1600px] mx-auto select-none">
       <div className="bg-[#FCF7EE] rounded-[20px] p-3 text-slate-800 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] border border-[#F3E3CD]/60 font-raleway">
-        
-        {/* Section Header (Same style as Trending This Week) */}
         <div className="flex justify-between items-center mb-2.5 px-1">
-          <div className="flex items-center">
-            <HeaderFlower />
-            <h3 className="text-[12px] md:text-sm font-black text-[#3C2415] uppercase tracking-wide font-montserrat">
-              Keep shopping for this
-            </h3>
-            <HeaderFlower />
-          </div>
-          <button
+          <h2 className="text-[15px] font-black text-[#3F2A20] tracking-tight flex items-center">
+            Keep Shopping <HeaderFlower /> For
+          </h2>
+          <span
             onClick={() => navigate('/categories')}
-            className="text-[9.5px] md:text-xs font-bold text-[#4B6C36] hover:text-[#385227] flex items-center transition-colors duration-200"
+            className="text-[10.5px] font-black text-[#3E5A44] uppercase tracking-tighter cursor-pointer flex items-center"
           >
-            View All
-            <ViewAllIcon />
-          </button>
+            View All <ViewAllIcon />
+          </span>
         </div>
 
-        {/* Horizontal Scrollable Row of Compact Category Cards */}
-        <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
-          {categoriesData.map((item) => (
+        <div className="grid grid-cols-4 gap-2 md:gap-4">
+          {categoriesData.slice(0, 8).map((item) => (
             <div
               key={item.id}
               onClick={() => handleCardClick(item)}
-              className="flex-shrink-0 w-[100px] md:w-[125px] bg-white border border-[#E5D5C0]/65 rounded-[20px] p-2 flex flex-col items-center justify-between cursor-pointer hover:shadow-sm hover:border-[#6FAE4A]/40 transition-all duration-300 group"
+              className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform"
             >
-              {/* Category Image */}
-              <div className="w-full aspect-square bg-[#FFFDFB] rounded-[15px] flex items-center justify-center p-1.5 overflow-hidden">
-                <img
-                  src={getProductImage(item.img || item.image)}
-                  alt={item.name}
-                  className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
-                  onError={handleImageError}
-                />
+              <div className="w-full aspect-square rounded-[14px] overflow-hidden bg-white border border-[#EADCC9]/50 flex items-center justify-center p-1 mb-1 shadow-[0_2px_6px_rgba(0,0,0,0.02)]">
+                {item.img ? (
+                  <img src={item.img} alt={item.name} className="w-full h-full object-cover rounded-[10px]" loading="lazy" />
+                ) : (
+                  <span className="text-[11px] font-black text-[#3E5A44]">{item.name.charAt(0)}</span>
+                )}
               </div>
-
-              {/* Category Name */}
-              <span className="text-[9.5px] md:text-xs font-bold text-[#3C2415] text-center mt-1.5 leading-tight tracking-tight px-0.5 h-[28px] flex items-center justify-center">
+              <p className="text-[8.5px] md:text-[10px] font-bold text-[#3F2A20] text-center leading-tight line-clamp-2 px-0.5">
                 {item.name}
-              </span>
+              </p>
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );
 };
 
-export default React.memo(KeepShopping);
+export default KeepShopping;

@@ -1,11 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Wallet as WalletIcon, CreditCard, ArrowUpRight, ArrowDownLeft, Plus, ChevronRight } from 'lucide-react';
+import { getWallet, getWalletTransactions } from '../services/userApi';
+import { extractList, mapWalletTransaction } from '../utils/mappers';
+import { formatPrice } from '../../../shared/utils/priceFormatter';
 
 const Wallet = () => {
-  const transactions = [
-    { id: 1, title: 'Cashback - iPhone 15 Purchase', date: '22 Apr 2026', amount: '+ ₹500', type: 'credit' },
-    { id: 2, name: 'Payment to Amazon Bazaar', date: '21 Apr 2026', amount: '- ₹375', type: 'debit' },
-  ];
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [walletData, txData] = await Promise.all([
+          getWallet(),
+          getWalletTransactions({ limit: 20 }),
+        ]);
+        if (!cancelled) {
+          setBalance(walletData?.balance ?? 0);
+          setTransactions(extractList(txData).map(mapWalletTransaction));
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Failed to load wallet');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="bg-[#eaeded] min-h-screen pb-20">
@@ -23,7 +54,9 @@ const Wallet = () => {
           
           <div className="flex items-baseline gap-1 mb-8">
              <span className="text-sm font-medium text-slate-500">Available Balance:</span>
-             <span className="text-3xl font-black text-slate-900">₹1,245.50</span>
+             <span className="text-3xl font-black text-slate-900">
+               {loading ? '...' : formatPrice(balance)}
+             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -39,8 +72,14 @@ const Wallet = () => {
         </div>
 
         <h2 className="text-lg font-bold mb-4 px-2">Recent Transactions</h2>
+        {error && <p className="text-sm text-red-600 px-2 mb-3">{error}</p>}
         <div className="space-y-3">
-           {transactions.map(t => (
+           {loading ? (
+             <p className="text-sm text-slate-500 px-2">Loading transactions...</p>
+           ) : transactions.length === 0 ? (
+             <p className="text-sm text-slate-500 px-2">No transactions yet.</p>
+           ) : (
+             transactions.map((t) => (
               <div key={t.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
                  <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-full ${t.type === 'credit' ? 'bg-green-50' : 'bg-red-50'}`}>
@@ -53,7 +92,8 @@ const Wallet = () => {
                  </div>
                  <span className={`font-bold ${t.type === 'credit' ? 'text-green-600' : 'text-slate-900'}`}>{t.amount}</span>
               </div>
-           ))}
+             ))
+           )}
         </div>
       </div>
     </div>
@@ -61,4 +101,3 @@ const Wallet = () => {
 };
 
 export default Wallet;
-

@@ -1,0 +1,8 @@
+{
+  "name": "mithilakart",
+  "private": true,
+  "scripts": {
+    "test": "npm test --prefix backend",
+    "test:e2e": "npm run test:e2e --prefix backend"
+  }
+}

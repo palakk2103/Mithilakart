@@ -28,13 +28,23 @@ export const handleImageError = (e) => {
 };
 
 /**
- * Get product image URL or fallback to default dummy image
+ * Get product/category image URL or fallback to default dummy image.
+ * Automatically resolves relative `/uploads/...` paths to backend URL.
  */
-export const getProductImage = (src) => {
+export const getImageUrl = (src) => {
   if (!src || typeof src !== 'string' || src.trim() === '' || src === 'undefined' || src === 'null') {
     return DEFAULT_PRODUCT_IMAGE;
   }
-  return src;
+  const clean = src.trim();
+  if (clean.startsWith('/uploads')) {
+    const backendOrigin = import.meta.env.VITE_API_BASE_URL
+      ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/v1\/?$/, '')
+      : 'http://localhost:5000';
+    return `${backendOrigin}${clean}`;
+  }
+  return clean;
 };
+
+export const getProductImage = getImageUrl;
 
 export default DEFAULT_PRODUCT_IMAGE;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   DollarSign, TrendingUp, Wallet, ArrowUpRight, 
   ArrowDownRight, PieChart as PieIcon, Download,
@@ -9,16 +9,8 @@ import {
   BarChart, Bar
 } from 'recharts';
 import { motion } from 'framer-motion';
-
-const EARNINGS_TREND = [
-  { day: 'Mon', platform: 4500, vendors: 12000 },
-  { day: 'Tue', platform: 3200, vendors: 15000 },
-  { day: 'Wed', platform: 6800, vendors: 22000 },
-  { day: 'Thu', platform: 4100, vendors: 18000 },
-  { day: 'Fri', platform: 5900, vendors: 25000 },
-  { day: 'Sat', platform: 8200, vendors: 32000 },
-  { day: 'Sun', platform: 7400, vendors: 28000 },
-];
+import { financeApi } from '../../services/api';
+import { extractList, formatCurrency, mapEarningsTrend, mapPlatformEarnings } from '../../utils/mappers';
 
 const EarningStat = ({ title, value, sub, icon: Icon, color, bg }) => (
   <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
@@ -38,6 +30,36 @@ const EarningStat = ({ title, value, sub, icon: Icon, color, bg }) => (
 );
 
 const PlatformEarnings = () => {
+  const [earnings, setEarnings] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [trend, setTrend] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await financeApi.getEarnings();
+      if (cancelled) return;
+      if (!error && data) {
+        const mapped = mapPlatformEarnings(data);
+        setEarnings(mapped);
+        setTrend(mapEarningsTrend(data));
+        setTransactions(extractList(data.items || data.records || data.transactions).map((row, index) => ({
+          id: row.id || row._id || `TXN${8745 + index}`,
+          source: row.source || row.orderNumber || row.description || 'Platform',
+          type: row.type || 'Sales Commission',
+          gross: formatCurrency(row.gross ?? row.grossAmount ?? row.amount ?? 0),
+          comm: formatCurrency(row.commission ?? row.netAmount ?? 0),
+          status: row.status ? String(row.status).charAt(0).toUpperCase() + String(row.status).slice(1) : 'Settled',
+        })));
+      } else {
+        setEarnings(null);
+        setTrend([]);
+        setTransactions([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-700">
       {/* Header */}
@@ -62,7 +84,7 @@ const PlatformEarnings = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <EarningStat 
           title="Net Commission" 
-          value="₹45,280" 
+          value={formatCurrency(earnings?.netCommission ?? 0)} 
           sub="Platform earnings after payouts" 
           icon={Landmark} 
           color="text-blue-600" 
@@ -70,16 +92,16 @@ const PlatformEarnings = () => {
         />
         <EarningStat 
           title="Gross Merchandise" 
-          value="₹2,84,500" 
-          sub="Total sales value (7 days)" 
+          value={formatCurrency(earnings?.grossMerchandise ?? 0)} 
+          sub="Total sales value" 
           icon={DollarSign} 
           color="text-green-600" 
           bg="bg-green-50" 
         />
         <EarningStat 
           title="Pending Payouts" 
-          value="₹1,12,000" 
-          sub="Owed to active vendors" 
+          value={formatCurrency(earnings?.pendingPayouts ?? 0)} 
+          sub={`${earnings?.payoutCount ?? 0} payout records`} 
           icon={Wallet} 
           color="text-amber-600" 
           bg="bg-amber-50" 
@@ -104,7 +126,7 @@ const PlatformEarnings = () => {
           </div>
           <div className="flex-1 h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={EARNINGS_TREND}>
+              <AreaChart data={trend.length ? trend : [{ day: 'Total', platform: 0, vendors: 0 }]}>
                 <defs>
                   <linearGradient id="colorComm" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
@@ -155,7 +177,7 @@ const PlatformEarnings = () => {
                  <Landmark size={80} />
               </div>
               <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Settled this month</p>
-              <h4 className="text-2xl font-black mt-1 font-roboto">₹1,45,000</h4>
+              <h4 className="text-2xl font-black mt-1 font-roboto">{formatCurrency(earnings?.netCommission ?? 0)}</h4>
               <button className="mt-4 w-full py-2.5 bg-white/20 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/30 transition-all">
                  View History
               </button>
@@ -182,12 +204,11 @@ const PlatformEarnings = () => {
                   </tr>
                </thead>
                <tbody className="divide-y divide-slate-50 text-[11px] font-bold text-slate-600">
-                  {[
-                    { id: 'TXN8745', source: 'Order #OD8745', type: 'Sales Commission', gross: '₹4,500', comm: '₹450', status: 'Settled' },
-                    { id: 'TXN8746', source: 'Fashion Hub', type: 'Monthly Fee', gross: '₹1,500', comm: '₹1,500', status: 'Pending' },
-                    { id: 'TXN8747', source: 'Order #OD8746', type: 'Sales Commission', gross: '₹12,800', comm: '₹1,280', status: 'Settled' },
-                    { id: 'TXN8748', source: 'Order #OD8747', type: 'Sales Commission', gross: '₹2,300', comm: '₹230', status: 'Settled' },
-                  ].map((txn, i) => (
+                  {transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-8 py-12 text-center text-slate-400 text-sm font-bold">No revenue transactions found</td>
+                    </tr>
+                  ) : transactions.map((txn, i) => (
                     <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                        <td className="px-8 py-5 font-black text-blue-600 font-roboto">{txn.id}</td>
                        <td className="px-8 py-5 text-slate-900">{txn.source}</td>

@@ -1,5 +1,6 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { dashboardApi, sellersApi, reportsApi } from '../services/api';
+import { extractList, mapDashboardStats, mapPendingVendor, mapRevenueChart } from '../utils/mappers';
 import { 
   TrendingUp, Users, ShoppingBag, DollarSign, 
   ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, AlertCircle 
@@ -11,24 +12,53 @@ import {
 import { motion } from 'framer-motion';
 
 const Dashboard = () => {
-  const { systemStats, pendingVendors } = useSelector(state => state.admin);
+  const [systemStats, setSystemStats] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    activeVendors: 0,
+    platformCommission: 0,
+  });
+  const [pendingVendors, setPendingVendors] = useState([]);
+  const [salesData, setSalesData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const salesData = [
-    { name: 'Mon', sales: 4000 },
-    { name: 'Tue', sales: 3000 },
-    { name: 'Wed', sales: 5000 },
-    { name: 'Thu', sales: 2780 },
-    { name: 'Fri', sales: 1890 },
-    { name: 'Sat', sales: 2390 },
-    { name: 'Sun', sales: 3490 },
-  ];
+  const [categoryData, setCategoryData] = useState([]);
 
-  const categoryData = [
-    { name: 'Electronics', value: 45 },
-    { name: 'Fashion', value: 25 },
-    { name: 'Home', value: 20 },
-    { name: 'Others', value: 10 },
-  ];
+  const fetchDashboard = async () => {
+    setLoading(true);
+    const [statsRes, revenueRes, vendorsRes, inventoryRes] = await Promise.all([
+      dashboardApi.getStats(),
+      dashboardApi.getRevenueChart('7d'),
+      sellersApi.getAll({ kycStatus: 'pending' }),
+      reportsApi.getInventoryReport({ limit: 10 }),
+    ]);
+
+    if (statsRes.error && revenueRes.error && vendorsRes.error) {
+      setError(statsRes.error || revenueRes.error);
+    } else {
+      setError(null);
+      if (statsRes.data) setSystemStats(mapDashboardStats(statsRes.data));
+      if (revenueRes.data) setSalesData(mapRevenueChart(revenueRes.data));
+      if (vendorsRes.data) {
+        setPendingVendors(extractList(vendorsRes.data).map(mapPendingVendor));
+      }
+      if (inventoryRes.data) {
+        const rows = extractList(inventoryRes.data);
+        setCategoryData(
+          rows.slice(0, 4).map((row) => ({
+            name: row.category || row.name || 'Category',
+            value: row.count ?? row.stock ?? row.value ?? 0,
+          }))
+        );
+      }
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -65,7 +95,11 @@ const Dashboard = () => {
           <button className="flex-1 sm:flex-none px-5 py-2.5 bg-white border border-blue-100 rounded-xl text-sm font-bold text-blue-600 hover:bg-blue-50 transition-all">
             Download Report
           </button>
-          <button className="flex-1 sm:flex-none px-5 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-all">
+          <button
+            onClick={fetchDashboard}
+            disabled={loading}
+            className="flex-1 sm:flex-none px-5 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:scale-105 active:scale-95 transition-all"
+          >
             Refresh Data
           </button>
         </div>
@@ -91,7 +125,7 @@ const Dashboard = () => {
           </div>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesData}>
+              <AreaChart data={salesData.length ? salesData : [{ name: '—', sales: 0 }]}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>

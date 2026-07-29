@@ -1,13 +1,13 @@
 /**
  * Return Management Page
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, Clock, RotateCcw } from 'lucide-react';
 import { PageHeader, StatusBadge, SearchFilter } from '../../components/common';
 import { Card, Button } from '../../components/ui';
 import { ConfirmModal } from '../../components/common';
-import { returns } from '../../utils/dummyData';
+import { getReturns, approveReturn, rejectReturn } from '../../services/sellerApi';
 import { formatCurrency, formatDate, getRelativeTime } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
@@ -22,23 +22,54 @@ const ReturnList = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState({ open: false, type: null, item: null });
+  const [returns, setReturns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchReturns = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getReturns();
+      setReturns(data?.returns || []);
+    } catch (err) {
+      setError(err?.message || 'Failed to load returns');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReturns();
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...returns];
     if (activeTab !== 'all') result = result.filter((r) => r.status === activeTab);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter((r) => r.orderId.toLowerCase().includes(q) || r.customer.name.toLowerCase().includes(q));
+      result = result.filter((r) => r.orderId?.toLowerCase().includes(q) || r.customer?.name?.toLowerCase().includes(q));
     }
     return result;
-  }, [activeTab, searchQuery]);
+  }, [returns, activeTab, searchQuery]);
 
   const handleAction = (type, item) => setConfirmAction({ open: true, type, item });
 
-  const confirmHandler = () => {
-    const action = confirmAction.type === 'approve' ? 'approved' : 'rejected';
-    toast.success(`Return #${confirmAction.item?.id} has been ${action}`);
-    setConfirmAction({ open: false, type: null, item: null });
+  const confirmHandler = async () => {
+    try {
+      const { type, item } = confirmAction;
+      if (type === 'approve') {
+        await approveReturn(item.id);
+      } else {
+        await rejectReturn(item.id);
+      }
+      const action = type === 'approve' ? 'approved' : 'rejected';
+      toast.success(`Return #${item?.id} has been ${action}`);
+      setConfirmAction({ open: false, type: null, item: null });
+      fetchReturns();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to process return');
+    }
   };
 
   return (
@@ -68,10 +99,10 @@ const ReturnList = () => {
                     <StatusBadge status={ret.status} />
                     <span className="text-xs text-gray-400">Order #{ret.orderId}</span>
                   </div>
-                  <p className="text-sm font-medium text-gray-900">{ret.product.title}</p>
-                  <p className="text-xs text-gray-500 mt-1">Customer: {ret.customer.name} • Requested: {getRelativeTime(new Date(ret.requestedAt))}</p>
+                  <p className="text-sm font-medium text-gray-900">{ret.product?.title || ret.productTitle}</p>
+                  <p className="text-xs text-gray-500 mt-1">Customer: {ret.customer?.name || ret.customerName} • Requested: {getRelativeTime(new Date(ret.requestedAt))}</p>
                   <p className="text-xs text-gray-500 mt-1">Reason: <span className="text-gray-700">{ret.reason}</span></p>
-                  <p className="text-sm font-semibold text-gray-900 mt-2">Refund: {formatCurrency(ret.refundAmount)}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-2">Refund: {formatCurrency(ret.refundAmount || 0)}</p>
                 </div>
                 {ret.status === 'pending' && (
                   <div className="flex items-center gap-2">
@@ -100,7 +131,7 @@ const ReturnList = () => {
           </motion.div>
         ))}
 
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !loading && (
           <div className="text-center py-16">
             <RotateCcw size={40} className="text-gray-200 mx-auto mb-4" />
             <p className="text-gray-500">No return requests found</p>

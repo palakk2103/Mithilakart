@@ -1,33 +1,82 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Store, Eye, EyeOff, Lock, Mail, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, Lock, Mail, X, Phone, Clock, XCircle, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSellerAuth } from '../../context/SellerAuthContext';
+import { registerSeller, sendSellerPhoneOtp } from '../../services/sellerApi';
+import { applyOtpSendResult } from '../../../../shared/utils/otpResponse';
+import { useLocation } from '../../../../shared/context/LocationContext';
 
 const SellerLogin = () => {
   const navigate = useNavigate();
   const { login } = useSellerAuth();
+  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [storeName, setStoreName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [otpHint, setOtpHint] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [city, setCity] = useState('');
+  const [addressLine, setAddressLine] = useState('');
+  const [pincode, setPincode] = useState('');
+  const [approvalStatus, setApprovalStatus] = useState(null); // null | 'pending' | 'rejected' | 'suspended' | 'registered'
+  const { location: liveLocation, refreshLiveLocation } = useLocation();
+
+  const handleSendOtp = async () => {
+    if (!/^\d{10}$/.test(phone)) {
+      toast.error('Enter a valid 10-digit phone number');
+      return;
+    }
+
+    setIsLoading(true);
+    setOtpHint('');
+    try {
+      const result = await sendSellerPhoneOtp('+91', phone);
+      setOtpSent(true);
+      let hint = 'OTP sent to your phone';
+      applyOtpSendResult(result, {
+        setOtp,
+        setSuccess: (msg) => { hint = msg; setOtpHint(msg); },
+        setOtpSent,
+      });
+      toast.success(hint, { duration: result?.devOtp ? 10000 : 4000 });
+    } catch (err) {
+      toast.error(err.message || 'Failed to send OTP');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const detectApprovalStatus = (message = '') => {
+    const msg = message.toLowerCase();
+    if (msg.includes('pending') || msg.includes('not active') || msg.includes('not approved')) return 'pending';
+    if (msg.includes('rejected')) return 'rejected';
+    if (msg.includes('suspended')) return 'suspended';
+    return null;
+  };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (email !== '9111966732' || password !== '123456') {
-      toast.error('Invalid credentials');
-      return;
-    }
-    
     setIsLoading(true);
+    setApprovalStatus(null);
     try {
-      const result = await login('9111966732', '123456');
+      const result = await login(email.trim(), password);
       if (result.success) {
         toast.success('Welcome back! Login successful.');
         navigate('/seller/dashboard');
       } else {
-        toast.error(result.message || 'Login failed');
+        const status = detectApprovalStatus(result.message);
+        if (status) {
+          setApprovalStatus(status);
+        } else {
+          toast.error(result.message || 'Login failed');
+        }
       }
     } catch {
       toast.error('Something went wrong');
@@ -36,30 +85,65 @@ const SellerLogin = () => {
     }
   };
 
-  // Inline SVG pattern for background
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    if (!otpSent) {
+      await handleSendOtp();
+      return;
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+      toast.error('Enter the 6-digit OTP');
+      return;
+    }
+    if (!city.trim()) {
+      toast.error('Store city/location is required');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await registerSeller({
+        name: name.trim(),
+        email: email.trim(),
+        storeName: storeName.trim(),
+        phone: phone.trim(),
+        countryCode: '+91',
+        password,
+        otp: otp.trim(),
+        city: city.trim(),
+        addressLine: addressLine.trim() || liveLocation?.formattedAddress || undefined,
+        state: liveLocation?.state || undefined,
+        pincode: pincode.trim() || liveLocation?.pincode || undefined,
+        latitude: liveLocation?.latitude,
+        longitude: liveLocation?.longitude,
+        placeId: liveLocation?.placeId,
+      });
+      toast.success('Registration submitted successfully!');
+      setApprovalStatus('registered');
+      setMode('login');
+      setOtpSent(false);
+      setOtp('');
+    } catch (err) {
+      const errMsg = err.message || 'Registration failed';
+      toast.error(errMsg);
+      if (errMsg.toLowerCase().includes('expired') || errMsg.toLowerCase().includes('not found')) {
+        setOtpHint('OTP expired. Click "Resend OTP" below.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const backgroundPattern = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><path d="M10 20c2-3 5-5 8-5s6 2 8 5-2 8-5 8-6-2-8-5zm30 20c2-3 5-5 8-5s6 2 8 5-2 8-5 8-6-2-8-5zM25 45c1-2 3-3 5-3s4 1 5 3-1 4-3 4-4-1-5-3zM45 15c1-2 3-3 5-3s4 1 5 3-1 4-3 4-4-1-5-3z" fill="%23ffffff" fill-opacity="0.12" fill-rule="evenodd"/></svg>`;
 
   return (
-    <div 
+    <div
       className="min-h-screen flex flex-col items-center justify-between p-4 md:p-6 bg-gradient-to-br from-[#77eba3] to-[#42c585] relative overflow-hidden"
       style={{ backgroundImage: `radial-gradient(circle at 20% 30%, #77eba3 0%, #42c585 100%), url('${backgroundPattern}')` }}
     >
-      {/* Background organic elements */}
-      <div className="absolute top-10 left-10 opacity-20 pointer-events-none">
-        <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 0C35 25 15 35 0 50C15 65 35 75 50 100C65 75 85 65 100 50C85 35 65 25 50 0Z" fill="white" />
-        </svg>
-      </div>
-      <div className="absolute bottom-20 right-10 opacity-15 pointer-events-none">
-        <svg width="140" height="140" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 80C40 80 60 60 80 20C60 20 40 40 20 80Z" fill="white" />
-          <circle cx="50" cy="50" r="10" fill="white" />
-        </svg>
-      </div>
-
-      {/* Top Header Row */}
       <div className="w-full max-w-[420px] flex items-center justify-between z-10">
-        <button 
+        <button
           onClick={() => navigate('/')}
           className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-md active:scale-95 transition-all"
         >
@@ -72,91 +156,235 @@ const SellerLogin = () => {
         <div className="w-9"></div>
       </div>
 
-      {/* Main card */}
       <div className="w-full max-w-[420px] bg-[#f2fff5] rounded-[32px] px-6 py-8 shadow-2xl border border-white/40 z-10 my-6">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h2 className="text-3xl font-extrabold text-[#0a4a17]">
-            Welcome back
+            {mode === 'login' ? 'Welcome back' : 'Register as Seller'}
           </h2>
           <p className="text-[#3b8a53] text-[13px] font-semibold mt-1">
-            Grow Your Business with Mithilakart
+            {mode === 'login' ? 'Sign in with your seller account' : 'Phone OTP verification required'}
           </p>
         </div>
 
-        <form onSubmit={handleLoginSubmit} className="space-y-5">
-          {/* Email / Username Field */}
-          <div>
-            <label className="block text-[12px] font-bold text-[#1f592c] mb-1.5 px-1 uppercase tracking-wider">
-              Seller Username / Phone
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3b8a53]">
-                <Mail size={18} />
-              </span>
+        <div className="flex gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setOtpSent(false); }}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold ${mode === 'login' ? 'bg-[#0c5c20] text-white' : 'bg-[#e8fced] text-[#0a4a17]'}`}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('register')}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold ${mode === 'register' ? 'bg-[#0c5c20] text-white' : 'bg-[#e8fced] text-[#0a4a17]'}`}
+          >
+            Register
+          </button>
+        </div>
+
+        <form onSubmit={mode === 'login' ? handleLoginSubmit : handleRegisterSubmit} className="space-y-4">
+          {mode === 'register' && (
+            <>
               <input
                 type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. 9111966732"
-                className="w-full pl-11 pr-4 py-3 bg-[#e8fced] border-2 border-transparent focus:border-[#42c585] rounded-[16px] text-[14px] font-semibold text-[#0a4a17] placeholder-[#81b29a] focus:outline-none transition-all shadow-inner"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
                 required
               />
-            </div>
-          </div>
-
-          {/* Password Field */}
-          <div>
-            <label className="block text-[12px] font-bold text-[#1f592c] mb-1.5 px-1 uppercase tracking-wider">
-              Password
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3b8a53]">
-                <Lock size={18} />
-              </span>
               <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full pl-11 pr-11 py-3 bg-[#e8fced] border-2 border-transparent focus:border-[#42c585] rounded-[16px] text-[14px] font-semibold text-[#0a4a17] placeholder-[#81b29a] focus:outline-none transition-all shadow-inner"
+                type="text"
+                value={storeName}
+                onChange={(e) => setStoreName(e.target.value)}
+                placeholder="Store name"
+                className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
                 required
+              />
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3b8a53]" size={18} />
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="10-digit phone"
+                  className="w-full pl-11 pr-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
+                  required
+                />
+              </div>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Store city *"
+                className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
+                required
+              />
+              <input
+                type="text"
+                value={addressLine}
+                onChange={(e) => setAddressLine(e.target.value)}
+                placeholder="Store address / area"
+                className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
+              />
+              <input
+                type="text"
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="Pincode"
+                className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#3b8a53] hover:text-[#0a4a17] transition-colors"
+                onClick={async () => {
+                  try {
+                    const loc = await refreshLiveLocation({ silent: false });
+                    if (loc?.city) setCity(loc.city);
+                    if (loc?.formattedAddress) setAddressLine(loc.formattedAddress);
+                    if (loc?.pincode) setPincode(loc.pincode);
+                  } catch {
+                    // toast shown in hook
+                  }
+                }}
+                className="w-full py-2.5 rounded-[16px] border border-[#0c5c20]/20 text-[#0c5c20] text-sm font-bold"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                Use my live location
               </button>
-            </div>
+            </>
+          )}
+
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3b8a53]" size={18} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seller@example.com"
+              className="w-full pl-11 pr-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
+              required
+            />
           </div>
 
-          {/* Sign In Button */}
+          <div className="relative">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3b8a53]" size={18} />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password (min 8 chars)"
+              className="w-full pl-11 pr-11 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#3b8a53]"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
+          {mode === 'register' && otpHint && (
+            <p className="text-xs text-center text-[#0c5c20] font-bold">{otpHint}</p>
+          )}
+
+          {mode === 'register' && otpSent && (
+            <div className="space-y-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="6-digit OTP"
+                  className="w-full px-4 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold tracking-widest text-center"
+                  required
+                />
+              </div>
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={handleSendOtp}
+                  disabled={isLoading}
+                  className="text-xs text-[#0c5c20] font-bold underline hover:text-[#073f15] transition-colors"
+                >
+                  Resend OTP
+                </button>
+              </div>
+            </div>
+          )}
+
           <motion.button
             type="submit"
             disabled={isLoading}
             whileTap={{ scale: 0.97 }}
-            className="w-full py-4 bg-[#0c5c20] hover:bg-[#073f15] text-white rounded-[16px] text-[15px] font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-4 bg-[#0c5c20] hover:bg-[#073f15] text-white rounded-[16px] text-[15px] font-bold uppercase tracking-wider shadow-lg"
           >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              'Sign In to Seller Hub'
-            )}
+            {isLoading ? 'Please wait...' : mode === 'login' ? 'Sign In' : otpSent ? 'Complete Registration' : 'Send OTP & Continue'}
           </motion.button>
         </form>
-      </div>
 
-      {/* Footer Logo & Styling */}
-      <div className="flex flex-col items-center gap-1 my-4 z-10">
-        <img 
-          src="/mthibg.png" 
-          alt="Mithilakart" 
-          className="h-10 w-auto object-contain"
-        />
-        <div className="flex items-center text-[18px] font-bold text-white tracking-wide italic">
-          <span className="opacity-90">Mithila</span><span className="text-[#073f15]">kart</span>
-        </div>
+        {/* Approval Status Card */}
+        <AnimatePresence>
+          {approvalStatus && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className={`mt-5 rounded-[20px] p-5 border ${
+                approvalStatus === 'rejected' ? 'bg-red-50 border-red-200'
+                : approvalStatus === 'suspended' ? 'bg-orange-50 border-orange-200'
+                : 'bg-emerald-50 border-emerald-200'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 p-2 rounded-full ${
+                  approvalStatus === 'rejected' ? 'bg-red-100 text-red-500'
+                  : approvalStatus === 'suspended' ? 'bg-orange-100 text-orange-500'
+                  : 'bg-emerald-100 text-emerald-600'
+                }`}>
+                  {approvalStatus === 'rejected' ? <XCircle size={20} />
+                    : approvalStatus === 'suspended' ? <ShieldAlert size={20} />
+                    : approvalStatus === 'registered' ? <CheckCircle2 size={20} />
+                    : <Clock size={20} />}
+                </div>
+                <div className="flex-1">
+                  <h4 className={`text-[13px] font-extrabold ${
+                    approvalStatus === 'rejected' ? 'text-red-700'
+                    : approvalStatus === 'suspended' ? 'text-orange-700'
+                    : 'text-emerald-800'
+                  }`}>
+                    {approvalStatus === 'registered' ? 'Registration Successful! \uD83C\uDF89'
+                      : approvalStatus === 'pending' ? 'Approval Pending \u23F3'
+                      : approvalStatus === 'rejected' ? 'Application Rejected \u274C'
+                      : 'Account Suspended \u26A0\uFE0F'}
+                  </h4>
+                  <p className={`text-[12px] font-semibold mt-1 leading-relaxed ${
+                    approvalStatus === 'rejected' ? 'text-red-600'
+                    : approvalStatus === 'suspended' ? 'text-orange-600'
+                    : 'text-emerald-700'
+                  }`}>
+                    {approvalStatus === 'registered'
+                      ? 'Aapka registration ho gaya hai! Admin aapke documents verify karenge aur approval ke baad aap login kar sakte hain.'
+                      : approvalStatus === 'pending'
+                      ? 'Aapka account abhi admin approval ke liye pending hai. KYC approve hone ke baad aap login karke dashboard access kar sakte hain.'
+                      : approvalStatus === 'rejected'
+                      ? 'Admin ne aapki seller application reject kar di hai. Support se contact karein for details.'
+                      : 'Aapka account suspend kiya gaya hai. Kripya support team se sampark karein.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setApprovalStatus(null)}
+                  className="p-1 rounded-full hover:bg-white/60 transition-colors"
+                >
+                  <X size={14} className="text-slate-400" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

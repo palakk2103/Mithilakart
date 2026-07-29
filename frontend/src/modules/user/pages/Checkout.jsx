@@ -7,9 +7,20 @@ import {
 } from 'lucide-react';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import useAccountStore from '../../../store/useAccountStore';
-import ElectronicsImg from '../../../assets/products/product04.jpg';
-import ShippingUnavailable from '../components/common/ShippingUnavailable';
+import { createOrder, initiatePayment, verifyPayment, validateCoupon } from '../services/ordersApi';
+import { checkShippingServiceability } from '../services/shippingApi';
+import { getAddresses } from '../services/userApi';
+import { fetchCartItems, getMarketplaceTab, clearCart, dispatchCartUpdated } from '../utils/cartUtils';
+import { openRazorpayCheckout } from '../../../shared/services/razorpay';
+import { toast } from 'react-hot-toast';
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
 
+const PAYMENT_METHOD_MAP = {
+  UPI: 'upi',
+  CARD: 'card',
+  COD: 'cod',
+  WALLET: 'wallet',
+};
 
 const Checkout = () => {
   const { t } = useTranslation();
@@ -20,48 +31,116 @@ const Checkout = () => {
   const [selectedUpi, setSelectedUpi] = useState('paytm');
   const [orderStatus, setOrderStatus] = useState('idle'); // 'idle', 'processing', 'success'
   const [placedOrder, setPlacedOrder] = useState(null);
-  const [isShippingUnavailable, setIsShippingUnavailable] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponApplied, setCouponApplied] = useState(false);
   const addOrder = useAccountStore((state) => state.addOrder);
-
 
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]');
-  const primaryBgHover = isMithilakFlow ? 'bg-[#207C8A] hover:bg-[#1a6874]' : isFreshGroceryFlow ? 'bg-[#D9A21B] hover:bg-[#c49218]' : (isQuickShopFlow ? 'bg-[#F26522] hover:bg-[#d9561b]' : 'bg-[#6FAE4A] hover:bg-[#5b953d]');
-  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
-  const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#6FAE4A]');
-  const shopNowLink = isMithilakFlow ? '/mithilak' : isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/home');
+  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#d6186d]' : 'bg-[#3E5A44]');
+  const primaryBgHover = isMithilakFlow ? 'bg-[#207C8A] hover:bg-[#1a6672]' : isFreshGroceryFlow ? 'bg-[#D9A21B] hover:bg-[#c49218]' : (isQuickShopFlow ? 'bg-[#d6186d] hover:bg-[#b5125b]' : 'bg-[#3E5A44] hover:bg-[#06331b]');
+  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#d6186d]' : 'text-[#3E5A44]');
+  const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#d6186d]' : 'border-[#3E5A44]');
+  const shopNowLink = isMithilakFlow ? '/mithilak' : isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home');
 
-  const defaultProduct = {
-    name: 'EVOFOX Blaze Wired Ambidextrous Gaming Mouse',
-    price: 622,
-    oldPrice: 1299,
-    discount: '52%',
-    image: ElectronicsImg,
-    rating: '4.5',
-    reviews: '5,960',
-    qty: 1
-  };
+  const [checkoutItems, setCheckoutItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [defaultAddress, setDefaultAddress] = useState(null);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [courierServiceable, setCourierServiceable] = useState(null);
+  const [checkingServiceability, setCheckingServiceability] = useState(false);
 
-  const [checkoutItems, setCheckoutItems] = useState([defaultProduct]);
+  const isEcommerceFlow = !isQuickShopFlow && !isFreshGroceryFlow;
 
   useEffect(() => {
-    if (location.state?.product) {
-      setCheckoutItems([location.state.product]);
-    } else {
-      try {
-        const items = JSON.parse(localStorage.getItem('userCart') || '[]');
-        if (items.length > 0) {
-          setCheckoutItems(items);
-        } else {
-          setCheckoutItems([defaultProduct]);
+    let cancelled = false;
+
+    const load = async () => {
+      if (location.state?.product) {
+        if (!cancelled) {
+          setCheckoutItems([location.state.product]);
+          setLoading(false);
         }
-      } catch (e) {
-        setCheckoutItems([defaultProduct]);
+        return;
       }
-    }
+
+      try {
+        const { items, cart } = await fetchCartItems();
+        if (!cancelled) {
+          setCheckoutItems(items.length ? items : []);
+          setDeliveryFee(Number(cart?.deliveryCharge ?? cart?.shippingFee ?? 0) || 0);
+        }
+      } catch {
+        if (!cancelled) {
+          setCheckoutItems([]);
+          setDeliveryFee(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [location.state]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAddresses = async () => {
+      try {
+        const addresses = await getAddresses();
+        const list = Array.isArray(addresses) ? addresses : addresses?.items || [];
+        const preferred = list.find((item) => item.isDefault) || list[0];
+        if (!cancelled) setDefaultAddress(preferred || null);
+      } catch {
+        if (!cancelled) setDefaultAddress(null);
+      }
+    };
+
+    loadAddresses();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isEcommerceFlow || !defaultAddress?.pincode) {
+      setCourierServiceable(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const pincode = String(defaultAddress.pincode).replace(/\D/g, '').slice(0, 6);
+    if (pincode.length !== 6) {
+      setCourierServiceable(null);
+      return undefined;
+    }
+
+    const verify = async () => {
+      setCheckingServiceability(true);
+      try {
+        const result = await checkShippingServiceability({
+          pincode,
+          cod: selectedPayment === 'COD',
+        });
+        if (!cancelled) setCourierServiceable(true);
+      } catch {
+        if (!cancelled) setCourierServiceable(true);
+      } finally {
+        if (!cancelled) setCheckingServiceability(false);
+      }
+    };
+
+    verify();
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultAddress?.pincode, isEcommerceFlow, selectedPayment]);
 
   const totalPrice = checkoutItems.reduce((acc, item) => {
     return acc + parsePrice(item.price) * parsePrice(item.qty || 1);
@@ -71,20 +150,22 @@ const Checkout = () => {
     return acc + parsePrice(item.oldPrice || item.price) * parsePrice(item.qty || 1);
   }, 0);
 
-  const firstItem = checkoutItems[0] || defaultProduct;
+  const firstItem = checkoutItems[0] || { name: 'Order', price: 0, image: '' };
 
-  // Read address from localStorage (saved by Cart's address modal)
-  const savedAddr = localStorage.getItem('cartAddress');
-  const address = savedAddr ? { ...JSON.parse(savedAddr), type: 'HOME' } : {
+  const address = defaultAddress ? {
+    ...defaultAddress,
+    type: defaultAddress.type || 'HOME',
+    address: defaultAddress.address || defaultAddress.addressLine,
+  } : {
     name: 'Guest',
     type: 'HOME',
     address: 'No address provided',
-    phone: '—'
+    phone: '—',
   };
 
   // Auth guard — redirect unauthenticated users to login
   useEffect(() => {
-    if (localStorage.getItem('isAuthenticated') !== 'true') {
+    if (!isAuthenticated('customer')) {
       navigate('/login', { state: { from: location.pathname } });
     }
   }, [navigate, location.pathname]);
@@ -93,73 +174,165 @@ const Checkout = () => {
     window.scrollTo(0, 0);
   }, [currentStep]);
 
-  const handleContinue = () => {
-    if (currentStep === 2) {
-      setCurrentStep(3);
-    } else if (currentStep === 3) {
-      setOrderStatus('processing');
-      
-      const newOrder = {
-        id: `OD${Math.floor(Math.random() * 1000000000)}`,
-        status: 'Confirmed',
-        date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-        items: checkoutItems.map(item => ({
-          name: item.name,
-          price: item.price,
-          image: item.image || item.img
-        }))
-      };
+  const payableTotal = Math.max(0, totalPrice + deliveryFee - couponDiscount);
 
-      setTimeout(() => {
-        addOrder(newOrder);
-        setPlacedOrder(newOrder);
-        setOrderStatus('idle');
-        localStorage.removeItem('userCart');
-        window.dispatchEvent(new Event('cartUpdated'));
-        navigate('/order-confirmation', { state: { placedOrder: newOrder, checkoutItems } });
-      }, 2000);
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Enter a coupon code');
+      return;
+    }
+    try {
+      const result = await validateCoupon({
+        code: couponCode.trim().toUpperCase(),
+        subtotal: totalPrice,
+      });
+      const discount = result?.discountAmount ?? result?.discount ?? 0;
+      setCouponDiscount(Number(discount) || 0);
+      setCouponApplied(true);
+      toast.success(result?.message || 'Coupon applied');
+    } catch (err) {
+      setCouponDiscount(0);
+      setCouponApplied(false);
+      toast.error(err?.message || 'Invalid coupon');
     }
   };
 
-  const renderStepper = () => {
-    const stepperBg = isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isQuickShopFlow ? 'bg-[#FFF9F5]' : 'bg-[#F6F8F3]';
-    return (
-      <div className={`px-4 py-3.5 sticky top-14 z-40 transition-colors duration-300 ${stepperBg}`}>
-        <div className="flex items-center justify-between relative max-w-sm mx-auto">
-          {/* Connecting Lines */}
-          <div className="absolute top-3.5 left-[15%] right-[15%] h-[2.5px] bg-slate-200 -z-0">
-            <div className={`h-full ${primaryBg} transition-all duration-500`} style={{ width: currentStep === 2 ? '50%' : currentStep === 3 ? '100%' : '0%' }}></div>
-          </div>
+  const handleContinue = async () => {
+    if (currentStep === 2) {
+      if (isEcommerceFlow && courierServiceable === false) {
+        toast.error('Courier delivery is not available for this pincode. Please choose another address.');
+        return;
+      }
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      if (isEcommerceFlow && courierServiceable === false) {
+        toast.error('Courier delivery is not available for this pincode.');
+        return;
+      }
+      setOrderStatus('processing');
 
-          {/* Step 1: Address */}
-          <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${stepperBg}`}>
-            <div className={`w-7 h-7 rounded-full ${primaryBg} text-white flex items-center justify-center text-[11px] font-black shadow-xs`}>
-              <CheckCircle2 size={15} />
-            </div>
-            <span className="text-[10px] font-black text-slate-550 uppercase tracking-wider">{t('address.title')}</span>
-          </div>
+      try {
+        if (!defaultAddress?.id) {
+          throw new Error('Please add a delivery address before checkout');
+        }
 
-          {/* Step 2: Order Summary */}
-          <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${stepperBg}`}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all shadow-xs ${currentStep >= 2 ? `${primaryBg} text-white` : 'bg-white text-slate-400'}`}>
-              {currentStep > 2 ? <CheckCircle2 size={15} /> : '2'}
-            </div>
-            <span className={`text-[10px] font-black uppercase tracking-wider ${currentStep === 2 ? primaryText : 'text-slate-450'}`}>{t('checkout.orderSummary')}</span>
-          </div>
+        const paymentMethod = PAYMENT_METHOD_MAP[selectedPayment] || 'upi';
 
-          {/* Step 3: Payment */}
-          <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${stepperBg}`}>
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all shadow-xs ${currentStep === 3 ? `${primaryBg} text-white` : 'bg-white text-slate-400'}`}>
-              3
-            </div>
-            <span className={`text-[10px] font-black uppercase tracking-wider ${currentStep === 3 ? primaryText : 'text-slate-450'}`}>{t('checkout.paymentMethod')}</span>
-          </div>
-        </div>
-      </div>
-    );
+        const result = await createOrder({
+          addressId: defaultAddress.id,
+          paymentMethod,
+          commerceFlow: isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'fresh_grocery' : 'standard',
+          marketplaceTab: getMarketplaceTab(),
+          ...(couponApplied && couponCode ? { couponCode: couponCode.trim().toUpperCase() } : {}),
+        });
+
+        let paymentStatus = result.paymentStatus || result.payment?.paymentStatus;
+
+        if (paymentMethod !== 'cod' && paymentStatus !== 'paid') {
+          const paymentInit = result.payment?.keyId || result.payment?.mockPayment
+            ? result.payment
+            : await initiatePayment({ orderId: result.orderId, paymentMethod });
+
+          if (paymentInit.paymentStatus === 'paid' || paymentInit.mockPayment || paymentInit.provider === 'mock') {
+            paymentStatus = 'paid';
+          } else if (paymentInit.keyId) {
+            const razorpayResult = await openRazorpayCheckout({
+              keyId: paymentInit.keyId,
+              amountInPaise: paymentInit.amountInPaise,
+              providerOrderId: paymentInit.providerOrderId || paymentInit.providerPaymentId,
+              orderId: result.orderId,
+              prefill: {
+                name: address.name,
+                contact: address.phone,
+              },
+            });
+
+            const verified = await verifyPayment({
+              orderId: result.orderId,
+              providerPaymentId: razorpayResult.providerPaymentId,
+              providerOrderId: razorpayResult.providerOrderId,
+              signature: razorpayResult.signature,
+            });
+            paymentStatus = verified.paymentStatus;
+          } else {
+            throw new Error('Online payment is unavailable. Please choose Cash on Delivery.');
+          }
+        }
+
+        if (paymentMethod !== 'cod' && paymentStatus !== 'paid') {
+          throw new Error('Payment was not completed');
+        }
+
+        const newOrder = {
+          id: result.orderNumber || result.orderId,
+          status: result.status || 'Confirmed',
+          date: new Date().toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+          items: checkoutItems.map((item) => ({
+            name: item.name || item.title,
+            price: item.price,
+            image: item.image || item.img,
+          })),
+        };
+
+        addOrder(newOrder);
+        setPlacedOrder(newOrder);
+        await clearCart();
+        dispatchCartUpdated();
+        navigate('/order-confirmation', { state: { placedOrder: newOrder, checkoutItems } });
+        setOrderStatus('idle');
+      } catch (err) {
+        console.error('Order failed', err);
+        const message = err?.message || 'Could not place order. Please try again.';
+        toast.error(message.includes('Insufficient stock')
+          ? 'Some items are out of stock. Please update your cart and try again.'
+          : message.includes('Payment') || message.includes('payment') || message.includes('Razorpay') || message.includes('another method')
+            ? 'Online payment failed. Please use Cash on Delivery (COD) for testing.'
+            : message);
+        setOrderStatus('idle');
+      }
+    }
   };
 
-  const renderOrderSummary = (isDesktop = false) => (
+  const renderStepper = () => (
+    <div className={`px-4 py-3.5 sticky top-14 z-40 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'}`}>
+      <div className="flex items-center justify-between relative max-w-sm mx-auto">
+        {/* Connecting Lines */}
+        <div className="absolute top-3.5 left-[15%] right-[15%] h-[2.5px] bg-slate-200 -z-0">
+          <div className={`h-full ${primaryBg} transition-all duration-500`} style={{ width: currentStep === 2 ? '50%' : currentStep === 3 ? '100%' : '0%' }}></div>
+        </div>
+
+        {/* Step 1: Address */}
+        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'}`}>
+          <div className={`w-7 h-7 rounded-full ${primaryBg} text-white flex items-center justify-center text-[11px] font-black shadow-xs`}>
+            <CheckCircle2 size={15} />
+          </div>
+          <span className="text-[10px] font-black text-slate-550 uppercase tracking-wider">{t('address.title')}</span>
+        </div>
+
+        {/* Step 2: Order Summary */}
+        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'}`}>
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all shadow-xs ${currentStep >= 2 ? `${primaryBg} text-white` : 'bg-white text-slate-400'}`}>
+            {currentStep > 2 ? <CheckCircle2 size={15} /> : '2'}
+          </div>
+          <span className={`text-[10px] font-black uppercase tracking-wider ${currentStep === 2 ? primaryText : 'text-slate-450'}`}>{t('checkout.orderSummary')}</span>
+        </div>
+
+        {/* Step 3: Payment */}
+        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'}`}>
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all shadow-xs ${currentStep === 3 ? `${primaryBg} text-white` : 'bg-white text-slate-400'}`}>
+            3
+          </div>
+          <span className={`text-[10px] font-black uppercase tracking-wider ${currentStep === 3 ? primaryText : 'text-slate-450'}`}>{t('checkout.paymentMethod')}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderOrderSummary = () => (
     <div className="animate-in fade-in slide-in-from-right duration-300 px-4 space-y-4">
       {/* Deliver To */}
       <div className="bg-white rounded-[24px] p-4 border border-slate-100/50 shadow-[0_4px_16px_rgba(0,0,0,0.01)]">
@@ -172,27 +345,29 @@ const Checkout = () => {
             {t('address.edit')}
           </button>
         </div>
-        {isShippingUnavailable ? (
-          <div className="mt-2 pt-2 border-t border-slate-100">
-            <ShippingUnavailable onChangeLocation={() => setIsShippingUnavailable(false)} />
+        <p className="text-[13.5px] font-black text-slate-800">
+          {address.name} <span className="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded ml-1 font-black uppercase">{t('sidebar.home').toUpperCase()}</span>
+        </p>
+        <p className="text-[12.5px] text-slate-500 font-medium leading-relaxed mt-1.5">{address.address}</p>
+        <p className="text-[12.5px] text-slate-800 font-black mt-2 tracking-tight">{address.phone}</p>
+        {isEcommerceFlow && defaultAddress?.pincode && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            {checkingServiceability ? (
+              <p className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin" />
+                Checking courier delivery to {defaultAddress.pincode}…
+              </p>
+            ) : courierServiceable === false ? (
+              <p className="text-[11px] font-black text-red-600 uppercase tracking-wide">
+                Courier delivery unavailable for pincode {defaultAddress.pincode}
+              </p>
+            ) : courierServiceable ? (
+              <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
+                <Truck size={14} />
+                Courier delivery available to {defaultAddress.pincode}
+              </p>
+            ) : null}
           </div>
-        ) : (
-          <>
-            <p className="text-[13.5px] font-black text-slate-800">
-              {address.name} <span className="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded ml-1 font-black uppercase">{t('sidebar.home').toUpperCase()}</span>
-            </p>
-            <p className="text-[12.5px] text-slate-500 font-medium leading-relaxed mt-1.5">{address.address}</p>
-            <p className="text-[12.5px] text-slate-800 font-black mt-2 tracking-tight">{address.phone}</p>
-            <div className="mt-3 flex justify-end">
-              <button 
-                type="button"
-                onClick={() => setIsShippingUnavailable(true)}
-                className="text-[9px] text-red-500 font-black uppercase tracking-wider hover:underline"
-              >
-                Simulate Shipping Unavailable
-              </button>
-            </div>
-          </>
         )}
       </div>
 
@@ -233,48 +408,74 @@ const Checkout = () => {
         ))}
       </div>
 
-      {/* Price Summary */}
-      {!isDesktop && (
-        <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.01)] border border-slate-100/50 space-y-3.5 mb-28">
-          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-            <span>{t('product.mrp')}</span>
-            <span className="text-slate-800 font-black">{formatPrice(totalOldPrice)}</span>
-          </div>
-          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-            <span>{t('checkout.platformFees') || 'Platform Fees'}</span>
-            <span className="text-slate-800 font-black">₹19</span>
-          </div>
-          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-            <span>{t('checkout.productDiscount') || 'Product Discount'}</span>
-            <span className="text-green-750 font-black">-{formatPrice(totalOldPrice - totalPrice)}</span>
-          </div>
-          <div className="border-t border-dashed border-slate-200 my-2" />
-          <div className="flex justify-between items-center text-[14.5px] font-black text-slate-800">
-            <span>{t('cart.totalAmount')}</span>
-            <span className="text-[18px] text-slate-900">{formatPrice(totalPrice + 19)}</span>
-          </div>
-          
-          <div className="bg-emerald-50/50 px-4 py-2.5 rounded-full border border-emerald-100 flex items-center justify-center gap-2 mt-4 shadow-2xs">
-             <Zap size={13} className="text-emerald-700 fill-emerald-700" />
-             <p className="text-[11.5px] font-black text-emerald-800">{t('cart.savings')} {formatPrice(totalOldPrice - totalPrice)}!</p>
-          </div>
-
-          <p className="text-[10px] text-slate-404 text-center leading-relaxed font-bold pt-2">
-            {t('auth.termsText')} <span className={`${primaryText} underline`}>{t('auth.termsOfUse')}</span> {t('auth.and')} <span className={`${primaryText} underline`}>{t('auth.privacyPolicy')}</span>
-          </p>
+      {/* Coupon */}
+      <div className="bg-white rounded-[24px] p-4 border border-slate-100/50 shadow-[0_4px_16px_rgba(0,0,0,0.01)]">
+        <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-3">Apply Coupon</h3>
+        <div className="flex gap-2">
+          <input
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+            placeholder="Enter code"
+            className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold uppercase"
+          />
+          <button
+            type="button"
+            onClick={handleApplyCoupon}
+            className={`px-4 py-2.5 rounded-xl text-white text-[11px] font-black uppercase ${primaryBg}`}
+          >
+            Apply
+          </button>
         </div>
-      )}
+        {couponApplied && couponDiscount > 0 && (
+          <p className="text-[11px] font-bold text-green-700 mt-2">Coupon applied — saved {formatPrice(couponDiscount)}</p>
+        )}
+      </div>
+
+      {/* Price Summary */}
+      <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.01)] border border-slate-100/50 space-y-3.5 mb-28">
+        <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
+          <span>{t('product.mrp')}</span>
+          <span className="text-slate-800 font-black">{formatPrice(totalOldPrice)}</span>
+        </div>
+        <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
+          <span>{t('checkout.platformFees') || 'Platform Fees'}</span>
+          <span className="text-slate-800 font-black">{formatPrice(deliveryFee)}</span>
+        </div>
+        {couponDiscount > 0 && (
+          <div className="flex justify-between items-center text-[13px] text-green-700 font-bold">
+            <span>Coupon Discount</span>
+            <span className="font-black">-{formatPrice(couponDiscount)}</span>
+          </div>
+        )}
+        <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
+          <span>{t('checkout.productDiscount') || 'Product Discount'}</span>
+          <span className="text-green-750 font-black">-{formatPrice(totalOldPrice - totalPrice)}</span>
+        </div>
+        <div className="border-t border-dashed border-slate-200 my-2" />
+        <div className="flex justify-between items-center text-[14.5px] font-black text-slate-800">
+          <span>{t('cart.totalAmount')}</span>
+          <span className="text-[18px] text-slate-900">{formatPrice(payableTotal)}</span>
+        </div>
+        
+        <div className="bg-emerald-50/50 px-4 py-2.5 rounded-full border border-emerald-100 flex items-center justify-center gap-2 mt-4 shadow-2xs">
+           <Zap size={13} className="text-emerald-700 fill-emerald-700" />
+           <p className="text-[11.5px] font-black text-emerald-800">{t('cart.savings')} {formatPrice(totalOldPrice - totalPrice)}!</p>
+        </div>
+
+        <p className="text-[10px] text-slate-404 text-center leading-relaxed font-bold pt-2">
+          {t('auth.termsText')} <span className={`${primaryText} underline`}>{t('auth.termsOfUse')}</span> {t('auth.and')} <span className={`${primaryText} underline`}>{t('auth.privacyPolicy')}</span>
+        </p>
+      </div>
     </div>
   );
 
-  const renderPayment = (isDesktop = false) => (
-    <div className={`animate-in fade-in slide-in-from-right duration-300 ${isDesktop ? '' : 'pb-32'}`}>
+  const renderPayment = () => (
+    <div className="animate-in fade-in slide-in-from-right duration-300 pb-32">
       {/* Price Summary Card */}
-      {!isDesktop && (
-        <div className="bg-[#f4faf6] px-4 py-4 border border-[#e1f0e7] shadow-[0_4px_16px_rgba(8,66,36,0.02)] mx-4 mt-2 rounded-[24px]">
+      <div className="bg-[#f4faf6] px-4 py-4 border border-[#e1f0e7] shadow-[0_4px_16px_rgba(8,66,36,0.02)] mx-4 mt-2 rounded-[24px]">
         <div className="flex justify-between items-center mb-3">
           <span className="text-[13.5px] font-black text-slate-600">Total Amount</span>
-          <span className="text-[18px] font-black text-slate-900 tracking-tight">{formatPrice(totalPrice + 19)}</span>
+          <span className="text-[18px] font-black text-slate-900 tracking-tight">{formatPrice(payableTotal)}</span>
         </div>
         <div className="flex justify-between items-center mb-3 border-t border-slate-200/50 pt-3">
           <span className="text-[13px] text-slate-400 font-bold border-b border-dashed border-slate-350">Bank cashback</span>
@@ -282,10 +483,9 @@ const Checkout = () => {
         </div>
         <div className="flex justify-between items-center border-t border-slate-100 pt-3">
           <span className="text-[13.5px] font-black text-slate-650">Final Amount</span>
-          <span className="text-[17px] font-black text-slate-800">{formatPrice(totalPrice + 19 - 50)}</span>
+          <span className="text-[17px] font-black text-slate-800">{formatPrice(Math.max(0, payableTotal - 50))}</span>
         </div>
       </div>
-      )}
 
       {/* Cashback Banner */}
       <div className="bg-emerald-50/40 px-4 py-3 border border-emerald-100 mx-4 mt-3 rounded-[20px] flex items-center justify-between shadow-2xs">
@@ -302,6 +502,14 @@ const Checkout = () => {
 
       {/* Payment Options Accordions */}
       <div className="mt-5 px-4 space-y-3">
+        {import.meta.env.DEV && (
+          <div className="bg-blue-50 border border-blue-200 rounded-[20px] px-4 py-3 text-[11.5px] font-semibold text-blue-900 leading-relaxed">
+            Razorpay test mode: UPI/Netbanking fail ho to <span className="font-black">Card</span> use karo —
+            <span className="font-mono"> 4111 1111 1111 1111</span>, koi bhi future expiry/CVV.
+            UPI test: <span className="font-mono">success@razorpay</span>
+          </div>
+        )}
+
         {/* UPI Option */}
         <div className="bg-white border border-slate-100 rounded-[20px] overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.01)]">
            <div 
@@ -337,7 +545,7 @@ const Checkout = () => {
                                 onClick={handleContinue}
                                 className={`w-full ${primaryBgHover} text-white py-3.5 rounded-full font-black uppercase text-[12px] tracking-widest mt-4 shadow-md active:scale-95 transition-transform`}
                              >
-                               Pay {formatPrice(totalPrice + 19 - 50)}
+                               Pay {formatPrice(Math.max(0, payableTotal - 50))}
                              </button>
                           )}
                        </div>
@@ -375,6 +583,22 @@ const Checkout = () => {
              </div>
              <ChevronRight size={18} className={`text-slate-400 transition-transform ${selectedPayment === 'CARD' ? 'rotate-90' : ''}`} />
            </div>
+
+           {selectedPayment === 'CARD' && (
+             <div className="px-4 pb-5 pt-1 animate-in slide-in-from-top duration-200">
+               <div className="border border-slate-100 rounded-2xl p-5 bg-white">
+                 <p className="text-[11.5px] text-slate-500 font-bold leading-relaxed mb-4">
+                   Razorpay test card: <span className="font-mono text-slate-800">4111 1111 1111 1111</span> — any future expiry, any CVV.
+                 </p>
+                 <button
+                   onClick={handleContinue}
+                   className={`w-full ${primaryBgHover} text-white py-3.5 rounded-full font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
+                 >
+                   Pay with Card
+                 </button>
+               </div>
+             </div>
+           )}
         </div>
 
         {/* Cash on Delivery */}
@@ -426,101 +650,86 @@ const Checkout = () => {
     </div>
   );
 
-  if (orderStatus === 'processing') {
+  if (orderStatus !== 'idle') {
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + 2);
+    const estDeliveryStr = deliveryDate.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    });
+
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center w-full fixed inset-0 z-[1000] px-4 py-6 overflow-y-auto transition-colors duration-300 ${
         isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/45 via-[#FFFDF3]/95 to-white/95 backdrop-blur-xs' : 'bg-[#f0f3f6]'
       }`}>
-        <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-xl max-w-sm w-full text-center flex flex-col items-center">
-          <Loader2 size={48} className={`${primaryText} animate-spin mb-6`} />
-          <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Processing Your Order</p>
-          <p className="text-sm text-slate-500 mt-2 font-medium">Please do not close this window</p>
-        </div>
+        {orderStatus === 'processing' ? (
+          <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-xl max-w-sm w-full text-center flex flex-col items-center">
+            <Loader2 size={48} className={`${primaryText} animate-spin mb-6`} />
+            <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Processing Your Order</p>
+            <p className="text-sm text-slate-500 mt-2 font-medium">Please do not close this window</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-[32px] p-6 border border-slate-100/50 shadow-xl max-w-md w-full text-center animate-in zoom-in duration-500 space-y-6">
+            <div>
+              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-green-100 mx-auto">
+                <CheckCircle size={32} className="text-white" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Order Placed Successfully!</h2>
+              {placedOrder && (
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                  Order ID: {placedOrder.id}
+                </p>
+              )}
+            </div>
+
+            {/* Product & Order Details Card */}
+            <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-100 text-left space-y-4">
+              <div className="flex gap-4 items-center">
+                <div className="w-16 h-16 bg-white border border-slate-100 rounded-xl p-1.5 flex-shrink-0 flex items-center justify-center">
+                  <img src={firstItem.image || firstItem.img} className="w-full h-full object-contain mix-blend-multiply" alt="product" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[13.5px] font-black text-slate-800 line-clamp-2 leading-snug">{firstItem.name}</h4>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-[14px] font-black text-slate-900">{formatPrice(firstItem.price)}</span>
+                    <span className="text-[11px] text-slate-400 font-bold">Qty: {firstItem.qty || 1}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-dashed border-slate-200 pt-3 flex items-center gap-2">
+                <Truck size={16} className={primaryText} />
+                <p className="text-[12.5px] text-slate-705 font-medium">
+                  Estimated Delivery: <span className={`font-black ${primaryText}`}>{estDeliveryStr}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3 pt-2">
+              <button 
+                onClick={() => navigate(`/vendor/profile/orders/${placedOrder?.id || ''}`)}
+                className={`w-full ${primaryBgHover} text-white py-4 rounded-full font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
+              >
+                Track Order
+              </button>
+              <button 
+                onClick={() => navigate(shopNowLink)}
+                className="w-full bg-white border-2 border-slate-200 text-slate-750 hover:bg-slate-50 py-4 rounded-full font-black uppercase text-[12px] tracking-widest active:scale-95 transition-transform"
+              >
+                Continue Shopping
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  const renderDesktopPriceSummary = () => {
-    if (currentStep === 2) {
-      return (
-        <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.01)] border border-slate-100/50 space-y-3.5">
-          <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-wider mb-2">Price Details</h3>
-          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-            <span>{t('product.mrp')}</span>
-            <span className="text-slate-800 font-black">{formatPrice(totalOldPrice)}</span>
-          </div>
-          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-            <span>{t('checkout.platformFees') || 'Platform Fees'}</span>
-            <span className="text-slate-800 font-black">₹19</span>
-          </div>
-          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-            <span>{t('checkout.productDiscount') || 'Product Discount'}</span>
-            <span className="text-green-755 font-black">-{formatPrice(totalOldPrice - totalPrice)}</span>
-          </div>
-          <div className="border-t border-dashed border-slate-200 my-2" />
-          <div className="flex justify-between items-center text-[14.5px] font-black text-slate-800">
-            <span>{t('cart.totalAmount')}</span>
-            <span className="text-[18px] text-slate-900">{formatPrice(totalPrice + 19)}</span>
-          </div>
-          
-          <div className="bg-emerald-50/50 px-4 py-2.5 rounded-full border border-emerald-100 flex items-center justify-center gap-2 mt-4 shadow-2xs">
-             <Zap size={13} className="text-emerald-700 fill-emerald-700" />
-             <p className="text-[11.5px] font-black text-emerald-800">{t('cart.savings')} {formatPrice(totalOldPrice - totalPrice)}!</p>
-          </div>
-
-          <div className="pt-2">
-            <button 
-              onClick={handleContinue}
-              className={`${primaryBgHover} w-full text-white rounded-full py-3.5 font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
-            >
-              Continue
-            </button>
-          </div>
-
-          <p className="text-[10px] text-slate-404 text-center leading-relaxed font-bold pt-2">
-            {t('auth.termsText')} <span className={`${primaryText} underline`}>{t('auth.termsOfUse')}</span> {t('auth.and')} <span className={`${primaryText} underline`}>{t('auth.privacyPolicy')}</span>
-          </p>
-        </div>
-      );
-    } else {
-      return (
-        <div className="bg-white rounded-[24px] p-5 shadow-[0_4px_16px_rgba(0,0,0,0.01)] border border-slate-100/50 space-y-3.5">
-          <h3 className="text-[14px] font-black text-slate-800 uppercase tracking-wider mb-2">Price Details</h3>
-          <div className="bg-[#f4faf6] px-4 py-4 border border-[#e1f0e7] rounded-[24px] space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-[13.5px] font-black text-slate-600">Total Amount</span>
-              <span className="text-[18px] font-black text-slate-900 tracking-tight">{formatPrice(totalPrice + 19)}</span>
-            </div>
-            <div className="flex justify-between items-center border-t border-slate-200/50 pt-3">
-              <span className="text-[13px] text-slate-400 font-bold border-b border-dashed border-slate-350">Bank cashback</span>
-              <span className="text-[14px] font-black text-green-705">-₹50</span>
-            </div>
-            <div className="flex justify-between items-center border-t border-slate-100 pt-3">
-              <span className="text-[13.5px] font-black text-slate-650">Final Amount</span>
-              <span className="text-[17px] font-black text-slate-800">{formatPrice(totalPrice + 19 - 50)}</span>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button 
-              onClick={handleContinue}
-              className={`${primaryBgHover} w-full text-white rounded-full py-3.5 font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
-            >
-              Place Order
-            </button>
-          </div>
-
-          <p className="text-[10px] text-slate-404 text-center leading-relaxed font-bold pt-2">
-            {t('auth.termsText')} <span className={`${primaryText} underline`}>{t('auth.termsOfUse')}</span> {t('auth.and')} <span className={`${primaryText} underline`}>{t('auth.privacyPolicy')}</span>
-          </p>
-        </div>
-      );
-    }
-  };
-
   return (
     <div className={`min-h-screen font-sans text-slate-850 pb-28 transition-colors duration-300 relative ${
-      isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isQuickShopFlow ? 'bg-[#FFF9F5]' : 'bg-[#F6F8F3]'
+      isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'
     }`}>
       {/* Global Repeating Mithila Art Page Background Texture */}
       {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (
@@ -535,13 +744,7 @@ const Checkout = () => {
 
       {/* Header */}
       <div className={`sticky top-0 z-50 px-4 py-3 flex items-center justify-between transition-colors duration-300 relative z-10 ${
-        isMithilakFlow
-          ? 'bg-[#207C8A] border-transparent text-white shadow-sm'
-          : isFreshGroceryFlow
-            ? 'bg-[#D9A21B] border-transparent text-white shadow-sm'
-            : isQuickShopFlow
-              ? 'bg-[#F26522] border-transparent text-white shadow-sm'
-              : 'bg-[#FCF7EE]/90 border-b border-[#F3E3CD]/60 text-[#6FAE4A]'
+        isFreshGroceryFlow ? 'bg-[#D9A21B] text-white' : 'bg-[#f0f3f6]'
       }`}>
         <div className="flex items-center gap-4">
           <button 
@@ -550,47 +753,30 @@ const Checkout = () => {
           >
             <ArrowLeft size={18} strokeWidth={2.5} className="text-slate-800" />
           </button>
-          <h1 className={`text-[17px] font-black tracking-tight ${
-            (isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white' : 'text-slate-805'
-          }`}>Order Summary</h1>
+          <h1 className="text-[17px] font-black text-slate-800 tracking-tight">Order Summary</h1>
         </div>
       </div>
 
       {renderStepper()}
 
-      {/* Mobile-first main view */}
-      <main className="max-w-xl mx-auto md:hidden">
-        {currentStep === 2 ? renderOrderSummary(false) : renderPayment(false)}
+      <main className="max-w-xl mx-auto">
+        {currentStep === 2 ? renderOrderSummary() : renderPayment()}
       </main>
 
-      {/* Responsive split screen layout for Tablet & Desktop */}
-      <main className="hidden md:block max-w-5xl lg:max-w-6xl mx-auto px-4 py-6 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-start">
-          {/* Left Column: Address, Products or Payment details */}
-          <div className="md:col-span-2 space-y-6">
-            {currentStep === 2 ? renderOrderSummary(true) : renderPayment(true)}
-          </div>
-
-          {/* Right Column: Pricing Summary Card with Checkout Action Buttons */}
-          <div className="md:col-span-1 sticky top-24">
-            {renderDesktopPriceSummary()}
-          </div>
-        </div>
-      </main>
-
-      {/* Fixed Bottom Action Bar (Mobile Only) */}
-      <div className="fixed bottom-3 left-4 right-4 bg-white/95 backdrop-blur-md border border-slate-100 px-5 py-3.5 flex items-center justify-between z-50 shadow-[0_10px_30px_rgba(8,66,36,0.08)] rounded-[24px] md:hidden">
+      {/* Fixed Bottom Action Bar */}
+      <div className="fixed bottom-3 left-4 right-4 bg-white/95 backdrop-blur-md border border-slate-100 px-5 py-3.5 flex items-center justify-between z-50 shadow-[0_10px_30px_rgba(8,66,36,0.08)] rounded-[24px]">
         <div className="flex flex-col">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Amount</span>
           <div className="flex items-baseline gap-1">
             <span className="text-[18px] font-black text-slate-900">
-              {currentStep === 3 ? formatPrice(totalPrice + 19 - 50) : formatPrice(totalPrice + 19)}
+              {currentStep === 3 ? formatPrice(Math.max(0, payableTotal - 50)) : formatPrice(payableTotal)}
             </span>
           </div>
         </div>
         <button 
           onClick={handleContinue}
-          className={`${primaryBgHover} text-white rounded-full px-8 py-3.5 font-black uppercase text-[12px] tracking-widest shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
+          disabled={isEcommerceFlow && (checkingServiceability || courierServiceable === false)}
+          className={`${primaryBgHover} text-white rounded-full px-8 py-3.5 font-black uppercase text-[12px] tracking-widest shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {currentStep === 3 ? 'Place Order' : 'Continue'}
         </button>

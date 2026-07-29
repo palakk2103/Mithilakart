@@ -1,6 +1,8 @@
 import SearchInput from '../../../shared/components/SearchInput';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usersApi } from '../services/api';
+import { extractList, mapUser } from '../utils/mappers';
 import { 
   Users as UsersIcon, Search, Filter, Mail, 
   Phone, MapPin, Calendar, MoreVertical,
@@ -9,19 +11,30 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_USERS = [
-  { id: 'USR001', name: 'Rahul Sharma', email: 'rahul@example.com', phone: '+91 98765 43210', joined: '2026-05-01', totalSpent: '₹45,200', orders: 12, status: 'Active' },
-  { id: 'USR002', name: 'Priyanka Das', email: 'priyanka@example.com', phone: '+91 98765 43211', joined: '2026-04-28', totalSpent: '₹12,500', orders: 4, status: 'Active' },
-  { id: 'USR003', name: 'Amit Verma', email: 'amit@example.com', phone: '+91 98765 43212', joined: '2026-04-20', totalSpent: '₹89,400', orders: 28, status: 'VIP' },
-  { id: 'USR004', name: 'Sneha Kapur', email: 'sneha@example.com', phone: '+91 98765 43213', joined: '2026-04-15', totalSpent: '₹0', orders: 0, status: 'Inactive' },
-  { id: 'USR005', name: 'Vikram Singh', email: 'vikram@example.com', phone: '+91 98765 43214', joined: '2026-04-10', totalSpent: '₹1,56,000', orders: 45, status: 'VIP' },
-];
-
 const Users = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [usersList, setUsersList] = useState(MOCK_USERS);
+  const [usersList, setUsersList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    const { data, error: apiError } = await usersApi.getAll();
+    if (apiError) {
+      setError(apiError);
+      setUsersList([]);
+    } else {
+      setError(null);
+      setUsersList(extractList(data).map(mapUser));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
   const [filterStatus, setFilterStatus] = useState('All');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -72,10 +85,33 @@ const Users = () => {
     setActiveMenu(activeMenu === userId ? null : userId);
   };
 
-  const handleAction = (e, action, user) => {
+  const handleAction = async (e, action, user) => {
     e.stopPropagation();
-    console.log(`${action} user: ${user.name}`);
     if (action === 'view') navigate(`/admin/users/${user.id}`);
+    if (action === 'suspend') {
+      const { error: apiError } = await usersApi.suspend(user.id);
+      if (!apiError) {
+        setUsersList((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, status: 'Inactive' } : u))
+        );
+      }
+    }
+    if (action === 'block') {
+      const { error: apiError } = await usersApi.block(user.id);
+      if (!apiError) {
+        setUsersList((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, status: 'Inactive' } : u))
+        );
+      }
+    }
+    if (action === 'unblock') {
+      const { error: apiError } = await usersApi.unblock(user.id);
+      if (!apiError) {
+        setUsersList((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, status: 'Active' } : u))
+        );
+      }
+    }
     setActiveMenu(null);
   };
 

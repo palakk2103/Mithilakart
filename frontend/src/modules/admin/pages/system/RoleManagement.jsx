@@ -1,18 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { rolesApi } from '../../services/api';
+import { extractList, mapRole } from '../../utils/mappers';
 import { 
   ShieldCheck, UserPlus, Search, CheckCircle2, 
   Trash2, Shield, Settings, Key, User, Edit2, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_ROLES, ALL_PERMISSIONS } from '../../constants/dummyData';
 import { ConfirmDialog } from '../../components/ui';
 
+const ALL_PERMISSIONS = [
+  { group: 'Dashboard', items: ['dashboard.view', 'dashboard.analytics'] },
+  { group: 'Users', items: ['users.view', 'users.edit', 'users.block', 'users.delete'] },
+  { group: 'Products', items: ['products.view', 'products.edit', 'products.approve', 'products.delete'] },
+  { group: 'Orders', items: ['orders.view', 'orders.edit', 'orders.cancel'] },
+  { group: 'Finance', items: ['finance.view', 'finance.edit', 'finance.payout'] },
+  { group: 'Sellers', items: ['sellers.view', 'sellers.edit', 'sellers.approve', 'sellers.suspend'] },
+  { group: 'Categories', items: ['categories.view', 'categories.edit', 'categories.delete'] },
+  { group: 'Banners', items: ['banners.view', 'banners.edit', 'banners.delete'] },
+  { group: 'Reports', items: ['reports.view', 'reports.export'] },
+  { group: 'Settings', items: ['settings.view', 'settings.edit'] },
+  { group: 'Tickets', items: ['tickets.view', 'tickets.edit', 'tickets.close'] },
+  { group: 'Returns', items: ['returns.view', 'returns.edit', 'returns.approve'] },
+  { group: 'Coupons', items: ['coupons.view', 'coupons.edit', 'coupons.delete'] },
+  { group: 'Notifications', items: ['notifications.view', 'notifications.send'] },
+  { group: 'System', items: ['system.admins', 'system.roles', 'system.audit', 'system.settings'] },
+];
+
 const RoleManagement = () => {
-  const [roles, setRoles] = useState(MOCK_ROLES);
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: [] });
+
+  const fetchRoles = async () => {
+    setLoading(true);
+    const { data, error: apiError } = await rolesApi.getAll();
+    if (apiError) {
+      setError(apiError);
+      setRoles([]);
+    } else {
+      setError(null);
+      setRoles(extractList(data).map(mapRole));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchRoles();
+  }, []);
 
   const handleEdit = (role) => {
     setSelectedRole(role);
@@ -47,24 +85,19 @@ const RoleManagement = () => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!roleForm.name) return;
 
     if (selectedRole) {
-      // Edit
-      setRoles(prev => prev.map(r => r.id === selectedRole.id ? { ...r, ...roleForm } : r));
+      const { data, error: apiError } = await rolesApi.update(selectedRole.id, roleForm);
+      if (!apiError) {
+        setRoles(prev => prev.map(r => r.id === selectedRole.id ? { ...r, ...mapRole(data || roleForm) } : r));
+      }
     } else {
-      // Create
-      const newRole = {
-        id: Date.now(),
-        name: roleForm.name,
-        description: roleForm.description,
-        permissions: roleForm.permissions,
-        members: 0,
-        color: 'blue',
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      setRoles(prev => [...prev, newRole]);
+      const { data, error: apiError } = await rolesApi.create(roleForm);
+      if (!apiError) {
+        setRoles(prev => [...prev, mapRole(data || { ...roleForm, id: Date.now(), members: 0, color: 'blue', createdAt: new Date().toISOString() })]);
+      }
     }
     setIsEditing(false);
   };

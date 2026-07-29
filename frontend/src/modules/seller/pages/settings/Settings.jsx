@@ -2,46 +2,121 @@
  * Settings Page
  * Manage Store profile, Bank details, Password, and Notification Preferences.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Store, Landmark, Shield, Bell, Save, ArrowLeft } from 'lucide-react';
 import { PageHeader } from '../../components/common';
 import { Card, Button, Toggle } from '../../components/ui';
-import { sellerProfile } from '../../utils/dummyData';
+import {
+  getProfile, updateProfile, updateBankDetails, changePassword, updateNotificationPrefs,
+} from '../../services/sellerApi';
 import toast from 'react-hot-toast';
+
+const defaultNotificationPrefs = {
+  orderAlerts: true,
+  outOfStock: true,
+  customerReviews: false,
+  weeklyDigest: true,
+};
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
-  const [notifications, setNotifications] = useState({
-    orderAlerts: true,
-    outOfStock: true,
-    customerReviews: false,
-    weeklyDigest: true,
-  });
+  const [notifications, setNotifications] = useState(defaultNotificationPrefs);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const { register: registerProfile, handleSubmit: handleProfileSubmit } = useForm({ defaultValues: sellerProfile });
-  const { register: registerBank, handleSubmit: handleBankSubmit } = useForm({ defaultValues: sellerProfile.bankDetails });
+  const { register: registerProfile, handleSubmit: handleProfileSubmit, reset: resetProfile } = useForm();
+  const { register: registerBank, handleSubmit: handleBankSubmit, reset: resetBank } = useForm();
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, reset: resetPassword } = useForm();
 
-  const onUpdateProfile = (data) => {
-    toast.success('Profile updated successfully!');
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const profile = await getProfile();
+        resetProfile({
+          name: profile?.name || '',
+          storeName: profile?.storeName || '',
+          email: profile?.email || '',
+          phone: profile?.phone || '',
+          address: profile?.address || profile?.storeDescription || '',
+        });
+        const bank = profile?.bankDetails || profile?.bank || {};
+        resetBank({
+          holderName: bank.holderName || bank.accountHolder || '',
+          bankName: bank.bankName || '',
+          accountNumber: bank.accountNumber || '',
+          ifsc: bank.ifsc || '',
+        });
+        if (profile?.notificationPrefs) {
+          setNotifications({ ...defaultNotificationPrefs, ...profile.notificationPrefs });
+        }
+      } catch (err) {
+        setError(err?.message || 'Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [resetProfile, resetBank]);
+
+  const onUpdateProfile = async (data) => {
+    try {
+      await updateProfile(data);
+      toast.success('Profile updated successfully!');
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update profile');
+    }
   };
 
-  const onUpdateBank = (data) => {
-    toast.success('Bank details updated successfully!');
+  const onUpdateBank = async (data) => {
+    try {
+      await updateBankDetails(data);
+      toast.success('Bank details updated successfully!');
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update bank details');
+    }
   };
 
-  const onChangePassword = (data) => {
+  const onChangePassword = async (data) => {
     if (data.newPassword !== data.confirmPassword) {
       toast.error("New passwords don't match!");
       return;
     }
-    toast.success('Password updated successfully!');
-    resetPassword();
+    try {
+      await changePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+      toast.success('Password updated successfully!');
+      resetPassword();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update password');
+    }
+  };
+
+  const handleNotificationPrefChange = async (key, value) => {
+    const updated = { ...notifications, [key]: value };
+    setNotifications(updated);
+    try {
+      await updateNotificationPrefs(updated);
+    } catch (err) {
+      setNotifications(notifications);
+      toast.error(err?.message || 'Failed to update notification preferences');
+    }
   };
 
   const inputClass = "w-full px-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all";
   const labelClass = "block text-sm font-medium text-gray-700 mb-1.5";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-gray-500">Loading settings...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-8">
@@ -166,25 +241,25 @@ const Settings = () => {
                   label="New Order Alerts"
                   description="Receive instant toast notifications when customers purchase items"
                   checked={notifications.orderAlerts}
-                  onChange={(v) => setNotifications((p) => ({ ...p, orderAlerts: v }))}
+                  onChange={(v) => handleNotificationPrefChange('orderAlerts', v)}
                 />
                 <Toggle
                   label="Out of Stock Indicators"
                   description="Alerts you immediately when inventory item reaches threshold"
                   checked={notifications.outOfStock}
-                  onChange={(v) => setNotifications((p) => ({ ...p, outOfStock: v }))}
+                  onChange={(v) => handleNotificationPrefChange('outOfStock', v)}
                 />
                 <Toggle
                   label="Customer Review Submissions"
                   description="Receive email summaries when products receive ratings"
                   checked={notifications.customerReviews}
-                  onChange={(v) => setNotifications((p) => ({ ...p, customerReviews: v }))}
+                  onChange={(v) => handleNotificationPrefChange('customerReviews', v)}
                 />
                 <Toggle
                   label="Weekly Digest summary"
                   description="Get weekly sales, settlement reports directly to your inbox"
                   checked={notifications.weeklyDigest}
-                  onChange={(v) => setNotifications((p) => ({ ...p, weeklyDigest: v }))}
+                  onChange={(v) => handleNotificationPrefChange('weeklyDigest', v)}
                 />
               </div>
             </Card>

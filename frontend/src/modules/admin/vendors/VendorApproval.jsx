@@ -1,6 +1,6 @@
-import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { approveVendor, rejectVendor } from '../../../store/slices/adminSlice';
+import React, { useState, useEffect } from 'react';
+import { sellersApi } from '../services/api';
+import { extractList, mapPendingVendor } from '../utils/mappers';
 import { 
   CheckCircle2, XCircle, FileText, MapPin, 
   Mail, Phone, ShieldCheck, ExternalLink, Calendar
@@ -8,15 +8,39 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 const VendorApproval = () => {
-  const { pendingVendors } = useSelector(state => state.admin);
-  const dispatch = useDispatch();
+  const [pendingVendors, setPendingVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleApprove = (id) => {
-    dispatch(approveVendor(id));
+  const fetchPending = async () => {
+    setLoading(true);
+    const { data, error: apiError } = await sellersApi.getAll({ kycStatus: 'pending' });
+    if (apiError) {
+      setError(apiError);
+      setPendingVendors([]);
+    } else {
+      setError(null);
+      setPendingVendors(extractList(data).map(mapPendingVendor));
+    }
+    setLoading(false);
   };
 
-  const handleReject = (id) => {
-    dispatch(rejectVendor(id));
+  useEffect(() => {
+    fetchPending();
+  }, []);
+
+  const handleApprove = async (id) => {
+    const { error: apiError } = await sellersApi.approve(id);
+    if (!apiError) {
+      setPendingVendors((prev) => prev.filter((v) => v.id !== id));
+    }
+  };
+
+  const handleReject = async (id) => {
+    const { error: apiError } = await sellersApi.reject(id, 'Rejected by admin');
+    if (!apiError) {
+      setPendingVendors((prev) => prev.filter((v) => v.id !== id));
+    }
   };
 
   return (

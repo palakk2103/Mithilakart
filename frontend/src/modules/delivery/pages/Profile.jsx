@@ -1,27 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { 
   User, Settings, HelpCircle, Info, LogOut, 
-  ChevronRight, Wallet, Bell 
+  ChevronRight, Wallet
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const AGENT = {
-  name: 'chirag',
-  rating: 4.8,
-  joined: 'Jan 2025',
-};
+import { toast } from 'react-hot-toast';
+import { clearTokens } from '../../../shared/api/tokenStorage';
+import { logoutDelivery, setOnlineStatus } from '../services/deliveryApi';
+import useDeliveryStore from '../../../store/useDeliveryStore';
 
 const DeliveryProfile = () => {
   const navigate = useNavigate();
   const context = useOutletContext();
   const [localOnline, setLocalOnline] = useState(true);
+  const { profile, fetchProfile } = useDeliveryStore();
   
   const isOnline = context ? context.isOnline : localOnline;
   const setIsOnline = context ? context.setIsOnline : setLocalOnline;
 
-  const handleLogout = () => {
-    localStorage.removeItem('isDeliveryAuthenticated');
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  const handleToggleOnline = async () => {
+    const next = !isOnline;
+    try {
+      await setOnlineStatus(next);
+      setIsOnline(next);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update status');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutDelivery();
+    } catch {
+      // proceed with local logout
+    }
+    clearTokens('delivery');
     navigate('/delivery/auth');
   };
 
@@ -33,9 +51,10 @@ const DeliveryProfile = () => {
     { icon: Info, label: 'About', path: '/delivery/about' },
   ];
 
+  const displayName = profile.fullName || 'Partner';
+
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-24 font-sans">
-      {/* Profile Header Card */}
       <div className="px-4 pt-4 mb-6">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -44,13 +63,12 @@ const DeliveryProfile = () => {
             </div>
             <div>
               <p className="text-slate-400 font-bold text-[10px] uppercase tracking-wider">Hello</p>
-              <h2 className="text-lg font-black text-slate-900 leading-none mt-0.5">{AGENT.name}</h2>
+              <h2 className="text-lg font-black text-slate-900 leading-none mt-0.5">{displayName}</h2>
             </div>
           </div>
           
-          {/* Status Toggle */}
           <button 
-            onClick={() => setIsOnline(!isOnline)}
+            onClick={handleToggleOnline}
             className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isOnline ? 'bg-[#388e3c]' : 'bg-slate-200'}`}
           >
             <motion.div 
@@ -61,12 +79,10 @@ const DeliveryProfile = () => {
         </div>
       </div>
 
-      {/* Menu Section */}
       <div className="px-5 mb-3">
         <h3 className="text-lg font-black text-slate-800 tracking-tight uppercase">Menu</h3>
       </div>
 
-      {/* Menu Items List */}
       <div className="px-4 space-y-2">
         {menuItems.map((item, idx) => (
           <button 
@@ -82,7 +98,6 @@ const DeliveryProfile = () => {
           </button>
         ))}
 
-        {/* Logout Item */}
         <button 
           onClick={handleLogout}
           className="w-full bg-red-50/50 rounded-xl p-3.5 border border-red-100 shadow-sm flex items-center gap-3 active:scale-[0.98] transition-all group mt-4"
@@ -99,4 +114,3 @@ const DeliveryProfile = () => {
 };
 
 export default DeliveryProfile;
-

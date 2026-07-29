@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
 import DeliveryLayout from '../layouts/DeliveryLayout';
 import DeliveryAuth from '../pages/Auth';
 import DeliverySignup from '../pages/Signup';
@@ -14,8 +15,7 @@ import Support from '../pages/Support';
 import About from '../pages/About';
 
 const DeliveryProtectedRoute = () => {
-  const isDeliveryAuthenticated = localStorage.getItem('isDeliveryAuthenticated') === 'true';
-  if (!isDeliveryAuthenticated) {
+  if (!isAuthenticated('delivery')) {
     return <Navigate to="/delivery/auth" replace />;
   }
   return <DeliveryLayout />;

@@ -1,0 +1,22 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: mithilakart-mongodb
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mithilakart_mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: mithilakart-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - mithilakart_redis_data:/data
+
+volumes:
+  mithilakart_mongo_data:
+  mithilakart_redis_data:

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Zap, Plus, Search, Filter, MoreVertical, 
   Download, CheckCircle2, XCircle, Clock, 
@@ -6,16 +6,31 @@ import {
   ArrowUpRight, Users, Timer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const MOCK_SALES = [
-  { id: 1, name: 'Midnight Madness', start: '2026-05-15 00:00', end: '2026-05-15 04:00', products: 15, discount: 'Flat 50%', status: 'Scheduled' },
-  { id: 2, name: 'Lunch Hour Deal', start: '2026-05-11 12:00', end: '2026-05-11 14:00', products: 8, discount: 'Up to 70%', status: 'Live' },
-  { id: 3, name: 'Flash Friday', start: '2026-05-09 18:00', end: '2026-05-09 23:59', products: 45, discount: 'Min 40%', status: 'Completed' },
-];
+import { flashSalesApi } from '../../services/api';
+import { extractList, mapFlashSale } from '../../utils/mappers';
 
 const FlashSale = () => {
-  const [sales, setSales] = useState(MOCK_SALES);
+  const [sales, setSales] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await flashSalesApi.getAll();
+      if (cancelled) return;
+      if (!error) {
+        setSales(extractList(data).map(mapFlashSale));
+      } else {
+        setSales([]);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const liveSale = sales.find((sale) => sale.status === 'Live');
 
   const StatusBadge = ({ status }) => {
     const styles = {
@@ -52,9 +67,9 @@ const FlashSale = () => {
       {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Active Sales', value: '01', icon: Timer, color: 'text-red-500', bg: 'bg-red-50' },
-          { label: 'Participating Items', value: '68', icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { label: 'Projected Traffic', value: '4.2k', icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+          { label: 'Active Sales', value: String(sales.filter((s) => s.status === 'Live').length).padStart(2, '0'), icon: Timer, color: 'text-red-500', bg: 'bg-red-50' },
+          { label: 'Participating Items', value: String(sales.reduce((sum, s) => sum + s.products, 0)), icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
+          { label: 'Scheduled Events', value: String(sales.filter((s) => s.status === 'Scheduled').length), icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
             <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center shadow-inner`}>
@@ -69,6 +84,7 @@ const FlashSale = () => {
       </div>
 
       {/* Active Sale Alert if Live */}
+      {liveSale && (
       <div className="bg-slate-900 rounded-3xl p-6 text-white relative overflow-hidden flex items-center justify-between">
          <div className="absolute -right-10 -bottom-10 opacity-10">
             <Zap size={200} />
@@ -76,14 +92,15 @@ const FlashSale = () => {
          <div className="relative z-10">
             <div className="flex items-center gap-3">
                <div className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-               <h3 className="text-xl font-black font-montserrat uppercase tracking-tight">Lunch Hour Deal is Live</h3>
+               <h3 className="text-xl font-black font-montserrat uppercase tracking-tight">{liveSale.name} is Live</h3>
             </div>
-            <p className="text-xs opacity-60 mt-2 font-medium">Ends in <span className="text-red-400 font-bold">01:42:15</span> • 458 users browsing currently</p>
+            <p className="text-xs opacity-60 mt-2 font-medium">Ends {liveSale.end} • {liveSale.products} products included</p>
          </div>
          <button className="relative z-10 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
             Monitor Live
          </button>
       </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -99,7 +116,15 @@ const FlashSale = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {sales.map((sale, i) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm font-bold">Loading flash sales...</td>
+                </tr>
+              ) : sales.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm font-bold">No flash sales found</td>
+                </tr>
+              ) : sales.map((sale, i) => (
                 <tr key={sale.id} className="group hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div>

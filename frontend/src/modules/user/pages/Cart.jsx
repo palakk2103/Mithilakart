@@ -6,35 +6,24 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
+import { fetchCartItems, updateCartItemQuantity, removeCartItemById } from '../utils/cartUtils';
+import { isAuthenticated as checkAuth } from '../../../shared/api/tokenStorage';
+import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
+import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
 import useAccountStore from '../../../store/useAccountStore';
+import { getUser } from '../../../shared/api/tokenStorage';
 
 const Cart = () => {
   const { t } = useTranslation();
   const [cartItems, setCartItems] = useState([]);
   const navigate = useNavigate();
+  const { location: liveLocation, setPromptOpen } = useLiveLocation();
+  const { savedAddresses, selectedAddressId } = useAccountStore();
+  useHydrateAddresses();
+  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
 
-  // Wishlist and confirmation states
-  const { wishlist, addToWishlist, removeFromWishlist } = useAccountStore();
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [itemToConfirm, setItemToConfirm] = useState(null);
-
-  // Authentication and address flow states
-  const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem('isAuthenticated') === 'true');
-  const [address, setAddress] = useState(() => {
-    const saved = localStorage.getItem('cartAddress');
-    if (saved) return JSON.parse(saved);
-    // If user is already logged in on mount, auto-assign default address
-    if (localStorage.getItem('isAuthenticated') === 'true') {
-      const defaultAddr = {
-        name: 'Harsh Pandey',
-        phone: '9876543210',
-        address: '83 Kishan Pura Mataji Mandir, Sector No. 5 New Harsud Chh...'
-      };
-      localStorage.setItem('cartAddress', JSON.stringify(defaultAddr));
-      return defaultAddr;
-    }
-    return null;
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => checkAuth('customer'));
+  const [address, setAddress] = useState(null);
 
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [addrName, setAddrName] = useState('');
@@ -44,108 +33,85 @@ const Cart = () => {
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A] hover:bg-[#1a6874]' : (isFreshGroceryFlow ? 'bg-[#D9A21B] hover:bg-[#c49218]' : (isQuickShopFlow ? 'bg-[#F26522] hover:bg-[#d9561b]' : 'bg-[#6FAE4A] hover:bg-[#5b953d]'));
-  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : (isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]'));
-  const shopNowLink = isMithilakFlow ? '/mithilak' : (isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/home'));
-  const btnShadow = isMithilakFlow ? 'shadow-[0_4px_16px_rgba(32,124,138,0.22)]' : isFreshGroceryFlow ? 'shadow-[0_4px_16px_rgba(217,162,27,0.15)]' : (isQuickShopFlow ? 'shadow-[0_4px_16px_rgba(242,101,34,0.22)]' : 'shadow-[0_4px_16px_rgba(8,66,36,0.22)]');
+  const primaryBg = isMithilakFlow ? 'bg-[#207C8A] hover:bg-[#185e68]' : (isFreshGroceryFlow ? 'bg-[#D9A21B] hover:bg-[#c49218]' : (isQuickShopFlow ? 'bg-[#d6186d] hover:bg-[#b5125b]' : 'bg-[#3E5A44] hover:bg-[#06331b]'));
+  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : (isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#d6186d]' : 'text-[#3E5A44]'));
+  const shopNowLink = isMithilakFlow ? '/mithilak' : (isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home'));
 
-  // Load cart items for all users (authenticated or not)
+  // Load cart items from API
   useEffect(() => {
-    try {
-      const items = JSON.parse(localStorage.getItem('userCart') || '[]');
-      setCartItems(items);
-    } catch (e) {
-      console.error("Failed to load cart", e);
-    }
-  }, []);
+    let cancelled = false;
 
-  // Re-sync auth & address state when returning from login page
-  useEffect(() => {
-    const syncAuthState = () => {
-      const authNow = localStorage.getItem('isAuthenticated') === 'true';
-      setIsAuthenticated(authNow);
-      if (authNow) {
-        const savedAddr = localStorage.getItem('cartAddress');
-        if (savedAddr) {
-          setAddress(JSON.parse(savedAddr));
-        } else {
-          // Auto-assign default address for logged-in users without one
-          const defaultAddr = {
-            name: 'Harsh Pandey',
-            phone: '9876543210',
-            address: '83 Kishan Pura Mataji Mandir, Sector No. 5 New Harsud Chh...'
-          };
-          localStorage.setItem('cartAddress', JSON.stringify(defaultAddr));
-          setAddress(defaultAddr);
-        }
+    const loadCart = async () => {
+      try {
+        const { items } = await fetchCartItems();
+        if (!cancelled) setCartItems(items);
+      } catch (e) {
+        console.error('Failed to load cart', e);
       }
     };
 
-    // Listen for popstate (back/forward navigation) and focus (tab switch back)
+    loadCart();
+    const onCartUpdated = () => loadCart();
+    window.addEventListener('cartUpdated', onCartUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('cartUpdated', onCartUpdated);
+    };
+  }, []);
+
+  // Sync delivery address from live GPS / saved profile
+  useEffect(() => {
+    const user = getUser('customer');
+    if (deliverTo.source === 'live' || deliverTo.source === 'saved') {
+      setAddress({
+        name: user?.name || 'Delivery',
+        phone: user?.phone || '',
+        address: deliverTo.label,
+      });
+    }
+  }, [deliverTo.label, deliverTo.source]);
+
+  // Re-sync auth when returning from login
+  useEffect(() => {
+    const syncAuthState = () => {
+      setIsAuthenticated(checkAuth('customer'));
+    };
+
+    window.addEventListener('customer-auth-changed', syncAuthState);
     window.addEventListener('popstate', syncAuthState);
     window.addEventListener('focus', syncAuthState);
-    // Also run on mount in case we just returned from login
     syncAuthState();
 
     return () => {
+      window.removeEventListener('customer-auth-changed', syncAuthState);
       window.removeEventListener('popstate', syncAuthState);
       window.removeEventListener('focus', syncAuthState);
     };
   }, []);
 
-  const handleRemoveClick = (item) => {
-    setItemToConfirm(item);
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (!itemToConfirm) return;
-    const updated = cartItems.filter(item => item.cartId !== itemToConfirm.cartId);
-    setCartItems(updated);
-    localStorage.setItem('userCart', JSON.stringify(updated));
-    window.dispatchEvent(new Event('cartUpdated'));
-    setShowConfirmModal(false);
-    setItemToConfirm(null);
-  };
-
-  const handleMoveToWishlist = () => {
-    if (!itemToConfirm) return;
-    // Add to wishlist using Zustand store (avoid duplicates)
-    if (!wishlist.some(wish => wish.id === itemToConfirm.id)) {
-      addToWishlist({
-        id: itemToConfirm.id || Date.now(),
-        name: itemToConfirm.name,
-        price: itemToConfirm.price,
-        oldPrice: itemToConfirm.oldPrice,
-        discount: itemToConfirm.discount,
-        image: itemToConfirm.image,
-        brand: itemToConfirm.brand,
-        rating: itemToConfirm.rating,
-        reviews: itemToConfirm.reviews
-      });
+  const handleRemove = async (cartId) => {
+    try {
+      await removeCartItemById(cartId);
+      setCartItems((prev) => prev.filter((item) => item.cartId !== cartId));
+    } catch (e) {
+      console.error('Failed to remove item', e);
     }
-
-    // Remove from cart
-    const updated = cartItems.filter(item => item.cartId !== itemToConfirm.cartId);
-    setCartItems(updated);
-    localStorage.setItem('userCart', JSON.stringify(updated));
-    window.dispatchEvent(new Event('cartUpdated'));
-
-    setShowConfirmModal(false);
-    setItemToConfirm(null);
   };
 
-  const updateQuantity = (cartId, delta) => {
-    const updated = cartItems.map(item => {
-      if (item.cartId === cartId) {
-        const newQty = Math.max(1, (item.qty || 1) + delta);
-        return { ...item, qty: newQty };
-      }
-      return item;
-    });
-    setCartItems(updated);
-    localStorage.setItem('userCart', JSON.stringify(updated));
-    window.dispatchEvent(new Event('cartUpdated'));
+  const updateQuantity = async (cartId, delta) => {
+    const item = cartItems.find((i) => i.cartId === cartId);
+    if (!item) return;
+
+    try {
+      const newQty = await updateCartItemQuantity(item, delta);
+      setCartItems((prev) =>
+        prev.map((cartItem) =>
+          cartItem.cartId === cartId ? { ...cartItem, qty: newQty, quantity: newQty } : cartItem
+        )
+      );
+    } catch (e) {
+      console.error('Failed to update quantity', e);
+    }
   };
 
   const totalPrice = cartItems.reduce((acc, item) => {
@@ -161,7 +127,7 @@ const Cart = () => {
 
   return (
     <div className={`min-h-screen pb-32 font-sans text-slate-800 flex flex-col transition-colors duration-300 relative ${
-      isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isQuickShopFlow ? 'bg-[#FFF9F5]' : 'bg-[#F6F8F3]'
+      isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : 'bg-bg-cream'
     }`}>
       {/* Global Repeating Mithila Art Page Background Texture */}
       {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (
@@ -176,13 +142,11 @@ const Cart = () => {
 
       {/* Header */}
       <div className={`sticky top-0 z-[100] px-4 py-3 flex items-center justify-between border-b transition-colors duration-300 relative ${
-        isMithilakFlow
-          ? 'bg-[#207C8A] border-transparent text-white shadow-sm'
-          : isFreshGroceryFlow
-            ? 'bg-[#D9A21B] border-transparent text-white shadow-sm'
-            : isQuickShopFlow
-              ? 'bg-[#F26522] border-transparent text-white shadow-sm'
-              : 'bg-[#FCF7EE] border-[#F3E3CD]/60 text-[#6FAE4A]'
+        isFreshGroceryFlow 
+          ? 'bg-[#D9A21B] border-transparent text-white' 
+          : isMithilakFlow
+            ? 'bg-[#207C8A] border-transparent text-white'
+            : 'bg-[#FCF7EE] border-[#F3E3CD]/60'
       }`}>
         <button 
           onClick={() => navigate(-1)} 
@@ -190,9 +154,7 @@ const Cart = () => {
         >
           <ArrowLeft size={18} strokeWidth={2.5} />
         </button>
-        <h1 className={`text-[17px] font-black tracking-tight ${
-          (isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white' : 'text-slate-800'
-        }`}>{t('nav.cart')}</h1>
+        <h1 className={`text-[17px] font-black tracking-tight ${isMithilakFlow ? 'text-white' : 'text-slate-800'}`}>{t('nav.cart')}</h1>
         <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 border border-slate-100/50 font-bold select-none cursor-pointer">
           •••
         </div>
@@ -325,16 +287,8 @@ const Cart = () => {
 
                       {/* Delete Action */}
                       <button 
-                        onClick={() => handleRemoveClick(item)}
-                        className={`absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-full active:scale-90 transition-transform ${
-                          isMithilakFlow 
-                            ? 'text-[#6FAE4A] hover:bg-[#6FAE4A]/5' 
-                            : isFreshGroceryFlow 
-                              ? 'text-[#D9A21B] hover:bg-[#D9A21B]/5' 
-                              : isQuickShopFlow 
-                                ? 'text-[#F26522] hover:bg-[#F26522]/5' 
-                                : 'text-rose-600 hover:text-rose-800 hover:bg-rose-50/50'
-                        }`}
+                        onClick={() => handleRemove(item.cartId)}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 text-rose-600 hover:text-rose-800 p-2 rounded-full hover:bg-rose-50/50 active:scale-90 transition-transform"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -342,55 +296,6 @@ const Cart = () => {
                   </div>
                 ))}
               </div>
-
-              {/* Wishlist Items Section */}
-              {wishlist && wishlist.length > 0 && (
-                <div className="bg-white rounded-[28px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] border border-slate-100/50 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[14px] font-black text-slate-800 tracking-tight uppercase flex items-center gap-1.5">
-                      <Heart size={16} className="text-rose-500 fill-rose-500" />
-                      From Your Wishlist
-                    </h3>
-                    <Link to="/profile/wishlist" className={`${primaryText} text-[11px] font-black uppercase tracking-wider hover:underline`}>
-                      View All
-                    </Link>
-                  </div>
-                  
-                  <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
-                    {wishlist.map((item) => (
-                      <div 
-                        key={item.id} 
-                        className="w-[140px] flex-shrink-0 flex flex-col bg-slate-50/50 rounded-2xl p-3 border border-slate-100 relative group cursor-pointer"
-                        onClick={() => navigate('/product-detail', { state: { product: item } })}
-                      >
-                        <div className="w-full aspect-square bg-white rounded-xl flex items-center justify-center p-2 mb-2 border border-slate-100">
-                          <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
-                        </div>
-                        <h4 className="text-[11.5px] font-bold text-slate-700 truncate leading-snug">{item.name}</h4>
-                        <p className="text-[13px] font-black text-slate-900 mt-1">{formatPrice(item.price)}</p>
-                        
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Add item to cart
-                            const cart = JSON.parse(localStorage.getItem('userCart') || '[]');
-                            if (!cart.some(cartItem => cartItem.id === item.id)) {
-                              cart.push({ ...item, cartId: Date.now(), qty: 1 });
-                              localStorage.setItem('userCart', JSON.stringify(cart));
-                              setCartItems(cart);
-                              window.dispatchEvent(new Event('cartUpdated'));
-                            }
-                            removeFromWishlist(item.id);
-                          }}
-                          className={`w-full mt-2 py-1.5 ${primaryBg} text-white text-[10px] font-black rounded-lg uppercase tracking-wider text-center active:scale-95 transition-transform`}
-                        >
-                          Add to Cart
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Right Column (Summary & Desktop Action) */}
@@ -433,7 +338,7 @@ const Cart = () => {
                 </button>
               ) : (
                 <button 
-                  onClick={() => navigate('/checkout', { state: { product: cartItems[0] } })}
+                  onClick={() => navigate('/vendor/checkout', { state: { product: cartItems[0] } })}
                   className={`hidden md:flex w-full ${primaryBg} text-white font-black py-4 rounded-full active:scale-[0.98] transition-all items-center justify-center text-[14px] shadow-md cursor-pointer`}
                 >
                   Proceed to Checkout
@@ -454,21 +359,21 @@ const Cart = () => {
           {!isAuthenticated ? (
             <button 
               onClick={() => navigate('/login', { state: { from: '/cart' } })}
-              className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider ${btnShadow} active:scale-95 transition-transform`}
+              className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
             >
               Login to Proceed
             </button>
           ) : !address ? (
             <button 
               onClick={() => setShowAddressModal(true)}
-              className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider ${btnShadow} active:scale-95 transition-transform`}
+              className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
             >
               Add Address
             </button>
           ) : (
             <button 
-              onClick={() => navigate('/checkout', { state: { product: cartItems[0] } })}
-              className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider ${btnShadow} active:scale-95 transition-transform`}
+              onClick={() => navigate('/vendor/checkout', { state: { product: cartItems[0] } })}
+              className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
             >
               Proceed to Checkout
             </button>
@@ -492,7 +397,6 @@ const Cart = () => {
             <form onSubmit={(e) => {
               e.preventDefault();
               const newAddress = { name: addrName, phone: addrPhone, address: addrDetails };
-              localStorage.setItem('cartAddress', JSON.stringify(newAddress));
               setAddress(newAddress);
               setShowAddressModal(false);
             }} className="space-y-4">
@@ -502,7 +406,7 @@ const Cart = () => {
                   type="text" 
                   value={addrName} 
                   onChange={(e) => setAddrName(e.target.value)} 
-                  placeholder="e.g. Harsh Pandey"
+                  placeholder="Your name"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
                   required
                 />
@@ -536,58 +440,6 @@ const Cart = () => {
                 Save & Continue
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Move to Wishlist / Delete Confirmation Modal */}
-      {showConfirmModal && itemToConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-[32px] w-full max-w-[360px] p-6 shadow-2xl border border-slate-100/50 relative transform animate-in zoom-in-95 duration-200 text-center">
-            <button 
-              onClick={() => {
-                setShowConfirmModal(false);
-                setItemToConfirm(null);
-              }}
-              className="absolute right-6 top-6 text-slate-400 hover:text-slate-700 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
-            >
-              <X size={18} />
-            </button>
-            
-            <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 mx-auto mb-4 mt-2">
-              <Trash2 size={24} />
-            </div>
-
-            <h3 className="text-[17px] font-black text-slate-800 tracking-tight mb-2">
-              Remove Item?
-            </h3>
-            <p className="text-[13px] text-slate-500 font-medium mb-6 px-2">
-              Are you sure you want to remove <strong>{itemToConfirm.name}</strong>? You can move it to your wishlist to buy it later.
-            </p>
-
-            <div className="space-y-2.5">
-              <button 
-                onClick={handleMoveToWishlist}
-                className={`w-full py-3.5 ${primaryBg} text-white font-black rounded-2xl text-[12px] uppercase tracking-wider shadow-sm hover:shadow transition-all active:scale-[0.98] cursor-pointer`}
-              >
-                Move to Wishlist
-              </button>
-              <button 
-                onClick={handleConfirmDelete}
-                className="w-full py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-black rounded-2xl text-[12px] uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer"
-              >
-                Delete permanently
-              </button>
-              <button 
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  setItemToConfirm(null);
-                }}
-                className="w-full py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-500 font-bold rounded-2xl text-[12px] uppercase tracking-wider transition-all active:scale-[0.98] cursor-pointer"
-              >
-                Cancel
-              </button>
-            </div>
           </div>
         </div>
       )}
