@@ -6,10 +6,14 @@ import { Save, Loader2, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const SECTION_TITLES = {
-  'still-looking': 'Still Looking For These?',
+  'trending-this-week': 'Trending This Week',
+  'todays-special-deals': "Today's Special Deals",
   'top-selection': 'Top Selection',
+  'brands-in-spotlight': 'Brands in Spotlight',
   'spotlight': 'Brands in Spotlight',
-  'best-quality': 'Best Quality',
+  'best-quality-guaranteed': 'Best Quality Guaranteed',
+  'best-quality': 'Best Quality Guaranteed',
+  'still-looking': 'Still Looking For These?',
   'keep-shopping': 'Keep Shopping',
 };
 
@@ -21,7 +25,7 @@ const COMMERCE_FLOWS = [
 ];
 
 const HomeSectionsManager = () => {
-  const { section: sectionKey = 'still-looking' } = useParams();
+  const { section: sectionKey = 'trending-this-week' } = useParams();
   const [commerceFlow, setCommerceFlow] = useState('standard');
   const [sectionData, setSectionData] = useState({ title: '', productIds: [], isActive: true });
   const [products, setProducts] = useState([]);
@@ -34,12 +38,17 @@ const HomeSectionsManager = () => {
     setLoading(true);
     const [sectionsRes, productsRes] = await Promise.all([
       sectionsApi.getAll(),
-      productsApi.getAll({ limit: 100, status: 'approved' }),
+      productsApi.getAll({ limit: 100 }),
     ]);
 
     const sections = extractList(sectionsRes.data);
     const match = sections.find(
-      (s) => s.sectionKey === sectionKey && (s.commerceFlow || 'standard') === commerceFlow
+      (s) => (s.sectionKey === sectionKey ||
+             (sectionKey === 'brands-in-spotlight' && s.sectionKey === 'spotlight') ||
+             (sectionKey === 'best-quality-guaranteed' && s.sectionKey === 'best-quality') ||
+             (sectionKey === 'spotlight' && s.sectionKey === 'brands-in-spotlight') ||
+             (sectionKey === 'best-quality' && s.sectionKey === 'best-quality-guaranteed')) &&
+             (s.commerceFlow || 'standard') === commerceFlow
     );
 
     setSectionData({
@@ -52,7 +61,7 @@ const HomeSectionsManager = () => {
     setAllProducts(catalog);
 
     const ids = (match?.productIds || []).map((id) => String(id._id || id));
-    setProducts(catalog.filter((p) => ids.includes(String(p._id || p.id))));
+    setProducts(ids.map((id) => catalog.find((p) => String(p._id || p.id) === String(id))).filter(Boolean));
 
     setLoading(false);
   }, [sectionKey, commerceFlow]);
@@ -65,25 +74,38 @@ const HomeSectionsManager = () => {
       toast.error('Product already in section');
       return;
     }
-    const nextIds = [...sectionData.productIds, selectedProductId];
+    const nextIds = [selectedProductId, ...sectionData.productIds];
     setSectionData((p) => ({ ...p, productIds: nextIds }));
-    setProducts(allProducts.filter((p) => nextIds.includes(String(p._id || p.id))));
+    setProducts(nextIds.map((id) => allProducts.find((p) => String(p._id || p.id) === String(id))).filter(Boolean));
     setSelectedProductId('');
   };
 
   const removeProduct = (productId) => {
     const nextIds = sectionData.productIds.filter((id) => id !== productId);
     setSectionData((p) => ({ ...p, productIds: nextIds }));
-    setProducts(allProducts.filter((p) => nextIds.includes(String(p._id || p.id))));
+    setProducts(nextIds.map((id) => allProducts.find((p) => String(p._id || p.id) === String(id))).filter(Boolean));
   };
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await sectionsApi.update(sectionKey, {
+    const payload = {
       title: sectionData.title,
       productIds: sectionData.productIds,
       isActive: sectionData.isActive,
-    }, { commerceFlow });
+    };
+    const { error } = await sectionsApi.update(sectionKey, payload, { commerceFlow });
+    
+    // Also sync legacy key alias if applicable
+    const aliasMap = {
+      'brands-in-spotlight': 'spotlight',
+      'spotlight': 'brands-in-spotlight',
+      'best-quality-guaranteed': 'best-quality',
+      'best-quality': 'best-quality-guaranteed',
+    };
+    if (aliasMap[sectionKey]) {
+      await sectionsApi.update(aliasMap[sectionKey], payload, { commerceFlow }).catch(() => {});
+    }
+
     setSaving(false);
     if (error) {
       toast.error(error);
@@ -163,9 +185,12 @@ const HomeSectionsManager = () => {
           </div>
 
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{products.length} products in section</p>
-            {products.map((product) => (
-              <div key={product._id || product.id} className="flex items-center gap-4 p-3 border border-slate-100 rounded-xl">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{products.length} products in section (Top item appears first on homepage)</p>
+            {products.map((product, index) => (
+              <div key={product._id || product.id} className="flex items-center gap-4 p-3 border border-slate-100 rounded-xl relative">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${index === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                  #{index + 1} {index === 0 ? '(Newest / First)' : ''}
+                </span>
                 <img
                   src={product.images?.[0]?.url || product.image || 'https://via.placeholder.com/64'}
                   alt=""

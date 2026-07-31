@@ -10,6 +10,13 @@ class OrderRepository extends BaseRepository {
     return this.find({ userId, deletedAt: null }, options);
   }
 
+  async findById(id, options = {}) {
+    if (!id) return null;
+    const isObjectId = typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id);
+    const filter = isObjectId ? { _id: id } : { orderNumber: String(id) };
+    return this.findOne(filter, options);
+  }
+
   async findActiveById(orderId, userId = null) {
     const isObjectId = typeof orderId === 'string' && /^[0-9a-fA-F]{24}$/.test(orderId);
     const filter = isObjectId ? { _id: orderId } : { orderNumber: String(orderId) };

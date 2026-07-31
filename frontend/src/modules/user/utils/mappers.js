@@ -1,6 +1,7 @@
 import { parsePrice } from '../../../shared/utils/priceFormatter';
+import { DEFAULT_PRODUCT_IMAGE, getImageUrl } from '../../../shared/utils/imageUtils';
 
-export const DEFAULT_PRODUCT_IMAGE = 'https://via.placeholder.com/120?text=Product';
+export { DEFAULT_PRODUCT_IMAGE };
 
 export const extractList = (data) => {
   if (Array.isArray(data)) return data;
@@ -14,15 +15,15 @@ export const extractList = (data) => {
 export const getEntityId = (entity) => entity?.id || entity?._id || '';
 
 export const getProductImage = (product, fallback = DEFAULT_PRODUCT_IMAGE) => {
-  if (product?.image) return product.image;
-  if (product?.img) return product.img;
-  if (product?.imageUrl) return product.imageUrl;
-  if (Array.isArray(product?.images) && product.images.length > 0) {
+  let rawUrl = null;
+  if (product?.image) rawUrl = product.image;
+  else if (product?.img) rawUrl = product.img;
+  else if (product?.imageUrl) rawUrl = product.imageUrl;
+  else if (Array.isArray(product?.images) && product.images.length > 0) {
     const first = product.images[0];
-    const url = typeof first === 'string' ? first : first?.url;
-    if (url) return url;
+    rawUrl = typeof first === 'string' ? first : first?.url;
   }
-  return fallback;
+  return rawUrl ? getImageUrl(rawUrl) : fallback;
 };
 
 export const formatDisplayPrice = (value) => {
@@ -103,6 +104,8 @@ export const mapCartItem = (item) => ({
   quantity: item.quantity ?? item.qty ?? 1,
   image: getProductImage(item),
   img: getProductImage(item),
+  marketplaceTab: item.marketplaceTab || item.tab || null,
+  commerceFlow: item.commerceFlow || null,
 });
 
 export const mapOrderForList = (order) => ({
@@ -318,10 +321,14 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
   const result = { ...fallbackSections };
 
   const sectionMap = {
-    'still-looking': 'stillLooking',
+    'trending-this-week': 'trendingThisWeek',
+    'todays-special-deals': 'todaysSpecialDeals',
     'top-selection': 'topSelection',
+    'brands-in-spotlight': 'brandsSpotlight',
     spotlight: 'brandsSpotlight',
-    'best-quality': 'bestQuality',
+    'best-quality-guaranteed': 'bestQualityGuaranteed',
+    'best-quality': 'bestQualityGuaranteed',
+    'still-looking': 'stillLooking',
     'keep-shopping': 'keepShopping',
   };
 
@@ -329,27 +336,38 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
     const key = sectionMap[section.key];
     if (!key || !section.products?.length) return;
 
-    result[key] = section.products.map((product, index) => {
+    const mappedProducts = section.products.map((product, index) => {
       const img = getProductImage(product);
       const id = getEntityId(product);
       const link = `/vendor/product-detail`;
 
-      if (key === 'stillLooking' || key === 'keepShopping') {
+      if (key === 'stillLooking' || key === 'keepShopping' || key === 'trendingThisWeek' || key === 'todaysSpecialDeals') {
         return {
           id,
           label: product.title || product.name || section.title,
+          name: product.title || product.name || section.title,
+          title: product.title || product.name || section.title,
           img,
+          price: product.price,
+          mrp: product.mrp,
+          brand: product.brand,
           link,
           product,
         };
       }
 
       if (key === 'brandsSpotlight') {
+        const discountLabel = product.mrp && product.price && product.mrp > product.price
+          ? `${Math.round(((product.mrp - product.price) / product.mrp) * 100)}% OFF`
+          : 'SPECIAL';
         return {
           id,
-          title: product.title || product.name,
-          sub: product.brand || section.title || 'Shop now',
+          title: discountLabel,
+          sub: product.title || product.name || product.brand || 'Featured',
+          brand: product.brand || 'Spotlight',
           img,
+          price: product.price,
+          mrp: product.mrp,
           link,
           product,
         };
@@ -358,27 +376,30 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
       return {
         id,
         name: product.title || product.name,
+        title: product.title || product.name,
         tag: section.title || ['Grab Or Gone', 'Best Picks', 'Popular', 'Widest Range'][index % 4],
         img,
+        price: product.price,
+        mrp: product.mrp,
+        brand: product.brand,
         link,
         product,
       };
     });
+
+    result[key] = result[key]?.length ? result[key] : mappedProducts;
   });
 
   return result;
 };
 
-export const mapHomeBanners = (banners, fallbackBanners = []) => {
-  const list = extractList(banners);
-  if (!list.length) return fallbackBanners;
-
-  return list.map((banner, index) => ({
-    id: getEntityId(banner) || index,
-    image: banner.imageUrl || banner.image,
-    title: banner.title || '',
-    link: banner.linkUrl,
-  }));
+export const mapHomeBanners = () => {
+  return [
+    { id: 'g1', image: '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png', title: 'Shop More Save More' },
+    { id: 'g2', image: '/Gemini_Generated_Image_rhy76srhy76srhy7.png', title: 'Authentic Mithila Artistry' },
+    { id: 'g3', image: '/Gemini_Generated_Image_unwuxnunwuxnunwu.png', title: 'Cultural Heritage Collection' },
+    { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: 'Special Festival Handicrafts' }
+  ];
 };
 
 const SHOP_DISPLAY_NAMES = {
@@ -426,30 +447,23 @@ export const mapShopCategoryCards = (categories) => {
   const list = extractList(categories);
   if (!list.length) return [];
 
-  const navSlugs = new Set([
-    'beauty',
-    'gifting',
-    'electronics',
-    'jewellery',
-    'toys',
-    'stationery',
-    'fashion',
-    'electrical',
-  ]);
-
   return list
-    .filter((cat) => navSlugs.has(cat.slug))
+    .filter((cat) => cat.isActive !== false)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-    .map((cat, index) => ({
-      id: getEntityId(cat),
-      name: SHOP_DISPLAY_NAMES[cat.name] || cat.name,
-      img: cat.imageUrl || cat.iconUrl || '',
-      path:
-        cat.name === 'Toys'
-          ? '/vendor/toys'
-          : `/vendor/category-products?category=${encodeURIComponent(cat.name)}`,
-      hasImage: index < 4,
-    }));
+    .map((cat, index) => {
+      const rawImg = cat.imageUrl || cat.iconUrl || cat.image;
+      const img = rawImg ? getImageUrl(rawImg) : '';
+      return {
+        id: getEntityId(cat),
+        name: SHOP_DISPLAY_NAMES[cat.name] || cat.name,
+        img,
+        path:
+          cat.name === 'Toys'
+            ? '/vendor/toys'
+            : `/vendor/category-products?category=${encodeURIComponent(cat.name)}`,
+        hasImage: Boolean(img) || index < 4,
+      };
+    });
 };
 
 export const mapMithilaCategoryCards = (categories) => {

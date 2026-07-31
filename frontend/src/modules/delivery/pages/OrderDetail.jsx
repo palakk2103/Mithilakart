@@ -62,11 +62,14 @@ const DeliveryOrderDetail = () => {
   const [delivered, setDelivered] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const [loading, setLoading] = useState(true);
+
   const shareLocation = ['accepted', 'at_pickup', 'in_transit'].includes(currentStatus);
   useDeliveryLocationShare(shareLocation && !delivered);
 
   useEffect(() => {
     const loadOrder = async () => {
+      setLoading(true);
       try {
         let data = null;
         try {
@@ -84,6 +87,8 @@ const DeliveryOrderDetail = () => {
         setDelivered(mapped.status === 'delivered');
       } catch (err) {
         toast.error(err?.message || 'Failed to load order');
+      } finally {
+        setLoading(false);
       }
     };
     if (orderId) loadOrder();
@@ -101,8 +106,12 @@ const DeliveryOrderDetail = () => {
       try {
         const pickupOtp = sessionStorage.getItem(`delivery_pickup_otp_${order.id}`) || '0000';
         const pickupResult = await markPickup(order.id, pickupOtp);
-        if (pickupResult?.deliveryOtp) {
-          sessionStorage.setItem(`delivery_customer_otp_hint_${order.id}`, String(pickupResult.deliveryOtp));
+        const otpCode = pickupResult?.deliveryOtp || pickupResult?.data?.deliveryOtp;
+        if (otpCode) {
+          sessionStorage.setItem(`delivery_customer_otp_hint_${order.id}`, String(otpCode));
+          toast.success(`Package Picked Up! Delivery OTP: ${otpCode}`, { duration: 12000 });
+        } else {
+          toast.success('Package Picked Up! Proceeding to customer.');
         }
         setCurrentStatus('in_transit');
       } catch (err) {
@@ -140,10 +149,26 @@ const DeliveryOrderDetail = () => {
     return 'Completed';
   };
 
-  if (!order) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
         <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Loading order...</p>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6 text-center">
+        <Package size={48} className="text-slate-300 mb-4 animate-bounce" />
+        <h2 className="text-lg font-bold text-slate-800">Order Not Found</h2>
+        <p className="text-sm text-slate-500 mt-1 max-w-sm">We couldn't retrieve details for this delivery order.</p>
+        <button
+          onClick={() => navigate('/delivery/orders')}
+          className="mt-6 px-6 py-3.5 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg hover:bg-blue-700 transition-all"
+        >
+          Back to Orders
+        </button>
       </div>
     );
   }
@@ -160,18 +185,7 @@ const DeliveryOrderDetail = () => {
         <h2 className="text-2xl font-black text-slate-900 mb-2">Delivery Successful!</h2>
         <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Order #{order.id}</p>
         
-        <div className="mt-8 grid grid-cols-2 gap-3 w-full">
-           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <p className="text-[8px] font-black text-slate-400 uppercase mb-2">Package Photo</p>
-              <img src={capturedPhoto} className="w-full h-20 object-cover rounded-lg" alt="Proof" />
-           </div>
-           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <p className="text-[8px] font-black text-slate-400 uppercase mb-2">Customer Sign</p>
-              <img src={signature} className="w-full h-20 object-contain rounded-lg bg-white" alt="Sign" />
-           </div>
-        </div>
-
-        <div className="mt-4 p-5 bg-slate-900 rounded-2xl w-full">
+        <div className="mt-8 p-5 bg-slate-900 rounded-2xl w-full">
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Earnings</p>
            <p className="text-3xl font-black text-white">₹{order.earning}.00</p>
         </div>
@@ -186,15 +200,6 @@ const DeliveryOrderDetail = () => {
 
   return (
     <div className="pb-40 bg-[#f8fafc] min-h-screen">
-      <AnimatePresence>
-        {showCamera && (
-          <CameraSimulation 
-            onCapture={(img) => { setCapturedPhoto(img); setShowCamera(false); }} 
-            onClose={() => setShowCamera(false)} 
-          />
-        )}
-      </AnimatePresence>
-
       <div className="sticky top-0 bg-white/80 backdrop-blur-md z-40 px-4 py-4 border-b border-slate-100 flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="p-2.5 bg-slate-100 rounded-xl text-slate-700"><ArrowLeft size={20} /></button>
         <div className="flex-1">
@@ -246,9 +251,16 @@ const DeliveryOrderDetail = () => {
         </div>
 
         <div id="otp-section" className={`bg-white rounded-3xl border p-6 transition-all ${statusIndex >= 2 ? 'border-amber-200 shadow-xl shadow-amber-50' : 'opacity-30 pointer-events-none'}`}>
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center"><ShieldCheck size={20} className="text-amber-600" /></div>
-            <div><h3 className="text-sm font-black text-slate-900">Verify OTP</h3><p className="text-[10px] text-slate-400 font-bold uppercase">Final Step</p></div>
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center"><ShieldCheck size={20} className="text-amber-600" /></div>
+              <div><h3 className="text-sm font-black text-slate-900">Verify OTP</h3><p className="text-[10px] text-slate-400 font-bold uppercase">Final Step — Ask Customer</p></div>
+            </div>
+            {sessionStorage.getItem(`delivery_customer_otp_hint_${order.id}`) && (
+              <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60">
+                OTP Hint: {sessionStorage.getItem(`delivery_customer_otp_hint_${order.id}`)}
+              </span>
+            )}
           </div>
           <div className="flex gap-2 mb-4">
             {[...Array(4)].map((_, i) => (

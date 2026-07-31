@@ -3,68 +3,94 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const BannerCarousel = ({ banners = [] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
-  const containerRef = React.useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // Preload all banner images
+  const totalBanners = banners ? banners.length : 0;
+
   useEffect(() => {
+    if (currentIndex >= totalBanners && totalBanners > 0) {
+      setCurrentIndex(0);
+    }
+  }, [totalBanners, currentIndex]);
+
+  useEffect(() => {
+    if (!banners || !banners.length) return;
     banners.forEach((banner) => {
-      const img = new Image();
-      img.src = banner.image;
+      if (banner?.image) {
+        const img = new Image();
+        img.src = banner.image;
+      }
     });
   }, [banners]);
 
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev === banners.length - 1 ? 0 : prev + 1));
-  }, [banners.length]);
+    if (totalBanners <= 1) return;
+    setCurrentIndex((prev) => (prev + 1) % totalBanners);
+  }, [totalBanners]);
+
+  const prevSlide = useCallback(() => {
+    if (totalBanners <= 1) return;
+    setCurrentIndex((prev) => (prev === 0 ? totalBanners - 1 : prev - 1));
+  }, [totalBanners]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsVisible(entry.isIntersecting),
-      { threshold: 0.1 }
-    );
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (banners.length <= 1 || !isVisible) return;
-    const interval = setInterval(nextSlide, 2500);
+    if (totalBanners <= 1 || isHovered) return;
+    const interval = setInterval(() => {
+      nextSlide();
+    }, 3000);
     return () => clearInterval(interval);
-  }, [nextSlide, banners.length, isVisible]);
+  }, [nextSlide, totalBanners, isHovered]);
 
-  if (!banners || banners.length === 0) return null;
+  if (!banners || totalBanners === 0) return null;
+
+  const currentBanner = banners[currentIndex] || banners[0];
 
   return (
-    <div ref={containerRef} className="relative w-full p-0">
-      {/* Mobile view - Single Banner (Untouched layout, only hidden on desktop) */}
-      <div className="md:hidden relative aspect-[16/9] w-full overflow-hidden rounded-xl shadow-lg bg-gray-50">
-        <AnimatePresence mode="popLayout">
+    <div 
+      className="relative w-full select-none rounded-2xl overflow-hidden shadow-sm"
+      style={{
+        borderWidth: '8px',
+        borderStyle: 'solid',
+        borderImageSource: "url('/border_1-removebg-preview.png')",
+        borderImageSlice: '24',
+        borderImageRepeat: 'round',
+        padding: '6px',
+        backgroundColor: '#FFF8EE'
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Mobile view - Single Banner */}
+      <div className="md:hidden relative aspect-[16/9] w-full overflow-hidden rounded-2xl shadow-md bg-gray-50 border border-[#EADCC9]/40">
+        <AnimatePresence mode="wait">
           <motion.div
-            key={banners[currentIndex]?.id || currentIndex}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            key={currentBanner?.id || currentIndex}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
             className="absolute inset-0"
           >
             <img
-              src={banners[currentIndex]?.image}
-              alt={banners[currentIndex]?.title || "Banner"}
+              src={currentBanner?.image}
+              alt={currentBanner?.title || "Hero Banner"}
               className="h-full w-full object-cover"
               loading="eager"
-              fetchPriority="high"
             />
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
+              <span className="text-[#e2a750] font-bold text-[10px] uppercase tracking-widest mb-0.5">Special Collection</span>
+              <h3 className="text-white text-base font-black tracking-tight drop-shadow-md">
+                {currentBanner?.title || "Mithilakart Special Deals"}
+              </h3>
+            </div>
           </motion.div>
         </AnimatePresence>
 
-        {/* Pagination Dots (Mobile only, overlaid on image) */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex justify-center gap-1.5 z-10">
+        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex justify-center gap-1.5 z-10">
           {banners.map((_, idx) => (
-            <div
+            <button
               key={idx}
+              onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
               className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}
             />
           ))}
@@ -73,58 +99,35 @@ const BannerCarousel = ({ banners = [] }) => {
 
       {/* Desktop view - Premium Hero Section (Carousel + Sidebar Stack) */}
       <div className="hidden md:grid md:grid-cols-10 md:gap-6 md:max-w-[1600px] md:mx-auto">
-        {/* Main Banner Carousel (70% width) */}
-        <div className="md:col-span-7 relative aspect-[16/9] w-full overflow-hidden rounded-2xl shadow-lg bg-gray-50 group">
-          <AnimatePresence mode="popLayout">
+        <div className="md:col-span-7 relative aspect-[16/9] w-full overflow-hidden rounded-2xl shadow-lg bg-gray-50 group border border-[#EADCC9]/50">
+          <AnimatePresence mode="wait">
             <motion.div
-              key={banners[currentIndex]?.id || currentIndex}
-              initial={{ opacity: 0, x: 20 }}
+              key={currentBanner?.id || currentIndex}
+              initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: -30 }}
               transition={{ duration: 0.5, ease: 'easeInOut' }}
               className="absolute inset-0"
             >
               <img
-                src={banners[currentIndex]?.image}
-                alt={banners[currentIndex]?.title || "Banner"}
+                src={currentBanner?.image}
+                alt={currentBanner?.title || "Hero Banner"}
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading="eager"
               />
-              {/* Premium Gradient Overlay with Text */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex flex-col justify-end p-8">
-                <span className="text-[#e2a750] font-bold text-sm uppercase tracking-widest mb-1 animate-pulse">Exclusive Deal</span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-8">
+                <span className="text-[#e2a750] font-bold text-sm uppercase tracking-widest mb-1 animate-pulse">Exclusive Collection</span>
                 <h3 className="text-white text-3xl font-black tracking-tight drop-shadow-md mb-2">
-                  {banners[currentIndex]?.title || "Mithilakart Special Deals"}
+                  {currentBanner?.title || "Mithilakart Special Deals"}
                 </h3>
-                <p className="text-white/80 text-sm font-medium max-w-md">
-                  Shop high quality products directly from curated vendors at unbelievable discounts.
+                <p className="text-white/90 text-sm font-medium max-w-md drop-shadow-xs">
+                  Discover authentic handcrafted treasures and deals directly from finest artisans.
                 </p>
               </div>
             </motion.div>
           </AnimatePresence>
-          
-          {/* Controls */}
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setCurrentIndex((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
-            }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md flex items-center justify-center transition-colors duration-300 opacity-0 group-hover:opacity-100 shadow-md"
-          >
-            &#10094;
-          </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              nextSlide();
-            }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-md flex items-center justify-center transition-colors duration-300 opacity-0 group-hover:opacity-100 shadow-md"
-          >
-            &#10095;
-          </button>
 
-          {/* Dots Indicator */}
-          <div className="absolute bottom-4 right-8 flex gap-2">
+          <div className="absolute bottom-4 right-8 flex gap-2 z-10">
             {banners.map((_, idx) => (
               <button
                 key={idx}
@@ -132,36 +135,35 @@ const BannerCarousel = ({ banners = [] }) => {
                   e.stopPropagation();
                   setCurrentIndex(idx);
                 }}
-                className={`h-2 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-6 bg-white' : 'w-2 bg-white/40'}`}
+                className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${idx === currentIndex ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'}`}
               />
             ))}
           </div>
         </div>
 
-        {/* Side Promos (30% width) */}
         <div className="md:col-span-3 flex flex-col gap-4 justify-between">
           {[1, 2].map((offset) => {
-            const idx = (currentIndex + offset) % banners.length;
-            const banner = banners[idx];
-            if (!banner) return null;
+            const idx = (currentIndex + offset) % totalBanners;
+            const sideBanner = banners[idx];
+            if (!sideBanner) return null;
             return (
               <div 
                 key={offset} 
                 onClick={() => setCurrentIndex(idx)}
-                className="relative flex-1 aspect-[16/7] w-full overflow-hidden rounded-2xl shadow-md bg-gray-50 cursor-pointer group hover:shadow-lg transition-all duration-300"
+                className="relative flex-1 aspect-[16/7] w-full overflow-hidden rounded-2xl shadow-md bg-gray-50 cursor-pointer group hover:shadow-xl transition-all duration-300 border border-[#EADCC9]/40"
               >
                 <img
-                  src={banner.image}
-                  alt={banner.title || "Promo"}
+                  src={sideBanner.image}
+                  alt={sideBanner.title || "Promo Banner"}
                   className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex flex-col justify-end p-4">
-                  <h4 className="text-white text-base font-black tracking-tight leading-tight">
-                    {banner.title || "Trending Promo"}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
+                  <h4 className="text-white text-sm font-black tracking-tight leading-tight line-clamp-1">
+                    {sideBanner.title || "Trending Promo"}
                   </h4>
-                  <span className="text-[10px] text-white/80 font-bold uppercase tracking-wider mt-1 flex items-center gap-1 group-hover:text-[#e2a750] transition-colors">
-                    View Offer <span className="text-xs">&rarr;</span>
+                  <span className="text-[10px] text-white/90 font-bold uppercase tracking-wider mt-1 flex items-center gap-1 group-hover:text-[#e2a750] transition-colors">
+                    Explore Now <span className="text-xs">&rarr;</span>
                   </span>
                 </div>
               </div>
@@ -169,14 +171,6 @@ const BannerCarousel = ({ banners = [] }) => {
           })}
         </div>
       </div>
-
-      {/* Preload hidden images to keep them in browser cache */}
-      <div className="hidden">
-        {banners.map((b, i) => (
-          <img key={i} src={b.image} alt="preload" />
-        ))}
-      </div>
-
     </div>
   );
 };

@@ -35,8 +35,8 @@ const EMPTY_FORM = {
   iconUrl: '',
   sortOrder: 0,
   isActive: true,
-  commerceFlows: ['standard'],
-  visibleTabs: ['mithilakart'],
+  commerceFlows: ['standard', 'mithilak', 'quick_shop', 'fresh_grocery'],
+  visibleTabs: ['mithilakart', 'mithilak', 'quick_shop', 'groceries_fresh'],
 };
 
 const slugify = (value) =>

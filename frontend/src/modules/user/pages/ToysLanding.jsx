@@ -12,17 +12,13 @@ import { getCategories, getCategoryProducts } from '../services/catalogApi';
 import { getFlowHome } from '../services/storefrontApi';
 import { extractList, findCategoryByName, mapProductForCard, mapHomeBanners } from '../utils/mappers';
 
-// Banner Assets
-import ImageBanner1 from '../../../assets/TopBanner/ImageBanner1.jpg';
-import ImageBanner2 from '../../../assets/TopBanner/ImageBanner2.jpg';
-import ImageBanner3 from '../../../assets/TopBanner/ImageBanner3.webp';
-import ImageBanner4 from '../../../assets/TopBanner/ImageBanner4.jpg';
+
 
 const DEFAULT_BANNERS = [
-  { id: 1, image: ImageBanner1, title: 'Toys & Baby Sale' },
-  { id: 2, image: ImageBanner2, title: 'New Learning Toys' },
-  { id: 3, image: ImageBanner3, title: 'Baby Care Offers' },
-  { id: 4, image: ImageBanner4, title: 'Top Kids Deals' }
+  { id: 'g1', image: '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png', title: 'Shop More Save More' },
+  { id: 'g2', image: '/Gemini_Generated_Image_rhy76srhy76srhy7.png', title: 'Authentic Artisan Crafts' },
+  { id: 'g3', image: '/Gemini_Generated_Image_unwuxnunwuxnunwu.png', title: 'Handcrafted Heritage' },
+  { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: 'Festive Deals & Toys' }
 ];
 
 const ToysLanding = () => {

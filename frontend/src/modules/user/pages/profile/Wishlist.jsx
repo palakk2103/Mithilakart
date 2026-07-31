@@ -24,7 +24,7 @@ const Wishlist = () => {
           setWishlist(extractList(data).map((p) => mapWishlistItem(p)));
         }
       } catch {
-        if (!cancelled) setWishlist([]);
+        // Keep existing client store wishlist items on API error / 401
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -47,6 +47,12 @@ const Wishlist = () => {
     e.stopPropagation();
     try {
       await addProductToCart(product);
+      try {
+        await removeWishlistApi(product.id);
+      } catch {
+        // ignore backend failure in offline/demo mode
+      }
+      removeFromWishlist(product.id);
       navigate('/vendor/cart');
     } catch {
       // keep UI unchanged
@@ -58,7 +64,7 @@ const Wishlist = () => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#f3e8ff]/60 via-[#faf5ff] to-[#f5f3ff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
-  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#ff2a5f] to-[#ff7e5f]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
+  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
 
   return (

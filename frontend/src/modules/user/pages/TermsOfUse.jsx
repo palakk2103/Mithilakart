@@ -184,7 +184,6 @@ const TermsOfUse = () => {
         </section>
           </>
         )}
-        <Footer />
       </div>
     </div>
   );

@@ -103,7 +103,7 @@ async function seedCatalog() {
         stock: seed.stock,
         categoryId: seed.categoryId,
         status: PRODUCT_STATUS.APPROVED,
-        images: [{ url: '/uploads/cms/sample-banner.jpg', alt: seed.title, sortOrder: 0 }],
+        images: [{ url: '/uploads/cms/f1dd8c4f-72be-4205-94fa-9ed7d74a7a84.jpg', alt: seed.title, sortOrder: 0 }],
         tags: seed.tags,
         commerceFlows: seed.flows,
         rating: 4.6,

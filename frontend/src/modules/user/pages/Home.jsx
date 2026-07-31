@@ -41,11 +41,6 @@ import CardImg from '../../../assets/products/product03.jpg';
 import FashionTabImg from '../../../assets/products/product04.jpg';
 
 // Banner Assets
-import FashionSaleBannerImg from '../../../assets/TopBanner/fashion_sale_banner.png';
-import ImageBanner1 from '../../../assets/TopBanner/ImageBanner1.jpg';
-import ImageBanner2 from '../../../assets/TopBanner/ImageBanner2.jpg';
-import ImageBanner3 from '../../../assets/TopBanner/ImageBanner3.webp';
-import ImageBanner4 from '../../../assets/TopBanner/ImageBanner4.jpg';
 
 import useVendorStore from '../../../store/useVendorStore';
 import toast from 'react-hot-toast';
@@ -63,16 +58,17 @@ const Home = () => {
 
   const categoryBanners = useMemo(() => {
     const fallbackBanners = [
-      { id: 1, image: ImageBanner1, title: 'Summer Sale' },
-      { id: 2, image: ImageBanner2, title: 'New Arrivals' },
-      { id: 3, image: ImageBanner3, title: 'Electronics Deal' },
-      { id: 4, image: ImageBanner4, title: 'Grocery Offers' }
+      { id: 'g1', image: '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png', title: 'Shop More Save More' },
+      { id: 'g2', image: '/Gemini_Generated_Image_rhy76srhy76srhy7.png', title: 'Authentic Mithila Artistry' },
+      { id: 'g3', image: '/Gemini_Generated_Image_unwuxnunwuxnunwu.png', title: 'Cultural Heritage Collection' },
+      { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: 'Special Festival Handicrafts' }
     ];
 
-    const homeBannerList = mapHomeBanners(homeBanners, fallbackBanners);
+    const homeBannerList = fallbackBanners;
 
     return {
       'Home': homeBannerList,
+      'You Buy': homeBannerList,
       'Toys': homeBannerList,
       'Beauty': homeBannerList,
       'Art. Jewellery': homeBannerList,
@@ -80,7 +76,7 @@ const Home = () => {
       'Cosmetics': homeBannerList,
       'Fashion': homeBannerList
     };
-  }, [homeBanners]);
+  }, []);
 
   const mainCategoriesList = useMemo(() => {
     const iconMap = {
@@ -133,7 +129,7 @@ const Home = () => {
 
   return (
     <div
-      className="min-h-screen pb-20 overflow-x-hidden bg-transparent text-primary-dark"
+      className="pb-2 overflow-x-hidden bg-transparent text-primary-dark"
       style={{
         WebkitBackfaceVisibility: 'hidden',
         backfaceVisibility: 'hidden',
@@ -143,7 +139,7 @@ const Home = () => {
       }}
     >
       {/* 1. TOP HORIZONTAL CATEGORY ROW (Super Compact & Scrollable circles) - Always Visible */}
-      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar px-3 pt-1 pb-3 mb-2">
+      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar px-3 pt-3 pb-3 mb-3">
         {mainCategoriesList.map((cat, idx) => {
           if (cat.label === 'You Buy') {
             return (
@@ -222,30 +218,13 @@ const Home = () => {
         })}
       </div>
 
-      {/* 2. PROMOTIONAL FASHION SALE BANNER (With Mithila Decorative Border) */}
+      {/* 2. HERO BANNER CAROUSEL (Auto-scrolling Banner Section) */}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
         <div className="px-3 mb-5 md:mb-8">
-          <div 
-            onClick={() => navigate('/category-products?category=Fashion')}
-            className="w-full h-[185px] sm:h-[215px] md:h-[350px] rounded-2xl overflow-hidden shadow-xs cursor-pointer active:scale-99 transition-transform"
-            style={{
-              borderWidth: '10px',
-              borderStyle: 'solid',
-              borderImageSource: "url('/border_1-removebg-preview.png')",
-              borderImageSlice: '24',
-              borderImageRepeat: 'round',
-              padding: '14px',
-              backgroundColor: '#FFF8EE'
-            }}
-          >
-            <img
-              src={FashionSaleBannerImg}
-              alt="Fashion Sale Special Offer"
-              className="w-full h-full object-cover rounded-md"
-            />
-          </div>
+          <BannerCarousel banners={categoryBanners[selectedCategory] || categoryBanners['Home']} />
         </div>
       )}
+
 
       {/* 3. SHOP BY CATEGORIES SECTION */}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
@@ -277,7 +256,7 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-2.5">
-            {(homeSections.brandsSpotlight || []).slice(0, 3).map((deal) => (
+            {(homeSections.todaysSpecialDeals?.length ? homeSections.todaysSpecialDeals : homeSections.brandsSpotlight || []).slice(0, 3).map((deal) => (
               <div
                 key={deal.id}
                 onClick={() => navigate('/product-detail', { state: { productId: deal.id, product: deal.product } })}
@@ -349,13 +328,13 @@ const Home = () => {
 
           <div className="mb-5 md:mb-8">
             <LazySection height="350px">
-              <BrandsSpotlight items={homeSections.brandsSpotlight} />
+              <BrandsSpotlight items={homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection} />
             </LazySection>
           </div>
 
           <div className="mb-5 md:mb-8">
             <LazySection height="500px">
-              <BestQuality items={homeSections.bestQuality} />
+              <BestQuality items={homeSections.bestQualityGuaranteed?.length ? homeSections.bestQualityGuaranteed : (homeSections.bestQuality?.length ? homeSections.bestQuality : homeSections.topSelection)} />
             </LazySection>
           </div>
 
@@ -370,7 +349,7 @@ const Home = () => {
           </div>
 
           {/* Dynamic Products Section based on Bottom Tabs */}
-          <div className="pb-20 mb-5 md:mb-8">
+          <div className="mb-2">
             <CategoryProductsSection selectedCategory={activeTab} />
           </div>
         </>

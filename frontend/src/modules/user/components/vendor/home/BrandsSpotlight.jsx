@@ -2,27 +2,29 @@ import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-const BrandsSpotlight = ({ items }) => {
+const BrandsSpotlight = ({ items = [] }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
   const handleBrandClick = useCallback((card) => {
+    const prodId = card.id || card.product?._id || card.product?.id;
     navigate('/product-detail', { 
       state: { 
-        product: { 
-          id: Math.random().toString(36).substr(2, 9),
-          name: card.sub,
-          brand: card.title,
-          price: 1499,
-          oldPrice: 2999,
-          discount: '50% off',
-          rating: 4.9,
+        productId: prodId,
+        product: card.product || { 
+          id: prodId,
+          name: card.sub || card.title,
+          brand: card.brand || 'Featured',
+          price: card.price || 999,
+          oldPrice: card.mrp || 1499,
           image: card.img,
-          label: 'Sponsored'
+          label: 'Spotlight'
         } 
       } 
     });
   }, [navigate]);
+
+  if (!Array.isArray(items) || !items.length) return null;
 
   return (
     <>

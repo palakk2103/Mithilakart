@@ -95,14 +95,14 @@ class StorefrontService extends BaseService {
   async _resolveSectionProducts(productIds = []) {
     if (!productIds.length) return [];
 
-    const products = await this.productRepository.findPublic(
-      { _id: { $in: productIds } },
+    const products = await this.productRepository.find(
+      { _id: { $in: productIds }, deletedAt: null },
       { limit: productIds.length }
     );
 
     const orderMap = new Map(productIds.map((id, index) => [String(id), index]));
     return products
-      .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0))
+      .sort((a, b) => (orderMap.get(String(a._id)) ?? 999) - (orderMap.get(String(b._id)) ?? 999))
       .map((product) => ({
         id: product._id,
         title: product.title,

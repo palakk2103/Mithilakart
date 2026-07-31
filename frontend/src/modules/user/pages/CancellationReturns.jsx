@@ -262,7 +262,6 @@ const CancellationReturns = () => {
         </section>
           </>
         )}
-        <Footer />
       </div>
     </div>
   );

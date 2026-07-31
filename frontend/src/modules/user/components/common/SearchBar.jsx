@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Camera, Mic, ScanLine, MapPin, ChevronDown, Zap, X, Star } from 'lucide-react';
+import { Search, Camera, Mic, MapPin, ChevronDown, Zap, X, Star } from 'lucide-react';
 import LanguageSelector from './LanguageSelector';
 import { useTranslation } from 'react-i18next';
 import SearchInput from '../../../../shared/components/SearchInput';
@@ -142,7 +142,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
     || (selectedAddress?.address ? selectedAddress.address.slice(0, 32) : 'Set delivery location');
 
   return (
-    <div className="px-3 pb-2 flex flex-col gap-1.5 md:px-4 md:pb-3 md:flex-col md:gap-3">
+    <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-2 md:px-4 md:pb-3 md:flex-col md:gap-3">
       {/* Hidden file input for camera upload */}
       <input 
         type="file" 
@@ -153,15 +153,15 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
       />
 
 
-      <div className="flex items-center justify-between py-0.5 md:py-2">
+      <div className="flex items-center justify-between gap-1.5 py-0.5 md:py-1">
         {isFreshGroceryActive ? (
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1 min-w-0 text-white hover:text-white/95 text-left"
+            className="flex items-center gap-1 min-w-0 text-white hover:text-white/95 text-left h-[30px] px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
           >
             <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] flex-shrink-0 text-white" />
-            <span className="text-[10px] md:text-[11px] font-bold truncate max-w-[170px] md:max-w-[220px]">
+            <span className="text-[11px] font-bold truncate max-w-[190px] sm:max-w-[250px] md:max-w-[320px]">
               {displayAddress}
             </span>
             <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
@@ -170,47 +170,49 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1 min-w-0 text-white/95 hover:text-white text-left"
+            className="flex items-center gap-1 min-w-0 text-white/95 hover:text-white text-left h-[30px] px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
           >
-            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] md:w-[14px] md:h-[14px] flex-shrink-0" />
-            <span className="text-[11.5px] font-bold truncate max-w-[180px] md:max-w-[220px]">
+            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] flex-shrink-0" />
+            <span className="text-[11px] font-bold truncate max-w-[190px] sm:max-w-[250px] md:max-w-[320px]">
               {displayAddress}
             </span>
-            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] md:w-[12px] md:h-[12px] flex-shrink-0" />
+            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0" />
           </button>
         ) : (
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1.5 min-w-0 text-white/95 hover:opacity-85 transition-opacity text-left"
+            className="flex items-center gap-1 min-w-0 text-white bg-white/20 hover:bg-white/30 border border-white/25 px-2.5 h-[30px] rounded-full shadow-xs transition-all text-left"
           >
-            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] md:w-[14px] md:h-[14px] flex-shrink-0" />
-            <span className="text-[10px] md:text-[11px] font-bold truncate max-w-[170px] md:max-w-[220px]">
+            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] flex-shrink-0 text-white" />
+            <span className="text-[11px] font-bold truncate max-w-[190px] sm:max-w-[250px] md:max-w-[320px] text-white">
               {displayAddress}
             </span>
-            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] md:w-[12px] md:h-[12px] flex-shrink-0" />
+            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
           </button>
         )}
 
-        {/* Language Pill + Coin/Star Badge */}
-        <div className="flex items-center gap-2">
+        {/* Language Pill + Coin/Star/Delivery Badge */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {/* Functional language selector button */}
           <LanguageSelector isDarkHeader={false} variant={isMithilakActive ? "mithila" : ""} compact={true} />
           
-          {/* Custom Coins/Stars Badge */}
+          {/* Custom Coins/Stars Badge or Delivery Time Badge */}
           {isFreshGroceryActive ? (
-            <div className="flex items-center gap-0.5 px-2 py-0.5 bg-white/20 border border-white/10 rounded-full text-white font-bold text-[10.5px] shadow-xs">
-              <span className="flex items-center gap-0.5">✦ 3</span>
+            <div className="flex items-center gap-1 px-2.5 h-[25px] bg-white/20 border border-white/15 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
+              <span>15 mins</span>
+            </div>
+          ) : isQuickShopActive ? (
+            <div className="flex items-center gap-1 px-2.5 h-[25px] bg-[#D45014] border border-white/20 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
+              <span>15 mins</span>
             </div>
           ) : isMithilakActive ? (
-            <div className="flex items-center gap-0.5 px-2 py-0.5 bg-[#207C8A] border border-white/20 rounded-full text-white font-extrabold text-[11px] shadow-xs">
+            <div className="flex items-center gap-0.5 px-2.5 h-[25px] bg-[#207C8A] border border-white/20 rounded-full text-white font-extrabold text-[11px] shadow-xs">
               <Star size={11} className="text-yellow-300 fill-yellow-300" />
               <span>3</span>
             </div>
           ) : (
-            <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white border border-[#FFF8EE]/20 shadow-xs ${
-              isQuickShopActive ? 'bg-[#D45014]' : 'bg-[#3E5A44]'
-            }`}>
+            <div className="flex items-center gap-0.5 px-2.5 h-[25px] bg-[#54A034] rounded-full text-white border border-white/20 shadow-xs">
               <Star size={11} className="text-yellow-300 fill-yellow-300" />
               <span className="text-[11px] font-extrabold">3</span>
             </div>

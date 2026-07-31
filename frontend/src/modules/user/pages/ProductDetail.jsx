@@ -16,6 +16,7 @@ import { mapProductForDetail, extractList, mapReview, mapQuestion } from '../uti
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
 import { toast } from 'react-hot-toast';
 import { addProductToCart, fetchCartCount } from '../utils/cartUtils';
+import useTabTheme from '../../../shared/hooks/useTabTheme';
 
 // Import Assets
 import PlumShampoo from '../../../assets/products/product05.jpg';
@@ -33,26 +34,28 @@ import TowerFan from '../../../assets/products/product09.jpg';
 const ProductDetail = () => {
   const { t } = useTranslation();
   const location = useRouterLocation();
+  const navigate = useNavigate();
   const { location: liveLocation } = useLiveLocation();
   const { savedAddresses, selectedAddressId } = useAccountStore();
   useHydrateAddresses();
   const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
-  const navigate = useNavigate();
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
-  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#3E5A44]');
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#3E5A44]');
-  const primaryBgHover = isMithilakFlow ? 'hover:bg-[#1a6672]' : isFreshGroceryFlow ? 'hover:bg-[#c49218]' : (isQuickShopFlow ? 'hover:bg-[#d45014]' : 'hover:bg-[#06331b]');
-  const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#F26522]' : 'border-[#3E5A44]');
-  const primaryLightBg = isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : (isQuickShopFlow ? 'bg-[#FFF5EE]' : 'bg-primary-light');
-  const shadowColor = isMithilakFlow ? 'shadow-[0_4px_16px_rgba(32,124,138,0.22)]' : isFreshGroceryFlow ? 'shadow-[0_4px_16px_rgba(217,162,27,0.15)]' : (isQuickShopFlow ? 'shadow-[0_4px_16px_rgba(242,101,34,0.22)]' : 'shadow-[0_4px_16px_rgba(8,66,36,0.22)]');
-  const shadowColorLight = isMithilakFlow ? 'shadow-[0_10px_30px_rgba(32,124,138,0.08)]' : isFreshGroceryFlow ? 'shadow-[0_10px_30px_rgba(217,162,27,0.06)]' : (isQuickShopFlow ? 'shadow-[0_10px_30px_rgba(242,101,34,0.08)]' : 'shadow-[0_10px_30px_rgba(8,66,36,0.08)]');
-  
-  const accentBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-orange-500' : 'bg-green-500');
-  const accentText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-orange-500' : 'text-green-500');
-  const accentBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-orange-500' : 'border-green-500');
+  const theme = useTabTheme();
+  const {
+    primaryText,
+    primaryBg,
+    primaryBgHover,
+    primaryBorder,
+    primaryLightBg,
+    shadowColor,
+    shadowColorLight,
+    accentBg,
+    accentText,
+    accentBorder
+  } = theme;
+  const isMithilakFlow = theme.activeFlow === 'mithilak';
+  const isQuickShopFlow = theme.activeFlow === 'quickshop';
+  const isFreshGroceryFlow = theme.activeFlow === 'freshgrocery';
 
   const [selectedSize, setSelectedSize] = useState('S');
   const { wishlist, addToWishlist: addToWishlistStore, removeFromWishlist } = useAccountStore();
@@ -261,11 +264,19 @@ const ProductDetail = () => {
     if (!product) return;
     try {
       if (isWishlisted) {
-        await removeWishlistItem(product.id);
+        try {
+          await removeWishlistItem(product.id);
+        } catch {
+          // ignore API error (e.g. 401 unauthenticated) and update local store
+        }
         removeFromWishlist(product.id);
         setToastMessage('Removed from Wishlist');
       } else {
-        await addToWishlist(product.id);
+        try {
+          await addToWishlist(product.id);
+        } catch {
+          // ignore API error (e.g. 401 unauthenticated) and update local store
+        }
         addToWishlistStore(product);
         setToastMessage('Added to Wishlist');
       }
@@ -350,16 +361,7 @@ const ProductDetail = () => {
     <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative ${
       isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-bg-cream'
     }`}>
-      {/* Global Repeating Mithila Art Page Background Texture */}
-      {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (
-        <div 
-          className="fixed inset-0 pointer-events-none z-0 bg-repeat opacity-[0.03] select-none"
-          style={{
-            backgroundImage: "url('/Screenshot 2026-07-17 130906.png')",
-            backgroundSize: '360px',
-          }}
-        />
-      )}
+
 
       {/* Premium Boutique Header */}
       <div className={`sticky top-0 z-50 px-4 py-3 flex items-center justify-between border-b border-gray-100 shadow-[0_1px_8px_rgba(0,0,0,0.01)] transition-colors duration-300 relative z-10 ${
@@ -468,13 +470,13 @@ const ProductDetail = () => {
         {/* Strike Prices / Coupon Layout */}
         <div className="mt-2.5">
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="bg-[#FFD633] text-slate-900 text-[20px] font-black px-3 py-1.5 rounded-[4px] relative flex items-center shadow-[0_1px_3px_rgba(0,0,0,0.05)] select-none">
+            <div className="bg-[#FFD633] text-slate-900 text-[20px] font-black px-5 py-0.5 rounded-[4px] relative flex items-center shadow-[0_1px_3px_rgba(0,0,0,0.05)] select-none">
               {/* Coupon style side cutouts */}
               <div className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full border-r border-slate-100"></div>
               <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full border-l border-slate-100"></div>
               {formatPrice(product.price)}
             </div>
-            <span className="text-[14px] text-gray-400 font-medium line-through">
+            <span className="text-[14px] text-gray-500 font-semibold line-through">
               MRP {formatPrice(product.oldPrice)}
             </span>
           </div>
@@ -1145,12 +1147,12 @@ const ProductDetail = () => {
             {product.pack || '1 unit'}
           </span>
           <div className="flex items-center gap-1.5">
-            <div className="bg-[#FFD633] text-slate-900 text-[14px] font-black px-2 py-0.5 rounded-[3px] relative flex items-center shadow-3xs">
+            <div className="bg-[#FFD633] text-slate-900 text-[14px] font-black px-3.5 py-[1px] rounded-[3px] relative flex items-center shadow-3xs">
               <div className="absolute left-[-2px] top-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full"></div>
               <div className="absolute right-[-2px] top-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full"></div>
               {formatPrice(product.price)}
             </div>
-            <span className="text-[11px] text-slate-400 font-bold line-through leading-none">
+            <span className="text-[11px] text-slate-500 font-semibold line-through leading-none">
               MRP {formatPrice(product.oldPrice)}
             </span>
           </div>

@@ -13,6 +13,7 @@ import { formatCurrency } from '../../utils/formatters';
 import usePagination from '../../hooks/usePagination';
 import useDebounce from '../../hooks/useDebounce';
 import toast from 'react-hot-toast';
+import { getProductImage } from '../../../../shared/utils/imageUtils';
 
 const ProductList = () => {
   const navigate = useNavigate();
@@ -99,7 +100,7 @@ const ProductList = () => {
   // Table columns
   const columns = [
     { key: 'title', label: 'Product', render: (_, row) => {
-      const imgUrl = row.images?.[0]?.url || row.image || row.gallery?.[0]?.url || row.gallery?.[0];
+      const imgUrl = getProductImage(row.images?.[0]?.url || row.image || row.gallery?.[0]?.url || row.gallery?.[0]);
       return (
         <div className="flex items-center gap-3 min-w-[200px]">
           <div className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-gray-100 overflow-hidden">
@@ -116,8 +117,10 @@ const ProductList = () => {
         </div>
       );
     }},
-    { key: 'category', label: 'Category', render: (val) => (
-      <span className="text-xs font-medium text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg">{val}</span>
+    { key: 'category', label: 'Category', render: (val, row) => (
+      <span className="text-xs font-medium text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg">
+        {row.category?.name || row.category || row.categoryId?.name || val || 'General'}
+      </span>
     )},
     { key: 'price', label: 'Price', render: (_, row) => (
       <div>

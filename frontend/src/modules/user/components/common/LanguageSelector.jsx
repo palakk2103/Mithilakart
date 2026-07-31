@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 
 const languages = [
-  { code: 'en', name: 'English', flagUrl: 'https://flagcdn.com/w40/au.png' },
+  { code: 'en', name: 'English', flagUrl: 'https://flagcdn.com/w40/gb.png' },
   { code: 'hi', name: 'हिन्दी', flagUrl: 'https://flagcdn.com/w40/in.png' },
   { code: 'mai', name: 'मैथिली', flagUrl: 'https://flagcdn.com/w40/in.png' }
 ];
@@ -17,8 +17,8 @@ const LanguageSelector = ({ isDarkHeader = false, variant = '', compact = false 
   const currentLanguage = languages.find(lang => lang.code === baseLanguageCode) || languages[0];
 
   const buttonStyle = compact 
-    ? 'bg-white text-gray-900 border-none rounded-lg text-[12px] font-bold px-3.5 py-1.5 leading-normal shadow-xs hover:bg-gray-100'
-    : 'bg-white text-gray-900 border-none rounded-lg text-[13px] font-bold px-4 py-2 leading-normal shadow-sm hover:bg-gray-100';
+    ? 'bg-white text-gray-900 border-none rounded-md text-[11px] font-bold px-2.5 h-[30px] flex items-center justify-center leading-none shadow-xs hover:bg-gray-100'
+    : 'bg-white text-gray-900 border-none rounded-md text-[13px] font-bold px-4 h-[38px] flex items-center justify-center leading-none shadow-sm hover:bg-gray-100';
 
   const handleLanguageChange = (code) => {
     i18n.changeLanguage(code);
@@ -30,12 +30,12 @@ const LanguageSelector = ({ isDarkHeader = false, variant = '', compact = false 
     <div className="relative inline-block text-left z-[9999]">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-center gap-1.5 font-bold transition-all duration-300 ${buttonStyle}`}
+        className={`flex items-center justify-center gap-1 font-bold transition-all duration-300 ${buttonStyle}`}
       >
         <img
           src={currentLanguage.flagUrl}
           alt={currentLanguage.name}
-          className="w-[18px] h-[13px] object-cover rounded-[2px] shadow-xs border border-slate-200 flex-shrink-0"
+          className={`${compact ? 'w-[15px] h-[11px]' : 'w-[18px] h-[13px]'} object-cover rounded-[2px] shadow-xs border border-slate-200 flex-shrink-0`}
         />
         <span>{currentLanguage.name}</span>
       </button>

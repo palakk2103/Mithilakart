@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useVendorStore from '../../../../../store/useVendorStore';
+import { handleImageError, getProductImage } from '../../../../../shared/utils/imageUtils';
 
 const HeaderFlower = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block align-middle mx-1">
@@ -55,16 +56,43 @@ const TrendingThisWeek = () => {
   const navigate = useNavigate();
   const { homeSections } = useVendorStore();
 
-  const trendingItems = (homeSections.stillLooking?.length
+  const rawList = homeSections.trendingThisWeek?.length
+    ? homeSections.trendingThisWeek
+    : homeSections.stillLooking?.length
     ? homeSections.stillLooking
-    : homeSections.topSelection || []
-  ).map((item, index) => ({
-    id: item.id || index,
-    name: item.label || item.title || item.name || 'Trending',
-    img: item.img,
-    path: item.link || '/vendor/product-detail',
-    product: item.product,
-  }));
+    : homeSections.topSelection || [];
+
+  const trendingItems = rawList.map((item, index) => {
+    const prod = item.product || {};
+    const name = item.name || item.title || item.label || prod.title || prod.name || 'Trending Product';
+    const image = getProductImage(item.img || item.image || prod.image || (Array.isArray(prod.images) ? prod.images[0]?.url : null));
+    const price = item.price ?? prod.price;
+
+    return {
+      id: item.id || prod._id || prod.id || index,
+      name,
+      img: image,
+      price,
+      product: prod,
+    };
+  });
+
+  const handleProductClick = useCallback((item) => {
+    const prod = item.product || {};
+    navigate('/product-detail', {
+      state: {
+        product: {
+          id: item.id || prod._id || prod.id,
+          name: item.name,
+          brand: prod.brand || 'Trending Product',
+          price: item.price || prod.price || 0,
+          oldPrice: prod.mrp || item.mrp || item.price || 0,
+          image: item.img,
+          label: 'Trending This Week',
+        },
+      },
+    });
+  }, [navigate]);
 
   if (!trendingItems.length) return null;
 
@@ -80,7 +108,7 @@ const TrendingThisWeek = () => {
             <HeaderFlower />
           </div>
           <button
-            onClick={() => navigate('/categories')}
+            onClick={() => navigate('/all-offers')}
             className="text-[9px] md:text-xs font-bold text-[#4B6C36] hover:text-[#385227] flex items-center transition-colors duration-200"
           >
             View All
@@ -92,18 +120,10 @@ const TrendingThisWeek = () => {
           {trendingItems.map((item) => (
             <div
               key={item.id}
-              onClick={() => {
-                if (item.product) {
-                  navigate('/vendor/product-detail', {
-                    state: { productId: item.id, product: item.product },
-                  });
-                  return;
-                }
-                navigate(item.path);
-              }}
-              className="flex-shrink-0 w-[84px] min-[375px]:w-[94px] md:w-[130px] bg-[#FCF7EE] rounded-t-[1000px] rounded-b-[12px] md:rounded-b-[15px] p-1.5 md:p-2 flex flex-col items-center cursor-pointer hover:shadow-xs hover:border-[#E5D2BA] transition-all duration-300 border border-[#F1E1CE] group"
+              onClick={() => handleProductClick(item)}
+              className="flex-shrink-0 w-[84px] min-[375px]:w-[94px] md:w-[130px] bg-[#FCF7EE] rounded-t-[75px] md:rounded-t-[90px] rounded-b-[12px] md:rounded-b-[15px] p-1.5 pt-3 md:p-2 md:pt-4 flex flex-col items-center cursor-pointer hover:shadow-xs hover:border-[#E5D2BA] transition-all duration-300 border border-[#F1E1CE] group"
             >
-              <span className="text-[8px] min-[375px]:text-[9px] md:text-xs font-black text-[#3C2415] text-center mb-0.5 group-hover:text-[#D35400] transition-colors duration-200 truncate w-full px-0.5">
+              <span className="text-[8px] min-[375px]:text-[9px] md:text-xs font-black text-[#3C2415] text-center mt-1 mb-0.5 group-hover:text-[#D35400] transition-colors duration-200 line-clamp-2 w-full px-0.5 leading-tight">
                 {item.name}
               </span>
 
@@ -113,19 +133,21 @@ const TrendingThisWeek = () => {
                   <ellipse cx="50" cy="62.5" rx="41" ry="51" fill="none" stroke="#7A5A44" strokeWidth="0.8" strokeDasharray="1, 3.5" />
                 </svg>
 
-                <div className="w-[76%] h-[82%] rounded-[50%/50%] overflow-hidden bg-white/70 flex items-center justify-center p-0.5 border border-[#F3E3CD]/30 shadow-inner group-hover:scale-102 transition-transform duration-300">
-                  {item.img ? (
-                    <img src={item.img} alt={item.name} className="w-full h-full object-cover rounded-[50%/50%]" />
-                  ) : (
-                    <span className="text-[10px] font-bold text-[#3E5A44]">{item.name.charAt(0)}</span>
-                  )}
+                <div className="w-[76%] h-[82%] rounded-[50%/50%] overflow-hidden bg-white flex items-center justify-center p-1 border border-[#F3E3CD]/30 shadow-inner group-hover:scale-102 transition-transform duration-300">
+                  <img
+                    src={item.img}
+                    alt={item.name}
+                    className="w-full h-full object-contain mix-blend-multiply rounded-[50%/50%]"
+                    loading="lazy"
+                    onError={handleImageError}
+                  />
                 </div>
               </div>
 
               <CardFlowerGarland />
 
-              <span className="text-[6.8px] md:text-[9px] font-black text-[#4B6C36] tracking-wider uppercase mt-0.5 group-hover:text-[#385227] transition-colors duration-200">
-                VIEW STORE
+              <span className="text-[9px] md:text-[11px] font-black text-[#4B6C36] tracking-wider uppercase mt-0.5 group-hover:text-[#D35400] transition-colors duration-200">
+                {item.price ? `₹${item.price}` : 'VIEW PRODUCT'}
               </span>
               <ViewStoreDivider />
             </div>
@@ -136,4 +158,4 @@ const TrendingThisWeek = () => {
   );
 };
 
-export default TrendingThisWeek;
+export default React.memo(TrendingThisWeek);

@@ -3,18 +3,11 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Bell, Heart, ShoppingCart } from 'lucide-react';
 
-const HeaderTop = ({ cartCount = 0 }) => {
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
+import useTabTheme from '../../../../shared/hooks/useTabTheme';
 
-  const badgeBg = isMithilakFlow 
-    ? 'bg-[#207C8A]' 
-    : isFreshGroceryFlow 
-      ? 'bg-[#D9A21B]' 
-      : isQuickShopFlow 
-        ? 'bg-[#F26522]' 
-        : 'bg-[#6FAE4A]';
+const HeaderTop = ({ cartCount = 0 }) => {
+  const { primaryBadgeBg } = useTabTheme();
+  const badgeBg = primaryBadgeBg;
 
   return (
     <div className="px-3 py-1 flex items-center justify-between">

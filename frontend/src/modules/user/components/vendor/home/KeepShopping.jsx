@@ -5,10 +5,10 @@ import { mapShopCategoryCards } from '../../../utils/mappers';
 
 const HeaderFlower = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block align-middle mx-1">
-    <path d="M12 2C13.5 6.5 13.5 6.5 12 11C10.5 6.5 10.5 6.5 12 2Z" fill="#4B6C36" />
-    <path d="M12 22C13.5 17.5 13.5 17.5 12 13C10.5 17.5 10.5 17.5 12 22Z" fill="#4B6C36" />
-    <path d="M2 12C6.5 13.5 6.5 13.5 11 12C6.5 10.5 6.5 10.5 2 12Z" fill="#4B6C36" />
-    <path d="M22 12C17.5 13.5 17.5 13.5 13 12C17.5 10.5 17.5 10.5 22 12Z" fill="#4B6C36" />
+    <path d="M12 2C13.5 6.5 13.5 6.5 12 11C10.5 6.5 10.5 6.5 12 2Z" fill="#65B842" />
+    <path d="M12 22C13.5 17.5 13.5 17.5 12 13C10.5 17.5 10.5 17.5 12 22Z" fill="#65B842" />
+    <path d="M2 12C6.5 13.5 6.5 13.5 11 12C6.5 10.5 6.5 10.5 2 12Z" fill="#65B842" />
+    <path d="M22 12C17.5 13.5 17.5 13.5 13 12C17.5 10.5 17.5 10.5 22 12Z" fill="#65B842" />
     <path d="M5.5 5.5C8.5 7.5 8.5 7.5 10 9C8.5 8.5 8.5 8.5 5.5 5.5Z" fill="#D35400" stroke="#D35400" strokeWidth="1.5" strokeLinecap="round" />
     <path d="M18.5 5.5C15.5 7.5 15.5 7.5 14 9C15.5 8.5 15.5 8.5 18.5 5.5Z" fill="#D35400" stroke="#D35400" strokeWidth="1.5" strokeLinecap="round" />
     <path d="M5.5 18.5C8.5 16.5 8.5 16.5 10 15C8.5 15.5 8.5 15.5 5.5 18.5Z" fill="#D35400" stroke="#D35400" strokeWidth="1.5" strokeLinecap="round" />
@@ -20,8 +20,8 @@ const HeaderFlower = () => (
 
 const ViewAllIcon = () => (
   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block ml-0.5 align-middle">
-    <path d="M6 4L14 12L6 20" stroke="#4B6C36" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M13 4L21 12L13 20" stroke="#4B6C36" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+    <path d="M6 4L14 12L6 20" stroke="#65B842" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M13 4L21 12L13 20" stroke="#65B842" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
   </svg>
 );
 
@@ -56,7 +56,7 @@ const KeepShopping = () => {
           </h2>
           <span
             onClick={() => navigate('/categories')}
-            className="text-[10.5px] font-black text-[#3E5A44] uppercase tracking-tighter cursor-pointer flex items-center"
+            className="text-[10.5px] font-black text-[#65B842] uppercase tracking-tighter cursor-pointer flex items-center"
           >
             View All <ViewAllIcon />
           </span>

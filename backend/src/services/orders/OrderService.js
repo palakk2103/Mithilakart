@@ -530,7 +530,7 @@ class OrderService extends BaseService {
   }
 
   async getOrderDetail(orderId, userId) {
-    const order = await this.orderRepository.findOne({ _id: orderId, userId });
+    const order = await this.orderRepository.findActiveById(orderId, userId);
     if (!order) throw AppError.notFound('Order not found');
     return this._buildOrderDetail(order);
   }
@@ -767,7 +767,7 @@ class OrderService extends BaseService {
       this._emitStatusChange(order, toStatus);
 
       if (
-        toStatus === ORDER_STATUS.PACKED
+        (toStatus === ORDER_STATUS.CONFIRMED || toStatus === ORDER_STATUS.PACKED)
         && this.deliveryOrderService
         && (order.fulfilmentType === 'local_delivery' || LOCAL_DELIVERY_FLOWS.has(order.commerceFlow))
       ) {

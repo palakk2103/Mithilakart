@@ -17,16 +17,58 @@ const ImageUploader = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFiles = useCallback((files) => {
-    const newImages = Array.from(files)
+  const handleFiles = useCallback(async (files) => {
+    const fileArray = Array.from(files)
       .filter((file) => file.type.startsWith('image/'))
-      .slice(0, maxImages - images.length)
-      .map((file) => ({
-        id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        file,
-        preview: URL.createObjectURL(file),
-        name: file.name,
-      }));
+      .slice(0, maxImages - images.length);
+
+    if (!fileArray.length) return;
+
+    const compressImage = (file) =>
+      new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 1000;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.onerror = () => resolve(e.target.result);
+          img.src = e.target.result;
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+
+    const newImages = await Promise.all(
+      fileArray.map(async (file) => {
+        const dataUrl = (await compressImage(file)) || '';
+        return {
+          id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          file,
+          preview: dataUrl,
+          url: dataUrl,
+          name: file.name,
+        };
+      })
+    );
+
     onChange?.([...images, ...newImages]);
   }, [images, maxImages, onChange]);
 

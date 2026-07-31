@@ -83,11 +83,11 @@ const AdminLayout = () => {
           name: 'Home Sections', 
           icon: <Layout size={18} />,
           subItems: [
-            { name: 'Still Looking', path: '/admin/storefront/sections/still-looking' },
+            { name: 'Trending This Week', path: '/admin/storefront/sections/trending-this-week' },
+            { name: "Today's Special Deals", path: '/admin/storefront/sections/todays-special-deals' },
             { name: 'Top Selection', path: '/admin/storefront/sections/top-selection' },
-            { name: 'Spotlight', path: '/admin/storefront/sections/spotlight' },
-            { name: 'Best Quality', path: '/admin/storefront/sections/best-quality' },
-            { name: 'Keep Shopping', path: '/admin/storefront/sections/keep-shopping' },
+            { name: 'Brands in Spotlight', path: '/admin/storefront/sections/brands-in-spotlight' },
+            { name: 'Best Quality Guaranteed', path: '/admin/storefront/sections/best-quality-guaranteed' },
           ]
         },
         { name: 'Category Manager', path: '/admin/categories', icon: <Layers size={18} /> },

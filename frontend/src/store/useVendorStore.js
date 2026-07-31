@@ -3,9 +3,12 @@ import { getHome, getFlowHome } from '../modules/user/services/storefrontApi';
 import { mapStorefrontSections } from '../modules/user/utils/mappers';
 
 const emptyHomeSections = {
-  stillLooking: [],
+  trendingThisWeek: [],
+  todaysSpecialDeals: [],
   topSelection: [],
   brandsSpotlight: [],
+  bestQualityGuaranteed: [],
+  stillLooking: [],
   bestQuality: [],
   keepShopping: [],
 };

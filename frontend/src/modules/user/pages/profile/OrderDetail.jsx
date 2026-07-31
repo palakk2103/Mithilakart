@@ -178,7 +178,21 @@ const OrderDetail = () => {
     return <div className="min-h-screen flex items-center justify-center">Loading order...</div>;
   }
 
-  if (!order) return null;
+  if (!order) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-gray-50">
+        <Package size={48} className="text-gray-300 mb-4 animate-bounce" />
+        <h2 className="text-lg font-bold text-gray-800">Order Not Found</h2>
+        <p className="text-sm text-gray-500 mt-1 max-w-sm">We couldn't retrieve details for order #{orderId}.</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-6 px-6 py-3 bg-blue-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg hover:bg-blue-700 transition-all"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   const orderTotalPrice = order.items.reduce((acc, item) => acc + parsePrice(item.price), 0);
   const orderTotalOldPrice = order.items.reduce((acc, item) => {
@@ -199,7 +213,7 @@ const OrderDetail = () => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#f3e8ff]/60 via-[#faf5ff] to-[#f5f3ff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
-  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#ff2a5f] to-[#ff7e5f]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
+  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
 
   return (

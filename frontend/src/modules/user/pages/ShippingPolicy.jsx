@@ -334,7 +334,6 @@ const ShippingPolicy = () => {
         </section>
           </>
         )}
-        <Footer />
       </div>
     </div>
   );

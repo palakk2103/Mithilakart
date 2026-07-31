@@ -134,11 +134,18 @@ class CategoryService extends BaseService {
   }
 
   async _invalidateCache() {
-    await this.cacheService.del(CACHE_KEYS.categoriesTree('all'));
-    await this.cacheService.del(CACHE_KEYS.categoriesTree('standard'));
-    await this.cacheService.del(CACHE_KEYS.categoriesTree('mithilak'));
-    await this.cacheService.del(CACHE_KEYS.categoriesTree('quick_shop'));
-    await this.cacheService.del(CACHE_KEYS.categoriesTree('fresh_grocery'));
+    const keys = [
+      'all',
+      'standard',
+      'mithilak',
+      'quick_shop',
+      'fresh_grocery',
+      'groceries_fresh',
+      'mithilakart',
+    ];
+    await Promise.all(
+      keys.map((k) => this.cacheService.del(CACHE_KEYS.categoriesTree(k)))
+    );
   }
 }
 

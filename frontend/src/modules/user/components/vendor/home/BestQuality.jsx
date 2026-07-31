@@ -134,23 +134,29 @@ const BestQuality = ({ items = [] }) => {
   const { t } = useTranslation();
 
   const products = (Array.isArray(items) && items.length)
-    ? items.slice(0, 4).map((item, idx) => ({
-        id: item.id || item._id || item.productId,
-        name: item.title || item.name || 'Product',
-        tag: item.tag || item.badge || 'Popular',
-        img: item.image || item.img || (Array.isArray(item.images) ? item.images[0]?.url : null),
-        price: item.price,
-        mrp: item.mrp,
-        brand: item.brand,
-      }))
+    ? items.slice(0, 4).map((item, idx) => {
+        const prod = item.product || {};
+        return {
+          id: item.id || item._id || item.productId || prod._id || prod.id,
+          name: item.title || item.name || prod.title || prod.name || 'Product',
+          tag: item.tag || item.badge || 'Popular',
+          img: item.img || item.image || prod.image || (Array.isArray(prod.images) ? prod.images[0]?.url : null),
+          price: item.price ?? prod.price,
+          mrp: item.mrp ?? prod.mrp,
+          brand: item.brand ?? prod.brand,
+          product: prod,
+        };
+      })
     : [];
 
   const handleProductClick = useCallback((product) => {
-    if (!product.id) return;
+    const prodId = product.id;
+    if (!prodId) return;
     navigate('/product-detail', {
       state: {
-        product: {
-          id: product.id,
+        productId: prodId,
+        product: product.product && Object.keys(product.product).length ? product.product : {
+          id: prodId,
           name: product.name,
           brand: product.brand || 'Premium Quality',
           price: product.price || 0,

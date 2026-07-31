@@ -16,10 +16,14 @@ const PRODUCT_STATUS = {
 const PRODUCT_STATUS_VALUES = Object.values(PRODUCT_STATUS);
 
 const HOME_SECTION_KEYS = [
-  'still-looking',
+  'trending-this-week',
+  'todays-special-deals',
   'top-selection',
+  'brands-in-spotlight',
   'spotlight',
+  'best-quality-guaranteed',
   'best-quality',
+  'still-looking',
   'keep-shopping',
 ];
 

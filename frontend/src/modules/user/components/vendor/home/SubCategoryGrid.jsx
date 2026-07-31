@@ -2,14 +2,13 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useVendorStore from '../../../../../store/useVendorStore';
 import { mapShopCategoryCards } from '../../../utils/mappers';
+import { handleImageError } from '../../../../../shared/utils/imageUtils';
 
 const SubCategoryGrid = () => {
   const navigate = useNavigate();
   const { homeCategories } = useVendorStore();
 
   const categoryItems = useMemo(() => mapShopCategoryCards(homeCategories), [homeCategories]);
-  const categoryItemsTop = categoryItems.filter((item) => item.hasImage);
-  const categoryItemsBottom = categoryItems.filter((item) => !item.hasImage);
 
   if (!categoryItems.length) return null;
 
@@ -21,50 +20,38 @@ const SubCategoryGrid = () => {
         </h2>
         <span
           onClick={() => navigate('/categories')}
-          className="text-xs font-bold text-[#3E5A44] hover:text-[#2d4232] cursor-pointer hover:underline transition-colors"
+          className="text-xs font-bold text-[#65B842] hover:text-[#529C33] cursor-pointer hover:underline transition-colors"
         >
           View All
         </span>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 md:gap-6 justify-items-center mb-3">
-        {categoryItemsTop.map((item) => (
+      {/* Single Row Horizontal Scroll Container */}
+      <div className="flex items-center gap-3 md:gap-5 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-1 px-1">
+        {categoryItems.map((item) => (
           <div
             key={item.id}
             onClick={() => navigate(item.path)}
-            className="w-full flex flex-col items-center cursor-pointer group"
+            className="flex-shrink-0 w-24 sm:w-28 md:w-36 flex flex-col items-center cursor-pointer group"
           >
-            <div className="w-full aspect-[1/1.18] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-1.5 md:p-3 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(61,35,20,0.05)] group-hover:border-[#3E5A44]/40 transition-all duration-300 transform">
-              <span className="text-[9.2px] sm:text-xs md:text-sm font-black text-[#3F2A20] text-center mt-2 px-0.5 leading-tight tracking-tight h-[20px] flex items-center justify-center">
+            <div className="w-full aspect-[1/1.15] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-3 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(61,35,20,0.05)] group-hover:border-[#65B842]/40 transition-all duration-300 transform">
+              <span className="text-[9.5px] sm:text-xs md:text-sm font-black text-[#3F2A20] text-center mt-1 px-0.5 leading-tight tracking-tight h-[20px] flex items-center justify-center truncate w-full">
                 {item.name}
               </span>
 
-              <div className="w-[88%] aspect-square rounded-[14px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/40 flex items-center justify-center p-0.5 mb-1.5 relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
+              <div className="w-[88%] aspect-square rounded-[14px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/40 flex items-center justify-center p-0.5 mb-1 relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
                 {item.img ? (
                   <img
                     src={item.img}
                     alt={item.name}
+                    onError={handleImageError}
                     className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500"
                   />
                 ) : (
-                  <span className="text-[10px] font-bold text-[#3E5A44]">{item.name.charAt(0)}</span>
+                  <span className="text-[12px] font-black text-[#65B842]">{item.name.charAt(0)}</span>
                 )}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-4 gap-1.5 md:gap-6 justify-items-center">
-        {categoryItemsBottom.map((item) => (
-          <div
-            key={item.id}
-            onClick={() => navigate(item.path)}
-            className="w-full bg-[#FFF8EE] border border-[#EADCC9]/50 rounded-xl py-1.5 px-0.5 text-center cursor-pointer hover:border-[#3E5A44]/40 hover:bg-white active:scale-98 transition-all duration-200"
-          >
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-black text-[#3F2A20] leading-tight block px-0.5">
-              {item.name}
-            </span>
           </div>
         ))}
       </div>

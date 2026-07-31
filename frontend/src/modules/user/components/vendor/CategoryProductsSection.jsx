@@ -4,14 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { getCategories, getCategoryProducts } from '../../services/catalogApi';
 import { findCategoryByName, extractList, mapProductForCard } from '../../utils/mappers';
 import { addProductToCart } from '../../utils/cartUtils';
+import useTabTheme from '../../../../shared/hooks/useTabTheme';
 
 const CornerFlower = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px] opacity-85 select-none pointer-events-none">
     {/* Green leaves/petals */}
-    <path d="M12 2C13 4.5 13 4.5 12 7C11 4.5 11 4.5 12 2Z" fill="#3E5A44" />
-    <path d="M12 22C13 19.5 13 19.5 12 17C11 19.5 11 19.5 12 22Z" fill="#3E5A44" />
-    <path d="M2 12C4.5 13 4.5 13 7 12C4.5 11 4.5 11 2 12Z" fill="#3E5A44" />
-    <path d="M22 12C19.5 13 19.5 13 17 12C19.5 11 19.5 11 22 12Z" fill="#3E5A44" />
+    <path d="M12 2C13 4.5 13 4.5 12 7C11 4.5 11 4.5 12 2Z" fill="#65B842" />
+    <path d="M12 22C13 19.5 13 19.5 12 17C11 19.5 11 19.5 12 22Z" fill="#65B842" />
+    <path d="M2 12C4.5 13 4.5 13 7 12C4.5 11 4.5 11 2 12Z" fill="#65B842" />
+    <path d="M22 12C19.5 13 19.5 13 17 12C19.5 11 19.5 11 22 12Z" fill="#65B842" />
     {/* Orange petals */}
     <circle cx="12" cy="8.5" r="2.2" fill="#E67E22" />
     <circle cx="12" cy="15.5" r="2.2" fill="#E67E22" />
@@ -27,12 +28,12 @@ const CardBottomDivider = () => (
   <div className="w-full flex items-center justify-center my-0.5 md:my-1 select-none pointer-events-none">
     <svg viewBox="0 0 120 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[65px] md:w-[85px] h-auto">
       {/* Left branch */}
-      <path d="M45 12 C35 14, 20 15, 10 12" stroke="#3E5A44" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-      <path d="M35 13 C34 11, 31 11, 30 12.5" fill="#3E5A44" />
+      <path d="M45 12 C35 14, 20 15, 10 12" stroke="#65B842" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <path d="M35 13 C34 11, 31 11, 30 12.5" fill="#65B842" />
       <circle cx="32" cy="14.5" r="1.2" fill="#D35400" />
       {/* Right branch */}
-      <path d="M75 12 C85 14, 100 15, 110 12" stroke="#3E5A44" strokeWidth="1.2" strokeLinecap="round" fill="none" />
-      <path d="M85 13 C86 11, 89 11, 90 12.5" fill="#3E5A44" />
+      <path d="M75 12 C85 14, 100 15, 110 12" stroke="#65B842" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+      <path d="M85 13 C86 11, 89 11, 90 12.5" fill="#65B842" />
       <circle cx="88" cy="14.5" r="1.2" fill="#D35400" />
       {/* Central Flower */}
       <circle cx="60" cy="12" r="3.5" fill="#E67E22" />
@@ -46,6 +47,7 @@ const CardBottomDivider = () => (
 
 const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const { primaryText, primaryBorder } = useTabTheme();
 
   // Use a stable pseudo-random number based on the product ID for the rating count
   const ratingCount = useMemo(() => {
@@ -95,7 +97,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
         {/* Rating Badge on Image */}
         <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 md:gap-1 bg-white/95 backdrop-blur-xs px-1 py-0.2 md:px-1.5 md:py-0.5 rounded-[4px] md:rounded-[6px] shadow-xs border border-[#EADCC9]/30">
           <span className="text-[8px] md:text-[9.5px] font-black text-slate-800">{product.rating || '4.8'}</span>
-          <Star size={7} fill="currentColor" className="text-[#3E5A44] stroke-none" />
+          <Star size={7} fill="currentColor" className={`${primaryText} stroke-none`} />
           <div className="w-[1px] h-2 bg-gray-300 mx-0.5" />
           <span className="text-[7.5px] md:text-[8.5px] font-semibold text-gray-500">({ratingCount})</span>
         </div>
@@ -112,12 +114,12 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
             <div className="flex items-center gap-1 md:gap-1.5 flex-wrap">
               <span className="text-[11px] md:text-[13.5px] font-black text-slate-900">₹{product.price}</span>
               <span className="text-[8.5px] md:text-[10px] text-gray-400 line-through font-semibold">MRP ₹{product.oldPrice || '1,999'}</span>
-              <span className="border border-[#F26522]/45 text-[#F26522] bg-[#F26522]/5 text-[7px] md:text-[8px] px-1 py-0.2 rounded-full font-black uppercase tracking-tight">
+              <span className={`border ${primaryBorder} ${primaryText} bg-white text-[7px] md:text-[8px] px-1 py-0.2 rounded-full font-black uppercase tracking-tight`}>
                 {Math.round(((parseInt((product.oldPrice || '1999').toString().replace(/,/g, '')) - parseInt(product.price?.toString().replace(/,/g, ''))) / parseInt((product.oldPrice || '1999').toString().replace(/,/g, ''))) * 100)}% OFF
               </span>
             </div>
-            <p className="text-[8.5px] md:text-[9.5px] font-extrabold text-[#3E5A44] tracking-tight mt-0.5">
-              ₹{Math.round(product.price * 0.9)} with UPI offer + more
+            <p className={`text-[8.5px] md:text-[9.5px] font-extrabold ${primaryText} tracking-tight mt-0.5`}>
+              ₹{Math.round(product.price * 0.9)} with offer + more
             </p>
           </div>
         </div>
@@ -254,7 +256,7 @@ const CategoryProductsSection = ({ selectedCategory }) => {
             ))}
           </div>
           {/* Intersection Trigger */}
-          <div ref={loaderRef} className="h-20 w-full" />
+          <div ref={loaderRef} className="h-2 w-full" />
         </>
       )}
     </div>

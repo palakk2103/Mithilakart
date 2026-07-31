@@ -45,7 +45,7 @@ const getMithilakartHeaderBg = (category) => {
       return 'bg-[#FEF08A]'; // Soft Yellow
     case 'You Buy':
     default:
-      return 'bg-[#3E5A44]'; // Default Olive Green
+      return 'bg-[#65B842]'; // Default Vibrant Green
   }
 };
 
@@ -58,11 +58,19 @@ const VendorLayout = () => {
   const [cartItems, setCartItems] = useState([]);
   const [scrolled, setScrolled] = useState(false);
   const { savedAddresses, selectedAddressId, isDarkMode } = useAccountStore();
-  const { selectedCategory, setSelectedCategory, fetchStandardNav } = useVendorStore();
+  const { activeFlow, setActiveFlow, selectedCategory, setSelectedCategory, fetchStandardNav } = useVendorStore();
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   useHydrateAddresses();
   const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
   const selectedAddress = savedAddresses.find(a => a.id === selectedAddressId) || savedAddresses[0];
+
+  const cartBadgeBg = activeFlow === 'mithilak' 
+    ? 'bg-[#207C8A]' 
+    : activeFlow === 'freshgrocery' 
+      ? 'bg-[#D9A21B]' 
+      : activeFlow === 'quickshop' 
+        ? 'bg-[#F26522]' 
+        : 'bg-[#65B842]';
 
   /* ── Cart listener ── */
   useEffect(() => {
@@ -92,7 +100,16 @@ const VendorLayout = () => {
 
   useEffect(() => {
     window.dispatchEvent(new Event('cartUpdated'));
-  }, [location.pathname]);
+    if (location.pathname.includes('/mithilak')) {
+      if (activeFlow !== 'mithilak') setActiveFlow('mithilak');
+    } else if (location.pathname.includes('/fresh-grocery')) {
+      if (activeFlow !== 'freshgrocery') setActiveFlow('freshgrocery');
+    } else if (location.pathname.includes('/quick-shop')) {
+      if (activeFlow !== 'quickshop') setActiveFlow('quickshop');
+    } else if (location.pathname === '/home' || location.pathname === '/') {
+      if (activeFlow !== 'mithilakart') setActiveFlow('mithilakart');
+    }
+  }, [location.pathname, activeFlow, setActiveFlow]);
 
   /* ── Scroll shadow listener ── */
   useEffect(() => {
@@ -120,41 +137,59 @@ const VendorLayout = () => {
   const isCartOrCheckoutPage = 
     location.pathname.includes('/cart') || 
     location.pathname.includes('/checkout') || 
-    location.pathname.includes('/profile');
-  const cartTotalItems = cartItems.reduce((acc, item) => acc + (item.qty || 1), 0);
-  const cartTotalPrice = cartItems.reduce((acc, item) => {
+    location.pathname.includes('/order-summary') || 
+    location.pathname.includes('wishlist') || 
+    location.pathname.includes('/profile') ||
+    location.pathname.includes('/orders') ||
+    location.pathname.includes('/order-detail') ||
+    location.pathname.includes('/help-center');
+
+  const activeTabMarketplaceTab = 
+    activeFlow === 'mithilak' ? 'mithilak' :
+    activeFlow === 'freshgrocery' ? 'groceries_fresh' :
+    activeFlow === 'quickshop' ? 'quick_shop' : 'mithilakart';
+
+  const currentTabCartItems = cartItems.filter(item => {
+    const itemTab = item.marketplaceTab || (
+      item.commerceFlow === 'fresh_grocery' ? 'groceries_fresh' :
+      item.commerceFlow === 'quick_shop' ? 'quick_shop' :
+      item.commerceFlow === 'mithilak' ? 'mithilak' : 'mithilakart'
+    );
+    return itemTab === activeTabMarketplaceTab;
+  });
+
+  const cartTotalItems = currentTabCartItems.reduce((acc, item) => acc + (item.qty || 1), 0);
+  const cartTotalPrice = currentTabCartItems.reduce((acc, item) => {
     return acc + parsePrice(item.price) * parsePrice(item.qty || 1);
   }, 0);
   const isDarkHeader = (
-    localStorage.getItem('isMithilakFlow') === 'true' || 
-    location.pathname.includes('/mithilak') || 
-    (location.pathname.includes('/quick-shop') && !location.pathname.includes('/fresh-grocery')) ||
-    (!location.pathname.includes('/quick-shop') && !location.pathname.includes('/fresh-grocery') && (selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory))
+    activeFlow === 'mithilak' || 
+    activeFlow === 'quickshop' || 
+    (activeFlow === 'mithilakart' && (selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory))
   );
 
-  const isMithilakartFlow = 
-    !location.pathname.includes('/mithilak') && 
-    !location.pathname.includes('/quick-shop') && 
-    !location.pathname.includes('/fresh-grocery');
+  const isMithilakartFlow = activeFlow === 'mithilakart';
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 text-primary-dark relative ${
-      (localStorage.getItem('isMithilakFlow') === 'true' || location.pathname.includes('/mithilak'))
+      activeFlow === 'mithilak'
         ? 'bg-[#F5F9FA]'
-        : location.pathname.includes('/fresh-grocery')
+        : activeFlow === 'freshgrocery'
           ? 'bg-[#FFF8EE]'
-          : location.pathname.includes('/quick-shop')
+          : activeFlow === 'quickshop'
             ? 'bg-white'
             : 'bg-[#F6F8F3]'
     }`}>
       {/* Global Repeating Mithila Art Page Background Texture */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-30 bg-repeat opacity-[0.035] select-none"
-        style={{
-          backgroundImage: "url('/Screenshot 2026-07-17 130906.png')",
-          backgroundSize: '360px',
-        }}
-      />
+      {location.pathname !== '/product-detail' && location.pathname !== '/vendor/product-detail' && (
+        <div 
+          className="fixed inset-0 pointer-events-none z-0 bg-repeat opacity-[0.012] select-none"
+          style={{
+            backgroundImage: "url('/Screenshot 2026-07-17 130906.png')",
+            backgroundSize: '360px',
+          }}
+        />
+      )}
 
       {/* Drawer Sidebar */}
       <MainSidebar isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
@@ -162,12 +197,12 @@ const VendorLayout = () => {
       {/* Desktop Header */}
       {!hideHeader && (
         <div className={`hidden md:flex items-center justify-between px-8 py-2.5 border-b border-gray-200/80 sticky top-0 z-50 shadow-sm transition-colors duration-300 ${
-          (localStorage.getItem('isMithilakFlow') === 'true' || location.pathname.includes('/mithilak'))
-            ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1] text-white'
-            : location.pathname.includes('/fresh-grocery')
+          activeFlow === 'mithilak'
+            ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58] text-white'
+            : activeFlow === 'freshgrocery'
               ? 'bg-[#D9A21B] text-[#3F2A20]'
-              : location.pathname.includes('/quick-shop')
-                ? 'bg-gradient-to-r from-[#ff2a5f] to-[#ff7e5f] text-white'
+              : activeFlow === 'quickshop'
+                ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00] text-white'
                 : `${getMithilakartHeaderBg(selectedCategory)} ${
                     selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory
                       ? 'text-white'
@@ -189,7 +224,7 @@ const VendorLayout = () => {
               <Link to="/categories" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>{t('nav.categories')}</Link>
               <Link to="/cart" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-2 hover:bg-black/5 text-[#3F2A20]`}>
                 <span>{t('nav.cart')}</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-[#F26522] text-white">{cartCount}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${cartBadgeBg} text-white`}>{cartTotalItems}</span>
               </Link>
               <Link to="/profile" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>Profile</Link>
             </nav>
@@ -220,14 +255,14 @@ const VendorLayout = () => {
               : '0 1px 0px rgba(0,0,0,0.02)',
           }}
           transition={{ duration: 0.22 }}
-          className={`md:hidden sticky top-0 z-50 pb-2 rounded-b-[20px] transition-colors duration-300 ${
-            (localStorage.getItem('isMithilakFlow') === 'true' || location.pathname.includes('/mithilak'))
+          className={`md:hidden sticky top-0 z-50 pb-3 mb-4 rounded-b-[24px] transition-colors duration-300 ${
+            activeFlow === 'mithilak'
               ? 'bg-[#207C8A]'
-              : location.pathname.includes('/fresh-grocery')
+              : activeFlow === 'freshgrocery'
                 ? 'bg-[#D9A21B]'
-                : location.pathname.includes('/quick-shop')
+                : activeFlow === 'quickshop'
                   ? 'bg-[#F26522]'
-                  : 'bg-[#3E5A44]'
+                  : 'bg-[#65B842]'
           }`}
         >
 
@@ -246,31 +281,24 @@ const VendorLayout = () => {
       <div className="flex-1 flex flex-col bg-transparent relative z-10">
         <div className="flex-1 flex">
           <div className="w-full max-w-[1600px] mx-auto px-0 md:px-8 xl:px-12 flex h-full">
-            <main className="flex-1 min-w-0 pb-16">
+            <main className="flex-1 min-w-0 pb-0">
               <Outlet />
             </main>
           </div>
         </div>
-        {!location.pathname.includes('/profile') && <Footer />}
+        <Footer />
       </div>
 
       {/* Mobile-First Bottom Navbar (Fixed) */}
       {!hideFooter && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t px-6 py-2 flex justify-between items-center z-50 bg-[#FFF8EE] border-[#EADCC9]/55 text-[#3F2A20] shadow-[0_-2px_10px_rgba(63,42,32,0.05)]">
         <Link 
-          to={(localStorage.getItem('isMithilakFlow') === 'true' || location.pathname.includes('/mithilak')) ? "/mithilak" : "/home"} 
-          onClick={() => {
-            if (!(localStorage.getItem('isMithilakFlow') === 'true' || location.pathname.includes('/mithilak'))) {
-              localStorage.setItem('isQuickShopFlow', 'false');
-              localStorage.setItem('isMithilakFlow', 'false');
-              localStorage.setItem('isFreshGroceryFlow', 'false');
-            }
-          }}
+          to={activeFlow === 'mithilak' ? "/mithilak" : activeFlow === 'freshgrocery' ? "/fresh-grocery" : activeFlow === 'quickshop' ? "/quick-shop" : "/home"} 
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/home' || location.pathname === '/quick-shop' || location.pathname === '/mithilak' || location.pathname === '/fresh-grocery'
-              ? ((localStorage.getItem('isMithilakFlow') === 'true' || location.pathname === '/mithilak') 
+              ? (activeFlow === 'mithilak' 
                   ? 'text-[#207C8A]' 
-                  : (localStorage.getItem('isFreshGroceryFlow') === 'true' ? 'text-[#D9A21B]' : (localStorage.getItem('isQuickShopFlow') === 'true' ? 'text-[#FF5C00]' : 'text-[#3E5A44]')))
+                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : (activeFlow === 'quickshop' ? 'text-[#FF5C00]' : 'text-[#65B842]')))
               : 'text-[#3F2A20]/80'
           }`}
         >
@@ -281,9 +309,9 @@ const VendorLayout = () => {
           to="/categories"
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/categories' 
-              ? ((localStorage.getItem('isMithilakFlow') === 'true' || location.pathname.includes('/mithilak')) 
+              ? (activeFlow === 'mithilak' 
                   ? 'text-[#207C8A]' 
-                  : (localStorage.getItem('isFreshGroceryFlow') === 'true' ? 'text-[#D9A21B]' : 'text-[#3E5A44]')) 
+                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : 'text-[#65B842]')) 
               : 'text-[#3F2A20]/80'
           }`}
         >
@@ -294,16 +322,16 @@ const VendorLayout = () => {
           to="/cart" 
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/cart' 
-              ? ((localStorage.getItem('isMithilakFlow') === 'true' || location.pathname.includes('/mithilak')) 
+              ? (activeFlow === 'mithilak' 
                   ? 'text-[#207C8A]' 
-                  : (localStorage.getItem('isFreshGroceryFlow') === 'true' ? 'text-[#D9A21B]' : 'text-[#3E5A44]')) 
+                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : 'text-[#65B842]')) 
               : 'text-[#3F2A20]/80'
           }`}
         >
           <div className="relative">
             <ShoppingCart size={22} strokeWidth={2.2} />
-            <span className="absolute -top-1.5 -right-2 text-[8px] font-black px-1 py-0.5 rounded-full bg-[#F26522] text-white border border-[#FFF8EE]">
-              {cartCount}
+            <span className={`absolute -top-1.5 -right-2 text-[8px] font-black px-1 py-0.5 rounded-full ${cartBadgeBg} text-white border border-[#FFF8EE]`}>
+              {cartTotalItems}
             </span>
           </div>
           <span className={`text-[10px] ${location.pathname === '/cart' ? 'font-black' : 'font-semibold'}`}>Cart</span>
@@ -312,14 +340,14 @@ const VendorLayout = () => {
           to="/profile" 
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/profile' 
-              ? ((localStorage.getItem('isMithilakFlow') === 'true' || location.pathname.includes('/mithilak')) 
+              ? (activeFlow === 'mithilak' 
                   ? 'text-[#207C8A]' 
-                  : (localStorage.getItem('isFreshGroceryFlow') === 'true' ? 'text-[#D9A21B]' : 'text-[#3E5A44]')) 
+                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : 'text-[#65B842]')) 
               : 'text-[#3F2A20]/80'
           }`}
         >
           <User size={22} strokeWidth={2.2} />
-          <span className={`text-[10px] ${location.pathname === '/profile' ? 'font-black' : 'font-semibold'}`}>You</span>
+          <span className={`text-[10px] ${location.pathname === '/profile' ? 'font-black' : 'font-semibold'}`}>Account</span>
         </Link>
       </nav>
       )}
@@ -332,10 +360,10 @@ const VendorLayout = () => {
             localStorage.getItem('isFreshGroceryFlow') === 'true'
               ? 'bg-gradient-to-r from-[#7A3E17] to-[#b45309] hover:brightness-110'
               : localStorage.getItem('isMithilakFlow') === 'true'
-                ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1] hover:brightness-110'
+                ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58] hover:brightness-110'
                   : localStorage.getItem('isQuickShopFlow') === 'true'
-                    ? 'bg-gradient-to-r from-[#ff2a5f] to-[#ff7e5f] hover:brightness-110'
-                  : 'bg-[#3E5A44] hover:bg-[#06331b]'
+                    ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00] hover:brightness-110'
+                  : 'bg-[#65B842] hover:bg-[#529b34]'
           }`}
         >
           <div className="flex items-center gap-3">
@@ -355,7 +383,7 @@ const VendorLayout = () => {
           </div>
           <div className={`flex items-center gap-1 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors duration-300 ${
             localStorage.getItem('isQuickShopFlow') === 'true'
-              ? 'bg-white text-[#d6186d]'
+              ? 'bg-white text-[#F26522]'
               : 'bg-white/20 text-white'
           }`}>
             <span>{t('nav.viewCart')}</span>

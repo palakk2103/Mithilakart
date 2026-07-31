@@ -12,15 +12,27 @@ import { useLocation as useLiveLocation } from '../../../shared/context/Location
 import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
 import useAccountStore from '../../../store/useAccountStore';
 import { getUser } from '../../../shared/api/tokenStorage';
+import useTabTheme from '../../../shared/hooks/useTabTheme';
+import { getWishlist, addToWishlist as addToWishlistApi, removeFromWishlist as removeFromWishlistApi } from '../services/userApi';
+import { extractList, mapWishlistItem } from '../utils/mappers';
+import { addProductToCart } from '../utils/cartUtils';
 
 const Cart = () => {
   const { t } = useTranslation();
   const [cartItems, setCartItems] = useState([]);
   const navigate = useNavigate();
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
-  const { savedAddresses, selectedAddressId } = useAccountStore();
+  const { savedAddresses, selectedAddressId, wishlist, addToWishlist: addToWishlistStore, removeFromWishlist: removeFromWishlistStore } = useAccountStore();
   useHydrateAddresses();
   const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
+
+  const theme = useTabTheme();
+  const isMithilakFlow = theme.activeFlow === 'mithilak';
+  const isQuickShopFlow = theme.activeFlow === 'quickshop';
+  const isFreshGroceryFlow = theme.activeFlow === 'freshgrocery';
+  const primaryBg = `${theme.primaryBg} ${theme.primaryBgHover}`;
+  const primaryText = theme.primaryText;
+  const shopNowLink = isMithilakFlow ? '/mithilak' : (isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home'));
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => checkAuth('customer'));
   const [address, setAddress] = useState(null);
@@ -30,27 +42,38 @@ const Cart = () => {
   const [addrPhone, setAddrPhone] = useState('');
   const [addrDetails, setAddrDetails] = useState('');
 
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A] hover:bg-[#185e68]' : (isFreshGroceryFlow ? 'bg-[#D9A21B] hover:bg-[#c49218]' : (isQuickShopFlow ? 'bg-[#d6186d] hover:bg-[#b5125b]' : 'bg-[#3E5A44] hover:bg-[#06331b]'));
-  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : (isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#d6186d]' : 'text-[#3E5A44]'));
-  const shopNowLink = isMithilakFlow ? '/mithilak' : (isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home'));
+  // Remove confirmation modal state
+  const [itemToRemove, setItemToRemove] = useState(null);
+
+  // Local Wishlist state for real-time rendering on Cart page
+  const [localWishlist, setLocalWishlist] = useState([]);
 
   // Load cart items from API
+  const loadCart = async () => {
+    try {
+      const { items } = await fetchCartItems();
+      setCartItems(items);
+    } catch (e) {
+      console.error('Failed to load cart', e);
+    }
+  };
+
+  // Load Wishlist items
+  const loadWishlistItems = async () => {
+    try {
+      const data = await getWishlist();
+      const items = extractList(data).map((p) => mapWishlistItem(p));
+      setLocalWishlist(items.length > 0 ? items : wishlist);
+    } catch {
+      setLocalWishlist(wishlist);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
-
-    const loadCart = async () => {
-      try {
-        const { items } = await fetchCartItems();
-        if (!cancelled) setCartItems(items);
-      } catch (e) {
-        console.error('Failed to load cart', e);
-      }
-    };
-
     loadCart();
+    loadWishlistItems();
+
     const onCartUpdated = () => loadCart();
     window.addEventListener('cartUpdated', onCartUpdated);
     return () => {
@@ -89,12 +112,52 @@ const Cart = () => {
     };
   }, []);
 
-  const handleRemove = async (cartId) => {
+  const handleConfirmRemove = async (moveToWishlist) => {
+    if (!itemToRemove) return;
+    const targetItem = itemToRemove;
+    setItemToRemove(null);
+
     try {
-      await removeCartItemById(cartId);
-      setCartItems((prev) => prev.filter((item) => item.cartId !== cartId));
+      if (moveToWishlist) {
+        const prod = {
+          id: targetItem.productId || targetItem.id,
+          name: targetItem.name,
+          price: targetItem.price,
+          image: targetItem.image,
+          brand: targetItem.brand,
+        };
+        try {
+          await addToWishlistApi(prod.id);
+        } catch {
+          // ignore offline/demo error
+        }
+        addToWishlistStore(prod);
+        setLocalWishlist((prev) => {
+          if (prev.some((w) => w.id === prod.id)) return prev;
+          return [prod, ...prev];
+        });
+      }
+
+      await removeCartItemById(targetItem.cartId);
+      setCartItems((prev) => prev.filter((item) => item.cartId !== targetItem.cartId));
     } catch (e) {
       console.error('Failed to remove item', e);
+    }
+  };
+
+  const handleAddWishlistItemToCart = async (product) => {
+    try {
+      await addProductToCart(product);
+      try {
+        await removeFromWishlistApi(product.id);
+      } catch {
+        // ignore API error in offline/demo mode
+      }
+      removeFromWishlistStore(product.id);
+      setLocalWishlist((prev) => prev.filter((item) => item.id !== product.id));
+      await loadCart();
+    } catch (e) {
+      console.error('Failed to add wishlist item to cart', e);
     }
   };
 
@@ -127,7 +190,7 @@ const Cart = () => {
 
   return (
     <div className={`min-h-screen pb-32 font-sans text-slate-800 flex flex-col transition-colors duration-300 relative ${
-      isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : 'bg-bg-cream'
+      isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : isQuickShopFlow ? 'bg-[#FFF5EE]' : 'bg-bg-cream'
     }`}>
       {/* Global Repeating Mithila Art Page Background Texture */}
       {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (
@@ -146,7 +209,9 @@ const Cart = () => {
           ? 'bg-[#D9A21B] border-transparent text-white' 
           : isMithilakFlow
             ? 'bg-[#207C8A] border-transparent text-white'
-            : 'bg-[#FCF7EE] border-[#F3E3CD]/60'
+            : isQuickShopFlow
+              ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00] border-transparent text-white'
+              : 'bg-[#FCF7EE] border-[#F3E3CD]/60'
       }`}>
         <button 
           onClick={() => navigate(-1)} 
@@ -154,7 +219,7 @@ const Cart = () => {
         >
           <ArrowLeft size={18} strokeWidth={2.5} />
         </button>
-        <h1 className={`text-[17px] font-black tracking-tight ${isMithilakFlow ? 'text-white' : 'text-slate-800'}`}>{t('nav.cart')}</h1>
+        <h1 className={`text-[17px] font-black tracking-tight ${isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow ? 'text-white' : 'text-slate-800'}`}>{t('nav.cart')}</h1>
         <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 border border-slate-100/50 font-bold select-none cursor-pointer">
           •••
         </div>
@@ -287,7 +352,7 @@ const Cart = () => {
 
                       {/* Delete Action */}
                       <button 
-                        onClick={() => handleRemove(item.cartId)}
+                        onClick={() => setItemToRemove(item)}
                         className="absolute right-0 top-1/2 -translate-y-1/2 text-rose-600 hover:text-rose-800 p-2 rounded-full hover:bg-rose-50/50 active:scale-90 transition-transform"
                       >
                         <Trash2 size={16} />
@@ -296,6 +361,42 @@ const Cart = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Wishlist Items Section on Cart Page */}
+              {localWishlist && localWishlist.length > 0 && (
+                <div className="bg-white rounded-[28px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.01)] border border-slate-100/50 space-y-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Heart size={18} className="text-rose-500 fill-rose-500" />
+                      <h3 className="text-[14px] font-black text-slate-800 tracking-tight">
+                        Items in Your Wishlist ({localWishlist.length})
+                      </h3>
+                    </div>
+                    <Link to="/wishlist" className={`text-[11px] font-black uppercase tracking-wider ${primaryText}`}>
+                      View All
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {localWishlist.slice(0, 6).map((item) => (
+                      <div key={item.id} className="border border-slate-100 rounded-2xl p-3 flex flex-col justify-between items-center bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                        <div className="w-16 h-16 rounded-xl bg-white p-1 flex items-center justify-center mb-2 border border-slate-100">
+                          <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
+                        </div>
+                        <h4 className="text-[12px] font-bold text-slate-800 text-center truncate w-full">{item.name}</h4>
+                        <p className="text-[12px] font-black text-slate-900 mt-0.5">{formatPrice(item.price)}</p>
+                        <button
+                          onClick={() => handleAddWishlistItemToCart(item)}
+                          className={`mt-2.5 w-full py-1.5 ${primaryBg} text-white font-black text-[10.5px] uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-transform flex items-center justify-center gap-1`}
+                        >
+                          <ShoppingCart size={12} />
+                          Add to Cart
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right Column (Summary & Desktop Action) */}
@@ -440,6 +541,57 @@ const Cart = () => {
                 Save & Continue
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Remove / Move to Wishlist Confirmation Modal */}
+      {itemToRemove && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-[32px] w-full max-w-[380px] p-6 shadow-2xl border border-slate-100/50 relative transform animate-in zoom-in-95 duration-200 text-center">
+            <button 
+              onClick={() => setItemToRemove(null)}
+              className="absolute right-5 top-5 text-slate-400 hover:text-slate-700 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Product Image preview */}
+            <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 mx-auto p-2 flex items-center justify-center mb-4">
+              <img src={itemToRemove.image} alt={itemToRemove.name} className="w-full h-full object-contain mix-blend-multiply" />
+            </div>
+
+            <h3 className="text-[18px] font-black text-slate-800 tracking-tight leading-snug">
+              Remove Item from Cart?
+            </h3>
+            <p className="text-[12.5px] text-slate-500 font-medium mt-1 mb-6 px-2">
+              "{itemToRemove.name}" can be saved to your Wishlist for later or deleted.
+            </p>
+
+            <div className="space-y-2.5">
+              <button 
+                onClick={() => handleConfirmRemove(true)}
+                className={`w-full py-3.5 ${primaryBg} text-white font-black rounded-2xl text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-transform flex items-center justify-center gap-2 cursor-pointer`}
+              >
+                <Heart size={16} className="fill-white text-white" />
+                Move to Wishlist
+              </button>
+
+              <button 
+                onClick={() => handleConfirmRemove(false)}
+                className="w-full py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-black rounded-2xl text-[12px] uppercase tracking-wider border border-rose-100 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Trash2 size={16} />
+                Remove from Cart
+              </button>
+
+              <button 
+                onClick={() => setItemToRemove(null)}
+                className="w-full py-2 text-slate-400 hover:text-slate-600 font-bold text-[12px] active:scale-[0.98] transition-transform cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

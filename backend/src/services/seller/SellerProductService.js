@@ -69,8 +69,17 @@ class SellerProductService extends BaseService {
       }
     }
 
+    const baseSku = data.sku ? String(data.sku).trim() : `SKU-${Date.now()}`;
+    let finalSku = baseSku;
+    let counter = 1;
+    while (await this.productRepository.findOne({ sellerId, sku: finalSku, deletedAt: null })) {
+      finalSku = `${baseSku}-${counter}`;
+      counter++;
+    }
+
     const product = await this.productRepository.create({
       ...data,
+      sku: finalSku,
       sellerId,
       status: initialStatus,
       masterStatus: initialStatus,
@@ -88,6 +97,17 @@ class SellerProductService extends BaseService {
     if (data.categoryId) {
       const category = await this.categoryRepository.findById(data.categoryId);
       if (!category || category.deletedAt) throw AppError.notFound('Category not found');
+    }
+
+    if (data.sku) {
+      const baseSku = String(data.sku).trim();
+      let finalSku = baseSku;
+      let counter = 1;
+      while (await this.productRepository.findOne({ sellerId, sku: finalSku, _id: { $ne: productId }, deletedAt: null })) {
+        finalSku = `${baseSku}-${counter}`;
+        counter++;
+      }
+      data.sku = finalSku;
     }
 
     return this.productRepository.updateById(productId, data);

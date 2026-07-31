@@ -79,7 +79,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/],
         // SPA routes (/admin, /seller, /home, etc.) — not only /
         navigateFallbackAllowlist: [/^(?!\/api(?:\/|$)).*/],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com/,

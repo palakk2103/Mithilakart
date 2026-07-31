@@ -102,7 +102,7 @@ const AddProduct = () => {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   const selectedCategoryId = watch('categoryId');
-  const selectedRootCategory = categoriesTree.find((c) => String(c.id) === String(selectedCategoryId));
+  const selectedRootCategory = categoriesTree.find((c) => String(c.id || c._id) === String(selectedCategoryId));
 
   // Fetch category tree based on the selected commerce flow.
   useEffect(() => {
@@ -110,9 +110,12 @@ const AddProduct = () => {
     const run = async () => {
       try {
         setCategoriesLoading(true);
-        const data = await customerApi.get('/categories', {
+        let data = await customerApi.get('/categories', {
           params: { commerceFlow },
         });
+        if (!Array.isArray(data) || data.length === 0) {
+          data = await customerApi.get('/categories');
+        }
         if (!cancelled) setCategoriesTree(Array.isArray(data) ? data : []);
       } catch {
         if (!cancelled) setCategoriesTree([]);
@@ -166,19 +169,19 @@ const AddProduct = () => {
     if (!targetId) return;
 
     // Case 1: target is root.
-    const rootMatch = categoriesTree.find((c) => String(c.id) === targetId);
+    const rootMatch = categoriesTree.find((c) => String(c.id || c._id) === targetId);
     if (rootMatch) {
-      setValue('categoryId', String(rootMatch.id));
+      setValue('categoryId', String(rootMatch.id || rootMatch._id));
       setValue('subcategoryId', '');
       return;
     }
 
     // Case 2: target is a child.
     for (const root of categoriesTree) {
-      const child = (root.children || []).find((ch) => String(ch.id) === targetId);
+      const child = (root.children || []).find((ch) => String(ch.id || ch._id) === targetId);
       if (child) {
-        setValue('categoryId', String(root.id));
-        setValue('subcategoryId', String(child.id));
+        setValue('categoryId', String(root.id || root._id));
+        setValue('subcategoryId', String(child.id || child._id));
         return;
       }
     }
@@ -223,7 +226,7 @@ const AddProduct = () => {
     const imagePayload = images
       .map((img, index) => {
         const url = img.url || img.preview;
-        if (!url || url.startsWith('blob:')) return null;
+        if (!url) return null;
         return { url, alt: img.name || data.title || '', sortOrder: index };
       })
       .filter(Boolean);
@@ -231,7 +234,7 @@ const AddProduct = () => {
     return {
       title: data.title,
       description: data.description || '',
-      sku: data.sku,
+      sku: data.sku?.trim() || `SKU-${Date.now().toString(36).toUpperCase()}`,
       categoryId: categoryIdEffective,
       brand: data.brand || '',
       price,
@@ -411,7 +414,7 @@ const AddProduct = () => {
                     >
                       <option value="">{categoriesLoading ? 'Loading...' : 'Select category'}</option>
                       {(categoriesTree || []).map((c) => (
-                        <option key={c.id} value={String(c.id)}>
+                        <option key={c.id || c._id} value={String(c.id || c._id)}>
                           {c.name}
                         </option>
                       ))}
@@ -427,7 +430,7 @@ const AddProduct = () => {
                     >
                       <option value="">Use category</option>
                       {(selectedRootCategory?.children || []).map((s) => (
-                        <option key={s.id} value={String(s.id)}>
+                        <option key={s.id || s._id} value={String(s.id || s._id)}>
                           {s.name}
                         </option>
                       ))}
@@ -599,8 +602,8 @@ const AddProduct = () => {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-3 justify-end sticky bottom-4 bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-gray-100">
-              <Button variant="secondary" onClick={onSaveDraft} icon={FileText}>Save as Draft</Button>
-              <Button variant="primary" type="submit" icon={Save}>{isEdit ? 'Update Product' : 'Publish Product'}</Button>
+              <Button type="button" variant="secondary" onClick={onSaveDraft} icon={FileText}>Save as Draft</Button>
+              <Button type="submit" variant="primary" icon={Save}>{isEdit ? 'Update Product' : 'Publish Product'}</Button>
             </div>
           </form>
         </div>

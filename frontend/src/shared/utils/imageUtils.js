@@ -32,7 +32,7 @@ export const handleImageError = (e) => {
  * Automatically resolves relative `/uploads/...` paths to backend URL.
  */
 export const getImageUrl = (src) => {
-  if (!src || typeof src !== 'string' || src.trim() === '' || src === 'undefined' || src === 'null') {
+  if (!src || typeof src !== 'string' || src.trim() === '' || src === 'undefined' || src === 'null' || src.includes('via.placeholder.com')) {
     return DEFAULT_PRODUCT_IMAGE;
   }
   const clean = src.trim();

@@ -457,11 +457,11 @@ const Categories = () => {
                       onClick={onClickHandler}
                       className="flex flex-col items-center cursor-pointer group active:scale-95 transition-transform w-[160px] mx-auto"
                     >
-                      <div className="w-full aspect-[1/1.12] bg-white border border-[#EADCC9]/70 rounded-t-full rounded-b-[24px] overflow-hidden flex flex-col items-center justify-between p-3 shadow-[0_4px_10px_rgba(61,35,20,0.02)] group-hover:shadow-[0_8px_20px_rgba(61,35,20,0.08)] group-hover:border-[#6FAE4A]/40 transition-all duration-300">
-                        <span className="text-[12px] md:text-sm font-black text-[#3F2A20] text-center mt-2.5 px-0.5 leading-tight tracking-tight h-[22px] flex items-center justify-center">
+                      <div className="w-full aspect-[1/1.18] bg-white border border-[#EADCC9]/70 rounded-t-[64px] rounded-b-[24px] overflow-hidden flex flex-col items-center justify-between p-3 pt-2 shadow-[0_4px_10px_rgba(61,35,20,0.02)] group-hover:shadow-[0_8px_20px_rgba(61,35,20,0.08)] group-hover:border-[#6FAE4A]/40 transition-all duration-300">
+                        <span className="text-[12px] md:text-[13px] font-black text-[#3F2A20] text-center mt-6 px-1.5 leading-tight tracking-tight min-h-[26px] flex items-center justify-center line-clamp-2">
                           {item.name}
                         </span>
-                        <div className="w-[82%] aspect-square rounded-[16px] overflow-hidden bg-[#FFFDFB] border border-slate-100 flex items-center justify-center p-1 mb-1.5 relative">
+                        <div className="w-[82%] aspect-square rounded-[16px] overflow-hidden bg-[#FFFDFB] border border-slate-100 flex items-center justify-center p-1 mb-0.5 relative">
                           <img
                             src={item.img}
                             alt={item.name}

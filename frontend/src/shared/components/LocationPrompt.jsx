@@ -30,7 +30,7 @@ const LocationPrompt = () => {
           >
             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-[#EAF5EE] text-[#3E5A44] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-[#EAF5EE] text-[#65B842] flex items-center justify-center">
                   <MapPin size={18} />
                 </div>
                 <div>
@@ -55,7 +55,7 @@ const LocationPrompt = () => {
               </p>
 
               {label && label !== 'Set delivery location' && (
-                <div className="rounded-2xl bg-[#F6F8F3] border border-[#EAF5EE] px-4 py-3 text-[12px] font-bold text-[#3E5A44]">
+                <div className="rounded-2xl bg-[#F6F8F3] border border-[#EAF5EE] px-4 py-3 text-[12px] font-bold text-[#65B842]">
                   Current: {label}
                 </div>
               )}
@@ -72,7 +72,7 @@ const LocationPrompt = () => {
                 onClick={() => {
                   refreshLiveLocation({ forcePrompt: false }).catch(() => {});
                 }}
-                className="w-full py-3.5 rounded-2xl bg-[#3E5A44] hover:bg-[#06331b] text-white font-black text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full py-3.5 rounded-2xl bg-[#65B842] hover:bg-[#529C33] text-white font-black text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <Navigation size={16} />
                 {loading ? 'Detecting location…' : 'Allow live location'}

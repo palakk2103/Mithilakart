@@ -36,7 +36,7 @@ const productRejectSchema = Joi.object({
 
 const listProductsQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).optional(),
-  limit: Joi.number().integer().min(1).max(100).optional(),
+  limit: Joi.number().integer().min(1).max(500).optional(),
   sort: Joi.string().optional(),
   search: Joi.string().allow('').optional(),
   q: Joi.string().allow('').optional(),

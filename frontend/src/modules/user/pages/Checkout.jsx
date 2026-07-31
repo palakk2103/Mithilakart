@@ -14,6 +14,7 @@ import { fetchCartItems, getMarketplaceTab, clearCart, dispatchCartUpdated } fro
 import { openRazorpayCheckout } from '../../../shared/services/razorpay';
 import { toast } from 'react-hot-toast';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import useTabTheme from '../../../shared/hooks/useTabTheme';
 
 const PAYMENT_METHOD_MAP = {
   UPI: 'upi',
@@ -36,13 +37,14 @@ const Checkout = () => {
   const [couponApplied, setCouponApplied] = useState(false);
   const addOrder = useAccountStore((state) => state.addOrder);
 
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
-  const primaryBg = isMithilakFlow ? 'bg-[#207C8A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-[#d6186d]' : 'bg-[#3E5A44]');
-  const primaryBgHover = isMithilakFlow ? 'bg-[#207C8A] hover:bg-[#1a6672]' : isFreshGroceryFlow ? 'bg-[#D9A21B] hover:bg-[#c49218]' : (isQuickShopFlow ? 'bg-[#d6186d] hover:bg-[#b5125b]' : 'bg-[#3E5A44] hover:bg-[#06331b]');
-  const primaryText = isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : (isQuickShopFlow ? 'text-[#d6186d]' : 'text-[#3E5A44]');
-  const primaryBorder = isMithilakFlow ? 'border-[#207C8A]' : isFreshGroceryFlow ? 'border-[#D9A21B]' : (isQuickShopFlow ? 'border-[#d6186d]' : 'border-[#3E5A44]');
+  const theme = useTabTheme();
+  const isMithilakFlow = theme.activeFlow === 'mithilak';
+  const isQuickShopFlow = theme.activeFlow === 'quickshop';
+  const isFreshGroceryFlow = theme.activeFlow === 'freshgrocery';
+  const primaryBg = theme.primaryBg;
+  const primaryBgHover = `${theme.primaryBg} ${theme.primaryBgHover}`;
+  const primaryText = theme.primaryText;
+  const primaryBorder = theme.primaryBorder;
   const shopNowLink = isMithilakFlow ? '/mithilak' : isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home');
 
   const [checkoutItems, setCheckoutItems] = useState([]);
@@ -744,7 +746,13 @@ const Checkout = () => {
 
       {/* Header */}
       <div className={`sticky top-0 z-50 px-4 py-3 flex items-center justify-between transition-colors duration-300 relative z-10 ${
-        isFreshGroceryFlow ? 'bg-[#D9A21B] text-white' : 'bg-[#f0f3f6]'
+        isFreshGroceryFlow 
+          ? 'bg-[#D9A21B] text-white' 
+          : isMithilakFlow 
+            ? 'bg-[#207C8A] text-white' 
+            : isQuickShopFlow 
+              ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00] text-white' 
+              : 'bg-[#f0f3f6]'
       }`}>
         <div className="flex items-center gap-4">
           <button 
@@ -753,7 +761,7 @@ const Checkout = () => {
           >
             <ArrowLeft size={18} strokeWidth={2.5} className="text-slate-800" />
           </button>
-          <h1 className="text-[17px] font-black text-slate-800 tracking-tight">Order Summary</h1>
+          <h1 className={`text-[17px] font-black tracking-tight ${isFreshGroceryFlow || isMithilakFlow || isQuickShopFlow ? 'text-white' : 'text-slate-800'}`}>Order Summary</h1>
         </div>
       </div>
 
