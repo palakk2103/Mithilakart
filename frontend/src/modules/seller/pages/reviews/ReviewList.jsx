@@ -121,6 +121,37 @@ const ReviewList = () => {
                     <span className="text-xs text-gray-400">{getRelativeTime(new Date(review.createdAt))}</span>
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed">{review.text}</p>
+                  
+                  {/* Render review images/videos for seller */}
+                  {(review.images?.length > 0 || review.videos?.length > 0) && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {review.images?.map((url, idx) => (
+                        <a 
+                          key={`seller-img-${idx}`} 
+                          href={url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden border border-gray-200 hover:opacity-85 active:scale-95 transition-all block flex-shrink-0"
+                        >
+                          <img src={url} className="w-full h-full object-cover" alt="review" />
+                        </a>
+                      ))}
+                      {review.videos?.map((url, idx) => (
+                        <a 
+                          key={`seller-vid-${idx}`} 
+                          href={url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="relative w-12 h-12 bg-black rounded-lg overflow-hidden border border-gray-250 hover:opacity-85 active:scale-95 transition-all block flex-shrink-0 flex items-center justify-center"
+                        >
+                          <video src={url} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+                            <span className="text-[10px] text-white font-bold">▶</span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 mt-3">
                     <span className="text-xs font-semibold text-gray-900">{review.customer || review.customerName}</span>
                     <span className="text-xs text-gray-300">•</span>

@@ -10,7 +10,6 @@ import BrandsSpotlight from '../components/vendor/home/BrandsSpotlight';
 import BestQuality from '../components/vendor/home/BestQuality';
 import KeepShopping from '../components/vendor/home/KeepShopping';
 import RatingSection from '../components/vendor/home/RatingSection';
-import CategoryTabs from '../components/vendor/home/CategoryTabs';
 import SubCategoryGrid from '../components/vendor/home/SubCategoryGrid';
 import TrendingThisWeek from '../components/vendor/home/TrendingThisWeek';
 
@@ -338,20 +337,7 @@ const Home = () => {
             </LazySection>
           </div>
 
-          <div className="mb-5 md:mb-8">
-            <LazySection height="150px">
-              <CategoryTabs
-                tabs={data.tabs}
-                activeTab={activeTab}
-                onTabClick={handleTabClick}
-              />
-            </LazySection>
-          </div>
 
-          {/* Dynamic Products Section based on Bottom Tabs */}
-          <div className="mb-2">
-            <CategoryProductsSection selectedCategory={activeTab} />
-          </div>
         </>
       )}
 

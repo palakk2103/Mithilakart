@@ -35,7 +35,7 @@ const Checkout = () => {
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
-  const addOrder = useAccountStore((state) => state.addOrder);
+  const { addOrder, savedAddresses, selectedAddressId } = useAccountStore();
 
   const theme = useTabTheme();
   const isMithilakFlow = theme.activeFlow === 'mithilak';
@@ -94,11 +94,29 @@ const Checkout = () => {
     let cancelled = false;
 
     const loadAddresses = async () => {
+      // Find from Zustand store first
+      const storePreferred = savedAddresses.find((item) => String(item.id || item._id) === String(selectedAddressId)) ||
+                             savedAddresses.find((item) => item.isDefault) ||
+                             savedAddresses[0];
+
+      if (storePreferred) {
+        if (!cancelled) setDefaultAddress(storePreferred);
+        return;
+      }
+
       try {
         const addresses = await getAddresses();
-        const list = Array.isArray(addresses) ? addresses : addresses?.items || [];
-        const preferred = list.find((item) => item.isDefault) || list[0];
-        if (!cancelled) setDefaultAddress(preferred || null);
+        const list = Array.isArray(addresses)
+          ? addresses
+          : Array.isArray(addresses?.items)
+            ? addresses.items
+            : Array.isArray(addresses?.data)
+              ? addresses.data
+              : [];
+        const apiPreferred = list.find((item) => String(item.id || item._id) === String(selectedAddressId)) ||
+                             list.find((item) => item.isDefault) ||
+                             list[0];
+        if (!cancelled) setDefaultAddress(apiPreferred || null);
       } catch {
         if (!cancelled) setDefaultAddress(null);
       }
@@ -108,7 +126,7 @@ const Checkout = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [savedAddresses, selectedAddressId]);
 
   useEffect(() => {
     if (!isEcommerceFlow || !defaultAddress?.pincode) {
@@ -214,14 +232,15 @@ const Checkout = () => {
       setOrderStatus('processing');
 
       try {
-        if (!defaultAddress?.id) {
+        const addressId = defaultAddress?.id || defaultAddress?._id;
+        if (!addressId) {
           throw new Error('Please add a delivery address before checkout');
         }
 
         const paymentMethod = PAYMENT_METHOD_MAP[selectedPayment] || 'upi';
 
         const result = await createOrder({
-          addressId: defaultAddress.id,
+          addressId,
           paymentMethod,
           commerceFlow: isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'fresh_grocery' : 'standard',
           marketplaceTab: getMarketplaceTab(),

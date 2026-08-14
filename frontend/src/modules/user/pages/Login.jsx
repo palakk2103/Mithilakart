@@ -7,23 +7,26 @@ import { sendPhoneOtp, verifyPhoneOtp, sendEmailOtp, verifyEmailOtp } from '../s
 import { applyOtpSendResult } from '../../../shared/utils/otpResponse';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
+import useTabTheme from '../../../shared/hooks/useTabTheme';
+import useVendorStore from '../../../store/useVendorStore';
+import SocialIcons from '../../../shared/components/SocialIcons';
 
-const FlowerIcon = ({ className = "w-5 h-5" }) => (
+const FlowerIcon = ({ className = "w-5 h-5", color = "#F26522" }) => (
   <svg viewBox="0 0 24 24" className={`${className} inline-block`} fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* Leaves/Green details */}
     <path d="M6 6L18 18M18 6L6 18" stroke="#556b2f" strokeWidth="1.5" strokeLinecap="round" />
     {/* 8 petals */}
-    <circle cx="12" cy="7" r="2" fill="#F26522" />
-    <circle cx="12" cy="17" r="2" fill="#F26522" />
-    <circle cx="7" cy="12" r="2" fill="#F26522" />
-    <circle cx="17" cy="12" r="2" fill="#F26522" />
-    <circle cx="8.5" cy="8.5" r="2" fill="#F26522" />
-    <circle cx="15.5" cy="15.5" r="2" fill="#F26522" />
-    <circle cx="15.5" cy="8.5" r="2" fill="#F26522" />
-    <circle cx="8.5" cy="15.5" r="2" fill="#F26522" />
+    <circle cx="12" cy="7" r="2" fill={color} />
+    <circle cx="12" cy="17" r="2" fill={color} />
+    <circle cx="7" cy="12" r="2" fill={color} />
+    <circle cx="17" cy="12" r="2" fill={color} />
+    <circle cx="8.5" cy="8.5" r="2" fill={color} />
+    <circle cx="15.5" cy="15.5" r="2" fill={color} />
+    <circle cx="15.5" cy="8.5" r="2" fill={color} />
+    <circle cx="8.5" cy="15.5" r="2" fill={color} />
     {/* Center */}
     <circle cx="12" cy="12" r="3.5" fill="#FFF5EE" stroke="#556b2f" strokeWidth="1" />
-    <circle cx="12" cy="12" r="1.5" fill="#F26522" />
+    <circle cx="12" cy="12" r="1.5" fill={color} />
   </svg>
 );
 
@@ -32,6 +35,8 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useRouterLocation();
   const { refreshLiveLocation } = useLiveLocation();
+  const theme = useTabTheme();
+  const setActiveFlow = useVendorStore((state) => state.setActiveFlow);
   
   const [useEmail, setUseEmail] = useState(false);
   const [countryCode, setCountryCode] = useState('+91');
@@ -45,12 +50,29 @@ const Login = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const getDefaultRedirect = (flow) => {
+    if (flow === 'quickshop') return '/quick-shop';
+    if (flow === 'mithilak') return '/mithilak';
+    if (flow === 'freshgrocery') return '/fresh-grocery';
+    return '/home';
+  };
+
+  useEffect(() => {
+    if (location.state?.flow) {
+      setActiveFlow(location.state.flow);
+    }
+  }, [location.state?.flow, setActiveFlow]);
+
   useEffect(() => {
     if (isAuthenticated('customer')) {
-      const redirectTo = location.state?.from || '/home';
-      navigate(redirectTo, { replace: true });
+      const defaultRedirect = getDefaultRedirect(theme.activeFlow);
+      const redirectTo = location.state?.from || defaultRedirect;
+      const redirectState = {};
+      if (location.state?.product) redirectState.product = location.state.product;
+      if (location.state?.checkoutProduct) redirectState.checkoutProduct = location.state.checkoutProduct;
+      navigate(redirectTo, { replace: true, state: redirectState });
     }
-  }, [location.state?.from, navigate]);
+  }, [location.state?.from, navigate, location.state?.checkoutProduct, location.state?.product, theme.activeFlow]);
 
   // 60-second countdown timer for resending OTP
   useEffect(() => {
@@ -148,8 +170,11 @@ const Login = () => {
         setSuccess('Authentication successful! Logging in...');
         refreshLiveLocation({ silent: true }).catch(() => {});
         setTimeout(() => {
-          const redirectTo = location.state?.from || '/home';
-          const redirectState = location.state?.checkoutProduct ? { product: location.state.checkoutProduct } : undefined;
+          const defaultRedirect = getDefaultRedirect(theme.activeFlow);
+          const redirectTo = location.state?.from || defaultRedirect;
+          const redirectState = {};
+          if (location.state?.product) redirectState.product = location.state.product;
+          if (location.state?.checkoutProduct) redirectState.checkoutProduct = location.state.checkoutProduct;
           navigate(redirectTo, { state: redirectState });
         }, 800);
       }
@@ -178,8 +203,30 @@ const Login = () => {
   // Inline SVG pattern for background
   const backgroundPattern = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><path d="M10 20c2-3 5-5 8-5s6 2 8 5-2 8-5 8-6-2-8-5zm30 20c2-3 5-5 8-5s6 2 8 5-2 8-5 8-6-2-8-5zM25 45c1-2 3-3 5-3s4 1 5 3-1 4-3 4-4-1-5-3zM45 15c1-2 3-3 5-3s4 1 5 3-1 4-3 4-4-1-5-3z" fill="%23ffffff" fill-opacity="0.12" fill-rule="evenodd"/></svg>`;
 
+  const primaryBg = theme.primaryBg;
+  const primaryBgHover = theme.primaryBgHover;
+  const primaryText = theme.primaryText;
+  const primaryBorder = theme.primaryBorder;
+  const primaryLightBg = theme.primaryLightBg;
+
+  const outerBgMap = {
+    quickshop: 'bg-[#f7f4eb]',
+    mithilak: 'bg-[#eef5f6]',
+    freshgrocery: 'bg-[#faf6eb]',
+    mithilakart: 'bg-[#f2f7f1]'
+  };
+  const cardBgMap = {
+    quickshop: 'bg-[#FFF9F3]/95',
+    mithilak: 'bg-[#fafdff]/95',
+    freshgrocery: 'bg-[#FFFdfa]/95',
+    mithilakart: 'bg-[#fbfdfa]/95'
+  };
+  
+  const outerBg = outerBgMap[theme.activeFlow] || 'bg-[#f2f7f1]';
+  const cardBg = cardBgMap[theme.activeFlow] || 'bg-[#fbfdfa]/95';
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between p-2.5 py-3 md:p-6 bg-[#f7f4eb] relative overflow-hidden">
+    <div className={`min-h-screen flex flex-col items-center justify-between p-2.5 py-3 md:p-6 relative overflow-hidden ${outerBg}`}>
       {/* Background Image with lower opacity */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-25 pointer-events-none"
@@ -190,7 +237,8 @@ const Login = () => {
       <div className="w-full max-w-[420px] flex items-center justify-between z-10">
         <button 
           onClick={() => navigate('/home')}
-          className="bg-[#F26522]/10 hover:bg-[#F26522]/20 text-[#F26522] p-2 rounded-full backdrop-blur-md active:scale-95 transition-all"
+          className="p-2 rounded-full backdrop-blur-md active:scale-95 transition-all"
+          style={{ backgroundColor: `${theme.primaryHex}1a`, color: theme.primaryHex }}
         >
           <X size={20} strokeWidth={2.5} />
         </button>
@@ -198,12 +246,12 @@ const Login = () => {
       </div>
 
       {/* Main card */}
-      <div className="w-full max-w-[420px] bg-[#FFF9F3]/95 rounded-[36px] p-2.5 shadow-2xl border border-[#F26522]/20 backdrop-blur-md z-10 my-2.5 md:my-6 relative overflow-hidden">
-        <div className="border border-dashed border-[#F26522]/40 rounded-[28px] px-5 py-5 md:px-6 md:py-8 relative">
+      <div className={`w-full max-w-[420px] rounded-[36px] p-2.5 shadow-2xl border backdrop-blur-md z-10 my-2.5 md:my-6 relative overflow-hidden ${cardBg}`} style={{ borderColor: `${theme.primaryHex}33` }}>
+        <div className="border border-dashed rounded-[28px] px-5 py-5 md:px-6 md:py-8 relative" style={{ borderColor: `${theme.primaryHex}66` }}>
           
           {/* Faint mandala background watermark */}
           <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden">
-            <svg className="w-80 h-80 text-[#F26522] fill-current" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-80 h-80 fill-current" style={{ color: theme.primaryHex }} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
               <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="1" fill="none" />
               <path d="M50 10 C55 25, 45 25, 50 10 Z" />
               <path d="M50 90 C55 75, 45 75, 50 90 Z" />
@@ -218,22 +266,22 @@ const Login = () => {
           </div>
 
           {/* Corner Flowers */}
-          <div className="absolute top-2.5 left-2.5"><FlowerIcon className="w-4 h-4" /></div>
-          <div className="absolute top-2.5 right-2.5"><FlowerIcon className="w-4 h-4" /></div>
-          <div className="absolute bottom-2.5 left-2.5"><FlowerIcon className="w-4 h-4" /></div>
-          <div className="absolute bottom-2.5 right-2.5"><FlowerIcon className="w-4 h-4" /></div>
+          <div className="absolute top-2.5 left-2.5"><FlowerIcon className="w-4 h-4" color={theme.primaryHex} /></div>
+          <div className="absolute top-2.5 right-2.5"><FlowerIcon className="w-4 h-4" color={theme.primaryHex} /></div>
+          <div className="absolute bottom-2.5 left-2.5"><FlowerIcon className="w-4 h-4" color={theme.primaryHex} /></div>
+          <div className="absolute bottom-2.5 right-2.5"><FlowerIcon className="w-4 h-4" color={theme.primaryHex} /></div>
 
           <div className="text-center mb-4 md:mb-8 z-10 relative">
             <h2 className="text-2xl md:text-3xl font-extrabold font-serif text-[#321c13] flex items-center justify-center gap-2">
-              <FlowerIcon className="w-5 h-5" />
+              <FlowerIcon className="w-5 h-5" color={theme.primaryHex} />
               <span>Welcome back</span>
-              <FlowerIcon className="w-5 h-5" />
+              <FlowerIcon className="w-5 h-5" color={theme.primaryHex} />
             </h2>
             {/* Divider */}
             <div className="flex items-center justify-center gap-2 my-2 md:my-2.5">
-              <div className="w-16 border-t border-dashed border-[#F26522]/40"></div>
-              <FlowerIcon className="w-3.5 h-3.5" />
-              <div className="w-16 border-t border-dashed border-[#F26522]/40"></div>
+              <div className="w-16 border-t border-dashed" style={{ borderColor: `${theme.primaryHex}66` }}></div>
+              <FlowerIcon className="w-3.5 h-3.5" color={theme.primaryHex} />
+              <div className="w-16 border-t border-dashed" style={{ borderColor: `${theme.primaryHex}66` }}></div>
             </div>
             <p className="text-[#705c53] text-[13px] font-semibold mt-1">
               Fresh Food & Handcrafted Items Delivered
@@ -241,7 +289,7 @@ const Login = () => {
           </div>
 
           {/* Authentication Toggle */}
-          <div className="flex gap-1.5 bg-[#FFF5EE] border border-[#F26522]/25 p-1 rounded-2xl mb-4 md:mb-6 z-10 relative">
+          <div className={`flex gap-1.5 border p-1 rounded-2xl mb-4 md:mb-6 z-10 relative ${theme.primaryLightBg}`} style={{ borderColor: `${theme.primaryHex}40` }}>
             <button
               type="button"
               disabled={isSendingOtp || isVerifyingOtp}
@@ -254,8 +302,8 @@ const Login = () => {
               }}
               className={`flex-1 py-3 px-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-bold rounded-xl transition-all capitalize tracking-normal whitespace-nowrap relative ${
                 !useEmail 
-                  ? 'bg-[#F26522] text-white shadow-md' 
-                  : 'text-[#F26522] hover:bg-[#F26522]/5'
+                  ? `${theme.primaryBg} text-white shadow-md` 
+                  : `${theme.primaryText} hover:bg-black/5`
               }`}
             >
               {!useEmail && (
@@ -276,8 +324,8 @@ const Login = () => {
               }}
               className={`flex-1 py-3 px-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-bold rounded-xl transition-all capitalize tracking-normal whitespace-nowrap relative ${
                 useEmail 
-                  ? 'bg-[#F26522] text-white shadow-md' 
-                  : 'text-[#F26522] hover:bg-[#F26522]/5'
+                  ? `${theme.primaryBg} text-white shadow-md` 
+                  : `${theme.primaryText} hover:bg-black/5`
               }`}
             >
               {useEmail && (
@@ -311,7 +359,8 @@ const Login = () => {
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="w-full pl-3 pr-6 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] focus:outline-none transition-all shadow-xs appearance-none text-center cursor-pointer"
+                      className="w-full pl-3 pr-6 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] focus:outline-none transition-all shadow-xs appearance-none text-center cursor-pointer"
+                      style={{ borderColor: `${theme.primaryHex}40` }}
                       disabled={otpSent || isSendingOtp || isVerifyingOtp}
                     >
                       <option value="+91">+91</option>
@@ -324,7 +373,7 @@ const Login = () => {
                     </div>
                   </div>
                   <div className="flex-1 relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F26522]/70">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${theme.primaryHex}b3` }}>
                       <Phone size={18} />
                     </span>
                     <input
@@ -332,7 +381,8 @@ const Login = () => {
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
                       placeholder="9876543210"
-                      className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
+                      className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
+                      style={{ borderColor: `${theme.primaryHex}40` }}
                       disabled={otpSent || isSendingOtp || isVerifyingOtp}
                       required
                       maxLength={10}
@@ -346,7 +396,7 @@ const Login = () => {
                   Email Address
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F26522]/70">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${theme.primaryHex}b3` }}>
                     <Mail size={18} />
                   </span>
                   <input
@@ -354,7 +404,8 @@ const Login = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="example@gmail.com"
-                    className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
+                    className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
+                    style={{ borderColor: `${theme.primaryHex}40` }}
                     disabled={otpSent || isSendingOtp || isVerifyingOtp}
                     required
                   />
@@ -370,7 +421,7 @@ const Login = () => {
                     6-Digit OTP
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#F26522]/70">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${theme.primaryHex}b3` }}>
                       <MessageSquare size={18} />
                     </span>
                     <input
@@ -379,7 +430,8 @@ const Login = () => {
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                       placeholder="••••••"
                       maxLength={6}
-                      className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border border-[#F26522]/25 focus:border-[#F26522] focus:ring-1 focus:ring-[#F26522] rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs tracking-widest text-center"
+                      className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs tracking-widest text-center"
+                      style={{ borderColor: `${theme.primaryHex}40` }}
                       disabled={isVerifyingOtp}
                       required
                     />
@@ -387,15 +439,14 @@ const Login = () => {
                 </div>
 
                 {/* Resend Timer */}
-                <div className="flex items-center justify-between text-[12px] font-bold px-1 text-[#F26522]/80">
+                <div className="flex items-center justify-between text-[12px] font-bold px-1" style={{ color: `${theme.primaryHex}cc` }}>
                   <span>OTP expires in: {timer}s</span>
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={timer > 0 || isSendingOtp || isVerifyingOtp}
-                    className={`text-[#F26522] hover:underline font-bold transition-all ${
-                      timer > 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
+                    className="hover:underline font-bold transition-all cursor-pointer"
+                    style={{ color: theme.primaryHex }}
                   >
                     Resend OTP
                   </button>
@@ -408,7 +459,7 @@ const Login = () => {
               type="submit"
               whileTap={{ scale: 0.97 }}
               disabled={isSendingOtp || isVerifyingOtp}
-              className="w-full py-4 bg-[#F26522] hover:bg-[#d45014] text-white rounded-[16px] text-[15px] font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden font-serif"
+              className={`w-full py-4 text-white rounded-[16px] text-[15px] font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden font-serif ${primaryBg} ${primaryBgHover}`}
             >
               <div className="absolute inset-1 border border-dashed border-white/50 rounded-xl pointer-events-none" />
               {isSendingOtp || isVerifyingOtp ? (
@@ -424,9 +475,17 @@ const Login = () => {
           {/* Link to Register */}
           <div className="text-center mt-6 text-[12px] font-bold text-[#705c53] z-10 relative">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-[#F26522] hover:underline">
+            <Link to="/signup" state={location.state} className="hover:underline" style={{ color: theme.primaryHex }}>
               Register here!
             </Link>
+          </div>
+
+          {/* Social Icons */}
+          <div className="mt-5 pt-4 border-t border-dashed z-10 relative flex flex-col items-center gap-2.5" style={{ borderColor: `${theme.primaryHex}33` }}>
+            <p className="text-center text-[10px] font-extrabold text-[#705c53] uppercase tracking-wider">
+              Connect With Us
+            </p>
+            <SocialIcons />
           </div>
         </div>
       </div>

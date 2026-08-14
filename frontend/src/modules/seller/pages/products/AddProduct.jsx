@@ -143,16 +143,29 @@ const AddProduct = () => {
         setDeliveryMode(inferDeliveryMode(product?.commerceFlows));
         setSelectedTabs(commerceFlowsToTabs(product?.commerceFlows));
         setSpecifications(product?.specifications?.length ? product.specifications : [{ key: '', value: '' }]);
+        const mediaItems = [];
         if (product?.images?.length) {
-          setImages(product.images.map((img, index) => ({
-            id: `existing_${index}`,
+          mediaItems.push(...product.images.map((img, index) => ({
+            id: `existing_img_${index}`,
+            type: 'image',
             preview: img.url,
             url: img.url,
             name: img.alt || `Image ${index + 1}`,
           })));
         } else if (product?.gallery?.length) {
-          setImages(product.gallery);
+          mediaItems.push(...product.gallery);
         }
+        if (product?.videos?.length) {
+          mediaItems.push(...product.videos.map((vid, index) => ({
+            id: `existing_vid_${index}`,
+            type: 'video',
+            isVideo: true,
+            preview: vid.url,
+            url: vid.url,
+            name: vid.alt || `Video ${index + 1}`,
+          })));
+        }
+        setImages(mediaItems);
       } catch (err) {
         setError(err?.message || 'Failed to load product');
       } finally {
@@ -224,10 +237,20 @@ const AddProduct = () => {
     }
 
     const imagePayload = images
+      .filter((img) => img.type !== 'video' && !img.isVideo && !img.url?.match(/\.(mp4|webm|ogg|mov)$/i))
       .map((img, index) => {
         const url = img.url || img.preview;
         if (!url) return null;
         return { url, alt: img.name || data.title || '', sortOrder: index };
+      })
+      .filter(Boolean);
+
+    const videoPayload = images
+      .filter((img) => img.type === 'video' || img.isVideo || img.url?.match(/\.(mp4|webm|ogg|mov)$/i))
+      .map((vid, index) => {
+        const url = vid.url || vid.preview;
+        if (!url) return null;
+        return { url, alt: vid.name || data.title || '', sortOrder: index };
       })
       .filter(Boolean);
 
@@ -242,6 +265,7 @@ const AddProduct = () => {
       stock: Number(data.stock),
       tags: tagsArr,
       images: imagePayload,
+      videos: videoPayload,
       attributes,
       commerceFlows,
       status,
@@ -279,7 +303,12 @@ const AddProduct = () => {
       }
       navigate('/seller/products');
     } catch (err) {
-      toast.error(err?.message || 'Failed to save product');
+      const detailMsg = Array.isArray(err?.details)
+        ? err.details.map((d) => `${d.field}: ${d.message}`).join(', ')
+        : Array.isArray(err?.data?.details)
+        ? err.data.details.map((d) => `${d.field}: ${d.message}`).join(', ')
+        : err?.message || 'Failed to save product';
+      toast.error(detailMsg);
     }
   };
 
@@ -295,7 +324,12 @@ const AddProduct = () => {
       toast.success('Saved as draft');
       navigate('/seller/products');
     } catch (err) {
-      toast.error(err?.message || 'Failed to save draft');
+      const detailMsg = Array.isArray(err?.details)
+        ? err.details.map((d) => `${d.field}: ${d.message}`).join(', ')
+        : Array.isArray(err?.data?.details)
+        ? err.data.details.map((d) => `${d.field}: ${d.message}`).join(', ')
+        : err?.message || 'Failed to save draft';
+      toast.error(detailMsg);
     }
   };
 
@@ -454,11 +488,18 @@ const AddProduct = () => {
                 {!selectedTabs.every((t) => QUICK_TAB_KEYS.has(t)) && (
                   <div>
                     <label className={labelClass}>Delivery Estimate</label>
-                    <input
+                    <select
                       {...register('deliveryEstimate')}
-                      placeholder="e.g. 3-5 business days"
                       className={inputClass}
-                    />
+                    >
+                      <option value="">Select delivery time</option>
+                      <option value="Same Day Delivery">Same Day Delivery</option>
+                      <option value="1-2 Days">1-2 Days</option>
+                      <option value="2-3 Days">2-3 Days</option>
+                      <option value="3-5 Business Days">3-5 Business Days</option>
+                      <option value="5-7 Business Days">5-7 Business Days</option>
+                      <option value="7-10 Business Days">7-10 Business Days</option>
+                    </select>
                   </div>
                 )}
 

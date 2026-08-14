@@ -54,6 +54,7 @@ const UPLOAD_CONTEXTS = {
   PRODUCT: 'products',
   CMS: 'cms',
   AVATAR: 'avatars',
+  REVIEW: 'reviews',
 };
 
 module.exports = {

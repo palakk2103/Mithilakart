@@ -7,6 +7,7 @@ import {
   Home as HomeIcon,
   LayoutGrid,
   ChevronRight,
+  X,
 } from 'lucide-react';
 
 import MainSidebar from '../components/common/MainSidebar';
@@ -57,6 +58,7 @@ const VendorLayout = () => {
   const [cartCount, setCartCount] = useState(0);
   const [cartItems, setCartItems] = useState([]);
   const [scrolled, setScrolled] = useState(false);
+  const [isFloatingCartDismissed, setIsFloatingCartDismissed] = useState(false);
   const { savedAddresses, selectedAddressId, isDarkMode } = useAccountStore();
   const { activeFlow, setActiveFlow, selectedCategory, setSelectedCategory, fetchStandardNav } = useVendorStore();
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
@@ -159,6 +161,12 @@ const VendorLayout = () => {
   });
 
   const cartTotalItems = currentTabCartItems.reduce((acc, item) => acc + (item.qty || 1), 0);
+  
+  // Reset dismissed state when total items in the cart change
+  useEffect(() => {
+    setIsFloatingCartDismissed(false);
+  }, [cartTotalItems]);
+
   const cartTotalPrice = currentTabCartItems.reduce((acc, item) => {
     return acc + parsePrice(item.price) * parsePrice(item.qty || 1);
   }, 0);
@@ -353,7 +361,7 @@ const VendorLayout = () => {
       )}
 
       {/* Floating Cart Pill (Shows on all pages when cart has items, except cart/checkout page) */}
-      {!isCartOrCheckoutPage && cartTotalItems > 0 && (
+      {!isCartOrCheckoutPage && cartTotalItems > 0 && !isFloatingCartDismissed && (
         <div 
           onClick={() => navigate('/vendor/cart')}
           className={`fixed bottom-[76px] left-4 right-4 md:bottom-8 md:right-8 md:left-auto md:w-[380px] md:px-6 md:py-4 md:rounded-2xl z-[1000] rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgba(0,0,0,0.15)] text-white cursor-pointer active:scale-[0.98] transition-all duration-300 animate-in slide-in-from-bottom-6 ${
@@ -381,13 +389,25 @@ const VendorLayout = () => {
               </p>
             </div>
           </div>
-          <div className={`flex items-center gap-1 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors duration-300 ${
-            localStorage.getItem('isQuickShopFlow') === 'true'
-              ? 'bg-white text-[#F26522]'
-              : 'bg-white/20 text-white'
-          }`}>
-            <span>{t('nav.viewCart')}</span>
-            <ChevronRight size={13} strokeWidth={3} />
+          <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-1 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors duration-300 ${
+              localStorage.getItem('isQuickShopFlow') === 'true'
+                ? 'bg-white text-[#F26522]'
+                : 'bg-white/20 text-white'
+            }`}>
+              <span>{t('nav.viewCart')}</span>
+              <ChevronRight size={13} strokeWidth={3} />
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsFloatingCartDismissed(true);
+              }}
+              className="p-1 rounded-full hover:bg-white/20 active:scale-90 transition-all text-white/80 hover:text-white"
+              aria-label="Dismiss cart notification"
+            >
+              <X size={18} strokeWidth={2.5} />
+            </button>
           </div>
         </div>
       )}

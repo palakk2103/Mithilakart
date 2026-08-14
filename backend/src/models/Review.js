@@ -11,6 +11,7 @@ const reviewSchema = new mongoose.Schema(
     title: { type: String, default: null, trim: true },
     body: { type: String, required: true, trim: true },
     images: { type: [String], default: [] },
+    videos: { type: [String], default: [] },
     isVerifiedPurchase: { type: Boolean, default: true },
     status: { type: String, enum: REVIEW_STATUS_VALUES, default: 'pending', index: true },
     sellerReply: { type: String, default: null },

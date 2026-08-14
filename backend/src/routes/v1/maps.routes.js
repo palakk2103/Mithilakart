@@ -14,7 +14,7 @@ const nearbyProductsQuerySchema = coordsQuerySchema.keys({
   page: Joi.number().integer().min(1).optional(),
   limit: Joi.number().integer().min(1).max(100).optional(),
   commerceFlow: Joi.string().valid('standard', 'quick_shop', 'fresh_grocery', 'mithilak').optional(),
-  categoryId: Joi.string().hex().length(24).optional(),
+  categoryId: Joi.string().optional(),
 });
 
 const geocodeBodySchema = Joi.object({

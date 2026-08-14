@@ -11,6 +11,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 
+import DispatchDelayTimer from '../../../shared/components/DispatchDelayTimer';
+import { getDispatchSlaInfo } from '../../../shared/utils/dispatchDelayUtils';
+
 const StatusBadge = ({ status }) => {
   const styles = {
     'Pending': 'bg-amber-50 text-amber-600 border-amber-100',
@@ -22,9 +25,10 @@ const StatusBadge = ({ status }) => {
     'Returned': 'bg-orange-50 text-orange-600 border-orange-100',
     'Refunded': 'bg-teal-50 text-teal-600 border-teal-100',
     'Cancelled': 'bg-red-50 text-red-600 border-red-100',
+    'Delayed Dispatch': 'bg-red-100 text-red-700 border-red-300 font-bold',
   };
   return (
-    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${styles[status]}`}>
+    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${styles[status] || styles['Pending']}`}>
       {status}
     </span>
   );
@@ -55,12 +59,16 @@ const Orders = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const tabs = ['All', 'Pending', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Returned', 'Refunded', 'Cancelled'];
+  const tabs = ['All', 'Pending', 'Confirmed', 'Packed', 'Delayed Dispatch', 'Shipped', 'Out for Delivery', 'Delivered', 'Returned', 'Refunded', 'Cancelled'];
 
   const filteredOrders = ordersList.filter(order => {
-    const matchesTab = activeTab === 'All' || order.status === activeTab;
-    const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         order.customer.toLowerCase().includes(searchQuery.toLowerCase());
+    let matchesTab = activeTab === 'All' || order.status === activeTab;
+    if (activeTab === 'Delayed Dispatch') {
+      const sla = getDispatchSlaInfo(order);
+      matchesTab = sla.isPending && (sla.dispatchState === 'delayed' || sla.dispatchState === 'escalated');
+    }
+    const matchesSearch = String(order.id || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         String(order.customer || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
@@ -171,7 +179,16 @@ const Orders = () => {
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{order.items} Items</p>
                     </td>
                     <td className="px-6 py-5">
-                      <StatusBadge status={order.status} />
+                      {(() => {
+                        const sla = getDispatchSlaInfo(order);
+                        const isDelayed = sla.isPending && (sla.dispatchState === 'delayed' || sla.dispatchState === 'escalated');
+                        return (
+                          <div className="flex flex-col items-start gap-1">
+                            <StatusBadge status={isDelayed ? 'Delayed Dispatch' : order.status} />
+                            <DispatchDelayTimer order={order} size="sm" />
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-5">
                       <span className={`text-[10px] font-black uppercase tracking-widest ${order.payment === 'Paid' ? 'text-green-500' : 'text-slate-400'}`}>

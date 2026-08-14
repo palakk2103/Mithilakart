@@ -210,8 +210,6 @@ class OrderService extends BaseService {
         }
       }
 
-      await this.cartService.clearCart({ userId, sessionId: null });
-
       const updatedOrder = await this.orderRepository.findById(order._id, { session });
 
       return {
@@ -222,6 +220,16 @@ class OrderService extends BaseService {
         payment: paymentResult || null,
       };
     });
+
+    try {
+      await this.cartService.clearCart({ userId, sessionId: null });
+    } catch (err) {
+      if (this.logger) {
+        this.logger.error({ err, userId }, 'Failed to clear cart after order placement');
+      }
+    }
+
+    return result;
   }
 
   async releaseOrderReservations(orderId, session = null) {

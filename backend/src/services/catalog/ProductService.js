@@ -276,6 +276,7 @@ class ProductService extends BaseService {
       stock: product.stock,
       categoryId: product.categoryId,
       images: product.images,
+      videos: product.videos,
       commerceFlows: product.commerceFlows,
       rating: product.rating,
       reviewCount: product.reviewCount,

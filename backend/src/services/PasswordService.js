@@ -13,7 +13,7 @@ class PasswordService {
 
   validateStrength(password) {
     if (!password || password.length < PASSWORD.MIN_LENGTH) {
-      throw AppError.validation('Password must be at least 8 characters long');
+      throw AppError.validation('Password must be at least 6 characters long');
     }
 
     if (!PASSWORD.PATTERN.test(password)) {

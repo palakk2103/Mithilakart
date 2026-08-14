@@ -12,13 +12,15 @@ class OrderRepository extends BaseRepository {
 
   async findById(id, options = {}) {
     if (!id) return null;
-    const isObjectId = typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id);
+    const isObjectId = (typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)) ||
+                       (id && typeof id === 'object' && id.toString && /^[0-9a-fA-F]{24}$/.test(id.toString()));
     const filter = isObjectId ? { _id: id } : { orderNumber: String(id) };
     return this.findOne(filter, options);
   }
 
   async findActiveById(orderId, userId = null) {
-    const isObjectId = typeof orderId === 'string' && /^[0-9a-fA-F]{24}$/.test(orderId);
+    const isObjectId = (typeof orderId === 'string' && /^[0-9a-fA-F]{24}$/.test(orderId)) ||
+                       (orderId && typeof orderId === 'object' && orderId.toString && /^[0-9a-fA-F]{24}$/.test(orderId.toString()));
     const filter = isObjectId ? { _id: orderId } : { orderNumber: String(orderId) };
     if (userId) filter.userId = userId;
     return this.findOne(filter);

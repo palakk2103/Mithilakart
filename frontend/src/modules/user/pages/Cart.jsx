@@ -70,6 +70,12 @@ const Cart = () => {
   };
 
   useEffect(() => {
+    if (!checkAuth('customer')) {
+      navigate('/login', { state: { from: '/cart', flow: theme.activeFlow } });
+    }
+  }, [navigate, theme.activeFlow]);
+
+  useEffect(() => {
     let cancelled = false;
     loadCart();
     loadWishlistItems();
@@ -425,7 +431,7 @@ const Cart = () => {
               {/* Desktop Checkout button */}
               {!isAuthenticated ? (
                 <button 
-                  onClick={() => navigate('/login', { state: { from: '/cart' } })}
+                  onClick={() => navigate('/login', { state: { from: '/cart', flow: theme.activeFlow } })}
                   className={`hidden md:flex w-full ${primaryBg} text-white font-black py-4 rounded-full active:scale-[0.98] transition-all items-center justify-center text-[14px] shadow-md cursor-pointer`}
                 >
                   Login to Proceed
@@ -439,7 +445,7 @@ const Cart = () => {
                 </button>
               ) : (
                 <button 
-                  onClick={() => navigate('/vendor/checkout', { state: { product: cartItems[0] } })}
+                  onClick={() => navigate('/vendor/checkout')}
                   className={`hidden md:flex w-full ${primaryBg} text-white font-black py-4 rounded-full active:scale-[0.98] transition-all items-center justify-center text-[14px] shadow-md cursor-pointer`}
                 >
                   Proceed to Checkout
@@ -459,7 +465,7 @@ const Cart = () => {
           </div>
           {!isAuthenticated ? (
             <button 
-              onClick={() => navigate('/login', { state: { from: '/cart' } })}
+              onClick={() => navigate('/login', { state: { from: '/cart', flow: theme.activeFlow } })}
               className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
             >
               Login to Proceed
@@ -473,7 +479,7 @@ const Cart = () => {
             </button>
           ) : (
             <button 
-              onClick={() => navigate('/vendor/checkout', { state: { product: cartItems[0] } })}
+              onClick={() => navigate('/vendor/checkout')}
               className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
             >
               Proceed to Checkout

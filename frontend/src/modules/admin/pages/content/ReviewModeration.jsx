@@ -102,6 +102,37 @@ const ReviewModeration = () => {
                     <span className="text-[10px] text-slate-400 ml-2">{review.user} · {review.date}</span>
                   </div>
                   <p className="text-sm text-slate-700 leading-relaxed">{review.comment}</p>
+                  
+                  {/* Render review images/videos for admin */}
+                  {(review.images?.length > 0 || review.videos?.length > 0) && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {review.images?.map((url, idx) => (
+                        <a 
+                          key={`admin-img-${idx}`} 
+                          href={url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 hover:opacity-80 active:scale-95 transition-all block flex-shrink-0"
+                        >
+                          <img src={url} className="w-full h-full object-cover" alt="review" />
+                        </a>
+                      ))}
+                      {review.videos?.map((url, idx) => (
+                        <a 
+                          key={`admin-vid-${idx}`} 
+                          href={url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="relative w-12 h-12 bg-black rounded-lg overflow-hidden border border-slate-200 hover:opacity-80 active:scale-95 transition-all block flex-shrink-0 flex items-center justify-center"
+                        >
+                          <video src={url} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <span className="text-[10px] text-white font-bold">▶</span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {review.rawStatus === 'pending' && (
                   <div className="flex gap-2 shrink-0">

@@ -79,12 +79,16 @@ export const getDashboardStats = getDashboard;
 // PRODUCTS
 export const getProducts = async (params) => {
   const data = await api.get('/products', { params });
-  return mapListResponse(data, 'products');
+  const mapped = mapListResponse(data, 'products');
+  return {
+    ...mapped,
+    products: (mapped.products || []).map(withId),
+  };
 };
 
-export const getProduct = async (id) => api.get(`/products/${id}`);
+export const getProduct = async (id) => withId(await api.get(`/products/${id}`));
 
-export const createProduct = async (data) => api.post('/products', data);
+export const createProduct = async (data) => withId(await api.post('/products', data));
 
 export const updateProduct = async (id, data) => api.put(`/products/${id}`, data);
 
@@ -159,10 +163,14 @@ export const rejectReturn = async (id) => api.patch(`/returns/${id}/reject`);
 // CUSTOMERS
 export const getCustomers = async (params) => {
   const data = await api.get('/customers', { params });
-  return mapListResponse(data, 'customers');
+  const mapped = mapListResponse(data, 'customers');
+  return {
+    ...mapped,
+    customers: (mapped.customers || []).map(withId),
+  };
 };
 
-export const getCustomer = async (id) => api.get(`/customers/${id}`);
+export const getCustomer = async (id) => withId(await api.get(`/customers/${id}`));
 
 // INVENTORY
 export const getInventory = async () => {
@@ -183,7 +191,11 @@ export const getStockHistory = async (id) => api.get(`/inventory/${id}/history`)
 // REVIEWS
 export const getReviews = async (params) => {
   const data = await api.get('/reviews', { params });
-  return mapListResponse(data, 'reviews');
+  const mapped = mapListResponse(data, 'reviews');
+  return {
+    ...mapped,
+    reviews: (mapped.reviews || []).map(withId),
+  };
 };
 
 export const replyToReview = async (id, reply) =>
@@ -195,10 +207,14 @@ export const reportReview = async (id, reason) =>
 // COUPONS
 export const getCoupons = async () => {
   const data = await api.get('/coupons');
-  return mapListResponse(data, 'coupons');
+  const mapped = mapListResponse(data, 'coupons');
+  return {
+    ...mapped,
+    coupons: (mapped.coupons || []).map(withId),
+  };
 };
 
-export const createCoupon = async (data) => api.post('/coupons', data);
+export const createCoupon = async (data) => withId(await api.post('/coupons', data));
 
 export const updateCoupon = async (id, data) => api.put(`/coupons/${id}`, data);
 

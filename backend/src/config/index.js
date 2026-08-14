@@ -77,12 +77,16 @@ function loadConfig() {
     upload: {
       destination: optional('UPLOAD_DESTINATION', process.env.UPLOAD_DESTINATION, 'uploads'),
       publicBaseUrl: optional('UPLOAD_PUBLIC_BASE_URL', process.env.UPLOAD_PUBLIC_BASE_URL, '/uploads'),
-      maxFileSizeMb: parseInteger('UPLOAD_MAX_FILE_SIZE_MB', process.env.UPLOAD_MAX_FILE_SIZE_MB, 10),
+      maxFileSizeMb: parseInteger('UPLOAD_MAX_FILE_SIZE_MB', process.env.UPLOAD_MAX_FILE_SIZE_MB, 50),
       allowedMimeTypes: parseCsv(process.env.UPLOAD_ALLOWED_MIME_TYPES, [
         'image/jpeg',
         'image/png',
         'image/webp',
         'application/pdf',
+        'video/mp4',
+        'video/webm',
+        'video/ogg',
+        'video/quicktime',
       ]),
     },
     storage: {

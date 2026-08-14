@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, ChevronRight, Search, ListFilter, Star, 
-  Edit3, ShoppingBag, X, Check, Calendar, Package, Filter, MessageSquare
+  Edit3, ShoppingBag, X, Check, Calendar, Package, Filter, MessageSquare,
+  Upload, Loader2, Image, Film
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import useAccountStore from '../../../../store/useAccountStore';
 import SearchInput from '../../../../shared/components/SearchInput';
 import { getOrders } from '../../services/ordersApi';
+import { createProductReview } from '../../services/catalogApi';
+import { uploadReviewMedia } from '../../../../shared/services/uploadService';
 import { extractList, mapOrderForList } from '../../utils/mappers';
+import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
 
 // Real Images from Assets
 // Real Images from Assets
@@ -149,6 +154,62 @@ const MyOrders = () => {
   const [ratings, setRatings] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleReviewSubmit = async () => {
+    const orderId = showReviewModal;
+    const currentOrder = orders.find(o => o.id === orderId);
+    if (!currentOrder || !currentOrder.items || !currentOrder.items[0]) {
+      toast.error('Order details not found');
+      return;
+    }
+    const mainItem = currentOrder.items[0];
+    const productId = mainItem.productId || mainItem.id;
+
+    const currentRating = ratings[orderId]?.rating || 0;
+    const currentReviewBody = ratings[orderId]?.review || '';
+
+    if (currentRating === 0) {
+      toast.error('Please select a rating');
+      return;
+    }
+    if (!currentReviewBody.trim()) {
+      toast.error('Please write a review message');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const uploadedImages = [];
+      const uploadedVideos = [];
+
+      for (const file of selectedFiles) {
+        const url = await uploadReviewMedia(file);
+        if (file.type.startsWith('video/')) {
+          uploadedVideos.push(url);
+        } else {
+          uploadedImages.push(url);
+        }
+      }
+
+      await createProductReview(productId, {
+        orderId: currentOrder.mongoId || currentOrder.id,
+        rating: currentRating,
+        body: currentReviewBody.trim(),
+        images: uploadedImages,
+        videos: uploadedVideos,
+      });
+
+      toast.success('Review submitted successfully!');
+      setShowReviewModal(null);
+      setSelectedFiles([]);
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit review');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -195,7 +256,9 @@ const MyOrders = () => {
 
   const OrderCard = ({ order }) => {
     const mainItem = order.items[0];
-    const statusColor = order.status === 'Delivered' ? 'text-green-600' : order.status === 'Cancelled' ? 'text-red-600' : 'text-primary-dark';
+    const sla = getDispatchSlaInfo(order);
+    const isDelayed = sla.isPending && (sla.dispatchState === 'delayed' || sla.dispatchState === 'escalated');
+    const statusColor = isDelayed ? 'text-amber-600 font-bold' : order.status === 'Delivered' ? 'text-green-600' : order.status === 'Cancelled' ? 'text-red-600' : 'text-primary-dark';
     const currentOrderRating = ratings[order.id] || { rating: 0, review: '' };
 
     return (
@@ -215,7 +278,7 @@ const MyOrders = () => {
             <div className="flex justify-between items-start">
               <div className="flex-1 pr-2">
                 <p className={`text-[13px] font-bold mb-0.5 ${statusColor}`}>
-                  {order.status} on {order.date}
+                  {isDelayed ? 'Shipment Delayed' : order.status} {order.date ? `· ${order.date}` : ''}
                 </p>
                 <h3 className="text-[12px] text-gray-500 line-clamp-1 leading-tight font-medium">
                   {mainItem.name}
@@ -377,7 +440,7 @@ const MyOrders = () => {
           <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
              <motion.div 
                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-               onClick={() => setShowReviewModal(null)}
+               onClick={() => !isSubmitting && setShowReviewModal(null)}
                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
              />
              <motion.div 
@@ -386,49 +449,114 @@ const MyOrders = () => {
                exit={{ scale: 0.9, opacity: 0 }}
                className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-2xl p-6"
              >
-                <div className="flex justify-between items-center mb-6">
-                   <h3 className="text-[18px] font-black text-slate-900 uppercase tracking-tight">Write a Review</h3>
-                   <button onClick={() => setShowReviewModal(null)} className="p-2 bg-gray-100 rounded-full">
-                      <X size={18} className="text-gray-500" />
-                   </button>
-                </div>
-                
-                <div className="flex flex-col items-center mb-8">
-                   <div className="flex gap-2 mb-3">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star 
-                          key={star} 
-                          size={32} 
-                          onClick={() => setRatings(prev => ({ ...prev, [showReviewModal]: { ...prev[showReviewModal], rating: star } }))}
-                          className={`cursor-pointer transition-all active:scale-125 ${star <= (ratings[showReviewModal]?.rating || 0) ? 'text-green-600 fill-green-600 shadow-sm' : 'text-gray-200'}`} 
-                        />
-                      ))}
-                   </div>
-                   <p className="text-[13px] font-bold text-gray-400 uppercase tracking-widest">
-                     {(ratings[showReviewModal]?.rating === 5 && 'Excellent!') || 
-                      (ratings[showReviewModal]?.rating === 4 && 'Very Good!') || 
-                      (ratings[showReviewModal]?.rating === 3 && 'Good') || 
-                      (ratings[showReviewModal]?.rating === 2 && 'Fair') || 
-                      (ratings[showReviewModal]?.rating === 1 && 'Bad') || 'Select Rating'}
-                   </p>
-                </div>
+                 <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-[18px] font-black text-slate-900 uppercase tracking-tight">Write a Review</h3>
+                    <button onClick={() => !isSubmitting && setShowReviewModal(null)} className="p-2 bg-gray-100 rounded-full" disabled={isSubmitting}>
+                       <X size={18} className="text-gray-500" />
+                    </button>
+                 </div>
+                 
+                 <div className="flex flex-col items-center mb-8">
+                    <div className="flex gap-2 mb-3">
+                       {[1, 2, 3, 4, 5].map((star) => (
+                         <Star 
+                           key={star} 
+                           size={32} 
+                           onClick={() => !isSubmitting && setRatings(prev => ({ ...prev, [showReviewModal]: { ...prev[showReviewModal], rating: star } }))}
+                           className={`cursor-pointer transition-all active:scale-125 ${star <= (ratings[showReviewModal]?.rating || 0) ? 'text-green-600 fill-green-600 shadow-sm' : 'text-gray-200'}`} 
+                         />
+                       ))}
+                    </div>
+                    <p className="text-[13px] font-bold text-gray-400 uppercase tracking-widest">
+                      {(ratings[showReviewModal]?.rating === 5 && 'Excellent!') || 
+                       (ratings[showReviewModal]?.rating === 4 && 'Very Good!') || 
+                       (ratings[showReviewModal]?.rating === 3 && 'Good') || 
+                       (ratings[showReviewModal]?.rating === 2 && 'Fair') || 
+                       (ratings[showReviewModal]?.rating === 1 && 'Bad') || 'Select Rating'}
+                    </p>
+                 </div>
 
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 mb-6">
-                   <textarea 
-                    placeholder="Share your experience with this product..."
-                    className="w-full bg-transparent border-none outline-none text-[14px] text-slate-800 placeholder:text-gray-400 min-h-[120px] resize-none"
-                    value={ratings[showReviewModal]?.review || ''}
-                    onChange={(e) => setRatings(prev => ({ ...prev, [showReviewModal]: { ...prev[showReviewModal], review: e.target.value } }))}
-                   />
-                </div>
+                 <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 mb-6">
+                    <textarea 
+                     placeholder="Share your experience with this product..."
+                     className="w-full bg-transparent border-none outline-none text-[14px] text-slate-800 placeholder:text-gray-400 min-h-[120px] resize-none"
+                     value={ratings[showReviewModal]?.review || ''}
+                     onChange={(e) => setRatings(prev => ({ ...prev, [showReviewModal]: { ...prev[showReviewModal], review: e.target.value } }))}
+                     disabled={isSubmitting}
+                    />
+                 </div>
 
-                <button 
-                  onClick={() => setShowReviewModal(null)}
-                  className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[13px] shadow-xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-                >
-                   <MessageSquare size={18} />
-                   Submit Review
-                </button>
+                 {/* Upload Media Section */}
+                 <div className="mb-6">
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-2">Upload Photo or Video</label>
+                    <div className="flex gap-2.5">
+                       <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-250 hover:border-slate-400 rounded-2xl p-4 bg-gray-50 cursor-pointer transition-all active:scale-[0.98]">
+                          <Upload size={20} className="text-gray-400 mb-1" />
+                          <span className="text-[10px] font-extrabold uppercase text-slate-700 tracking-tight">Choose Files</span>
+                          <input 
+                             type="file" 
+                             multiple 
+                             accept="image/*,video/*"
+                             className="hidden"
+                             disabled={isSubmitting}
+                             onChange={(e) => {
+                                const files = Array.from(e.target.files || []);
+                                setSelectedFiles(prev => [...prev, ...files]);
+                             }}
+                          />
+                       </label>
+                    </div>
+
+                    {/* Previews */}
+                    {selectedFiles.length > 0 && (
+                       <div className="flex gap-2 overflow-x-auto no-scrollbar mt-3 pb-1">
+                          {selectedFiles.map((file, idx) => {
+                             const isVideo = file.type.startsWith('video/');
+                             const previewUrl = URL.createObjectURL(file);
+                             return (
+                                <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0 flex items-center justify-center">
+                                   {isVideo ? (
+                                      <div className="relative w-full h-full bg-black flex items-center justify-center">
+                                         <video src={previewUrl} className="w-full h-full object-cover" muted />
+                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                            <Film size={14} className="text-white" />
+                                         </div>
+                                      </div>
+                                   ) : (
+                                      <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />
+                                   )}
+                                   <button 
+                                      type="button"
+                                      disabled={isSubmitting}
+                                      onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-sm hover:bg-red-650 active:scale-90 transition-all z-10"
+                                   >
+                                      <X size={10} />
+                                   </button>
+                                </div>
+                             );
+                          })}
+                       </div>
+                    )}
+                 </div>
+
+                 <button 
+                   onClick={handleReviewSubmit}
+                   disabled={isSubmitting}
+                   className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[13px] shadow-xl active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
+                 >
+                    {isSubmitting ? (
+                       <>
+                          <Loader2 size={18} className="animate-spin" />
+                          Submitting Review...
+                       </>
+                    ) : (
+                       <>
+                          <MessageSquare size={18} />
+                          Submit Review
+                       </>
+                    )}
+                 </button>
              </motion.div>
           </div>
         )}

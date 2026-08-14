@@ -17,11 +17,11 @@ const JWT = {
 
 const PASSWORD = {
   BCRYPT_ROUNDS: 12,
-  MIN_LENGTH: 8,
+  MIN_LENGTH: 6,
   MAX_FAILED_ATTEMPTS: 5,
   LOCKOUT_MINUTES: 15,
   HISTORY_COUNT: 5,
-  PATTERN: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/,
+  PATTERN: /^.{6,}$/,
 };
 
 const SESSION = {

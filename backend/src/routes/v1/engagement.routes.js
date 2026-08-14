@@ -13,6 +13,7 @@ function createEngagementRoutes({ reviewController, qnaController }, middleware)
     title: Joi.string().trim().optional().allow(null, ''),
     body: Joi.string().trim().required(),
     images: Joi.array().items(Joi.string()).optional(),
+    videos: Joi.array().items(Joi.string()).optional(),
   })), reviewController.create);
 
   router.get('/products/:id/reviews', validateParams(Joi.object({ id: objectIdSchema })), reviewController.listByProduct);

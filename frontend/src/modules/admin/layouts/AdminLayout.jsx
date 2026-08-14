@@ -48,6 +48,7 @@ const AdminLayout = () => {
   const navigate = useNavigate();
 
   const quickLinks = [
+    { name: 'Header Tabs Manager', path: '/admin/storefront/tabs' },
     { name: 'Banner Manager', path: '/admin/storefront/banners' },
     { name: 'Customer Database', path: '/admin/users' },
     { name: 'Inventory Stock', path: '/admin/inventory/all' },
@@ -77,6 +78,7 @@ const AdminLayout = () => {
     {
       title: 'STOREFRONT',
       items: [
+        { name: 'Header Tabs Manager', path: '/admin/storefront/tabs', icon: <LayoutGrid size={18} /> },
         { name: 'Banner Manager', path: '/admin/storefront/banners', icon: <Image size={18} /> },
         { name: 'Category Chips', path: '/admin/storefront/chips', icon: <LayoutGrid size={18} /> },
         { 

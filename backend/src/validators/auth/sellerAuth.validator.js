@@ -5,7 +5,7 @@ const phoneSchema = Joi.string().trim().pattern(/^\d{10}$/);
 
 const sellerLoginSchema = Joi.object({
   email: Joi.string().trim().email().required(),
-  password: Joi.string().min(8).required(),
+  password: Joi.string().min(6).required(),
   deviceId: Joi.string().trim().max(100).optional(),
 });
 
@@ -20,7 +20,7 @@ const sellerRegisterSchema = Joi.object({
   storeName: Joi.string().trim().min(2).max(120).required(),
   phone: phoneSchema.required(),
   countryCode: countryCodeSchema,
-  password: Joi.string().min(8).required(),
+  password: Joi.string().min(6).required(),
   otp: Joi.string().length(6).pattern(/^\d+$/).required(),
   deviceId: Joi.string().trim().max(100).optional(),
   addressLine: Joi.string().trim().min(5).max(300).optional(),

@@ -141,6 +141,7 @@ class SellerProductService extends BaseService {
       status: initialStatus,
       masterStatus: initialStatus,
       images: product.images,
+      videos: product.videos,
       tags: product.tags,
       commerceFlows: product.commerceFlows,
       brand: product.brand,

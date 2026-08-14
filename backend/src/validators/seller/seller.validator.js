@@ -10,16 +10,32 @@ const sellerProductCreateSchema = Joi.object({
   price: Joi.number().min(0).required(),
   mrp: Joi.number().min(0).required(),
   stock: Joi.number().integer().min(0).optional(),
-  categoryId: objectIdSchema.required(),
-  images: Joi.array().items(Joi.object({
-    url: Joi.string().uri().required(),
-    alt: Joi.string().allow('').optional(),
-    sortOrder: Joi.number().integer().min(0).optional(),
-  })).optional(),
+  categoryId: Joi.string().trim().required(),
+  images: Joi.array().items(
+    Joi.alternatives().try(
+      Joi.string(),
+      Joi.object({
+        url: Joi.string().required(),
+        alt: Joi.string().allow('').optional(),
+        sortOrder: Joi.number().integer().min(0).optional(),
+      })
+    )
+  ).optional(),
+  videos: Joi.array().items(
+    Joi.alternatives().try(
+      Joi.string(),
+      Joi.object({
+        url: Joi.string().required(),
+        alt: Joi.string().allow('').optional(),
+        sortOrder: Joi.number().integer().min(0).optional(),
+      })
+    )
+  ).optional(),
   tags: Joi.array().items(Joi.string()).optional(),
   commerceFlows: Joi.array().items(Joi.string().valid(...COMMERCE_FLOW_VALUES)).min(1).optional(),
   brand: Joi.string().allow('').optional(),
   attributes: Joi.object().optional(),
+  status: Joi.string().valid(...PRODUCT_STATUS_VALUES).optional(),
 });
 
 const sellerProductUpdateSchema = sellerProductCreateSchema.fork(
@@ -61,7 +77,7 @@ const sellerSettingsBankSchema = Joi.object({
 
 const sellerSettingsPasswordSchema = Joi.object({
   currentPassword: Joi.string().required(),
-  newPassword: Joi.string().min(8).required(),
+  newPassword: Joi.string().min(6).required(),
 });
 
 const sellerSettingsNotificationsSchema = Joi.object({

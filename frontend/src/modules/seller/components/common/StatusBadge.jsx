@@ -14,6 +14,8 @@ const statusColors = {
   delivered: 'success',
   cancelled: 'danger',
   returned: 'danger',
+  delayed: 'danger',
+  dispatch_delayed: 'danger',
   // Product statuses
   active: 'success',
   inactive: 'neutral',
@@ -41,6 +43,8 @@ const statusLabels = {
   delivered: 'Delivered',
   cancelled: 'Cancelled',
   returned: 'Returned',
+  delayed: 'Dispatch Delayed',
+  dispatch_delayed: 'Dispatch Delayed',
   active: 'Active',
   inactive: 'Inactive',
   out_of_stock: 'Out of Stock',

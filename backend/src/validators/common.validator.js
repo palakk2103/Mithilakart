@@ -9,7 +9,7 @@ const paginationQuerySchema = Joi.object({
   cursor: Joi.string().trim().optional(),
 });
 
-const objectIdSchema = Joi.string().trim().hex().length(24);
+const objectIdSchema = Joi.string().trim().min(1).max(128);
 const idOrOrderNumberSchema = Joi.string().trim().min(3).max(64);
 
 const dateRangeQuerySchema = Joi.object({

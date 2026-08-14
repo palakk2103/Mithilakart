@@ -83,6 +83,9 @@ export const mapProductForDetail = (product, fallbackImage = '') => {
     images: Array.isArray(product.images)
       ? product.images.map((img) => (typeof img === 'string' ? img : img.url)).filter(Boolean)
       : [card.image].filter(Boolean),
+    videos: Array.isArray(product.videos)
+      ? product.videos.map((vid) => (typeof vid === 'string' ? vid : vid.url)).filter(Boolean)
+      : [],
     variants: product.variants || [],
     tags: product.tags || [],
     attributes: product.attributes || {},
@@ -111,6 +114,7 @@ export const mapCartItem = (item) => ({
 export const mapOrderForList = (order) => ({
   id: order.orderNumber || getEntityId(order),
   orderNumber: order.orderNumber || getEntityId(order),
+  mongoId: getEntityId(order),
   status: order.status || 'Pending',
   date: order.createdAt
     ? new Date(order.createdAt).toLocaleDateString('en-GB', {
@@ -123,6 +127,8 @@ export const mapOrderForList = (order) => ({
   items: (order.sellerSubOrders || [])
     .flatMap((sub) => sub.items || [])
     .map((item) => ({
+      id: item.productId || getEntityId(item),
+      productId: item.productId || getEntityId(item),
       name: item.name || item.title || 'Product',
       price: formatDisplayPrice(item.unitPrice ?? item.lineTotal ?? item.price),
       image: getProductImage(item),
@@ -258,6 +264,11 @@ export const mapReview = (review) => ({
     : review.date || '',
   likes: review.likes ?? review.helpfulCount ?? 0,
   userName: review.userName || review.user?.name || 'Customer',
+  isVerified: review.isVerifiedPurchase ?? true,
+  images: Array.isArray(review.images) ? review.images : [],
+  videos: Array.isArray(review.videos) ? review.videos : [],
+  hasImage: Array.isArray(review.images) && review.images.length > 0,
+  hasVideo: Array.isArray(review.videos) && review.videos.length > 0,
 });
 
 export const mapQuestion = (q) => ({

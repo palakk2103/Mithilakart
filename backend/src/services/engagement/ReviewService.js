@@ -59,6 +59,7 @@ class ReviewService extends BaseService {
       title: payload.title || null,
       body: payload.body,
       images: payload.images || [],
+      videos: payload.videos || [],
       isVerifiedPurchase: true,
       status: REVIEW_STATUS.PENDING,
     });

@@ -502,6 +502,8 @@ export const mapAdminReview = (r = {}) => ({
   comment: r.body || r.comment || '',
   date: formatDate(r.createdAt),
   status: titleCaseStatus(r.status),
+  images: Array.isArray(r.images) ? r.images : [],
+  videos: Array.isArray(r.videos) ? r.videos : [],
 });
 
 export const mapAdminQna = (q = {}) => ({

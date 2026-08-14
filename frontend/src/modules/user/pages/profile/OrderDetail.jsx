@@ -12,6 +12,8 @@ import { getMyReturns } from '../../services/userApi';
 import { mapOrderDetail, getEntityId } from '../../utils/mappers';
 import LiveDeliveryMap from '../../../../shared/components/LiveDeliveryMap';
 import useOrderSocket from '../../../../shared/hooks/useOrderSocket';
+import DispatchDelayBanner from '../../../../shared/components/DispatchDelayBanner';
+import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
 
 const STATUS_STEPS = [
   { key: 'pending', title: 'Checkout Started', desc: 'Payment pending.' },
@@ -242,6 +244,8 @@ const OrderDetail = () => {
 
       <div className="relative z-10">
         <div className="w-full mx-auto px-4 pt-5 space-y-5 pb-24">
+          <DispatchDelayBanner order={order} role="user" />
+
           <div className="bg-gradient-to-br from-[#3E5A44] to-[#042112] rounded-3xl p-6 text-white shadow-[0_8px_30px_rgba(8,66,36,0.12)] relative overflow-hidden border border-emerald-800/30">
             <div className="absolute right-[-10px] top-[-10px] w-24 h-24 rounded-full bg-white/5 blur-xl pointer-events-none" />
             <div className="flex items-start gap-4">

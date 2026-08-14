@@ -7,6 +7,7 @@ import { useSellerAuth } from '../../context/SellerAuthContext';
 import { registerSeller, sendSellerPhoneOtp } from '../../services/sellerApi';
 import { applyOtpSendResult } from '../../../../shared/utils/otpResponse';
 import { useLocation } from '../../../../shared/context/LocationContext';
+import SocialIcons from '../../../../shared/components/SocialIcons';
 
 const SellerLogin = () => {
   const navigate = useNavigate();
@@ -272,10 +273,10 @@ const SellerLogin = () => {
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password (min 8 chars)"
+              placeholder="Password (min 6 chars)"
               className="w-full pl-11 pr-11 py-3 bg-[#e8fced] rounded-[16px] text-[14px] font-semibold"
               required
-              minLength={8}
+              minLength={6}
             />
             <button
               type="button"
@@ -324,6 +325,14 @@ const SellerLogin = () => {
             {isLoading ? 'Please wait...' : mode === 'login' ? 'Sign In' : otpSent ? 'Complete Registration' : 'Send OTP & Continue'}
           </motion.button>
         </form>
+
+        {/* Social Icons */}
+        <div className="mt-5 pt-4 border-t border-emerald-900/10 flex flex-col items-center gap-2">
+          <p className="text-center text-[10px] font-extrabold text-[#3b8a53] uppercase tracking-wider">
+            Connect With Us
+          </p>
+          <SocialIcons />
+        </div>
 
         {/* Approval Status Card */}
         <AnimatePresence>

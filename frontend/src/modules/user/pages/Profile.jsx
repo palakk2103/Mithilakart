@@ -90,7 +90,11 @@ const VendorProfile = () => {
   };
 
   const handleLogin = () => {
-    navigate('/login', { state: { from: '/profile' } });
+    const isQuickShop = localStorage.getItem('isQuickShopFlow') === 'true';
+    const isMithilak = localStorage.getItem('isMithilakFlow') === 'true';
+    const isFreshGrocery = localStorage.getItem('isFreshGroceryFlow') === 'true';
+    const flow = isQuickShop ? 'quickshop' : (isMithilak ? 'mithilak' : (isFreshGrocery ? 'freshgrocery' : 'mithilakart'));
+    navigate('/login', { state: { from: '/profile', flow } });
   };
 
   const profileOptions = [

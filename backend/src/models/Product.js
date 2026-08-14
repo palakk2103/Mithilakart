@@ -10,6 +10,15 @@ const productImageSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const productVideoSchema = new mongoose.Schema(
+  {
+    url: { type: String, required: true },
+    alt: { type: String, default: '' },
+    sortOrder: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', required: true },
@@ -25,6 +34,7 @@ const productSchema = new mongoose.Schema(
     masterStatus: { type: String, enum: PRODUCT_STATUS_VALUES, default: 'pending' },
     moderationNote: { type: String, default: null },
     images: { type: [productImageSchema], default: [] },
+    videos: { type: [productVideoSchema], default: [] },
     tags: { type: [String], default: [] },
     commerceFlows: {
       type: [{ type: String, enum: COMMERCE_FLOW_VALUES }],

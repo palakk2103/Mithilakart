@@ -7,12 +7,15 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import useDebounce from '../../hooks/useDebounce';
 import useSellerOrderStream from '../../hooks/useSellerOrderStream';
 import toast from 'react-hot-toast';
+import DispatchDelayTimer from '../../../../shared/components/DispatchDelayTimer';
+import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
 
 const tabs = [
   { key: 'all', label: 'All Orders' },
   { key: 'placed', label: 'New Orders' },
   { key: 'confirmed', label: 'Confirmed' },
   { key: 'packed', label: 'Packed' },
+  { key: 'delayed', label: 'Delayed Dispatch' },
   { key: 'shipped', label: 'Shipped' },
   { key: 'delivered', label: 'Delivered' },
   { key: 'cancelled', label: 'Cancelled' },
@@ -53,7 +56,16 @@ const OrderList = () => {
 
   const filteredOrders = useMemo(() => {
     let result = [...orders];
-    if (activeTab !== 'all') result = result.filter((o) => o.status === activeTab);
+    if (activeTab !== 'all') {
+      if (activeTab === 'delayed') {
+        result = result.filter((o) => {
+          const sla = getDispatchSlaInfo(o);
+          return sla.isPending && (sla.dispatchState === 'delayed' || sla.dispatchState === 'escalated');
+        });
+      } else {
+        result = result.filter((o) => o.status === activeTab);
+      }
+    }
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
@@ -66,7 +78,16 @@ const OrderList = () => {
     return result;
   }, [orders, activeTab, debouncedSearch]);
 
-  const getTabCount = (tab) => (tab === 'all' ? orders.length : orders.filter((o) => o.status === tab).length);
+  const getTabCount = (tab) => {
+    if (tab === 'all') return orders.length;
+    if (tab === 'delayed') {
+      return orders.filter((o) => {
+        const sla = getDispatchSlaInfo(o);
+        return sla.isPending && (sla.dispatchState === 'delayed' || sla.dispatchState === 'escalated');
+      }).length;
+    }
+    return orders.filter((o) => o.status === tab).length;
+  };
 
   const columns = [
     { key: 'id', label: 'Order ID', render: (_, row) => (
@@ -93,7 +114,16 @@ const OrderList = () => {
         <StatusBadge status={val?.status || 'pending'} size="sm" />
       </div>
     )},
-    { key: 'status', label: 'Status', align: 'center', render: (val) => <StatusBadge status={val} /> },
+    { key: 'status', label: 'Status', align: 'center', render: (val, row) => {
+      const sla = getDispatchSlaInfo(row);
+      const isDelayed = sla.isPending && (sla.dispatchState === 'delayed' || sla.dispatchState === 'escalated');
+      return (
+        <div className="flex flex-col items-center gap-1">
+          <StatusBadge status={isDelayed ? 'dispatch_delayed' : val} />
+          <DispatchDelayTimer order={row} size="sm" />
+        </div>
+      );
+    }},
     { key: 'placedAt', label: 'Date', render: (val) => <span className="text-xs text-gray-500">{formatDate(val)}</span> },
     { key: 'actions', label: '', sortable: false, render: (_, row) => (
       <button

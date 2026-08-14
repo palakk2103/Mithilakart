@@ -15,8 +15,8 @@ async function seedAuth() {
   await connectRedis(config);
 
   const passwordService = new PasswordService();
-  const defaultPassword = process.env.SEED_ADMIN_PASSWORD || 'Admin@12345';
-  const sellerPassword = process.env.SEED_SELLER_PASSWORD || 'Seller@12345';
+  const defaultPassword = process.env.SEED_ADMIN_PASSWORD || '123456';
+  const sellerPassword = process.env.SEED_SELLER_PASSWORD || '123456';
   const passwordHash = await passwordService.hash(defaultPassword);
   const sellerPasswordHash = await passwordService.hash(sellerPassword);
 
@@ -32,11 +32,14 @@ async function seedAuth() {
     { upsert: true, new: true }
   );
 
+  // Remove old admin user if existing
+  await AdminUser.deleteMany({ email: { $ne: 'palakpatel0342@gmail.com' } });
+
   await AdminUser.findOneAndUpdate(
-    { email: 'admin@mithilakart.com' },
+    { email: 'palakpatel0342@gmail.com' },
     {
       name: 'Super Admin',
-      email: 'admin@mithilakart.com',
+      email: 'palakpatel0342@gmail.com',
       passwordHash,
       roleId: superAdminRole._id,
       status: 'active',
@@ -49,10 +52,10 @@ async function seedAuth() {
   );
 
   await Seller.findOneAndUpdate(
-    { email: 'seller@mithilakart.com' },
+    { email: 'palakpatel0342@gmail.com' },
     {
-      name: 'Demo Seller',
-      email: 'seller@mithilakart.com',
+      name: 'Palak Patel (Seller)',
+      email: 'palakpatel0342@gmail.com',
       passwordHash: sellerPasswordHash,
       storeName: 'Mithila Heritage Store',
       phone: '9876543210',
@@ -94,8 +97,8 @@ async function seedAuth() {
   );
 
   process.stdout.write('Auth seed completed\n');
-  process.stdout.write(`Admin login: admin@mithilakart.com / ${defaultPassword}\n`);
-  process.stdout.write(`Seller login: seller@mithilakart.com / ${sellerPassword}\n`);
+  process.stdout.write(`Admin login: palakpatel0342@gmail.com / ${defaultPassword}\n`);
+  process.stdout.write(`Seller login: palakpatel0342@gmail.com / ${sellerPassword}\n`);
   process.stdout.write('Delivery OTP phone: +91 9123456789 (approved partner)\n');
 
   await disconnectDatabase();

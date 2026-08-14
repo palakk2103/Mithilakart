@@ -5,13 +5,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Printer, Package, MapPin, CreditCard, User, Clock, CheckCircle2, Truck, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Printer, Package, MapPin, CreditCard, User, Clock, CheckCircle2, Truck, ShoppingBag, AlertCircle } from 'lucide-react';
 import { PageHeader, StatusBadge } from '../../components/common';
 import { Button, Card } from '../../components/ui';
 import { getOrder, updateOrderStatus, getShipmentLabel } from '../../services/sellerApi';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import useOrderSocket from '../../../../shared/hooks/useOrderSocket';
 import toast from 'react-hot-toast';
+import DispatchDelayBanner from '../../../../shared/components/DispatchDelayBanner';
+import DispatchDelayTimer from '../../../../shared/components/DispatchDelayTimer';
+import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
 
 const STATUS_ACTIONS = {
   placed: [
@@ -95,9 +98,13 @@ const OrderDetail = () => {
     );
   }
 
+  const slaInfo = getDispatchSlaInfo(order);
+  const isDelayed = slaInfo.isPending && (slaInfo.dispatchState === 'delayed' || slaInfo.dispatchState === 'escalated');
+
   const timelineSteps = [
     { label: 'Order Placed', date: order.placedAt, icon: ShoppingBag, done: true },
     { label: 'Accepted', date: order.confirmedAt, icon: CheckCircle2, done: !!order.confirmedAt },
+    ...(isDelayed ? [{ label: 'Dispatch Delayed', date: order.delayedAt || null, icon: AlertCircle, done: true, isWarning: true }] : []),
     { label: 'Packed', date: order.packedAt, icon: Package, done: !!order.packedAt },
     { label: 'Shipped', date: order.shippedAt, icon: Truck, done: !!order.shippedAt },
     { label: 'Delivered', date: order.deliveredAt, icon: CheckCircle2, done: !!order.deliveredAt },
@@ -131,6 +138,8 @@ const OrderDetail = () => {
         )}
       </PageHeader>
 
+      <DispatchDelayBanner order={order} role="seller" />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -142,14 +151,18 @@ const OrderDetail = () => {
               <div className="absolute top-5 left-0 h-0.5 bg-[#2563EB] z-0"
                    style={{ width: `${(timelineSteps.filter(s => s.done).length - 1) / (timelineSteps.length - 1) * 100}%` }} />
 
-              {timelineSteps.map((step, i) => (
+              {timelineSteps.map((step) => (
                 <div key={step.label} className="flex flex-col items-center relative z-10">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                    step.done ? 'bg-[#2563EB] border-[#2563EB] text-white' : 'bg-white border-gray-200 text-gray-300'
+                    step.isWarning
+                      ? 'bg-red-500 border-red-500 text-white'
+                      : step.done
+                      ? 'bg-[#2563EB] border-[#2563EB] text-white'
+                      : 'bg-white border-gray-200 text-gray-300'
                   }`}>
                     <step.icon size={18} />
                   </div>
-                  <p className={`text-xs font-medium mt-2 ${step.done ? 'text-gray-900' : 'text-gray-400'}`}>{step.label}</p>
+                  <p className={`text-xs font-medium mt-2 ${step.isWarning ? 'text-red-600 font-bold' : step.done ? 'text-gray-900' : 'text-gray-400'}`}>{step.label}</p>
                   {step.date && <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(step.date, 'short')}</p>}
                 </div>
               ))}
@@ -198,7 +211,10 @@ const OrderDetail = () => {
           {/* Status */}
           <Card title="Status">
             <div className="mt-3 space-y-4">
-              <StatusBadge status={order.status} size="lg" />
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge status={isDelayed ? 'dispatch_delayed' : order.status} size="lg" />
+                <DispatchDelayTimer order={order} size="md" />
+              </div>
               {availableActions.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {availableActions.map((action) => (
