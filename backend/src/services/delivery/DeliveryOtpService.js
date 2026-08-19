@@ -28,8 +28,7 @@ class DeliveryOtpService extends BaseService {
     const key = this._key(assignmentId, type);
     const stored = await this.redis.get(key);
     if (!stored) {
-      // If OTP expired or missing in Redis, allow fallback in dev/testing mode
-      return true;
+      throw AppError.gone('OTP has expired or already used');
     }
 
     if (stored !== sha256(String(otp))) {

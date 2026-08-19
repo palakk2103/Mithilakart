@@ -102,74 +102,91 @@ const ProductList = () => {
     { key: 'title', label: 'Product', render: (_, row) => {
       const imgUrl = getProductImage(row.images?.[0]?.url || row.image || row.gallery?.[0]?.url || row.gallery?.[0]);
       return (
-        <div className="flex items-center gap-3 min-w-[200px]">
-          <div className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-gray-100 overflow-hidden">
+        <div className="flex items-center gap-2.5 min-w-[180px]">
+          <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200/60 overflow-hidden">
             {imgUrl ? (
-              <img src={imgUrl} alt={row.title || 'Product'} className="w-full h-full object-cover rounded-xl" />
+              <img src={imgUrl} alt={row.title || 'Product'} className="w-full h-full object-cover rounded-lg" />
             ) : (
-              <Package size={20} className="text-gray-300" />
+              <Package size={16} className="text-slate-400" />
             )}
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900 line-clamp-1">{row.title}</p>
-            <p className="text-[11px] text-gray-400">SKU: {row.sku}</p>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-900 line-clamp-1 truncate">{row.title}</p>
+            <p className="text-[10px] text-slate-400 truncate">SKU: {row.sku}</p>
           </div>
         </div>
       );
     }},
     { key: 'category', label: 'Category', render: (val, row) => (
-      <span className="text-xs font-medium text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg">
+      <span className="text-[10.5px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
         {row.category?.name || row.category || row.categoryId?.name || val || 'General'}
       </span>
     )},
     { key: 'price', label: 'Price', render: (_, row) => (
       <div>
-        <p className="text-sm font-semibold text-gray-900">{formatCurrency(row.discountPrice || row.price)}</p>
-        {row.discountPrice && <p className="text-xs text-gray-400 line-through">{formatCurrency(row.price)}</p>}
+        <p className="text-xs font-bold text-slate-900">{formatCurrency(row.discountPrice || row.price)}</p>
+        {row.discountPrice && <p className="text-[10px] text-slate-400 line-through">{formatCurrency(row.price)}</p>}
       </div>
     )},
     { key: 'stock', label: 'Stock', render: (val) => (
-      <div className="flex items-center gap-2">
-        <span className={`text-sm font-semibold ${val === 0 ? 'text-red-500' : val < 10 ? 'text-amber-500' : 'text-gray-900'}`}>{val}</span>
-        <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${val === 0 ? 'bg-red-500' : val < 10 ? 'bg-amber-500' : 'bg-blue-500'}`}
+      <div className="flex items-center gap-1.5">
+        <span className={`text-xs font-bold ${val === 0 ? 'text-rose-600' : val < 10 ? 'text-amber-600' : 'text-slate-800'}`}>{val}</span>
+        <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${val === 0 ? 'bg-rose-500' : val < 10 ? 'bg-amber-500' : 'bg-emerald-500'}`}
                style={{ width: `${Math.min((val / 200) * 100, 100)}%` }} />
         </div>
       </div>
     )},
     { key: 'status', label: 'Status', align: 'center', render: (val) => <StatusBadge status={val} size="sm" /> },
-    { key: 'sales', label: 'Sales', render: (val) => <span className="text-sm font-medium text-gray-600">{val || 0}</span> },
-    { key: 'actions', label: 'Actions', sortable: false, align: 'center', render: (_, row) => (
-      <div className="flex items-center gap-1 justify-center">
-        <button onClick={(e) => { e.stopPropagation(); navigate(`/seller/products/edit/${row.id}`); }}
-                className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
-          <Edit3 size={16} />
+    { key: 'sales', label: 'Sales', align: 'center', render: (val) => (
+      <span className="text-xs font-semibold text-slate-600">{val || 0}</span>
+    )},
+    { key: 'actions', label: '', sortable: false, render: (_, row) => (
+      <div className="flex items-center gap-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/seller/products/edit/${row.id}`); }}
+          className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
+          title="Edit"
+        >
+          <Edit3 size={14} />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); handleDuplicate(row); }}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Duplicate">
-          <Copy size={16} />
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDuplicate(row); }}
+          className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
+          title="Duplicate"
+        >
+          <Copy size={14} />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); handleDelete(row); }}
-                className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
-          <Trash2 size={16} />
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDelete(row); }}
+          className="p-1 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+          title="Delete"
+        >
+          <Trash2 size={14} />
         </button>
       </div>
     )},
   ];
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-6">
       <PageHeader title="Products" subtitle={`${filteredProducts.length} products in your store`}>
         <div className="flex items-center gap-2">
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('table')} className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'}`}>
-              <List size={16} />
+          <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200/60">
+            <button onClick={() => setViewMode('table')} className={`p-1.5 rounded-md transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-white shadow-2xs text-slate-900' : 'text-slate-400'}`} title="Table view">
+              <List size={15} />
             </button>
-            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'}`}>
-              <Grid3X3 size={16} />
+            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-white shadow-2xs text-slate-900' : 'text-slate-400'}`} title="Grid view">
+              <Grid3X3 size={15} />
             </button>
           </div>
-          <Button icon={Plus} onClick={() => navigate('/seller/products/add')}>Add Product</Button>
+          <button
+            onClick={() => navigate('/seller/products/add')}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg
+                       shadow-2xs hover:bg-slate-800 transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus size={15} /> Add Product
+          </button>
         </div>
       </PageHeader>
 

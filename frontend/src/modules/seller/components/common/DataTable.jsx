@@ -64,44 +64,43 @@ const DataTable = ({
   }
 
   return (
-    <div className={`bg-[var(--seller-card,#fff)] rounded-2xl border border-[var(--seller-border-light,#F3F4F6)] shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-[var(--seller-card,#fff)] rounded-xl border border-[var(--seller-border-light,#F3F4F6)] shadow-2xs overflow-hidden ${className}`}>
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
+      <div className="overflow-x-auto w-full seller-no-scrollbar">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-50/80 border-b border-gray-100">
+            <tr className="bg-slate-50/90 border-b border-slate-100">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   onClick={() => col.sortable !== false && handleSort(col.key)}
                   className={`
-                    px-6 py-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider
-                    ${col.sortable !== false && sortable ? 'cursor-pointer hover:text-gray-700 select-none' : ''}
+                    px-3.5 sm:px-4 py-2.5 text-[10.5px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap
+                    ${col.sortable !== false && sortable ? 'cursor-pointer hover:text-slate-800 select-none' : ''}
                     ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}
-                    ${col.sticky ? 'sticky top-0 bg-gray-50/80 z-10' : ''}
-                    ${col.width ? '' : ''}
+                    ${col.sticky ? 'sticky top-0 bg-slate-50/90 z-10' : ''}
                   `}
                   style={col.width ? { width: col.width, minWidth: col.width } : {}}
                 >
-                  <div className="flex items-center gap-1.5">
-                    {col.label}
+                  <div className={`flex items-center gap-1 ${col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : 'justify-start'}`}>
+                    <span>{col.label}</span>
                     {col.sortable !== false && sortable && <SortIcon columnKey={col.key} />}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-slate-100">
             <AnimatePresence>
               {paginatedData.map((row, index) => (
                 <motion.tr
                   key={row[rowKey] || index}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.03 }}
+                  transition={{ delay: index * 0.02 }}
                   onClick={() => onRowClick?.(row)}
                   className={`
-                    hover:bg-blue-50/30 transition-colors duration-150
+                    hover:bg-slate-50/80 transition-colors duration-150
                     ${onRowClick ? 'cursor-pointer' : ''}
                   `}
                 >
@@ -109,7 +108,7 @@ const DataTable = ({
                     <td
                       key={col.key}
                       className={`
-                        px-6 py-4 text-sm
+                        px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs text-slate-700 font-medium
                         ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left'}
                       `}
                     >
@@ -125,37 +124,37 @@ const DataTable = ({
 
       {/* Pagination */}
       {pagination && totalPages > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-gray-100 gap-4">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Showing</span>
+        <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-2.5 border-t border-slate-100 gap-2.5">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span>Show</span>
             <select
               value={pageSize}
               onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+              className="border border-slate-200 rounded-md px-1.5 py-0.5 text-xs bg-white focus:ring-1 focus:ring-slate-900 outline-none"
             >
               {PAGE_SIZES.map((size) => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
-            <span>of {sortedData.length} results</span>
+            <span>of {sortedData.length} records</span>
           </div>
 
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
               aria-label="First page"
             >
-              <ChevronsLeft size={16} />
+              <ChevronsLeft size={14} />
             </button>
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
               aria-label="Previous page"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={14} />
             </button>
 
             {/* Page numbers */}
@@ -175,10 +174,10 @@ const DataTable = ({
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
                   className={`
-                    w-9 h-9 rounded-lg text-sm font-medium transition-colors
+                    w-7 h-7 rounded-md text-xs font-semibold transition-colors cursor-pointer
                     ${currentPage === pageNum
-                      ? 'bg-[#2563EB] text-white shadow-sm'
-                      : 'hover:bg-gray-100 text-gray-600'
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'hover:bg-slate-100 text-slate-600'
                     }
                   `}
                 >
@@ -190,18 +189,18 @@ const DataTable = ({
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
               aria-label="Next page"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </button>
             <button
               onClick={() => setCurrentPage(totalPages)}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
               aria-label="Last page"
             >
-              <ChevronsRight size={16} />
+              <ChevronsRight size={14} />
             </button>
           </div>
         </div>

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest --runInBand",
+    "test": "jest --runInBand --testPathIgnorePatterns=tests/layer2",
     "test:watch": "jest --watch --runInBand",
     "test:integration": "jest --runInBand tests/integration",
     "test:e2e": "jest --runInBand tests/integration --json --outputFile=test-reports/e2e-results.json",
@@ -17,7 +17,11 @@
     "seed:auth": "node scripts/seed-auth.js",
     "seed:catalog": "node scripts/seed-catalog.js",
     "seed:phase3": "node scripts/migrate-phase3.js",
-    "migrate:cr001": "node scripts/migrate-cr001.js"
+    "migrate:cr001": "node scripts/migrate-cr001.js",
+    "migrate:cr002": "node scripts/migrate-cr002.js",
+    "seed:sellers": "node scripts/seed-sellers.js",
+    "test:layer2": "jest --runInBand tests/layer2",
+    "seed:cr002-test": "node scripts/seed-cr002-test-data.js"
   },
   "engines": {
     "node": ">=18.0.0"

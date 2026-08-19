@@ -8,6 +8,7 @@ import useDebounce from '../../hooks/useDebounce';
 import useSellerOrderStream from '../../hooks/useSellerOrderStream';
 import toast from 'react-hot-toast';
 import DispatchDelayTimer from '../../../../shared/components/DispatchDelayTimer';
+import FulfillmentOffers from '../../components/common/FulfillmentOffers';
 import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
 
 const tabs = [
@@ -91,26 +92,26 @@ const OrderList = () => {
 
   const columns = [
     { key: 'id', label: 'Order ID', render: (_, row) => (
-      <span className="text-sm font-semibold text-blue-600">#{row.orderNumber || row.id}</span>
+      <span className="text-xs font-bold text-blue-600 truncate">#{row.orderNumber || row.id}</span>
     )},
     { key: 'customer', label: 'Customer', render: (val) => (
-      <div>
-        <p className="text-sm font-medium text-gray-900">{val?.name || '—'}</p>
-        <p className="text-xs text-gray-400">{val?.phone || ''}</p>
+      <div className="min-w-0">
+        <p className="text-xs font-bold text-slate-900 truncate">{val?.name || '—'}</p>
+        <p className="text-[10.5px] text-slate-400 truncate">{val?.phone || ''}</p>
       </div>
     )},
     { key: 'products', label: 'Items', render: (val) => (
-      <div>
-        <p className="text-sm text-gray-700">{val?.[0]?.title?.substring(0, 30) || '—'}</p>
-        {val?.length > 1 && <p className="text-xs text-gray-400">+{val.length - 1} more</p>}
+      <div className="min-w-0 max-w-[200px]">
+        <p className="text-xs font-medium text-slate-700 truncate">{val?.[0]?.title?.substring(0, 30) || '—'}</p>
+        {val?.length > 1 && <p className="text-[10.5px] text-slate-400">+{val.length - 1} more</p>}
       </div>
     )},
     { key: 'finalAmount', label: 'Total', render: (val, row) => (
-      <span className="text-sm font-semibold text-gray-900">{formatCurrency(val || row.totalAmount || 0)}</span>
+      <span className="text-xs font-bold text-slate-900">{formatCurrency(val || row.totalAmount || 0)}</span>
     )},
     { key: 'payment', label: 'Payment', render: (val) => (
-      <div>
-        <p className="text-xs font-medium text-gray-600">{val?.method || '—'}</p>
+      <div className="flex flex-col gap-0.5">
+        <p className="text-[10.5px] font-semibold text-slate-600 uppercase">{val?.method || '—'}</p>
         <StatusBadge status={val?.status || 'pending'} size="sm" />
       </div>
     )},
@@ -118,44 +119,47 @@ const OrderList = () => {
       const sla = getDispatchSlaInfo(row);
       const isDelayed = sla.isPending && (sla.dispatchState === 'delayed' || sla.dispatchState === 'escalated');
       return (
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-0.5">
           <StatusBadge status={isDelayed ? 'dispatch_delayed' : val} />
           <DispatchDelayTimer order={row} size="sm" />
         </div>
       );
     }},
-    { key: 'placedAt', label: 'Date', render: (val) => <span className="text-xs text-gray-500">{formatDate(val)}</span> },
+    { key: 'placedAt', label: 'Date', render: (val) => <span className="text-[11px] text-slate-500 whitespace-nowrap">{formatDate(val)}</span> },
     { key: 'actions', label: '', sortable: false, render: (_, row) => (
       <button
         onClick={(e) => { e.stopPropagation(); navigate(`/seller/orders/${row.id}`); }}
-        className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+        className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
         title="View Details"
       >
-        <Eye size={16} />
+        <Eye size={15} />
       </button>
     )},
   ];
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-6">
       <PageHeader title="Orders" subtitle={`${filteredOrders.length} orders found`} />
 
+      {/* CR-002 — offers awaiting this seller's response. */}
+      <FulfillmentOffers onAccepted={() => fetchOrders(true)} />
+
       {error && (
-        <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700">{error}</div>
       )}
 
-      <div className="flex overflow-x-auto gap-1 bg-white rounded-xl border border-gray-100 p-1">
+      <div className="flex overflow-x-auto gap-1 bg-white rounded-xl border border-slate-100 p-1 seller-no-scrollbar">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-              activeTab === tab.key ? 'bg-[#2563EB] text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              activeTab === tab.key ? 'bg-slate-900 text-white shadow-2xs' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
             }`}
           >
             {tab.label}
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-              activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-400'
+            <span className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded-full ${
+              activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
             }`}>
               {getTabCount(tab.key)}
             </span>
@@ -166,7 +170,7 @@ const OrderList = () => {
       <SearchFilter searchValue={searchQuery} onSearchChange={setSearchQuery} placeholder="Search by order ID or customer..." />
 
       {loading ? (
-        <div className="text-center py-16 text-gray-500">Loading orders...</div>
+        <div className="text-center py-12 text-xs text-slate-400">Loading orders...</div>
       ) : (
         <DataTable
           columns={columns}

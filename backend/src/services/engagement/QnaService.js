@@ -28,7 +28,17 @@ class QnaService extends BaseService {
     const limit = Math.min(Number(query.limit) || 20, 100);
     const skip = (page - 1) * limit;
 
-    const items = await this.productQnaRepository.findByProduct(productId, {
+    let targetId = productId;
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      const product = await this.productRepository.findPublicById(productId);
+      if (!product) {
+        return { items: [], page, limit };
+      }
+      targetId = product._id;
+    }
+
+    const items = await this.productQnaRepository.findByProduct(targetId, {
       sort: '-createdAt',
       skip,
       limit,

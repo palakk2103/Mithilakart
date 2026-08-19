@@ -10,6 +10,8 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import MobileMenu from './MobileMenu';
 import NewOrderModal from '../common/NewOrderModal';
+import IncomingOfferModal from '../common/IncomingOfferModal';
+import { FulfillmentOfferProvider } from '../../context/FulfillmentOfferContext';
 import { useTheme } from '../../context/ThemeContext';
 import '../../styles/seller.css';
 
@@ -19,10 +21,16 @@ const SellerLayout = () => {
   const { theme } = useTheme();
 
   return (
+    <FulfillmentOfferProvider>
     <div className={`seller-module min-h-screen flex`}
          style={{ backgroundColor: 'var(--seller-bg)' }}>
-      {/* Realtime New Order Alert Modal Popup */}
+      {/* Standard e-commerce new-order alert (legacy SSE path, unchanged). */}
       <NewOrderModal />
+
+      {/* CR-002 — quick-commerce fulfillment offer. Mounted here, above the
+          router, so the seller is alerted on ANY page. Previously this lived
+          only inside the Orders page and 75% of offers expired unseen. */}
+      <IncomingOfferModal />
 
       {/* Desktop Sidebar */}
       <Sidebar
@@ -39,7 +47,7 @@ const SellerLayout = () => {
       {/* Main Content Area */}
       <div
         className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[272px]'
+          sidebarCollapsed ? 'lg:ml-[68px]' : 'lg:ml-[236px]'
         }`}
       >
         {/* Top Navbar */}
@@ -49,14 +57,14 @@ const SellerLayout = () => {
         />
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-5 lg:p-6 max-w-[1560px] w-full mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.15 }}
             >
               <Outlet />
             </motion.div>
@@ -64,6 +72,7 @@ const SellerLayout = () => {
         </main>
       </div>
     </div>
+    </FulfillmentOfferProvider>
   );
 };
 

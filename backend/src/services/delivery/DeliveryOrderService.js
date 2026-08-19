@@ -8,7 +8,11 @@ const {
   DELIVERY_EARNING_STATUS,
 } = require('../../constants/delivery');
 const { eventBus } = require('../../events/EventBus');
+const { DELIVERY_EVENTS } = require('../../events/eventTypes');
 const { parseLocationFields } = require('../../utils/geoHelper');
+const { DELIVERY_ASSIGNMENT_MODE } = require('../../constants/fulfillment');
+const { toFiniteNumber } = require('../../utils/numeric');
+const { logger } = require('../../utils/logger');
 
 class DeliveryOrderService extends BaseService {
   constructor({
@@ -22,6 +26,9 @@ class DeliveryOrderService extends BaseService {
     orderTrackingRepository,
     orderStatusHistoryRepository,
     userDeviceRepository = null,
+    // CR-002 — optional. Absent, the service behaves exactly as before.
+    deliveryPartnerRankingService = null,
+    fulfillmentConfigService = null,
   }) {
     super();
     this.deliveryAssignmentRepository = deliveryAssignmentRepository;
@@ -34,7 +41,36 @@ class DeliveryOrderService extends BaseService {
     this.orderTrackingRepository = orderTrackingRepository;
     this.orderStatusHistoryRepository = orderStatusHistoryRepository;
     this.userDeviceRepository = userDeviceRepository;
+    this.deliveryPartnerRankingService = deliveryPartnerRankingService;
+    this.fulfillmentConfigService = fulfillmentConfigService;
     this._lastLocationEmit = new Map();
+  }
+
+  setDeliveryPartnerRankingService(service) {
+    this.deliveryPartnerRankingService = service;
+  }
+
+  setFulfillmentConfigService(service) {
+    this.fulfillmentConfigService = service;
+  }
+
+  /**
+   * CR-002 — resolves the assignment strategy.
+   *
+   * Defaults to 'broadcast' on every failure path, so a config outage or a
+   * missing service can only ever fall back to the pre-CR-002 behaviour.
+   */
+  async _resolveAssignmentConfig(marketplaceTab = null) {
+    if (!this.fulfillmentConfigService) {
+      return { deliveryAssignmentMode: DELIVERY_ASSIGNMENT_MODE.BROADCAST };
+    }
+
+    try {
+      return await this.fulfillmentConfigService.resolve(marketplaceTab);
+    } catch (error) {
+      logger.warn({ err: error }, 'CR-002 delivery config unavailable — using broadcast');
+      return { deliveryAssignmentMode: DELIVERY_ASSIGNMENT_MODE.BROADCAST };
+    }
   }
 
   _mapOrderForDelivery(order, assignment = null) {
@@ -151,14 +187,43 @@ class DeliveryOrderService extends BaseService {
         throw AppError.conflict('Order is not ready for delivery assignment');
       }
 
-      await this.ensureAssignmentForOrder(order._id, session);
+      const existing = await this.ensureAssignmentForOrder(order._id, session);
 
-      const updated = await this.deliveryAssignmentRepository.acceptByOrderId(order._id, partnerId, session);
+      // Idempotent: the same partner re-accepting gets the same assignment
+      // back rather than a 409, so a retried request is harmless.
+      if (existing?.partnerId && String(existing.partnerId) === String(partnerId)) {
+        const otp = await this.deliveryOtpService.createOtp(existing._id, 'pickup');
+        return { assignment: existing, pickupOtp: otp, idempotent: true };
+      }
+
+      const config = await this._resolveAssignmentConfig(order.marketplaceTab);
+      const ranked = config.deliveryAssignmentMode === DELIVERY_ASSIGNMENT_MODE.RANKED
+        && this.deliveryPartnerRankingService;
+
+      // In ranked mode only the partner holding a live offer may accept; in
+      // broadcast mode the original first-come-first-served guard applies.
+      const updated = ranked
+        ? await this.deliveryAssignmentRepository.acceptOfferByPartner(order._id, partnerId, new Date(), session)
+        : await this.deliveryAssignmentRepository.acceptByOrderId(order._id, partnerId, session);
+
       if (!updated) {
-        throw AppError.conflict('Order already assigned to another partner');
+        throw AppError.conflict(
+          ranked
+            ? 'This offer is no longer available'
+            : 'Order already assigned to another partner'
+        );
       }
 
       const pickupOtp = await this.deliveryOtpService.createOtp(updated._id, 'pickup');
+
+      eventBus.publish(DELIVERY_EVENTS.ASSIGNMENT_ACCEPTED, {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        userId: order.userId,
+        partnerId,
+        assignmentId: updated._id,
+      });
+
       return { assignment: updated, pickupOtp };
     });
   }
@@ -321,6 +386,19 @@ class DeliveryOrderService extends BaseService {
 
     await this.ensureAssignmentForOrder(orderId, session);
 
+    // CR-002 — ranked mode offers to one partner at a time. Broadcast (the
+    // shipped default) falls through to the original behaviour below.
+    const config = await this._resolveAssignmentConfig(order.marketplaceTab);
+    if (config.deliveryAssignmentMode === DELIVERY_ASSIGNMENT_MODE.RANKED
+      && this.deliveryPartnerRankingService) {
+      const result = await this.offerToNextRankedPartner(orderId, { config, session });
+      if (result) return result;
+      // No eligible partner: fall through to broadcast so the order is not
+      // stranded just because ranking found nobody.
+      logger.info({ orderId: String(orderId) },
+        'CR-002 ranked assignment found no partner — falling back to broadcast');
+    }
+
     let lat = null;
     let lng = null;
 
@@ -366,6 +444,149 @@ class DeliveryOrderService extends BaseService {
     return { partnerIds, count: partnerIds.length };
   }
 
+  /** Pickup point for an order: the fulfilling seller, else the customer address. */
+  async _resolvePickupLocation(order) {
+    const sellerId = order.fulfillment?.sellerId
+      || (order.sellerSubOrders || [])[0]?.sellerId;
+
+    if (sellerId && this.sellerRepository) {
+      const seller = await this.sellerRepository.findById(sellerId);
+      if (seller?.latitude != null && seller?.longitude != null) {
+        return { lat: seller.latitude, lng: seller.longitude, sellerId };
+      }
+    }
+
+    if (this.orderItemRepository && this.sellerRepository) {
+      const items = await this.orderItemRepository.listByOrderId(order._id);
+      for (const id of [...new Set(items.map((it) => it.sellerId).filter(Boolean))]) {
+        const seller = await this.sellerRepository.findById(id);
+        if (seller?.latitude != null && seller?.longitude != null) {
+          return { lat: seller.latitude, lng: seller.longitude, sellerId: id };
+        }
+      }
+    }
+
+    const addr = order.addressSnapshot || {};
+    const lat = addr.lat ?? addr.latitude;
+    const lng = addr.lng ?? addr.longitude;
+    return (lat != null && lng != null) ? { lat, lng, sellerId: null } : null;
+  }
+
+  /**
+   * CR-002 — offers the assignment to the single best-ranked eligible partner.
+   *
+   * Returns null when no candidate is available, which lets the caller decide
+   * whether to fall back to broadcast rather than stranding the order.
+   */
+  async offerToNextRankedPartner(orderId, { config = null, session = null } = {}) {
+    const order = await this.orderRepository.findById(orderId, { session });
+    if (!order) return null;
+
+    const assignment = await this.ensureAssignmentForOrder(orderId, session);
+
+    // Someone already owns it — never offer a second time.
+    if (assignment.partnerId) return null;
+
+    const resolved = config || await this._resolveAssignmentConfig(order.marketplaceTab);
+    const pickup = await this._resolvePickupLocation(order);
+    if (!pickup) return null;
+
+    const radiusKm = toFiniteNumber(resolved.sellerSearchRadiusKm, 10);
+    const candidates = await this.deliveryPartnerRepository.findNearbyOnline({
+      latitude: pickup.lat,
+      longitude: pickup.lng,
+      maxDistanceMeters: radiusKm * 1000,
+      limit: 20,
+    });
+
+    if (!candidates.length) return null;
+
+    const { ranked } = await this.deliveryPartnerRankingService.rank({
+      partners: candidates,
+      pickupLocation: pickup,
+      customerLocation: {
+        lat: order.addressSnapshot?.lat ?? order.addressSnapshot?.latitude,
+        lng: order.addressSnapshot?.lng ?? order.addressSnapshot?.longitude,
+      },
+      config: resolved,
+      rejectedBy: assignment.rejectedBy || [],
+    });
+
+    if (!ranked.length) return null;
+
+    const best = ranked[0];
+    const timeoutSeconds = toFiniteNumber(resolved.deliveryPartnerAssignmentTimeoutSeconds, 60);
+    const expiresAt = new Date(Date.now() + (timeoutSeconds * 1000));
+
+    const offered = await this.deliveryAssignmentRepository.offerToPartner(
+      order._id, best.partnerId, expiresAt, session
+    );
+
+    // Lost the race — another path claimed the assignment between the read
+    // and this write. Correct outcome, not an error.
+    if (!offered) return null;
+
+    eventBus.publish(DELIVERY_EVENTS.ORDER_AVAILABLE, {
+      orderId: order._id,
+      orderNumber: order.orderNumber,
+      partnerIds: [String(best.partnerId)],
+      sellerIds: pickup.sellerId ? [String(pickup.sellerId)] : [],
+      fulfilmentType: 'local_delivery',
+      offerExpiresAt: expiresAt,
+      ranked: true,
+    });
+
+    logger.info({
+      orderId: String(order._id),
+      partnerId: String(best.partnerId),
+      rankScore: best.rankScore,
+      offerRound: offered.offerRound,
+    }, 'CR-002 ranked delivery offer made');
+
+    return { partnerIds: [String(best.partnerId)], count: 1, ranked: true, expiresAt };
+  }
+
+  /**
+   * Partner declined a ranked offer. Withdraw it, record the refusal so they
+   * are not re-offered, and move to the next candidate.
+   */
+  async rejectRankedOffer(partnerId, orderId, reason = null) {
+    const withdrawn = await this.deliveryAssignmentRepository.withdrawOffer(
+      orderId, partnerId, { reason }
+    );
+
+    if (!withdrawn) {
+      throw AppError.conflict('This offer is no longer available');
+    }
+
+    await this.offerToNextRankedPartner(orderId);
+    return { rejected: true, orderId: String(orderId) };
+  }
+
+  /** Sweeper path: the partner never responded within the offer window. */
+  async handleOfferTimeout(assignment) {
+    const expired = await this.deliveryAssignmentRepository.expireOffer(
+      assignment._id, assignment.offerExpiresAt
+    );
+
+    // Lost the race to a partner who accepted just in time — correct outcome.
+    if (!expired) return null;
+
+    // The unresponsive partner is excluded so the next round does not loop
+    // back to them.
+    const lastOffered = (assignment.offeredTo || []).slice(-1)[0];
+    if (lastOffered) {
+      await this.deliveryAssignmentRepository.updateById(
+        assignment._id, { $addToSet: { rejectedBy: lastOffered } }
+      );
+    }
+
+    logger.info({ assignmentId: String(assignment._id), orderId: String(assignment.orderId) },
+      'CR-002 delivery offer timed out — reassigning');
+
+    return this.offerToNextRankedPartner(assignment.orderId);
+  }
+
   async getTrackingMeta(orderId) {
     const assignment = await this.deliveryAssignmentRepository.findByOrderId(orderId);
     if (!assignment?.partnerId) {
@@ -404,6 +625,17 @@ class DeliveryOrderService extends BaseService {
         throw AppError.conflict('Order is no longer available');
       }
 
+      // CR-002 — a live ranked offer is withdrawn through the guarded path so
+      // the refusal is recorded and the partner is not re-offered.
+      const order = await this.orderRepository.findById(orderId, { session });
+      const config = await this._resolveAssignmentConfig(order?.marketplaceTab);
+      const ranked = config.deliveryAssignmentMode === DELIVERY_ASSIGNMENT_MODE.RANKED
+        && this.deliveryPartnerRankingService;
+
+      if (ranked && !assignment.partnerId && assignment.status === ASSIGNMENT_STATUS.ASSIGNED) {
+        return this.rejectRankedOffer(partnerId, orderId, reason);
+      }
+
       await this.deliveryAssignmentRepository.updateById(
         assignment._id,
         {
@@ -411,6 +643,7 @@ class DeliveryOrderService extends BaseService {
           status: ASSIGNMENT_STATUS.PENDING,
           rejectedAt: new Date(),
           rejectReason: reason || null,
+          $addToSet: { rejectedBy: partnerId },
         },
         session
       );

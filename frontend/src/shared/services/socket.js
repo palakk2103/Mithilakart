@@ -23,8 +23,20 @@ export function getSocket(portal) {
     autoConnect: true,
   });
 
+  // Connection state is exposed for diagnostics and for E2E tests, which must
+  // wait for the seller to have actually joined its room before asserting that
+  // an offer arrived — otherwise the test races the handshake.
+  socket.on('connect', () => { markConnected(portal, true); });
+  socket.on('disconnect', () => { markConnected(portal, false); });
+
   sockets[portal] = socket;
   return socket;
+}
+
+function markConnected(portal, connected) {
+  if (typeof window === 'undefined') return;
+  window.__socketState = { ...(window.__socketState || {}), [portal]: connected };
+  if (portal === 'seller') window.__cr002SocketConnected = connected;
 }
 
 export function disconnectSocket(portal) {

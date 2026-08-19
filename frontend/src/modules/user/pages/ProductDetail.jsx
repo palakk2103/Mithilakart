@@ -253,26 +253,32 @@ const ProductDetail = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const productId = location.state?.product?.id;
+    const incomingProduct = location.state?.product;
+    const productId = location.state?.productId || incomingProduct?.id || incomingProduct?._id || incomingProduct?.productId;
+    const isValidId = typeof productId === 'string' && productId.length >= 3;
 
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-        if (productId) {
+        if (isValidId) {
           const [detail, reviewData, questionData] = await Promise.all([
-            getProductById(productId),
+            getProductById(productId).catch(() => null),
             getProductReviews(productId).catch(() => []),
             getProductQuestions(productId).catch(() => []),
           ]);
           if (!cancelled) {
-            setProduct(mapProductForDetail(detail, PlumShampoo));
+            if (detail) {
+              setProduct(mapProductForDetail(detail, incomingProduct?.img || incomingProduct?.image || PlumShampoo));
+            } else if (incomingProduct) {
+              setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
+            }
             setReviews(extractList(reviewData).map(mapReview));
             setQuestions(extractList(questionData?.items || questionData).map(mapQuestion));
           }
-        } else if (location.state?.product) {
+        } else if (incomingProduct) {
           if (!cancelled) {
-            setProduct(mapProductForDetail(location.state.product, PlumShampoo));
+            setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
           }
         } else if (!cancelled) {
           setProduct(mapProductForDetail({
@@ -290,8 +296,8 @@ const ProductDetail = () => {
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Failed to load product');
-          if (location.state?.product) {
-            setProduct(mapProductForDetail(location.state.product, PlumShampoo));
+          if (incomingProduct) {
+            setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
           }
         }
       } finally {
@@ -380,12 +386,12 @@ const ProductDetail = () => {
       return;
     }
     try {
-      await addProductToCart(product, quantity);
+      await addProductToCart(product, quantity, theme.activeFlow);
       setToastMessage(`Added ${quantity} item(s) to cart`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
-    } catch {
-      setToastMessage('Could not add to cart');
+    } catch (err) {
+      setToastMessage(err?.message || 'Could not add to cart');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     }
@@ -403,21 +409,31 @@ const ProductDetail = () => {
   const mediaList = useMemo(() => {
     if (!product) return [];
     const items = [];
-    if (product.images?.length) {
-      product.images.forEach((url) => items.push({ type: 'image', url }));
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      product.images.forEach((img) => {
+        const url = typeof img === 'string' ? img : img?.url;
+        if (url) items.push({ type: 'image', url });
+      });
     } else if (product.image) {
       items.push({ type: 'image', url: product.image });
+    } else if (product.img) {
+      items.push({ type: 'image', url: product.img });
+    } else if (product.imageUrl) {
+      items.push({ type: 'image', url: product.imageUrl });
     }
-    if (product.videos?.length) {
-      product.videos.forEach((url) => items.push({ type: 'video', url }));
+    if (Array.isArray(product.videos) && product.videos.length > 0) {
+      product.videos.forEach((vid) => {
+        const url = typeof vid === 'string' ? vid : vid?.url;
+        if (url) items.push({ type: 'video', url });
+      });
     }
     if (!items.length) {
-      items.push({ type: 'image', url: product.image || '' });
+      items.push({ type: 'image', url: product.image || product.img || product.imageUrl || PlumShampoo });
     }
     return items;
   }, [product]);
 
-  const activeMedia = mediaList[currentSlide] || mediaList[0] || { type: 'image', url: product?.image || '' };
+  const activeMedia = mediaList[currentSlide] || mediaList[0] || { type: 'image', url: product?.image || product?.img || PlumShampoo };
 
   const handleShare = async () => {
     const shareData = {
@@ -592,7 +608,7 @@ const ProductDetail = () => {
             <Search size={20} />
           </button>
           <div 
-            onClick={() => navigate('/vendor/cart')} 
+            onClick={() => navigate('/cart')} 
             className={`relative p-1.5 rounded-full transition-colors active:scale-95 cursor-pointer ${
               isFreshGroceryFlow ? 'text-white hover:bg-white/5' : 'text-slate-800 hover:bg-gray-50'
             }`}
@@ -1901,10 +1917,16 @@ const ProductDetail = () => {
         </div>
       )}
 
-      {/* Toast Notification */}
+      {/* Toast Notification with View Cart Action */}
       {showToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[2000] bg-slate-900/95 backdrop-blur-md text-white px-6 py-3.5 rounded-full text-[13px] font-bold shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-          {toastMessage}
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[2000] bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-full text-[13px] font-bold shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 flex items-center gap-3 border border-white/10">
+          <span>{toastMessage}</span>
+          <button 
+            onClick={() => navigate('/cart')}
+            className="bg-[#E25822] text-white text-[11px] font-black px-3 py-1 rounded-full active:scale-95 transition-transform cursor-pointer shadow-xs hover:bg-[#d04a16]"
+          >
+            View Cart →
+          </button>
         </div>
       )}
     </div>

@@ -40,8 +40,8 @@ export const calcDiscountLabel = (price, mrp) => {
 
 export const mapProductForCard = (product, fallbackImage = '') => {
   const rawId = getEntityId(product);
-  const listingId = product.listingId || (product.marketplaceTab ? rawId : undefined);
-  const productId = product.productId || (!product.marketplaceTab ? rawId : undefined);
+  const listingId = product.listingId || undefined;
+  const productId = product.productId || rawId;
   const price = product.price ?? product.salePrice ?? 0;
   const mrp = product.mrp ?? product.oldPrice ?? product.mrp;
 

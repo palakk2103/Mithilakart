@@ -84,10 +84,20 @@ const { InventoryService } = require('../services/inventory/InventoryService');
 const { CommissionService } = require('../services/earnings/CommissionService');
 const { EarningsService } = require('../services/earnings/EarningsService');
 const { PayoutService } = require('../services/earnings/PayoutService');
+const { FulfillmentConfigService } = require('../services/fulfillment/FulfillmentConfigService');
+const { SellerEligibilityService } = require('../services/fulfillment/SellerEligibilityService');
+const { SellerRankingService } = require('../services/fulfillment/SellerRankingService');
+const { DeliveryPartnerRankingService } = require('../services/fulfillment/DeliveryPartnerRankingService');
+const { FulfillmentReservationService } = require('../services/fulfillment/FulfillmentReservationService');
+const { FulfillmentEngineService } = require('../services/fulfillment/FulfillmentEngineService');
+const { FulfillmentSweeper } = require('../services/fulfillment/FulfillmentSweeper');
+const { RoutingService } = require('../services/maps/RoutingService');
+const { SellerFulfillmentService } = require('../services/seller/SellerFulfillmentService');
 const { DeliveryOtpService } = require('../services/delivery/DeliveryOtpService');
 const { DeliveryOrderService } = require('../services/delivery/DeliveryOrderService');
 const { DeliveryEarningsService } = require('../services/delivery/DeliveryEarningsService');
 const { AdminDeliveryService } = require('../services/admin/AdminDeliveryService');
+const { AdminFulfillmentService } = require('../services/admin/AdminFulfillmentService');
 const { WalletService } = require('../services/wallet/WalletService');
 const { ReturnService } = require('../services/returns/ReturnService');
 const { RefundService } = require('../services/refunds/RefundService');
@@ -121,6 +131,8 @@ const { ShippingController } = require('../controllers/shipping/ShippingControll
 const { createShippingRoutes } = require('../routes/v1/shipping.routes');
 const { MarketplaceListingRepository } = require('../repositories/MarketplaceListingRepository');
 const { MarketplaceConfigRepository } = require('../repositories/MarketplaceConfigRepository');
+const { OrderFulfillmentRepository } = require('../repositories/OrderFulfillmentRepository');
+const { FulfillmentAttemptRepository } = require('../repositories/FulfillmentAttemptRepository');
 const { MarketplaceEngineService } = require('../services/marketplace/MarketplaceEngineService');
 const { MarketplaceListingService } = require('../services/marketplace/MarketplaceListingService');
 const { MarketplaceController } = require('../controllers/marketplace/MarketplaceController');
@@ -153,6 +165,7 @@ const { OrderController } = require('../controllers/orders/OrderController');
 const { PaymentController } = require('../controllers/payments/PaymentController');
 const { SellerDashboardController } = require('../controllers/seller/SellerDashboardController');
 const { SellerProductController } = require('../controllers/seller/SellerProductController');
+const { SellerFulfillmentController } = require('../controllers/seller/SellerFulfillmentController');
 const { SellerInventoryController } = require('../controllers/seller/SellerInventoryController');
 const { SellerReturnController } = require('../controllers/seller/SellerReturnController');
 const { SellerCustomerController } = require('../controllers/seller/SellerCustomerController');
@@ -280,6 +293,8 @@ function buildContainer() {
   const userNotificationRepository = new UserNotificationRepository();
   const marketplaceListingRepository = new MarketplaceListingRepository();
   const marketplaceConfigRepository = new MarketplaceConfigRepository();
+  const orderFulfillmentRepository = new OrderFulfillmentRepository();
+  const fulfillmentAttemptRepository = new FulfillmentAttemptRepository();
 
   const couponService = new CouponService({ couponRepository, couponUsageRepository });
 
@@ -438,6 +453,67 @@ function buildContainer() {
     courierShipmentService,
   });
 
+  // ── CR-002 — intelligent fulfillment ──────────────────────────────────────
+  // Wired after orderService so the engine can be injected into it below.
+  // If any of this were absent, OrderService falls back to its pre-CR-002
+  // behaviour, which is why the injection is optional rather than required.
+  const fulfillmentConfigService = new FulfillmentConfigService({
+    platformConfigService,
+    marketplaceConfigRepository,
+  });
+  const sellerEligibilityService = new SellerEligibilityService({
+    sellerRepository,
+    productRepository,
+    marketplaceListingRepository,
+  });
+  const routingService = new RoutingService({ platformConfigService });
+  const sellerRankingService = new SellerRankingService({
+    routingService,
+    orderRepository,
+    fulfillmentConfigService,
+  });
+  const fulfillmentReservationService = new FulfillmentReservationService({
+    productRepository,
+    fulfillmentAttemptRepository,
+  });
+  const fulfillmentEngineService = new FulfillmentEngineService({
+    orderRepository,
+    orderItemRepository,
+    orderFulfillmentRepository,
+    fulfillmentAttemptRepository,
+    sellerEligibilityService,
+    sellerRankingService,
+    fulfillmentReservationService,
+    fulfillmentConfigService,
+    routingService,
+    sellerRepository,
+    productRepository,
+    marketplaceConfigRepository,
+    courierShipmentService,
+  });
+  const deliveryPartnerRankingService = new DeliveryPartnerRankingService({
+    deliveryAssignmentRepository,
+    routingService,
+  });
+  const fulfillmentSweeper = new FulfillmentSweeper({
+    orderFulfillmentRepository,
+    fulfillmentEngineService,
+    fulfillmentConfigService,
+    deliveryAssignmentRepository,
+    // deliveryOrderService is constructed further down; injected via setter.
+  });
+
+  orderService.setFulfillmentEngineService(fulfillmentEngineService);
+
+  const sellerFulfillmentService = new SellerFulfillmentService({
+    orderRepository,
+    fulfillmentAttemptRepository,
+    fulfillmentEngineService,
+    // CR-002 P7 — resolves product titles/images so the seller offer popup can
+    // show WHAT to pack, not just how many lines.
+    productRepository,
+  });
+
   const shippingController = new ShippingController({ courierShipmentService });
   const marketplaceController = new MarketplaceController({
     marketplaceEngineService,
@@ -509,8 +585,12 @@ function buildContainer() {
     orderTrackingRepository,
     orderStatusHistoryRepository,
     userDeviceRepository,
+    // CR-002 P9 — ranked offers. Inert while deliveryAssignmentMode='broadcast'.
+    deliveryPartnerRankingService,
+    fulfillmentConfigService,
   });
   orderService.setDeliveryOrderService(deliveryOrderService);
+  fulfillmentSweeper.setDeliveryOrderService(deliveryOrderService);
   const deliveryEarningsService = new DeliveryEarningsService({ deliveryEarningRepository });
   const adminDeliveryService = new AdminDeliveryService({ deliveryPartnerRepository });
 
@@ -616,6 +696,17 @@ function buildContainer() {
     notifications: notificationService,
     promotions: adminPromotionService,
     subAdmins: adminSubAdminService,
+    // CR-002 — validating façade over the same settings store as `settings`.
+    fulfillment: new AdminFulfillmentService({
+      adminPlatformSettingsService,
+      fulfillmentConfigService,
+      orderFulfillmentRepository,
+      fulfillmentAttemptRepository,
+      orderRepository,
+      deliveryAssignmentRepository,
+      fulfillmentEngineService,
+      auditService: adminAuditService,
+    }),
   };
 
   const cartController = new CartController(cartService, cartMergeService);
@@ -654,6 +745,8 @@ function buildContainer() {
     notifications: new SellerNotificationController(sellerNotificationService),
     reviews: new SellerReviewController(reviewService),
     questions: new SellerQnaController(qnaService),
+    // CR-002 — additive; the existing seller order routes are unchanged.
+    fulfillment: new SellerFulfillmentController(sellerFulfillmentService),
   };
 
   const adminEngagementController = new AdminEngagementController(reviewService, qnaService);
@@ -683,6 +776,8 @@ function buildContainer() {
       orderItemRepository,
       orderTrackingRepository,
       orderStatusHistoryRepository,
+      orderFulfillmentRepository,
+      fulfillmentAttemptRepository,
       paymentTransactionRepository,
       paymentWebhookRepository,
       couponRepository,
@@ -732,6 +827,16 @@ function buildContainer() {
       cartService,
       cartMergeService,
       orderService,
+      // CR-002
+      fulfillmentConfigService,
+      sellerEligibilityService,
+      sellerRankingService,
+      fulfillmentReservationService,
+      fulfillmentEngineService,
+      sellerFulfillmentService,
+      fulfillmentSweeper,
+      deliveryPartnerRankingService,
+      routingService,
       paymentService,
       pricingService,
       couponService,

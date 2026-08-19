@@ -44,8 +44,6 @@ class OtpService {
   }
 
   async assertSendRateLimit(portal, identifier) {
-    if (this.config?.auth?.exposeOtpInDev) return;
-
     const key = this._sendRateKey(portal, identifier);
     const count = await this.redis.incr(key);
 

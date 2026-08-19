@@ -87,56 +87,56 @@ const Dashboard = () => {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="space-y-8 pb-8">
-      <PageHeader title="Dashboard" subtitle="Overview of your store performance">
+    <div className="space-y-4 sm:space-y-5 pb-6">
+      <PageHeader title="Dashboard" subtitle="Overview of your store performance and fulfillment metrics">
         <button
           onClick={() => navigate('/seller/products/add')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#2563EB] text-white text-sm font-semibold rounded-xl
-                     shadow-lg shadow-blue-200/50 hover:bg-[#1D4ED8] transition-all active:scale-95"
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg
+                     shadow-xs hover:bg-slate-800 transition-all active:scale-95 cursor-pointer"
         >
-          <Plus size={18} /> Add Product
+          <Plus size={15} /> Add Product
         </button>
       </PageHeader>
 
       {/* ─── Stat Cards ─────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         <StatCard title="Today's Orders" value={stats.todayOrders || 0} subtitle="orders received today" icon={ShoppingCart} iconBg="bg-blue-50" iconColor="text-blue-600" trend="up" trendValue="+12%" delay={0} />
-        <StatCard title="Revenue" value={formatCurrency(stats.revenue || 0)} subtitle="total revenue this month" icon={DollarSign} iconBg="bg-green-50" iconColor="text-green-600" trend="up" trendValue="+18%" delay={1} />
+        <StatCard title="Revenue" value={formatCurrency(stats.revenue || 0)} subtitle="total revenue this month" icon={DollarSign} iconBg="bg-emerald-50" iconColor="text-emerald-600" trend="up" trendValue="+18%" delay={1} />
         <StatCard title="Wallet Balance" value={formatCurrency(stats.walletBalance || 0)} subtitle="available for withdrawal" icon={Wallet} iconBg="bg-purple-50" iconColor="text-purple-600" delay={2} />
         <StatCard title="Avg. Rating" value={stats.averageRating || 0} subtitle={`based on ${reviewCount || 0} reviews`} icon={Star} iconBg="bg-amber-50" iconColor="text-amber-500" trend="up" trendValue="+0.2" delay={3} />
       </div>
 
       {/* ─── Quick Stats Row ─────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3.5">
         {[
-          { label: 'Pending', value: stats.pendingOrders || 0, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-          { label: 'Completed', value: stats.completedOrders || 0, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50' },
-          { label: 'Cancelled', value: stats.cancelledOrders || 0, icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
-          { label: 'Returns', value: stats.returns || 0, icon: RotateCcw, color: 'text-orange-500', bg: 'bg-orange-50' },
+          { label: 'Pending', value: stats.pendingOrders || 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Completed', value: stats.completedOrders || 0, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Cancelled', value: stats.cancelledOrders || 0, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+          { label: 'Returns', value: stats.returns || 0, icon: RotateCcw, color: 'text-orange-600', bg: 'bg-orange-50' },
         ].map((item, i) => (
           <motion.div
             key={item.label}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 + i * 0.1 }}
-            className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3"
+            transition={{ delay: 0.15 + i * 0.05 }}
+            className="bg-white rounded-xl border border-slate-100 p-3 sm:p-3.5 flex items-center gap-3 shadow-2xs"
           >
             <div className={`p-2 rounded-lg ${item.bg}`}>
-              <item.icon size={18} className={item.color} />
+              <item.icon size={16} className={item.color} />
             </div>
-            <div>
-              <p className="text-xl font-bold text-gray-900">{item.value}</p>
-              <p className="text-[11px] text-gray-400 font-medium">{item.label}</p>
+            <div className="min-w-0">
+              <p className="text-lg font-black text-slate-900 tracking-tight leading-none">{item.value}</p>
+              <p className="text-[10.5px] text-slate-400 font-semibold mt-1 truncate">{item.label}</p>
             </div>
           </motion.div>
         ))}
       </div>
 
       {/* ─── Charts Row ─────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Monthly Sales Chart */}
         <Card title="Monthly Sales" subtitle="Revenue & orders trend" className="lg:col-span-2">
-          <div className="h-[320px] mt-4">
+          <div className="h-[260px] mt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlySalesData}>
                 <defs>

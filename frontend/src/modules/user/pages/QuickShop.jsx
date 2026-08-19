@@ -413,7 +413,24 @@ const QuickShop = () => {
             <div className="grid grid-cols-3 gap-2.5">
               {/* Product 1: L'Oreal Shampoo */}
               <div 
-                onClick={() => navigate('/product-detail', { state: { product: { name: "L'Oreal Paris Hyaluron Moisture", price: 225, oldPrice: 230, rating: '4.3' } } })}
+                onClick={() => navigate('/product-detail', { 
+                  state: { 
+                    product: { 
+                      id: "AMT-QS-LOREAL",
+                      productId: "AMT-QS-LOREAL",
+                      name: "L'Oreal Paris Hyaluron Moisture", 
+                      title: "L'Oreal Paris Hyaluron Moisture Shampoo 200ml",
+                      price: 225, 
+                      oldPrice: 230, 
+                      mrp: 230,
+                      rating: '4.3',
+                      discount: '12% OFF',
+                      image: "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=300&auto=format&fit=crop&q=60",
+                      img: "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=300&auto=format&fit=crop&q=60",
+                      marketplaceTab: 'quick_shop',
+                    } 
+                  } 
+                })}
                 className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
               >
                 <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
@@ -441,7 +458,24 @@ const QuickShop = () => {
 
               {/* Product 2: Wellcore Creatine */}
               <div 
-                onClick={() => navigate('/product-detail', { state: { product: { name: "Wellcore Creatine", price: 530, oldPrice: 699, rating: '4.5' } } })}
+                onClick={() => navigate('/product-detail', { 
+                  state: { 
+                    product: { 
+                      id: "AMT-QS-WELLCORE",
+                      productId: "AMT-QS-WELLCORE",
+                      name: "Wellcore Creatine", 
+                      title: "Wellcore Creatine 122g",
+                      price: 530, 
+                      oldPrice: 699, 
+                      mrp: 699,
+                      rating: '4.5',
+                      discount: '12% OFF',
+                      image: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300&auto=format&fit=crop&q=60",
+                      img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300&auto=format&fit=crop&q=60",
+                      marketplaceTab: 'quick_shop',
+                    } 
+                  } 
+                })}
                 className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
               >
                 <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
@@ -472,7 +506,24 @@ const QuickShop = () => {
 
               {/* Product 3: Pilgrim Face Serum */}
               <div 
-                onClick={() => navigate('/product-detail', { state: { product: { name: "Pilgrim 10% Niacinamide", price: 202, oldPrice: 249, rating: '4.4' } } })}
+                onClick={() => navigate('/product-detail', { 
+                  state: { 
+                    product: { 
+                      id: "AMT-QS-PILGRIM",
+                      productId: "AMT-QS-PILGRIM",
+                      name: "Pilgrim 10% Niacinamide", 
+                      title: "Pilgrim 10% Niacinamide Serum 30ml",
+                      price: 202, 
+                      oldPrice: 249, 
+                      mrp: 249,
+                      rating: '4.4',
+                      discount: '20% OFF',
+                      image: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&auto=format&fit=crop&q=60",
+                      img: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&auto=format&fit=crop&q=60",
+                      marketplaceTab: 'quick_shop',
+                    } 
+                  } 
+                })}
                 className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
               >
                 <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
@@ -527,7 +578,24 @@ const QuickShop = () => {
             <div className="grid grid-cols-3 gap-2.5">
               {/* Potato */}
               <div 
-                onClick={() => navigate('/product-detail', { state: { product: { name: "Potato", price: 25, oldPrice: 30 } } })}
+                onClick={() => navigate('/product-detail', { 
+                  state: { 
+                    product: { 
+                      id: "AMT-GR-POTATO-1KG",
+                      productId: "AMT-GR-POTATO-1KG",
+                      name: "Potato", 
+                      title: "Fresh Potato 1kg",
+                      price: 25, 
+                      oldPrice: 30,
+                      mrp: 30,
+                      rating: 4.5,
+                      discount: '15% OFF',
+                      image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60",
+                      img: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60",
+                      marketplaceTab: 'quick_shop',
+                    } 
+                  } 
+                })}
                 className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
               >
                 <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
@@ -554,7 +622,24 @@ const QuickShop = () => {
 
               {/* Tomato */}
               <div 
-                onClick={() => navigate('/product-detail', { state: { product: { name: "Tomato", price: 22, oldPrice: 25 } } })}
+                onClick={() => navigate('/product-detail', { 
+                  state: { 
+                    product: { 
+                      id: "AMT-GR-001",
+                      productId: "AMT-GR-001",
+                      name: "Tomato", 
+                      title: "Fresh Tomatoes 1kg",
+                      price: 22, 
+                      oldPrice: 25,
+                      mrp: 25,
+                      rating: 4.4,
+                      discount: '12% OFF',
+                      image: "https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60",
+                      img: "https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60",
+                      marketplaceTab: 'quick_shop',
+                    } 
+                  } 
+                })}
                 className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
               >
                 <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
@@ -581,7 +666,24 @@ const QuickShop = () => {
 
               {/* Milk */}
               <div 
-                onClick={() => navigate('/product-detail', { state: { product: { name: "Milk", price: 48, oldPrice: 60 } } })}
+                onClick={() => navigate('/product-detail', { 
+                  state: { 
+                    product: { 
+                      id: "AMT-GR-MILK-1L",
+                      productId: "AMT-GR-MILK-1L",
+                      name: "Milk", 
+                      title: "Fresh Cow Milk 1L",
+                      price: 48, 
+                      oldPrice: 60,
+                      mrp: 60,
+                      rating: 4.8,
+                      discount: '10% OFF',
+                      image: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60",
+                      img: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60",
+                      marketplaceTab: 'quick_shop',
+                    } 
+                  } 
+                })}
                 className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
               >
                 <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
@@ -813,7 +915,24 @@ const QuickShop = () => {
         <div className="grid grid-cols-3 gap-2.5">
           {/* Potato */}
           <div 
-            onClick={() => navigate('/product-detail', { state: { product: { name: "Potato", price: 25, oldPrice: 30 } } })}
+            onClick={() => navigate('/product-detail', { 
+              state: { 
+                product: { 
+                  id: "AMT-GR-POTATO-1KG",
+                  productId: "AMT-GR-POTATO-1KG",
+                  name: "Potato", 
+                  title: "Fresh Potato 1kg",
+                  price: 25, 
+                  oldPrice: 30,
+                  mrp: 30,
+                  rating: 4.5,
+                  discount: '15% OFF',
+                  image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60",
+                  img: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60",
+                  marketplaceTab: 'quick_shop',
+                } 
+              } 
+            })}
             className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
           >
             <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
@@ -840,7 +959,24 @@ const QuickShop = () => {
 
           {/* Tomato */}
           <div 
-            onClick={() => navigate('/product-detail', { state: { product: { name: "Tomato", price: 22, oldPrice: 25 } } })}
+            onClick={() => navigate('/product-detail', { 
+              state: { 
+                product: { 
+                  id: "AMT-GR-001",
+                  productId: "AMT-GR-001",
+                  name: "Tomato", 
+                  title: "Fresh Tomatoes 1kg",
+                  price: 22, 
+                  oldPrice: 25,
+                  mrp: 25,
+                  rating: 4.4,
+                  discount: '12% OFF',
+                  image: "https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60",
+                  img: "https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60",
+                  marketplaceTab: 'quick_shop',
+                } 
+              } 
+            })}
             className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
           >
             <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
@@ -867,7 +1003,24 @@ const QuickShop = () => {
 
           {/* Milk */}
           <div 
-            onClick={() => navigate('/product-detail', { state: { product: { name: "Milk", price: 48, oldPrice: 60 } } })}
+            onClick={() => navigate('/product-detail', { 
+              state: { 
+                product: { 
+                  id: "AMT-GR-MILK-1L",
+                  productId: "AMT-GR-MILK-1L",
+                  name: "Milk", 
+                  title: "Fresh Cow Milk 1L",
+                  price: 48, 
+                  oldPrice: 60,
+                  mrp: 60,
+                  rating: 4.8,
+                  discount: '10% OFF',
+                  image: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60",
+                  img: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60",
+                  marketplaceTab: 'quick_shop',
+                } 
+              } 
+            })}
             className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
           >
             <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">

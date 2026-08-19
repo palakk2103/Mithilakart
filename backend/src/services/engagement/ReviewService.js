@@ -70,9 +70,19 @@ class ReviewService extends BaseService {
     const limit = Math.min(Number(query.limit) || 20, 100);
     const skip = (page - 1) * limit;
 
+    let targetId = productId;
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      const product = await this.productRepository.findPublicById(productId);
+      if (!product) {
+        return { items: [], total: 0, page, limit };
+      }
+      targetId = product._id;
+    }
+
     const [items, total] = await Promise.all([
-      this.reviewRepository.findByProduct(productId, {}, { sort: '-createdAt', skip, limit }),
-      this.reviewRepository.countByProduct(productId),
+      this.reviewRepository.findByProduct(targetId, {}, { sort: '-createdAt', skip, limit }),
+      this.reviewRepository.countByProduct(targetId),
     ]);
 
     return { items, total, page, limit };

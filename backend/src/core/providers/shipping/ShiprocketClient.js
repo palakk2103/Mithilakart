@@ -79,6 +79,35 @@ class ShiprocketClient {
     };
   }
 
+  /**
+   * Pickup locations registered on the account.
+   *
+   * `pickup_location` in an ad-hoc order is a NICKNAME that must already exist
+   * on the account — Shiprocket rejects the order otherwise. Reading the real
+   * list is what lets us fail with "you configured X, the account has Y and Z"
+   * instead of a generic rejection.
+   *
+   * Cached for the process lifetime: pickup locations change at operator pace,
+   * not per order, and this sits on the fulfillment hot path.
+   */
+  async listPickupLocations({ forceRefresh = false } = {}) {
+    if (!forceRefresh && this._pickupLocations) return this._pickupLocations;
+
+    const response = await this._authedRequest('/v1/external/settings/company/pickup');
+    const raw = response?.data?.shipping_address || response?.data || [];
+    const list = Array.isArray(raw) ? raw : [];
+
+    this._pickupLocations = list.map((entry) => ({
+      nickname: entry.pickup_location,
+      pincode: entry.pin_code ? String(entry.pin_code) : null,
+      city: entry.city || null,
+      // Shiprocket marks a verified/usable address with status 1.
+      verified: Number(entry.status) === 1,
+    }));
+
+    return this._pickupLocations;
+  }
+
   async createAdhocOrder(payload) {
     return this._authedRequest('/v1/external/orders/create/adhoc', {
       method: 'POST',
@@ -109,19 +138,43 @@ class ShiprocketClient {
     });
   }
 
-  async cancelShipments(ids) {
-    const list = Array.isArray(ids) ? ids : [ids];
+  /**
+   * Cancels by Shiprocket ORDER id.
+   *
+   * Verified against the live API: passing a shipment_id here is rejected with
+   * "Order Id does not exist". The two id spaces are not interchangeable, and
+   * mixing them up means a Mithilakart cancellation leaves the parcel live at
+   * the courier. Use cancelByAwb() once an AWB exists.
+   */
+  async cancelShipments(orderIds) {
+    const list = Array.isArray(orderIds) ? orderIds : [orderIds];
     return this._authedRequest('/v1/external/orders/cancel', {
       method: 'POST',
       body: { ids: list },
     });
   }
 
-  async generateLabel(shipmentId) {
-    return this._authedRequest(
-      `/v1/external/courier/generate/label?shipment_id=${encodeURIComponent(shipmentId)}`,
-      { method: 'GET' }
-    );
+  /** Cancels an already-manifested shipment by AWB — a different endpoint. */
+  async cancelByAwb(awbs) {
+    const list = Array.isArray(awbs) ? awbs : [awbs];
+    return this._authedRequest('/v1/external/orders/cancel/shipment/awbs', {
+      method: 'POST',
+      body: { awbs: list },
+    });
+  }
+
+  /**
+   * Shiprocket requires POST here. The previous GET returned HTTP 405
+   * ("The GET method is not supported for this route") on every call, so label
+   * generation could never succeed — it was silently swallowed by the caller's
+   * try/catch and every shipment went out without a label URL.
+   */
+  async generateLabel(shipmentIds) {
+    const list = Array.isArray(shipmentIds) ? shipmentIds : [shipmentIds];
+    return this._authedRequest('/v1/external/courier/generate/label', {
+      method: 'POST',
+      body: { shipment_id: list },
+    });
   }
 
   async _authedRequest(path, options = {}) {

@@ -20,37 +20,37 @@ const StatCard = ({
 }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: delay * 0.1, duration: 0.4 }}
+      transition={{ delay: delay * 0.05, duration: 0.2 }}
       className={`
-        bg-[var(--seller-card,#fff)] rounded-2xl border border-[var(--seller-border-light,#F3F4F6)]
-        p-6 shadow-sm hover:shadow-md transition-shadow duration-300 group
+        bg-[var(--seller-card,#fff)] rounded-xl border border-[var(--seller-border-light,#F3F4F6)]
+        p-4 shadow-2xs hover:shadow-xs transition-all duration-200 group select-none
         ${className}
       `}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className={`p-3 rounded-xl ${iconBg} group-hover:scale-110 transition-transform duration-300`}>
-          {Icon && <Icon size={22} className={iconColor} />}
+      <div className="flex items-center justify-between mb-3">
+        <div className={`p-2.5 rounded-lg ${iconBg} group-hover:scale-105 transition-transform duration-200`}>
+          {Icon && <Icon size={18} className={iconColor} />}
         </div>
         {trend && (
-          <div className={`flex items-center gap-1 text-xs font-semibold ${
-            trend === 'up' ? 'text-green-600' : 'text-red-500'
+          <div className={`flex items-center gap-0.5 text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
+            trend === 'up' ? 'text-emerald-700 bg-emerald-50 border border-emerald-200/60' : 'text-rose-700 bg-rose-50 border border-rose-200/60'
           }`}>
-            {trend === 'up' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+            {trend === 'up' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             <span>{trendValue}</span>
           </div>
         )}
       </div>
 
-      <p className="text-xs font-medium text-[var(--seller-subtext,#6B7280)] uppercase tracking-wide mb-1">
+      <p className="text-[10.5px] font-bold text-[var(--seller-subtext,#6B7280)] uppercase tracking-wider mb-0.5 truncate">
         {title}
       </p>
-      <h3 className="text-2xl font-bold text-[var(--seller-text,#111827)] tracking-tight">
+      <h3 className="text-xl sm:text-2xl font-black text-[var(--seller-text,#111827)] tracking-tight">
         {value}
       </h3>
       {subtitle && (
-        <p className="text-xs text-[var(--seller-subtext,#6B7280)] mt-1.5">{subtitle}</p>
+        <p className="text-[11px] text-[var(--seller-subtext,#6B7280)] mt-1 truncate">{subtitle}</p>
       )}
     </motion.div>
   );

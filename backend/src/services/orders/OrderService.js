@@ -44,6 +44,7 @@ class OrderService extends BaseService {
     this.geocodingService = geocodingService;
     this.courierShipmentService = courierShipmentService;
     this.deliveryOrderService = null;
+    this.fulfillmentEngineService = null;
   }
 
   setCourierShipmentService(courierShipmentService) {
@@ -52,6 +53,11 @@ class OrderService extends BaseService {
 
   setDeliveryOrderService(deliveryOrderService) {
     this.deliveryOrderService = deliveryOrderService;
+  }
+
+  /** CR-002. Optional: when unset, order placement behaves exactly as before. */
+  setFulfillmentEngineService(fulfillmentEngineService) {
+    this.fulfillmentEngineService = fulfillmentEngineService;
   }
 
   _generateOrderNumber() {
@@ -83,7 +89,7 @@ class OrderService extends BaseService {
       }
     }
 
-    return withTransaction(async (session) => {
+    const result = await withTransaction(async (session) => {
       await this._releaseStalePendingOrders(userId, session);
 
       const cart = items
@@ -221,15 +227,67 @@ class OrderService extends BaseService {
       };
     });
 
-    try {
-      await this.cartService.clearCart({ userId, sessionId: null });
-    } catch (err) {
-      if (this.logger) {
-        this.logger.error({ err, userId }, 'Failed to clear cart after order placement');
+    // Cart clearing happens AFTER the transaction commits, never inside it.
+    //
+    // Placement is the trigger, not payment success: a COD or pending-Razorpay
+    // order is a real order, and the cart has been consumed by it. If the
+    // transaction threw (payment declined, order creation failed, rollback),
+    // the await above rejects and we never reach here — so a failed order
+    // correctly leaves the cart intact.
+    //
+    // `items` means a direct "Buy Now" that bypassed the cart; wiping the
+    // whole cart there would delete unrelated items the customer still wants.
+    const placedFromCart = !items;
+
+    if (placedFromCart && result?.orderId) {
+      try {
+        await this.cartService.clearCart({ userId, sessionId: null });
+      } catch (err) {
+        // The order is already committed — a cart-clearing failure must never
+        // fail the request. Logged via the module logger; `this.logger` does
+        // not exist on BaseService and silently swallowed this before.
+        logger.error({ err, userId, orderId: result.orderId },
+          'Failed to clear cart after order placement');
       }
     }
 
     return result;
+  }
+
+  /**
+   * CR-002 — customer-safe fulfillment state.
+   *
+   * Poll target for clients whose socket dropped. Returns only the coarse
+   * projection: never the candidate seller list, rank scores, attempt history,
+   * or internal failure codes.
+   */
+  async getFulfillmentStatus(orderId, userId) {
+    const order = await this.orderRepository.findActiveById(orderId, userId);
+    if (!order) throw AppError.notFound('Order not found');
+
+    const fulfillment = order.fulfillment || {};
+    let state = null;
+
+    if (this.orderFulfillmentRepository) {
+      try {
+        const record = await this.orderFulfillmentRepository.findByOrderId(order._id);
+        state = record?.state || null;
+      } catch (err) {
+        logger.warn({ err, orderId: String(order._id) }, 'CR-002 fulfillment status lookup failed');
+      }
+    }
+
+    return {
+      orderId: String(order._id),
+      status: order.status,
+      state,
+      deliveryMode: fulfillment.deliveryMode ?? null,
+      estimatedDeliveryMinutes: fulfillment.estimatedDeliveryMinutes ?? null,
+      estimatedDeliveryAt: fulfillment.estimatedDeliveryAt ?? order.estimatedDeliveryAt ?? null,
+      fulfillmentType: fulfillment.type ?? order.fulfilmentType ?? null,
+      fallbackLevel: fulfillment.fallbackLevel ?? 0,
+      updatedAt: order.updatedAt,
+    };
   }
 
   async releaseOrderReservations(orderId, session = null) {
@@ -375,6 +433,42 @@ class OrderService extends BaseService {
         { fulfilmentType: 'local_delivery' },
         session
       );
+
+      // CR-002 — intelligent fulfillment for quick-commerce tabs.
+      //
+      // Started AFTER THE TRANSACTION COMMITS, never inside it. The engine
+      // reads the order on its own connection, so starting it here while the
+      // checkout transaction was still open meant it could not see the order
+      // at all — it logged "start called for a missing order" and the order was
+      // silently never fulfilled. That race is why fulfillment "sometimes"
+      // failed to progress in the browser while every unit test passed.
+      //
+      // Still fire-and-forget once committed: the engine runs after payment
+      // authorisation so the discovery window is a backend budget, never
+      // customer-facing latency, and an engine fault can never roll back a paid
+      // order. If the transaction aborts, the hook never runs — a rolled-back
+      // order must not trigger fulfillment.
+      //
+      // Both guards matter: without the service injected, or with the tab
+      // disabled, behaviour is byte-identical to before CR-002.
+      if (this.fulfillmentEngineService) {
+        const startEngine = async () => {
+          try {
+            if (await this.fulfillmentEngineService.isEnabledForTab(tab)) {
+              await this.fulfillmentEngineService.start(order._id);
+            }
+          } catch (err) {
+            logger.error({ err, orderId: order._id }, 'CR-002 fulfillment engine start failed');
+          }
+        };
+
+        if (session && typeof session.afterCommit === 'function') {
+          session.afterCommit(startEngine);
+        } else {
+          // No transaction in play (direct call, tests): safe to start at once.
+          Promise.resolve(startEngine()).catch(() => {});
+        }
+      }
     } else {
       try {
         const shipment = this.courierShipmentService

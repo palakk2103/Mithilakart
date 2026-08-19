@@ -8,19 +8,19 @@ import { motion } from 'framer-motion';
 const PageHeader = ({ title, subtitle, children, className = '' }) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 ${className}`}
+      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 ${className}`}
     >
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--seller-text,#111827)] tracking-tight">
+      <div className="min-w-0">
+        <h1 className="text-xl sm:text-2xl font-black text-[var(--seller-text,#111827)] tracking-tight truncate">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-sm text-[var(--seller-subtext,#6B7280)] mt-1">{subtitle}</p>
+          <p className="text-xs text-[var(--seller-subtext,#6B7280)] mt-0.5 truncate">{subtitle}</p>
         )}
       </div>
-      {children && <div className="flex items-center gap-3 flex-wrap">{children}</div>}
+      {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
     </motion.div>
   );
 };

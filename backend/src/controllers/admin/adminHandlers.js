@@ -189,6 +189,30 @@ function createAdminHandlers(services) {
     upsertTemplate: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.notifications.upsertTemplate(req.body));
     }),
+
+    // ── CR-002 — fulfillment configuration & monitoring ─────────────────────
+    fulfillmentSettings: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.fulfillment.getSettings(req.query.tab || null));
+    }),
+    updateFulfillmentSettings: asyncHandler(async (req, res) => {
+      const result = await services.fulfillment.updateSettings(req.body, req.user.id, req);
+      return ApiResponse.success(res, result);
+    }),
+    listFulfillments: asyncHandler(async (req, res) => {
+      const result = await services.fulfillment.listFulfillments(req.query);
+      return ApiResponse.paginated(res, result.items, result.meta);
+    }),
+    getFulfillmentDetail: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.fulfillment.getFulfillmentDetail(req.params.orderId));
+    }),
+    retryFulfillment: asyncHandler(async (req, res) => {
+      const result = await services.fulfillment.retryFulfillment(req.params.orderId, req.user.id, req);
+      return ApiResponse.success(res, result);
+    }),
+    forceCourierFulfillment: asyncHandler(async (req, res) => {
+      const result = await services.fulfillment.forceCourier(req.params.orderId, req.user.id, req);
+      return ApiResponse.success(res, result);
+    }),
   };
 }
 

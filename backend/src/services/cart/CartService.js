@@ -236,6 +236,10 @@ class CartService extends BaseService {
   }
 
   async updateItemQuantity({ userId, sessionId, commerceFlow = 'standard', productId, variantId = null, quantity }) {
+    // `tab` is read further down but was never declared here, so every call
+    // threw a ReferenceError. Derived the same way as addItem/getCart.
+    const tab = resolveTabFromQuery({ commerceFlow }) || null;
+
     const product = await this.productRepository.findPublicById(productId);
     if (!product) throw AppError.notFound('Product not found');
 

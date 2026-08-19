@@ -19,6 +19,7 @@
     "i18next": "^26.3.6",
     "lottie-react": "^2.4.1",
     "lucide-react": "^1.8.0",
+    "mongodb": "^7.5.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-hook-form": "^7.81.0",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.4",

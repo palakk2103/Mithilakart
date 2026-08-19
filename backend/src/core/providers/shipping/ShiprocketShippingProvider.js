@@ -62,6 +62,80 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
     return result;
   }
 
+  /**
+   * Resolves the pickup location nickname to use, validating it against the
+   * account.
+   *
+   * This exists because a mismatch here is invisible: `SHIPROCKET_PICKUP_LOCATION`
+   * was set to "Primary" while the account only had "MayurTailor" and two
+   * others, so every ad-hoc order was rejected and surfaced as a generic
+   * COURIER_UNAVAILABLE. 79 consecutive orders failed before anyone could tell
+   * a config typo from a courier outage. Failing loudly and specifically here is
+   * the difference between a five-minute fix and an invisible outage.
+   */
+  async resolvePickupLocation() {
+    const configured = this.config.pickupLocation || null;
+
+    let locations;
+    try {
+      locations = await this.client.listPickupLocations();
+    } catch (error) {
+      // Cannot verify — proceed with what is configured rather than block a
+      // shipment on a settings endpoint being briefly unavailable.
+      logger.warn({ err: error }, 'Shiprocket pickup locations unreadable — using configured value');
+      return { nickname: configured, pincode: this.config.pickupPincode || null, verified: null };
+    }
+
+    if (!locations.length) {
+      const err = new Error(
+        'Shiprocket has no pickup locations registered on this account. '
+        + 'Add one in Shiprocket → Settings → Pickup Addresses.'
+      );
+      err.code = 'COURIER_MISCONFIGURED';
+      throw err;
+    }
+
+    const match = configured
+      && locations.find((l) => String(l.nickname).toLowerCase() === String(configured).toLowerCase());
+
+    if (match) return match;
+
+    const available = locations
+      .map((l) => `"${l.nickname}"${l.verified ? '' : ' (unverified)'}`)
+      .join(', ');
+
+    const err = new Error(
+      `Shiprocket pickup location ${configured ? `"${configured}"` : '(not set)'} does not exist on this account. `
+      + `Set SHIPROCKET_PICKUP_LOCATION to one of: ${available}.`
+    );
+    err.code = 'COURIER_MISCONFIGURED';
+    throw err;
+  }
+
+  /**
+   * The customer's real contact number for the courier, or a hard failure.
+   *
+   * This used to silently substitute the literal '9876543210' whenever the
+   * address phone did not parse. 18 real orders in the production database have
+   * no usable phone, so 18 parcels would have been handed to a courier carrying
+   * a stranger's number: the driver cannot reach the customer, delivery fails,
+   * and the parcel comes back RTO — with nothing anywhere recording that the
+   * number was invented. A fabricated contact detail is worse than a refused
+   * shipment, because it fails silently and at the customer's expense.
+   */
+  _customerPhone(address = {}) {
+    const digits = String(address.phone || '').replace(/\D/g, '').slice(-10);
+
+    if (!/^[6-9]\d{9}$/.test(digits)) {
+      throw AppError.validation(
+        'A valid 10-digit customer phone number is required to book a courier shipment',
+        [{ field: 'phone', message: 'Missing or malformed contact number on the order address' }]
+      );
+    }
+
+    return digits;
+  }
+
   async createShipment(payload = {}) {
     this.ensureConfigured();
 
@@ -81,9 +155,18 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       throw AppError.validation('Shipping address pincode is required');
     }
 
+    // Resolved FIRST, because the parcel physically ships from this address and
+    // therefore this is the pincode serviceability must be checked against.
+    // Previously the check used the origin seller's pincode while the parcel
+    // actually dispatched from the configured pickup location — so a route could
+    // be declared serviceable on a lane the shipment never travels. On the
+    // courier-fallback path there is no fulfilling seller at all, which made the
+    // seller-derived pincode meaningless.
+    const pickupLocation = await this.resolvePickupLocation();
+
     await this.checkServiceability({
       address,
-      pickupPincode,
+      pickupPincode: pickupLocation.pincode || pickupPincode,
       paymentMethod,
       weightKg,
     });
@@ -113,7 +196,8 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
     const createBody = {
       order_id: String(orderNumber || orderId),
       order_date: orderDate,
-      pickup_location: this.config.pickupLocation || 'Primary',
+      // Validated against the account — never a silent 'Primary' guess.
+      pickup_location: pickupLocation.nickname,
       channel_id: this.config.channelId || undefined,
       comment: `Mithilakart order ${orderNumber}`,
       billing_customer_name: firstName,
@@ -125,7 +209,7 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       billing_state: address.state || '',
       billing_country: 'India',
       billing_email: address.email || 'customer@mithilakart.com',
-      billing_phone: String(address.phone || '9999999999').replace(/\D/g, '').slice(-10),
+      billing_phone: this._customerPhone(address),
       shipping_is_billing: true,
       order_items: orderItems,
       payment_method: paymentMode,
@@ -238,14 +322,19 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
   async cancelShipment({ shipmentId, shiprocketOrderId, awb }) {
     this.ensureConfigured();
 
+    // Order id and AWB are cancelled through DIFFERENT endpoints; a shipment id
+    // is valid for neither. Sending the wrong id type is rejected by Shiprocket
+    // ("Order Id does not exist"), which would leave a parcel live at the
+    // courier after the customer had already been told it was cancelled.
     if (shiprocketOrderId) {
       await this.client.cancelShipments([shiprocketOrderId]);
     } else if (awb) {
-      await this.client.cancelShipments([awb]);
-    } else if (shipmentId) {
-      await this.client.cancelShipments([shipmentId]);
+      await this.client.cancelByAwb([awb]);
     } else {
-      throw AppError.validation('shiprocketOrderId, awb, or shipmentId required to cancel');
+      throw AppError.validation(
+        'shiprocketOrderId or awb is required to cancel a Shiprocket shipment'
+        + (shipmentId ? ' (a shipmentId alone cannot be cancelled)' : '')
+      );
     }
 
     return { cancelled: true, provider: this.providerName, shipmentId, awb, shiprocketOrderId };

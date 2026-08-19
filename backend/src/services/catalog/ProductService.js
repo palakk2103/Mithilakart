@@ -127,9 +127,9 @@ class ProductService extends BaseService {
       throw AppError.notFound('Product not found');
     }
 
-    const variants = await this.productVariantRepository.findByProductId(id);
+    const variants = await this.productVariantRepository.findByProductId(product._id);
     let payload = this._serializeDetail(product, variants);
-    payload = await this._withFlashSalePrice(payload, id);
+    payload = await this._withFlashSalePrice(payload, product._id);
 
     await this.cacheService.set(cacheKey, payload, CACHE_TTL.PRODUCT_DETAIL);
     return payload;

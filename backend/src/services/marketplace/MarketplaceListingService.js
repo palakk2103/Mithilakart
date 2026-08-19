@@ -348,7 +348,7 @@ class MarketplaceListingService extends BaseService {
 
     if (tab) {
       const listing = await this.marketplaceListingRepository.findPublicOne({
-        productId,
+        productId: product._id,
         marketplaceTab: tab,
       });
 
@@ -360,7 +360,7 @@ class MarketplaceListingService extends BaseService {
       }
     }
 
-    const listings = await this.marketplaceListingRepository.findPublic({ productId });
+    const listings = await this.marketplaceListingRepository.findPublic({ productId: product._id });
     const activeListing = listings[0] || null;
 
     if (activeListing) {
@@ -381,7 +381,30 @@ class MarketplaceListingService extends BaseService {
   }
 
   async resolveListingForCart(listingId) {
-    const listing = await this.marketplaceListingRepository.findPublicOne({ _id: listingId });
+    if (!listingId) {
+      throw AppError.badRequest('Listing ID is required');
+    }
+    const mongoose = require('mongoose');
+    let listing = null;
+    if (mongoose.Types.ObjectId.isValid(listingId)) {
+      listing = await this.marketplaceListingRepository.findPublicOne({ _id: listingId });
+    }
+
+    if (!listing) {
+      // Lookup product by SKU / ID and find active listing
+      const product = await this.productRepository.findPublicById(listingId);
+      if (product) {
+        listing = await this.marketplaceListingRepository.findPublicOne({ productId: product._id });
+        if (listing) {
+          const availableStock = this.productRepository.getAvailableStock(product);
+          if (availableStock <= 0) {
+            throw AppError.conflict('Product is out of stock');
+          }
+          return { listing, product };
+        }
+      }
+    }
+
     if (!listing) {
       throw AppError.notFound('Listing not found or not available', [{ code: 'LISTING_NOT_FOUND' }]);
     }

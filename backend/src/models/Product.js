@@ -44,6 +44,25 @@ const productSchema = new mongoose.Schema(
     reviewCount: { type: Number, default: 0, min: 0 },
     brand: { type: String, default: '' },
     attributes: { type: mongoose.Schema.Types.Mixed, default: {} },
+
+    /**
+     * CR-002 — cross-seller catalog identity.
+     *
+     * Products are seller-owned (`sellerId` is required, `{sellerId, sku}` is
+     * unique), so there is otherwise no way to ask "which other sellers stock
+     * this same thing?". Two products sharing a non-null catalogKey are
+     * declared BY ADMIN to be the same sellable item and become substitutable
+     * for one another during fulfillment.
+     *
+     * null (the default, and every pre-CR-002 product) means the product is
+     * NOT substitutable — only its owning seller can fulfil it, which is
+     * exactly the pre-CR-002 behaviour.
+     *
+     * Never auto-derived from fuzzy title matching: a wrong key means the
+     * customer receives a different product than they ordered.
+     */
+    catalogKey: { type: String, default: null, trim: true },
+
     deletedAt: { type: Date, default: null },
   },
   {
@@ -56,6 +75,12 @@ productSchema.index({ sellerId: 1, status: 1, createdAt: -1 });
 productSchema.index({ categoryId: 1, status: 1, commerceFlows: 1 });
 productSchema.index({ status: 1, createdAt: -1 });
 productSchema.index({ sellerId: 1, sku: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
+// CR-002 — candidate lookup: "which sellers stock this catalog item?".
+// Partial, so the null-keyed majority costs nothing.
+productSchema.index(
+  { catalogKey: 1, sellerId: 1 },
+  { partialFilterExpression: { catalogKey: { $type: 'string' }, deletedAt: null } }
+);
 productSchema.index(
   { title: 'text', description: 'text', tags: 'text', brand: 'text' },
   { weights: { title: 10, tags: 5, brand: 3, description: 1 } }

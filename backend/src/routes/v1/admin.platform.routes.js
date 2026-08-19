@@ -51,6 +51,36 @@ function createAdminPlatformRoutes(services, middleware) {
   router.post('/support/tickets/:id/reply', authAdmin, requirePermission('tickets.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({ message: Joi.string().required() })), h.replySupport);
   router.patch('/support/tickets/:id/close', authAdmin, requirePermission('tickets.close'), validateParams(Joi.object({ id: objectIdSchema })), h.closeSupport);
 
+  // ── CR-002 — fulfillment configuration & monitoring ─────────────────────
+  // A validating façade over the same platform_settings store used below.
+  if (services.fulfillment) {
+    router.get('/fulfillment/settings', authAdmin, requirePermission('settings.view'), h.fulfillmentSettings);
+    router.put('/fulfillment/settings', authAdmin, requirePermission('settings.edit'), h.updateFulfillmentSettings);
+
+    router.get('/fulfillment/orders', authAdmin, requirePermission('orders.view'), h.listFulfillments);
+    router.get(
+      '/fulfillment/orders/:orderId',
+      authAdmin,
+      requirePermission('orders.view'),
+      validateParams(Joi.object({ orderId: objectIdSchema })),
+      h.getFulfillmentDetail
+    );
+    router.post(
+      '/fulfillment/orders/:orderId/retry',
+      authAdmin,
+      requirePermission('orders.edit'),
+      validateParams(Joi.object({ orderId: objectIdSchema })),
+      h.retryFulfillment
+    );
+    router.post(
+      '/fulfillment/orders/:orderId/force-courier',
+      authAdmin,
+      requirePermission('orders.edit'),
+      validateParams(Joi.object({ orderId: objectIdSchema })),
+      h.forceCourierFulfillment
+    );
+  }
+
   router.get('/settings', authAdmin, requirePermission('settings.view'), h.getSettings);
   router.put('/settings', authAdmin, requirePermission('settings.edit'), h.updateSettings);
   router.put('/settings/commission', authAdmin, requirePermission('finance.edit'), validateBody(Joi.object({ rate: Joi.number().min(0).max(1).required() })), h.updateCommission);

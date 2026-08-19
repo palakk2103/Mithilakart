@@ -13,6 +13,7 @@ function createOrdersRoutes({ orderController, returnController }, middleware) {
   router.get('/', authCustomer, validateQuery(listOrdersQuerySchema), orderController.listOrders);
   router.get('/:id', authCustomer, validateParams(Joi.object({ id: idOrOrderNumberSchema })), orderController.getOrderDetail);
   router.get('/:id/tracking', authCustomer, validateParams(Joi.object({ id: idOrOrderNumberSchema })), orderController.getOrderTracking);
+  router.get('/:id/fulfillment', authCustomer, validateParams(Joi.object({ id: idOrOrderNumberSchema })), orderController.getOrderFulfillment);
   router.post('/:id/cancel', authCustomer, validateParams(Joi.object({ id: idOrOrderNumberSchema })), validateBody(cancelOrderSchema), orderController.cancelOrder);
   router.post('/:id/returns', authCustomer, validateParams(Joi.object({ id: idOrOrderNumberSchema })), validateBody(Joi.object({
     orderItemId: objectIdSchema.required(),

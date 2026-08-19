@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { ORDER_STATUS } = require('../constants/commerce');
 const { COMMERCE_FLOW_VALUES } = require('../constants/catalog');
 const { MARKETPLACE_TAB_VALUES, DELIVERY_TYPE_VALUES } = require('../constants/marketplace');
+const { FULFILLMENT_TYPE_VALUES, DELIVERY_MODE_VALUES } = require('../constants/fulfillment');
 
 const orderSchema = new mongoose.Schema(
   {
@@ -67,6 +68,35 @@ const orderSchema = new mongoose.Schema(
       default: null,
     },
 
+    /**
+     * CR-002 — immutable fulfillment snapshot.
+     *
+     * Frozen when fulfillment is finalised so that a later Admin config change
+     * can never retroactively alter a historical order's ETA, fees, commission
+     * or delivery charge.
+     *
+     * The legacy top-level fields above (fulfilmentType, deliveryType,
+     * deliveryPromiseMinutes, estimatedDeliveryAt, shipment, sellerSubOrders)
+     * are RETAINED and kept mirrored, so every existing reader keeps working.
+     */
+    fulfillment: {
+      type: { type: String, enum: [...FULFILLMENT_TYPE_VALUES, null], default: null },
+      source: { type: String, default: null },
+      sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', default: null },
+      warehouseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller', default: null },
+      courierProvider: { type: String, default: null },
+      deliveryMode: { type: String, enum: [...DELIVERY_MODE_VALUES, null], default: null },
+      estimatedDeliveryMinutes: { type: Number, default: null },
+      estimatedDeliveryAt: { type: Date, default: null },
+      fallbackLevel: { type: Number, default: 0 },
+      fallbackReason: { type: String, default: null },
+      decidedAt: { type: Date, default: null },
+      configSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
+    },
+
+    platformFee: { type: Number, default: 0, min: 0 },
+    packagingFee: { type: Number, default: 0, min: 0 },
+
     cancelledAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
   },
@@ -77,6 +107,8 @@ const orderSchema = new mongoose.Schema(
 );
 
 orderSchema.index({ userId: 1, createdAt: -1 });
+// CR-002 — seller-scoped fulfillment queries (seller order list, admin monitor).
+orderSchema.index({ 'fulfillment.sellerId': 1, status: 1 });
 
 module.exports = mongoose.models.Order || mongoose.model('Order', orderSchema);
 

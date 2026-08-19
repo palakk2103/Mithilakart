@@ -129,71 +129,71 @@ const OrderDetail = () => {
   const isCourierOrder = order.fulfilmentType === 'courier' || order.commerceFlow === 'standard' || order.commerceFlow === 'mithilak';
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-6">
       <PageHeader title={`Order #${order.orderNumber || order.id}`} subtitle={`Placed on ${formatDate(order.placedAt, 'long')}`}>
-        <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate('/seller/orders')}>Back</Button>
-        <Button variant="secondary" icon={Printer} onClick={handlePrint}>Print Invoice</Button>
+        <Button variant="secondary" size="sm" icon={ArrowLeft} onClick={() => navigate('/seller/orders')}>Back</Button>
+        <Button variant="secondary" size="sm" icon={Printer} onClick={handlePrint}>Print Invoice</Button>
         {isCourierOrder && order.shipment?.labelUrl && (
-          <Button variant="secondary" icon={Truck} onClick={handleDownloadLabel}>Shipping Label</Button>
+          <Button variant="secondary" size="sm" icon={Truck} onClick={handleDownloadLabel}>Shipping Label</Button>
         )}
       </PageHeader>
 
       <DispatchDelayBanner order={order} role="seller" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           {/* Order Timeline */}
           <Card title="Order Timeline">
-            <div className="flex items-center justify-between mt-4 relative">
+            <div className="flex items-center justify-between mt-3 px-2 relative">
               {/* Progress Line */}
-              <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-100 z-0" />
-              <div className="absolute top-5 left-0 h-0.5 bg-[#2563EB] z-0"
-                   style={{ width: `${(timelineSteps.filter(s => s.done).length - 1) / (timelineSteps.length - 1) * 100}%` }} />
+              <div className="absolute top-4 left-4 right-4 h-0.5 bg-slate-100 z-0" />
+              <div className="absolute top-4 left-4 h-0.5 bg-slate-900 z-0 transition-all duration-300"
+                   style={{ width: `${(timelineSteps.filter(s => s.done).length - 1) / Math.max(1, timelineSteps.length - 1) * 100}%` }} />
 
               {timelineSteps.map((step) => (
                 <div key={step.label} className="flex flex-col items-center relative z-10">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-transform duration-200 ${
                     step.isWarning
-                      ? 'bg-red-500 border-red-500 text-white'
+                      ? 'bg-rose-500 border-rose-500 text-white'
                       : step.done
-                      ? 'bg-[#2563EB] border-[#2563EB] text-white'
-                      : 'bg-white border-gray-200 text-gray-300'
+                      ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
+                      : 'bg-white border-slate-200 text-slate-300'
                   }`}>
-                    <step.icon size={18} />
+                    <step.icon size={14} />
                   </div>
-                  <p className={`text-xs font-medium mt-2 ${step.isWarning ? 'text-red-600 font-bold' : step.done ? 'text-gray-900' : 'text-gray-400'}`}>{step.label}</p>
-                  {step.date && <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(step.date, 'short')}</p>}
+                  <p className={`text-[11px] font-bold mt-1.5 ${step.isWarning ? 'text-rose-600' : step.done ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</p>
+                  {step.date && <p className="text-[9.5px] text-slate-400 mt-0.2">{formatDate(step.date, 'short')}</p>}
                 </div>
               ))}
             </div>
           </Card>
 
           {/* Products */}
-          <Card title="Products">
-            <div className="space-y-3 mt-4">
+          <Card title="Ordered Items">
+            <div className="space-y-2.5 mt-2">
               {(order.products || []).map((product) => (
-                <div key={product.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-gray-100">
-                      <Package size={20} className="text-gray-300" />
+                <div key={product.id} className="flex items-center justify-between p-3 bg-slate-50/80 border border-slate-100 rounded-xl">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-200/60 shrink-0">
+                      <Package size={16} className="text-slate-400" />
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{product.title}</p>
-                      <p className="text-xs text-gray-400">Qty: {product.qty || product.quantity || 1}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">{product.title}</p>
+                      <p className="text-[10.5px] text-slate-400">Qty: {product.qty || product.quantity || 1}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{formatCurrency((product.price || 0) * (product.qty || product.quantity || 1))}</p>
+                  <p className="text-xs font-black text-slate-900 shrink-0 pl-3">{formatCurrency((product.price || 0) * (product.qty || product.quantity || 1))}</p>
                 </div>
               ))}
             </div>
 
             {/* Price Summary */}
-            <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span className="text-gray-900">{formatCurrency(order.totalAmount || 0)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Shipping</span><span className="text-gray-900">{order.shippingCharge ? formatCurrency(order.shippingCharge) : 'Free'}</span></div>
-              {(order.discount || 0) > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount</span><span className="text-green-600">-{formatCurrency(order.discount)}</span></div>}
-              <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-100"><span>Total</span><span>{formatCurrency(order.finalAmount || order.totalAmount || 0)}</span></div>
+            <div className="mt-3.5 pt-3 border-t border-slate-100 space-y-1.5">
+              <div className="flex justify-between text-xs"><span className="text-slate-500">Subtotal</span><span className="font-semibold text-slate-800">{formatCurrency(order.totalAmount || 0)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-slate-500">Delivery Fee</span><span className="font-semibold text-slate-800">{order.shippingCharge ? formatCurrency(order.shippingCharge) : 'Free'}</span></div>
+              {(order.discount || 0) > 0 && <div className="flex justify-between text-xs"><span className="text-slate-500">Discount</span><span className="font-semibold text-emerald-600">-{formatCurrency(order.discount)}</span></div>}
+              <div className="flex justify-between text-sm font-black pt-2 border-t border-slate-100 text-slate-900"><span>Total</span><span>{formatCurrency(order.finalAmount || order.totalAmount || 0)}</span></div>
             </div>
           </Card>
 

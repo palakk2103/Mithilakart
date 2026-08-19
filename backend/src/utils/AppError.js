@@ -47,6 +47,34 @@ class AppError extends Error {
     return new AppError(message, ERROR_CODES.DELIVERY_NOT_AVAILABLE, null, details);
   }
 
+  // ── CR-002 — intelligent fulfillment ───────────────────────────────────────
+  // MAP_SERVICE_UNAVAILABLE and REALTIME_CONNECTION_FAILED deliberately have no
+  // factory: they are logged and degraded, never thrown at a customer.
+
+  static fulfillmentTimeout(message = 'Fulfillment search timed out', details = null) {
+    return new AppError(message, ERROR_CODES.FULFILLMENT_TIMEOUT, null, details);
+  }
+
+  static noSellerAvailable(message = 'No seller can fulfil this order', details = null) {
+    return new AppError(message, ERROR_CODES.NO_SELLER_AVAILABLE, null, details);
+  }
+
+  static warehouseUnavailable(message = 'Warehouse fulfillment unavailable', details = null) {
+    return new AppError(message, ERROR_CODES.WAREHOUSE_UNAVAILABLE, null, details);
+  }
+
+  static courierUnavailable(message = 'Courier service unavailable', details = null) {
+    return new AppError(message, ERROR_CODES.COURIER_SERVICE_UNAVAILABLE, null, details);
+  }
+
+  static reservationFailed(message = 'Could not reserve inventory', details = null) {
+    return new AppError(message, ERROR_CODES.INVENTORY_RESERVATION_FAILED, null, details);
+  }
+
+  static offerExpired(message = 'This order offer has expired', details = null) {
+    return new AppError(message, ERROR_CODES.FULFILLMENT_OFFER_EXPIRED, null, details);
+  }
+
   static gone(message = 'Resource expired') {
     return new AppError(message, ERROR_CODES.GONE, HTTP_STATUS.GONE);
   }

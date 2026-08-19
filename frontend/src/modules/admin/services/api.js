@@ -265,6 +265,19 @@ export const contentApi = {
   moderateQuestion: (id, action) => asyncHandler(() => api.patch(`/content/qna/${id}`, { action })),
 };
 
+
+// ── CR-002 — FULFILLMENT CONFIG & MONITORING ──────────────────────────────
+// Validating facade over the same platform settings store; the backend
+// rejects out-of-range values rather than clamping them.
+export const fulfillmentApi = {
+  getSettings: (tab) => asyncHandler(() => api.get('/fulfillment/settings', { params: tab ? { tab } : {} })),
+  updateSettings: (updates) => asyncHandler(() => api.put('/fulfillment/settings', updates)),
+  list: (params) => asyncHandler(() => api.get('/fulfillment/orders', { params })),
+  getDetail: (orderId) => asyncHandler(() => api.get(`/fulfillment/orders/${orderId}`)),
+  retry: (orderId) => asyncHandler(() => api.post(`/fulfillment/orders/${orderId}/retry`)),
+  forceCourier: (orderId) => asyncHandler(() => api.post(`/fulfillment/orders/${orderId}/force-courier`)),
+};
+
 const adminApi = {
   auth: authApi,
   dashboard: dashboardApi,
