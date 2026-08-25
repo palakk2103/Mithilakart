@@ -55,12 +55,16 @@ const ProductCard = ({ product, onClick }) => {
           {product.title || product.name}
         </h3>
 
-        <div className="mt-1 md:mt-2 flex items-center gap-1.5">
-          <div className={`${primaryBg} text-white text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded flex items-center font-bold`}>
-            {product.rating || "4.2"} ★
+        {product.rating > 0 && (
+          <div className="mt-1 md:mt-2 flex items-center gap-1.5">
+            <div className={`${primaryBg} text-white text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded flex items-center font-bold`}>
+              {product.rating} ★
+            </div>
+            {product.reviewCount > 0 && (
+              <span className="text-slate-400 text-[10px] md:text-xs font-medium">({product.reviewCount})</span>
+            )}
           </div>
-          <span className="text-slate-400 text-[10px] md:text-xs font-medium">({product.reviews || "120"})</span>
-        </div>
+        )}
 
         <div className="mt-1.5 md:mt-3 flex flex-col">
           <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">

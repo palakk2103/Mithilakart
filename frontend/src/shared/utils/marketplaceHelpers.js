@@ -4,15 +4,24 @@
 
 /**
  * Detects the active marketplace tab based on the active route and local storage state.
+ *
+ * Returns the CANONICAL backend tab value directly (`mithilakart` | `mithilak` |
+ * `quick_shop` | `groceries_fresh` — matching `MARKETPLACE_TABS` in
+ * backend/src/constants/marketplace.js), not the zustand store's internal
+ * `activeFlow` spelling (`quickshop`/`freshgrocery`, no underscore), so a
+ * caller can pass this straight through as `?tab=` without a second mapping
+ * step.
  */
 export const getCurrentMarketplaceTab = () => {
+  if (typeof window === 'undefined') return 'mithilakart';
   if (localStorage.getItem('isFreshGroceryFlow') === 'true') {
     return 'groceries_fresh';
   }
   if (localStorage.getItem('isMithilakFlow') === 'true') {
     return 'mithilak';
   }
-  if (window.location.pathname.includes('/quick-shop')) {
+  if (localStorage.getItem('isQuickShopFlow') === 'true'
+    || window.location.pathname.includes('/quick-shop')) {
     return 'quick_shop';
   }
   return 'mithilakart';

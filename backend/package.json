@@ -21,7 +21,8 @@
     "migrate:cr002": "node scripts/migrate-cr002.js",
     "seed:sellers": "node scripts/seed-sellers.js",
     "test:layer2": "jest --runInBand tests/layer2",
-    "seed:cr002-test": "node scripts/seed-cr002-test-data.js"
+    "seed:cr002-test": "node scripts/seed-cr002-test-data.js",
+    "migrate:idempotency-unique": "node scripts/migrate-idempotency-unique.js"
   },
   "engines": {
     "node": ">=18.0.0"

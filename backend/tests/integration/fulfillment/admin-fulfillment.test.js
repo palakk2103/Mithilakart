@@ -130,6 +130,23 @@ describe('CR-002 P11 — AdminFulfillmentService', () => {
       expect(() => service.validate({ sellerRankingWeights: { distance: 0, routeEta: 0 } })).toThrow();
     });
 
+    it('accepts valid partnerRankingWeights, mirroring sellerRankingWeights', () => {
+      const { service } = build();
+      const clean = service.validate({ partnerRankingWeights: { pickupDistance: 0.6, workload: 0.4 } });
+      expect(clean.partnerRankingWeights).toEqual({ pickupDistance: 0.6, workload: 0.4 });
+    });
+
+    it('rejects an unknown partner ranking factor and an out-of-range weight', () => {
+      const { service } = build();
+      expect(() => service.validate({ partnerRankingWeights: { madeUp: 0.5 } })).toThrow();
+      expect(() => service.validate({ partnerRankingWeights: { pickupDistance: 5 } })).toThrow();
+    });
+
+    it('rejects all-zero partner ranking weights', () => {
+      const { service } = build();
+      expect(() => service.validate({ partnerRankingWeights: { pickupDistance: 0, workload: 0 } })).toThrow();
+    });
+
     it('rejects an empty or malformed payload', () => {
       const { service } = build();
       expect(() => service.validate({})).toThrow(/No settings provided/);
@@ -153,6 +170,8 @@ describe('CR-002 P11 — AdminFulfillmentService', () => {
       expect(result.ranges.quickFulfillmentSearchTimeoutSeconds).toEqual({ min: 5, max: 300 });
       expect(result.deliveryAssignmentModes).toContain('broadcast');
       expect(result.rankingFactors).toContain('distance');
+      expect(result.partnerRankingFactors).toContain('pickupDistance');
+      expect(result.settings.partnerRankingWeights).toBeDefined();
     });
   });
 

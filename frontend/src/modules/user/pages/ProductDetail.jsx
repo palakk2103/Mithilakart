@@ -12,28 +12,24 @@ import useAccountStore from '../../../store/useAccountStore';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
 import { useTranslation } from 'react-i18next';
-import { getProductById, getProductReviews, getProductQuestions, createProductReview, askProductQuestion } from '../services/catalogApi';
+import { getProductById, getProductReviews, getProductQuestions, createProductReview, askProductQuestion, getCategoryProducts } from '../services/catalogApi';
 import { uploadReviewMedia } from '../../../shared/services/uploadService';
 import { getOrders } from '../services/ordersApi';
 import { addToWishlist, removeFromWishlist as removeWishlistItem } from '../services/userApi';
-import { mapProductForDetail, extractList, mapReview, mapQuestion } from '../utils/mappers';
+import { mapProductForDetail, mapProductForCard, extractList, mapReview, mapQuestion } from '../utils/mappers';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
 import { toast } from 'react-hot-toast';
 import { addProductToCart, fetchCartCount } from '../utils/cartUtils';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
+import SEO from '../../../shared/components/SEO';
+import JsonLd from '../../../shared/components/JsonLd';
+import { SITE_URL } from '../../../config/siteConfig';
 
 // Import Assets
 import PlumShampoo from '../../../assets/products/product05.jpg';
 import FashionHero from '../../../assets/products/product06.jpg';
 import LorealShampoo from '../../../assets/products/product07.jpg';
 import EarbudsDeal from '../../../assets/products/product03.jpg';
-import Tshirt from '../../../assets/products/product05.jpg';
-import FlipFlops from '../../../assets/products/product07.jpg';
-import Suitcase from '../../../assets/products/product09.jpg';
-import TopSection1 from '../../../assets/TopSection/TopSection1.jpg';
-import Balloons from '../../../assets/products/product10.jpg';
-import SplitAC from '../../../assets/products/product08.jpg';
-import TowerFan from '../../../assets/products/product09.jpg';
 
 const ProductDetail = () => {
   const { t } = useTranslation();
@@ -65,6 +61,7 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState('S');
   const { wishlist, addToWishlist: addToWishlistStore, removeFromWishlist } = useAccountStore();
   const [product, setProduct] = useState(null);
+  const [similarProducts, setSimilarProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, body: '' });
@@ -106,7 +103,6 @@ const ProductDetail = () => {
   const [helpfulReviews, setHelpfulReviews] = useState({});
   const [likedQuestions, setLikedQuestions] = useState({});
   const [likedAnswers, setLikedAnswers] = useState({});
-  const [comboChecked, setComboChecked] = useState([true, true, false]); // [main, combo1, combo2]
 
   const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientY);
   const handleTouchMove = (e, setExpanded, isExpanded) => {
@@ -254,7 +250,11 @@ const ProductDetail = () => {
   useEffect(() => {
     let cancelled = false;
     const incomingProduct = location.state?.product;
-    const productId = location.state?.productId || incomingProduct?.id || incomingProduct?._id || incomingProduct?.productId;
+    // `?id=` lets a direct link, a search-engine crawl, or a shared URL
+    // resolve to the right product without navigation state — the state-only
+    // path above still wins when present (no extra fetch on in-app navigation).
+    const queryId = new URLSearchParams(location.search).get('id');
+    const productId = location.state?.productId || incomingProduct?.id || incomingProduct?._id || incomingProduct?.productId || queryId;
     const isValidId = typeof productId === 'string' && productId.length >= 3;
 
     const load = async () => {
@@ -281,17 +281,7 @@ const ProductDetail = () => {
             setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
           }
         } else if (!cancelled) {
-          setProduct(mapProductForDetail({
-            id: '1',
-            brand: 'Lounge Dreams',
-            name: 'Women Boxy Fit Checked Casual Shirt',
-            price: 1559,
-            mrp: 2999,
-            rating: 4.2,
-            reviewCount: 4,
-            image: PlumShampoo,
-            category: 'Fashion',
-          }, PlumShampoo));
+          setError('Product not found');
         }
       } catch (err) {
         if (!cancelled) {
@@ -309,27 +299,60 @@ const ProductDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [location.state]);
+  }, [location.state, location.search]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!product?.categoryId) {
+      setSimilarProducts([]);
+      return undefined;
+    }
+
+    getCategoryProducts(product.categoryId, { limit: 10 })
+      .then((data) => {
+        if (cancelled) return;
+        const list = extractList(data)
+          .map((p) => mapProductForCard(p))
+          .filter((p) => p.id !== product.id);
+        setSimilarProducts(list);
+      })
+      .catch(() => {
+        if (!cancelled) setSimilarProducts([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.categoryId, product?.id]);
 
   const detailsData = useMemo(() => {
     if (!product) return { highlights: [], specs: [] };
+
+    // Only real attributes the product actually carries — a product with no
+    // fabric/sleeve/etc. shows fewer rows rather than fabricated defaults
+    // (a bag being shown a fake "Sleeve: Full Sleeve" spec, for example).
+    const highlightFields = [
+      ['Pack of', product.pack],
+      ['Fabric', product.fabric],
+      ['Sleeve', product.sleeve],
+      ['Pattern', product.pattern],
+      ['Collar', product.collar],
+      ['Color', product.color],
+    ];
+    const specFields = [
+      ['Brand', product.brand],
+      ['Size', product.size],
+      ['Fit', product.fit],
+    ];
+
     return {
-      highlights: [
-        { label: 'Pack of', value: product.pack || '1' },
-        { label: 'Fabric', value: product.fabric || 'Wool Blend' },
-        { label: 'Sleeve', value: product.sleeve || 'Full Sleeve' },
-        { label: 'Pattern', value: product.pattern || 'Checkered' },
-        { label: 'Collar', value: product.collar || 'Spread' },
-        { label: 'Color', value: product.color || 'Pink' }
-      ],
-      specs: [
-        { label: 'Brand', value: product.brand || 'Mithilakart' },
-        { label: 'Size', value: product.size || 'M' },
-        { label: 'Fit', value: product.fit || 'Regular' },
-        { label: 'Fabric Care', value: 'Machine wash as per tag' },
-        { label: 'Suitable For', value: 'Western Wear' },
-        { label: 'Hem', value: 'Curved' }
-      ]
+      highlights: highlightFields
+        .filter(([, value]) => value)
+        .map(([label, value]) => ({ label, value })),
+      specs: specFields
+        .filter(([, value]) => value)
+        .map(([label, value]) => ({ label, value })),
     };
   }, [product]);
 
@@ -519,16 +542,13 @@ const ProductDetail = () => {
 
   // Filtered & Sorted Reviews
   const processedReviews = useMemo(() => {
+    // Production readiness audit Pass 2 (2026-08-25): this previously
+    // fabricated three fake reviews (fake names, fake dates, fake "Verified"
+    // badges, fake photo claims) whenever a product had zero real reviews —
+    // real customers were shown fake social proof on a live product page.
+    // Removed; a real "no reviews yet" empty state is rendered below instead.
     let list = [...reviews];
-    if (list.length === 0) {
-      // Mock review data when no reviews are present to demonstrate premium features
-      list = [
-        { id: 'mock-1', rating: 5, userName: 'Aarti Mishra', date: '20 May 2026', comment: 'Absolutely beautiful craftsmanship! The quality is premium and details are flawless.', isVerified: true, hasImage: true },
-        { id: 'mock-2', rating: 4, userName: 'Rohan Sharma', date: '18 May 2026', comment: 'Decent fit and nice pattern. Loved the overall texture of the cloth.', isVerified: true, hasImage: false },
-        { id: 'mock-3', rating: 5, userName: 'Neha K.', date: '15 May 2026', comment: 'Wonderful product. Will definitely recommend it to friends.', isVerified: false, hasImage: true }
-      ];
-    }
-    
+
     // Filtering
     if (reviewFilter === 'verified') {
       list = list.filter(r => r.isVerified);
@@ -550,39 +570,53 @@ const ProductDetail = () => {
     return list;
   }, [reviews, reviewFilter, reviewSort]);
 
-  // Frequently bought together details
-  const parsedPrice = product ? (parseFloat(product.price) || 0) : 0;
-  const comboPrice = parsedPrice + 299 + 499;
-  const comboDiscountedPrice = parsedPrice + 249 + 399;
-  const comboSavings = comboPrice - comboDiscountedPrice;
-
-  const handleAddComboToCart = async () => {
-    try {
-      if (comboChecked[0]) {
-        await addProductToCart(product, 1);
-      }
-      if (comboChecked[1]) {
-        await addProductToCart({ id: 'combo-1', name: 'Premium Cotton Socks (Pack of 3)', price: 249, image: Tshirt }, 1);
-      }
-      if (comboChecked[2]) {
-        await addProductToCart({ id: 'combo-2', name: 'Leather Slim Wallet', price: 399, image: Suitcase }, 1);
-      }
-      toast.success('Combo items added to cart!');
-    } catch {
-      toast.error('Failed to add combo items to cart');
-    }
-  };
-
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-cream">
-        <p className="text-sm text-slate-655">{loading ? 'Loading product...' : error || 'Product not found'}</p>
-      </div>
+      <>
+        {!loading && <SEO title="Product Not Found" noindex />}
+        <div className="min-h-screen flex items-center justify-center bg-bg-cream">
+          <p className="text-sm text-slate-655">{loading ? 'Loading product...' : error || 'Product not found'}</p>
+        </div>
+      </>
     );
   }
 
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description || undefined,
+    image: product.images?.length ? product.images : [product.image].filter(Boolean),
+    brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+    ...(product.rating > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: product.rating,
+        reviewCount: product.reviewCount || 1,
+      },
+    }),
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'INR',
+      price: String(product.price).replace(/,/g, ''),
+      availability: product.stock > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      url: `${SITE_URL}/product-detail?id=${product.id}`,
+    },
+  };
+
   return (
-    <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative ${
+    <>
+      <SEO
+        title={product.name}
+        description={product.description || undefined}
+        path={`/product-detail?id=${product.id}`}
+        image={product.image}
+        type="product"
+      />
+      <JsonLd data={productJsonLd} />
+      <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative ${
       isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-bg-cream'
     }`}>
 
@@ -1024,16 +1058,17 @@ const ProductDetail = () => {
           </div>
 
           {/* Product Highlights Accordion */}
+          {detailsData.highlights.length > 0 && (
           <div className="px-4 py-1.5 mt-2">
             <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-xs">
-              <div 
+              <div
                 onClick={() => setIsHighlightsOpen(!isHighlightsOpen)}
                 className="flex justify-between items-center cursor-pointer"
               >
                 <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-wider">Product Highlights</h3>
-                <ChevronRight 
-                  size={16} 
-                  className={`text-gray-400 transition-transform duration-300 ${isHighlightsOpen ? 'rotate-90' : ''}`} 
+                <ChevronRight
+                  size={16}
+                  className={`text-gray-400 transition-transform duration-300 ${isHighlightsOpen ? 'rotate-90' : ''}`}
                 />
               </div>
               {isHighlightsOpen && (
@@ -1048,6 +1083,7 @@ const ProductDetail = () => {
               )}
             </div>
           </div>
+          )}
 
           {/* Specifications with Inline Search Filter */}
           <div className="px-4 py-1.5 mt-1">
@@ -1080,7 +1116,7 @@ const ProductDetail = () => {
                   </div>
 
                   <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1">
-                    {['Specifications', 'Description', 'Manufacturer Info'].map(tab => (
+                    {['Specifications', 'Description'].map(tab => (
                       <button
                         key={tab}
                         onClick={(e) => {
@@ -1115,13 +1151,7 @@ const ProductDetail = () => {
 
                   {activeDetailTab === 'Description' && (
                     <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
-                      Premium quality materials with a modern, elegant drape. Features a premium finish and detailed stitching. Ideal for casual, lounge, and semi-formal wear.
-                    </p>
-                  )}
-
-                  {activeDetailTab === 'Manufacturer Info' && (
-                    <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
-                      Manufactured by Lounge Dreams Clothing Pvt Ltd. Designed and tailored in India.
+                      {product.description || 'No description available for this product.'}
                     </p>
                   )}
                 </div>
@@ -1201,6 +1231,11 @@ const ProductDetail = () => {
           </div>
 
           <div className="space-y-4 mb-5">
+            {processedReviews.length === 0 && (
+              <p className="text-xs text-slate-400 font-semibold text-center py-6">
+                No reviews yet — be the first to share your experience.
+              </p>
+            )}
             {processedReviews.map((review) => (
               <div key={review.id} className="border-b border-slate-50 pb-4 last:border-0">
                 <div className="flex items-center justify-between mb-1.5">
@@ -1423,79 +1458,47 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* Similar Products */}
-      <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
-        <div className="flex justify-between items-center px-4 mb-3 md:px-0">
-          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Similar Products</h3>
-          <span className="text-[10px] font-black text-[#3E5A44] tracking-widest uppercase cursor-pointer hover:underline">View All</span>
-        </div>
-        <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
-          {[
-            { img: TopSection1, name: 'Checked Cotton Shirt', brand: 'Fashion Hub', price: 899, oldPrice: 1999 },
-            { img: FlipFlops, name: 'Casual Flip Flops', brand: 'Drasert', price: 1299, oldPrice: 2499 },
-            { img: Suitcase, name: 'Premium Suitcase', brand: 'Lounge Dreams', price: 1599, oldPrice: 2999 }
-          ].map((item, idx) => (
-            <div 
-              key={idx} 
-              onClick={() => navigate('/vendor/product-detail', { state: { product: { ...item, image: item.img, rating: 4.1, discount: '55% OFF' } } })}
-              className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
-            >
-              <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
-                <img src={item.img} className="w-full h-full object-cover" alt="similar" />
-                <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-gray-100 shadow-2xs">
-                  <span className="text-[9px] font-black text-slate-800">4.1</span>
-                  <Star size={7} fill="#e2a750" className="text-[#e2a750]" />
+      {/* Similar Products — real products from the same category */}
+      {similarProducts.length > 0 && (
+        <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
+          <div className="flex justify-between items-center px-4 mb-3 md:px-0">
+            <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Similar Products</h3>
+          </div>
+          <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
+            {similarProducts.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => navigate('/product-detail', { state: { product: item } })}
+                className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
+              >
+                <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
+                  <img src={item.image} className="w-full h-full object-cover" alt={item.name} loading="lazy" />
+                  {item.rating > 0 && (
+                    <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-gray-100 shadow-2xs">
+                      <span className="text-[9px] font-black text-slate-800">{item.rating}</span>
+                      <Star size={7} fill="#e2a750" className="text-[#e2a750]" />
+                    </div>
+                  )}
+                </div>
+                <div className="px-2.5 pb-2.5 pt-0.5">
+                  <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
+                  {item.off && (
+                    <div className="text-[9px] font-black text-[#e47911] border border-[#e47911] px-1.5 py-0.5 rounded-full w-fit mt-1 uppercase">
+                      {item.off}
+                    </div>
+                  )}
+                  <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
+                    <span className="text-[13px] font-black text-slate-900">{formatPrice(item.price)}</span>
+                    {item.oldPrice && (
+                      <span className="text-[9.5px] text-gray-400 line-through">MRP {formatPrice(item.oldPrice)}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="px-2.5 pb-2.5 pt-0.5">
-                <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
-                <div className="text-[9px] font-black text-[#e47911] border border-[#e47911] px-1.5 py-0.5 rounded-full w-fit mt-1 uppercase">
-                  55% OFF
-                </div>
-                <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
-                  <span className="text-[13px] font-black text-slate-900">{formatPrice(item.price)}</span>
-                  <span className="text-[9.5px] text-gray-400 line-through">MRP {formatPrice(item.oldPrice)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Bought Together */}
-      <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
-        <div className="flex justify-between items-center px-4 mb-3 md:px-0">
-          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Bought Together</h3>
-          <span className="text-[10px] font-black text-[#3E5A44] tracking-widest uppercase cursor-pointer hover:underline">Explore</span>
-        </div>
-        <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
-          {[
-            { img: Balloons, name: 'Party Pack', price: 299, oldPrice: 599 },
-            { img: SplitAC, name: 'Samsung AC', price: 34999, oldPrice: 45999 },
-            { img: TowerFan, name: 'Tower Fan', price: 2499, oldPrice: 4999 }
-          ].map((item, i) => (
-            <div 
-              key={i} 
-              onClick={() => navigate('/product-detail', { state: { product: { ...item, image: item.img, rating: 4.3, discount: '60% off' } } })}
-              className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
-            >
-              <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
-                <img src={item.img} className="w-full h-full object-cover" alt="bought" />
-              </div>
-              <div className="px-2.5 pb-2.5 pt-0.5">
-                <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
-                <div className="text-[9px] font-black text-[#e47911] border border-[#e47911] px-1.5 py-0.5 rounded-full w-fit mt-1 uppercase">
-                  60% OFF
-                </div>
-                <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
-                  <span className="text-[13px] font-black text-slate-900">{formatPrice(item.price)}</span>
-                  <span className="text-[9.5px] text-gray-400 line-through">MRP {formatPrice(item.oldPrice)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Easy Returns Policy Bottom Sheet */}
       {showReturnPolicy && (
@@ -1929,7 +1932,8 @@ const ProductDetail = () => {
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

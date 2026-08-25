@@ -48,7 +48,12 @@ const orderSchema = new mongoose.Schema(
     couponCode: { type: String, default: null },
     couponDiscount: { type: Number, default: 0, min: 0 },
     inventoryDeducted: { type: Boolean, default: false },
-    idempotencyKey: { type: String, default: null, index: true, sparse: true },
+    // Indexed via the PARTIAL unique index declared below (not field-level
+    // `index: true`, which would register a second, conflicting plain index
+    // on the same key). See that declaration for why `sparse` alone is unsafe
+    // here — the schema default writes an explicit `null`, not an absent
+    // field.
+    idempotencyKey: { type: String, default: null },
 
     sellerSubOrders: [{
       sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller' },
@@ -107,6 +112,13 @@ const orderSchema = new mongoose.Schema(
 );
 
 orderSchema.index({ userId: 1, createdAt: -1 });
+// Partial (not sparse): only real string keys are constrained, so the many
+// existing `idempotencyKey: null` documents are excluded from the constraint
+// rather than colliding on it.
+orderSchema.index(
+  { idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } }
+);
 // CR-002 — seller-scoped fulfillment queries (seller order list, admin monitor).
 orderSchema.index({ 'fulfillment.sellerId': 1, status: 1 });
 

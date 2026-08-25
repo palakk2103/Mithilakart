@@ -42,6 +42,7 @@ const { SellerNotificationRepository } = require('../repositories/SellerNotifica
 const { DeliveryAssignmentRepository } = require('../repositories/DeliveryAssignmentRepository');
 const { DeliveryEarningRepository } = require('../repositories/DeliveryEarningRepository');
 const { WalletRepository } = require('../repositories/WalletRepository');
+const { GameSessionRepository } = require('../repositories/GameSessionRepository');
 const { WalletTransactionRepository } = require('../repositories/WalletTransactionRepository');
 const { RefundRepository } = require('../repositories/RefundRepository');
 const { ReviewRepository } = require('../repositories/ReviewRepository');
@@ -98,7 +99,9 @@ const { DeliveryOrderService } = require('../services/delivery/DeliveryOrderServ
 const { DeliveryEarningsService } = require('../services/delivery/DeliveryEarningsService');
 const { AdminDeliveryService } = require('../services/admin/AdminDeliveryService');
 const { AdminFulfillmentService } = require('../services/admin/AdminFulfillmentService');
+const { AdminGameService } = require('../services/admin/AdminGameService');
 const { WalletService } = require('../services/wallet/WalletService');
+const { GameService } = require('../services/game/GameService');
 const { ReturnService } = require('../services/returns/ReturnService');
 const { RefundService } = require('../services/refunds/RefundService');
 const { AdminReturnService } = require('../services/admin/AdminReturnService');
@@ -182,6 +185,7 @@ const { DeliveryOrderController } = require('../controllers/delivery/DeliveryOrd
 const { DeliveryEarningsController } = require('../controllers/delivery/DeliveryEarningsController');
 const { AdminDeliveryController } = require('../controllers/admin/AdminDeliveryController');
 const { WalletController } = require('../controllers/wallet/WalletController');
+const { GameController } = require('../controllers/game/GameController');
 const { ReturnController } = require('../controllers/returns/ReturnController');
 const { AdminReturnController } = require('../controllers/admin/AdminReturnController');
 const { AdminRefundController } = require('../controllers/admin/AdminRefundController');
@@ -276,6 +280,7 @@ function buildContainer() {
   const deliveryEarningRepository = new DeliveryEarningRepository();
   const walletRepository = new WalletRepository();
   const walletTransactionRepository = new WalletTransactionRepository();
+  const gameSessionRepository = new GameSessionRepository();
   const refundRepository = new RefundRepository();
   const reviewRepository = new ReviewRepository();
   const productQnaRepository = new ProductQnaRepository();
@@ -595,6 +600,12 @@ function buildContainer() {
   const adminDeliveryService = new AdminDeliveryService({ deliveryPartnerRepository });
 
   const walletService = new WalletService({ walletRepository, walletTransactionRepository });
+  const gameService = new GameService({
+    gameSessionRepository,
+    orderRepository,
+    walletService,
+    platformConfigService,
+  });
   const returnService = new ReturnService({ returnRepository, orderRepository, orderItemRepository });
   const refundService = new RefundService({
     refundRepository,
@@ -707,6 +718,11 @@ function buildContainer() {
       fulfillmentEngineService,
       auditService: adminAuditService,
     }),
+    // "Catch Your Delivery" — same validating-façade pattern as `fulfillment`.
+    game: new AdminGameService({
+      adminPlatformSettingsService,
+      platformConfigService,
+    }),
   };
 
   const cartController = new CartController(cartService, cartMergeService);
@@ -714,6 +730,7 @@ function buildContainer() {
   const paymentController = new PaymentController(paymentService, orderRepository);
   const returnController = new ReturnController(returnService);
   const walletController = new WalletController(walletService);
+  const gameController = new GameController(gameService);
   const reviewController = new ReviewController(reviewService);
   const qnaController = new QnaController(qnaService);
   const wishlistController = new WishlistController(wishlistService);
@@ -934,7 +951,7 @@ function buildContainer() {
       adminContent: createAdminContentRoutes(adminEngagementController, middleware),
       uploads: createUploadRoutes(uploadController, middleware),
       cart: createCartRoutes(cartController, middleware),
-      orders: createOrdersRoutes({ orderController, returnController }, middleware),
+      orders: createOrdersRoutes({ orderController, returnController, gameController }, middleware),
       seller: createSellerRoutes(sellerControllers, middleware),
       delivery: createDeliveryRoutes(deliveryControllers, middleware),
       adminOrders: createAdminOrdersRoutes(orderController, middleware),

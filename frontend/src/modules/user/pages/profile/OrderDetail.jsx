@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ArrowLeft, CheckCircle2, RotateCcw, X,
-  Truck, Wallet, Download, MapPin, User, Phone, Package, Clock, ReceiptText
+  Truck, Wallet, Download, MapPin, User, Phone, Package, Clock, ReceiptText, Gift
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import useAccountStore from '../../../../store/useAccountStore';
 import { parsePrice, formatPrice } from '../../../../shared/utils/priceFormatter';
-import { getOrderById, getOrderTracking, createReturn } from '../../services/ordersApi';
+import { getOrderById, getOrderTracking, createReturn, getGameEligibility } from '../../services/ordersApi';
 import { getMyReturns } from '../../services/userApi';
 import { mapOrderDetail, getEntityId } from '../../utils/mappers';
 import LiveDeliveryMap from '../../../../shared/components/LiveDeliveryMap';
@@ -15,6 +15,7 @@ import useOrderSocket from '../../../../shared/hooks/useOrderSocket';
 import DispatchDelayBanner from '../../../../shared/components/DispatchDelayBanner';
 import FulfillmentStatus from '../../../../shared/components/FulfillmentStatus';
 import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
+import CatchYourDeliveryGame from '../../components/common/CatchYourDeliveryGame';
 
 const STATUS_STEPS = [
   { key: 'pending', title: 'Checkout Started', desc: 'Payment pending.' },
@@ -61,6 +62,8 @@ const OrderDetail = () => {
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnForm, setReturnForm] = useState({ orderItemId: '', quantity: 1, reason: '' });
   const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [gameEligible, setGameEligible] = useState(false);
+  const [showGame, setShowGame] = useState(false);
 
   const loadOrder = useCallback(async () => {
     setLoading(true);
@@ -88,6 +91,25 @@ const OrderDetail = () => {
   useEffect(() => {
     loadOrder();
   }, [loadOrder]);
+
+  // "Catch Your Delivery" — purely additive, never blocks the order page:
+  // a failed/ineligible check just hides the entry point.
+  useEffect(() => {
+    let cancelled = false;
+    if (!orderId) return undefined;
+
+    getGameEligibility(orderId)
+      .then((data) => {
+        if (!cancelled) setGameEligible(Boolean(data?.eligible));
+      })
+      .catch(() => {
+        if (!cancelled) setGameEligible(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
 
   const socketOrderId = order?.mongoId || orderId;
 
@@ -249,6 +271,34 @@ const OrderDetail = () => {
 
           {/* CR-002 — live fulfillment state, entirely backend-driven. */}
           <FulfillmentStatus orderId={orderId} className="mb-4" />
+
+          {gameEligible && (
+            <button
+              type="button"
+              onClick={() => setShowGame(true)}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-emerald-50 border border-amber-200/60 shadow-xs active:scale-[0.98] transition-transform"
+            >
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-2xs flex-shrink-0">
+                <Gift size={20} className="text-amber-500" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="text-[12.5px] font-black text-emerald-900">Catch Your Delivery</p>
+                <p className="text-[10.5px] font-semibold text-emerald-700/60">Play now to win rewards</p>
+              </div>
+            </button>
+          )}
+
+          <CatchYourDeliveryGame
+            orderId={orderId}
+            isOpen={showGame}
+            onClose={() => {
+              setShowGame(false);
+              // A play just used up this order's one attempt — hide the entry point.
+              getGameEligibility(orderId)
+                .then((data) => setGameEligible(Boolean(data?.eligible)))
+                .catch(() => {});
+            }}
+          />
 
           <div className="bg-gradient-to-br from-[#3E5A44] to-[#042112] rounded-3xl p-6 text-white shadow-[0_8px_30px_rgba(8,66,36,0.12)] relative overflow-hidden border border-emerald-800/30">
             <div className="absolute right-[-10px] top-[-10px] w-24 h-24 rounded-full bg-white/5 blur-xl pointer-events-none" />

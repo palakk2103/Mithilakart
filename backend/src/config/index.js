@@ -119,6 +119,40 @@ function loadConfig() {
     },
     auth: {
       exposeOtpInDev: parseBoolean(process.env.EXPOSE_OTP_IN_DEV, !isProduction && !isTest),
+      /**
+       * Production readiness Pass 3 (2026-08-25): explicit phone allowlist,
+       * exempt from OtpService's send-rate-limit (5/hour) ONLY. Everything
+       * else about OTP (verify-attempt limits, expiry, code randomness,
+       * SMS delivery) is completely unaffected — this exists solely so
+       * automated E2E test runs don't exhaust the same 5-per-hour budget a
+       * real customer shares. Defaults to empty, so a deploy that never sets
+       * OTP_SEND_LIMIT_BYPASS_PHONES behaves identically to before this
+       * change; hard-refuses to have any effect in production regardless of
+       * what the env var is set to, so it can never be a live security
+       * regression even if a real customer's number were mistakenly listed.
+       */
+      otpSendLimitBypassPhones: isProduction
+        ? []
+        : String(process.env.OTP_SEND_LIMIT_BYPASS_PHONES || '')
+            .split(',')
+            .map((p) => p.trim())
+            .filter(Boolean),
+    },
+    rateLimitTestBypass: {
+      /**
+       * Production readiness Pass 3 (2026-08-25): a request carrying header
+       * `X-E2E-Test-Token` matching this value skips the IP-scoped
+       * authLogin limiter (10/15min) ONLY — every other rate-limit rule
+       * (public, authenticated, admin, upload, reportExport) is unaffected.
+       * Exists because E2E test runs share one loopback IP with every
+       * diagnostic curl call made during development, unlike real traffic
+       * where each user has a distinct IP.
+       *
+       * Hard forced to null under NODE_ENV=production regardless of the env
+       * var, so the header can never do anything even if a token leaked —
+       * mirrors otpSendLimitBypassPhones's safety property exactly.
+       */
+      token: isProduction ? null : (process.env.E2E_TEST_TOKEN || null),
     },
     razorpay: {
       keyId: optional('RAZORPAY_KEY_ID', process.env.RAZORPAY_KEY_ID, null),

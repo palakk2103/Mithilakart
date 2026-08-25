@@ -11,7 +11,11 @@ const walletTransactionSchema = new mongoose.Schema(
     referenceType: { type: String, enum: WALLET_TX_REFERENCE_VALUES, required: true },
     referenceId: { type: mongoose.Schema.Types.ObjectId, default: null },
     description: { type: String, default: null },
-    idempotencyKey: { type: String, default: null, index: true, sparse: true },
+    // Indexed via the PARTIAL unique index declared below, not field-level
+    // `index: true` (that would register a second, conflicting index). See
+    // Order.js for why `sparse` alone is not safe with a `default: null`
+    // field.
+    idempotencyKey: { type: String, default: null },
     deletedAt: { type: Date, default: null },
   },
   {
@@ -21,6 +25,10 @@ const walletTransactionSchema = new mongoose.Schema(
 );
 
 walletTransactionSchema.index({ userId: 1, createdAt: -1 });
+walletTransactionSchema.index(
+  { idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } }
+);
 
 module.exports =
   mongoose.models.WalletTransaction || mongoose.model('WalletTransaction', walletTransactionSchema);

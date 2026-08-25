@@ -17,6 +17,21 @@ function getRateLimitScope(req) {
   return `ip:${getClientIp(req)}`;
 }
 
+/**
+ * Production readiness Pass 3 (2026-08-25): true only when the request
+ * carries a matching E2E test token AND the rule being evaluated is
+ * `authLogin`. Deliberately narrow — this never touches the public,
+ * authenticated, admin, upload, or reportExport limiters, only the one that
+ * an E2E suite realistically exhausts by sharing one loopback IP across many
+ * real seller/customer logins in a single run. config.rateLimitTestBypass.token
+ * is hard-null in production, so this is unconditionally false there.
+ */
+function isE2ELoginBypass(req, rule) {
+  const token = config.rateLimitTestBypass?.token;
+  if (!token || rule?.name !== 'auth_login') return false;
+  return req.headers['x-e2e-test-token'] === token;
+}
+
 function createRateLimiterMiddleware(options = {}) {
   const { enabled = config.rateLimit.enabled } = options;
 
@@ -27,6 +42,10 @@ function createRateLimiterMiddleware(options = {}) {
 
     const rule = resolveRateLimitRule(req);
     if (!rule) {
+      return next();
+    }
+
+    if (isE2ELoginBypass(req, rule)) {
       return next();
     }
 
@@ -57,4 +76,5 @@ function createRateLimiterMiddleware(options = {}) {
 module.exports = {
   createRateLimiterMiddleware,
   getRateLimitScope,
+  isE2ELoginBypass,
 };

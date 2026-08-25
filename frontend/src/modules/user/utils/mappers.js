@@ -58,14 +58,17 @@ export const mapProductForCard = (product, fallbackImage = '') => {
     price: formatDisplayPrice(price),
     oldPrice: mrp ? formatDisplayPrice(mrp) : undefined,
     mrp: mrp ? formatDisplayPrice(mrp) : undefined,
-    rating: String(product.rating ?? '4.2'),
-    reviews: String(product.reviewCount ?? product.reviews ?? '120'),
-    reviewCount: product.reviewCount ?? product.reviews ?? 0,
+    // Real rating/review data only — a product with none shows no badge
+    // rather than a fabricated "4.2 (120)".
+    rating: product.rating > 0 ? Number(product.rating) : 0,
+    reviewCount: product.reviewCount > 0 ? Number(product.reviewCount) : 0,
     image: getProductImage(product, fallbackImage),
     img: getProductImage(product, fallbackImage),
     discount: product.discount || calcDiscountLabel(price, mrp),
     off: product.off || product.discount || calcDiscountLabel(price, mrp),
-    delivery: product.deliveryLabel || product.delivery || 'Tomorrow',
+    // Delivery promise must come from the backend (courier serviceability /
+    // fulfillment ETA) — never fabricated here. undefined when not provided.
+    delivery: product.deliveryLabel || product.delivery || undefined,
     stock: product.stock ?? product.availableStock,
     categoryId: product.categoryId,
   };

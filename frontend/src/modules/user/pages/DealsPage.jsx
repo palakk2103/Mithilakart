@@ -165,15 +165,28 @@ const DealsPage = () => {
                     Shop {product.brand} deals
                  </button>
 
-                 <div className={`flex items-center justify-between mt-2 pt-2 border-t ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
-                    <div className="flex items-center gap-1">
-                       <div className="flex gap-0.5">
-                          {[1,2,3,4].map(i => <Star key={i} size={10} className={`${isDarkMode ? 'text-[var(--color-gold)] fill-[var(--color-gold)]' : 'text-orange-400 fill-orange-400'} shadow-sm`} />)}
-                          <Star size={10} className="text-gray-300 fill-gray-300" />
-                       </div>
-                       <span className="text-[10px] text-gray-500 font-black">({product.reviews})</span>
-                    </div>
-                 </div>
+                 {product.rating > 0 && (
+                   <div className={`flex items-center justify-between mt-2 pt-2 border-t ${isDarkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                      <div className="flex items-center gap-1">
+                         <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                              <Star
+                                key={i}
+                                size={10}
+                                className={
+                                  i <= Math.round(product.rating)
+                                    ? `${isDarkMode ? 'text-[var(--color-gold)] fill-[var(--color-gold)]' : 'text-orange-400 fill-orange-400'} shadow-sm`
+                                    : 'text-gray-300 fill-gray-300'
+                                }
+                              />
+                            ))}
+                         </div>
+                         {product.reviewCount > 0 && (
+                           <span className="text-[10px] text-gray-500 font-black">({product.reviewCount})</span>
+                         )}
+                      </div>
+                   </div>
+                 )}
               </div>
            </div>
          ))}

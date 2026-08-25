@@ -202,11 +202,23 @@ class PaymentService extends BaseService {
   }
 
   async handleRazorpayWebhook({ provider, payload = {}, signature = null, rawBody = null }, session = null) {
-    if (typeof this.paymentProvider.verifyWebhookSignature === 'function' && rawBody) {
-      const valid = this.paymentProvider.verifyWebhookSignature({ rawBody, signature });
+    // Production-readiness audit (2026-08-25): this previously read
+    // `&& rawBody` as an extra condition, which meant that whenever rawBody
+    // was falsy for ANY reason (a proxy stripping it, a middleware ordering
+    // regression, RAZORPAY_WEBHOOK_SECRET left unset in .env so the real
+    // provider's own internal check never even ran) verification was SKIPPED
+    // entirely rather than failing. The provider's own
+    // verifyWebhookSignature() already correctly returns false when
+    // rawBody/signature/webhookSecret is missing — that's the one and only
+    // place this decision should be made. Fails closed by default when the
+    // provider exposes no verification method at all.
+    if (typeof this.paymentProvider.verifyWebhookSignature === 'function') {
+      const valid = await this.paymentProvider.verifyWebhookSignature({ rawBody, signature });
       if (!valid) {
         throw AppError.unauthorized('Invalid webhook signature');
       }
+    } else {
+      throw AppError.unauthorized('Webhook signature verification is not available for this provider');
     }
 
     const paymentEntity = payload?.payload?.payment?.entity || payload?.payment?.entity || payload;

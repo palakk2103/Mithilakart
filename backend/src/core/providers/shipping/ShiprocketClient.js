@@ -22,7 +22,18 @@ class ShiprocketClient {
   }
 
   verifyWebhookToken(headerToken) {
-    if (!this.webhookSecret) return true;
+    // Production-readiness audit (2026-08-25): this previously returned TRUE
+    // — accept every request unauthenticated — whenever SHIPROCKET_WEBHOOK_SECRET
+    // was unset, which it currently is in .env (commented out). That meant
+    // anyone who discovered the webhook URL and a real AWB could POST a
+    // forged "delivered" status and have it processed as genuine, before the
+    // courier actually delivered anything. Fails CLOSED instead: no secret
+    // configured means no webhook is accepted, logged loudly so the
+    // misconfiguration is visible rather than silently exploitable.
+    if (!this.webhookSecret) {
+      logger.warn('Shiprocket webhook rejected — SHIPROCKET_WEBHOOK_SECRET is not configured');
+      return false;
+    }
     return String(headerToken || '') === String(this.webhookSecret);
   }
 

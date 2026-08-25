@@ -90,6 +90,15 @@ class ProductService extends BaseService {
       throw AppError.validation('Search query is required');
     }
 
+    // Same tab-scoping fix as listPublic() (production readiness audit,
+    // 2026-08-25): without this, search always hit the unscoped legacy
+    // Product query regardless of marketplaceTab — live-confirmed a
+    // quick_shop-only product ("Atta") was returned identically whether
+    // searched with marketplaceTab=mithilak or no tab at all.
+    if (this.marketplaceListingService && resolveTabFromQuery(query)) {
+      return this.marketplaceListingService.listPublicForTab(query);
+    }
+
     const pagination = parsePagination(query);
     const filter = applyCommerceFlowFilter(
       buildListFilters(query, { exactFields: ['commerceFlow'] }),

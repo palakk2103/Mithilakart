@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/common/ProductCard';
 import { getProducts } from '../services/catalogApi';
 import { extractList, mapProductForCard } from '../utils/mappers';
+import { getCurrentMarketplaceTab } from '../../../shared/utils/marketplaceHelpers';
 
 import SamsungImg from '../../../assets/products/product01.jpg';
 
 const Products = () => {
+  const [searchParams] = useSearchParams();
+  // Explicit ?tab= wins; falls back to the customer's current marketplace
+  // tab. Without this, the fetch below was unscoped and returned every
+  // approved product across all four tabs mixed together — confirmed live
+  // against production data.
+  const marketplaceTab = searchParams.get('tab') || getCurrentMarketplaceTab();
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,7 +26,7 @@ const Products = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getProducts({ limit: 24 });
+        const data = await getProducts({ limit: 24, marketplaceTab });
         if (!cancelled) {
           setProducts(extractList(data).map((p) => mapProductForCard(p, SamsungImg)));
         }
@@ -32,7 +41,7 @@ const Products = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [marketplaceTab]);
 
   return (
     <div className="container mx-auto px-4 py-8 flex gap-6">

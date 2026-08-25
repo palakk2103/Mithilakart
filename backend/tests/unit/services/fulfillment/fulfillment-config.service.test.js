@@ -2,6 +2,7 @@ const { FulfillmentConfigService } = require('../../../../src/services/fulfillme
 const {
   DEFAULT_PLATFORM_SETTINGS,
   DEFAULT_SELLER_RANKING_WEIGHTS,
+  DEFAULT_PARTNER_RANKING_WEIGHTS,
 } = require('../../../../src/constants/platformSettings');
 
 function buildService({ platform = {}, tabConfig = undefined } = {}) {
@@ -168,6 +169,48 @@ describe('FulfillmentConfigService', () => {
       expect(weights.distance).toBe(0);
       expect(weights.routeEta).toBe(0);
       expect(weights.preparation).toBeCloseTo(1, 6);
+    });
+  });
+
+  describe('partnerRankingWeights (DB-backed, mirrors sellerRankingWeights)', () => {
+    it('exposes normalised code defaults when nothing is configured', async () => {
+      const { service } = buildService();
+      const config = await service.resolve(null);
+
+      expect(config.partnerRankingWeights).toEqual(DEFAULT_PARTNER_RANKING_WEIGHTS);
+      const total = Object.values(config.partnerRankingWeights).reduce((a, b) => a + b, 0);
+      expect(total).toBeCloseTo(1, 6);
+    });
+
+    it('prefers an admin-set platform setting over the code default', async () => {
+      const { service } = buildService({
+        platform: { partnerRankingWeights: { ...DEFAULT_PARTNER_RANKING_WEIGHTS, pickupDistance: 0.9 } },
+      });
+      const config = await service.resolve(null);
+
+      expect(config.partnerRankingWeights.pickupDistance).toBeGreaterThan(DEFAULT_PARTNER_RANKING_WEIGHTS.pickupDistance);
+      const total = Object.values(config.partnerRankingWeights).reduce((a, b) => a + b, 0);
+      expect(total).toBeCloseTo(1, 6);
+    });
+
+    it('normalizeWeights uses the partner factor set, not the seller one, when given partner defaults', () => {
+      const { service } = buildService();
+      const weights = service.normalizeWeights(
+        { ...DEFAULT_PARTNER_RANKING_WEIGHTS, workload: 0 },
+        DEFAULT_PARTNER_RANKING_WEIGHTS
+      );
+
+      expect(weights.workload).toBe(0);
+      expect(Object.keys(weights)).toEqual(Object.keys(DEFAULT_PARTNER_RANKING_WEIGHTS));
+      expect(Object.values(weights).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6);
+    });
+
+    it('is included in the order snapshot, same as seller ranking weights', async () => {
+      const { service } = buildService();
+      const resolved = await service.resolve('quick_shop');
+      const snapshot = service.buildSnapshot(resolved);
+
+      expect(snapshot.partnerRankingWeights).toEqual(resolved.partnerRankingWeights);
     });
   });
 

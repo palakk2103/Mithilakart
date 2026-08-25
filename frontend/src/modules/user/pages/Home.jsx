@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, Sparkles, Gift, Monitor, Gem, Shirt, Gamepad2, BookOpen, Zap, ChevronRight } from 'lucide-react';
+import SEO from '../../../shared/components/SEO';
 
 // Import Home Components
 import LazySection from '../components/vendor/home/LazySection';
@@ -127,7 +128,13 @@ const Home = () => {
   // Main horizontal category tabs (from admin category chips)
 
   return (
-    <div
+    <>
+      <SEO
+        title="Quick Commerce & Everyday Essentials"
+        description="Shop Mithilakart for groceries, fashion, electronics, beauty and authentic Mithila crafts — fast quick-commerce delivery and standard shipping, all in one place."
+        path="/home"
+      />
+      <div
       className="pb-2 overflow-x-hidden bg-transparent text-primary-dark"
       style={{
         WebkitBackfaceVisibility: 'hidden',
@@ -350,7 +357,8 @@ const Home = () => {
           <CategoryProductsSection selectedCategory={selectedCategory} />
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

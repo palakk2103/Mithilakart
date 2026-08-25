@@ -44,6 +44,17 @@ class OtpService {
   }
 
   async assertSendRateLimit(portal, identifier) {
+    // Production readiness Pass 3 (2026-08-25): narrow, explicit bypass for
+    // E2E test fixtures only. config.auth.otpSendLimitBypassPhones is hard
+    // forced to an empty array under NODE_ENV=production regardless of the
+    // env var (see config/index.js), so this can never affect a real
+    // customer even if the allowlist were accidentally left populated in a
+    // shared .env. Every other OTP protection (verify-attempt limit, expiry,
+    // code randomness) is untouched.
+    if (this.config?.auth?.otpSendLimitBypassPhones?.includes(identifier)) {
+      return;
+    }
+
     const key = this._sendRateKey(portal, identifier);
     const count = await this.redis.incr(key);
 

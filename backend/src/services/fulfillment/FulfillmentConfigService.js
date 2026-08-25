@@ -3,6 +3,7 @@ const {
   PLATFORM_SETTING_KEYS: K,
   DEFAULT_PLATFORM_SETTINGS,
   DEFAULT_SELLER_RANKING_WEIGHTS,
+  DEFAULT_PARTNER_RANKING_WEIGHTS,
   FULFILLMENT_SETTING_RANGES,
 } = require('../../constants/platformSettings');
 const { DELIVERY_ASSIGNMENT_MODE_VALUES } = require('../../constants/fulfillment');
@@ -43,15 +44,17 @@ class FulfillmentConfigService extends BaseService {
   }
 
   /**
-   * Normalises ranking weights to sum to 1.
+   * Normalises a ranking-weights map to sum to 1, against a given set of
+   * default weights (seller ranking and partner ranking each have their own
+   * factor set).
    *
    * Without this a partial admin edit — bumping `distance` to 0.9 and leaving
    * the rest — would silently rescale every other factor. Falls back to the
    * defaults if the admin zeroes out everything.
    */
-  normalizeWeights(raw) {
-    const source = (raw && typeof raw === 'object') ? raw : DEFAULT_SELLER_RANKING_WEIGHTS;
-    const keys = Object.keys(DEFAULT_SELLER_RANKING_WEIGHTS);
+  normalizeWeights(raw, defaults = DEFAULT_SELLER_RANKING_WEIGHTS) {
+    const source = (raw && typeof raw === 'object') ? raw : defaults;
+    const keys = Object.keys(defaults);
 
     const sanitized = {};
     for (const key of keys) {
@@ -60,7 +63,7 @@ class FulfillmentConfigService extends BaseService {
     }
 
     const total = keys.reduce((sum, key) => sum + sanitized[key], 0);
-    if (total <= 0) return { ...DEFAULT_SELLER_RANKING_WEIGHTS };
+    if (total <= 0) return { ...defaults };
 
     const normalized = {};
     for (const key of keys) normalized[key] = sanitized[key] / total;
@@ -140,7 +143,8 @@ class FulfillmentConfigService extends BaseService {
       maxSellerAttempts: this._num(pick(K.MAX_SELLER_ATTEMPTS_PER_ORDER), K.MAX_SELLER_ATTEMPTS_PER_ORDER),
 
       // Ranking
-      rankingWeights: this.normalizeWeights(pick(K.SELLER_RANKING_WEIGHTS)),
+      rankingWeights: this.normalizeWeights(pick(K.SELLER_RANKING_WEIGHTS), DEFAULT_SELLER_RANKING_WEIGHTS),
+      partnerRankingWeights: this.normalizeWeights(pick(K.PARTNER_RANKING_WEIGHTS), DEFAULT_PARTNER_RANKING_WEIGHTS),
 
       // Operational
       sweeperIntervalSeconds: this._num(pick(K.FULFILLMENT_SWEEPER_INTERVAL_SECONDS), K.FULFILLMENT_SWEEPER_INTERVAL_SECONDS),
@@ -174,6 +178,7 @@ class FulfillmentConfigService extends BaseService {
       routingFallbackSpeedKmph: resolved.routingFallbackSpeedKmph,
       maxSellerAttempts: resolved.maxSellerAttempts,
       rankingWeights: resolved.rankingWeights,
+      partnerRankingWeights: resolved.partnerRankingWeights,
       warehouseFallbackEnabled: resolved.warehouseFallbackEnabled,
       courierFallbackEnabled: resolved.courierFallbackEnabled,
       crossSellerSubstitutionEnabled: resolved.crossSellerSubstitutionEnabled,

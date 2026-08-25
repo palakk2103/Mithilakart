@@ -81,6 +81,13 @@ function createAdminPlatformRoutes(services, middleware) {
     );
   }
 
+  // ── "Catch Your Delivery" engagement game — same validating-façade
+  // pattern as fulfillment settings above.
+  if (services.game) {
+    router.get('/game/settings', authAdmin, requirePermission('settings.view'), h.gameSettings);
+    router.put('/game/settings', authAdmin, requirePermission('settings.edit'), h.updateGameSettings);
+  }
+
   router.get('/settings', authAdmin, requirePermission('settings.view'), h.getSettings);
   router.put('/settings', authAdmin, requirePermission('settings.edit'), h.updateSettings);
   router.put('/settings/commission', authAdmin, requirePermission('finance.edit'), validateBody(Joi.object({ rate: Joi.number().min(0).max(1).required() })), h.updateCommission);

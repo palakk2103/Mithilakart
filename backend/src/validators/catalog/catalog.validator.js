@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const { objectIdSchema } = require('../common.validator');
 const { COMMERCE_FLOW_VALUES, PRODUCT_STATUS_VALUES } = require('../../constants/catalog');
+const { MARKETPLACE_TAB_VALUES } = require('../../constants/marketplace');
 
 const mediaUrlSchema = Joi.string().trim().custom((value, helpers) => {
   if (!value) return value;
@@ -42,6 +43,11 @@ const listProductsQuerySchema = Joi.object({
   q: Joi.string().allow('').optional(),
   categoryId: objectIdSchema.optional(),
   commerceFlow: Joi.string().valid(...COMMERCE_FLOW_VALUES).optional(),
+  // Canonical tab param — resolveTabFromQuery() prefers this over commerceFlow.
+  // Was missing here: Joi's stripUnknown:true silently dropped it from every
+  // /products and /categories/:id/products request, so the frontend tab-scope
+  // fix (docs/production-readiness) could never actually take effect.
+  marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).optional(),
   status: Joi.string().valid(...PRODUCT_STATUS_VALUES).optional(),
   minPrice: Joi.number().min(0).optional(),
   maxPrice: Joi.number().min(0).optional(),

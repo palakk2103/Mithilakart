@@ -34,10 +34,21 @@ const PLATFORM_SETTING_KEYS = {
   MAX_SELLER_ATTEMPTS_PER_ORDER: 'maxSellerAttemptsPerOrder',
   // Ranking
   SELLER_RANKING_WEIGHTS: 'sellerRankingWeights',
+  PARTNER_RANKING_WEIGHTS: 'partnerRankingWeights',
   // Operational
   FULFILLMENT_SWEEPER_INTERVAL_SECONDS: 'fulfillmentSweeperIntervalSeconds',
   DELIVERY_ASSIGNMENT_MODE: 'deliveryAssignmentMode',
   CROSS_SELLER_SUBSTITUTION_ENABLED: 'crossSellerSubstitutionEnabled',
+
+  // ── "Catch Your Delivery" engagement game ───────────────────────────────────
+  GAME_ENABLED: 'gameEnabled',
+  GAME_STARTS_AT: 'gameStartsAt',
+  GAME_EXPIRES_AT: 'gameExpiresAt',
+  GAME_DURATION_SECONDS: 'gameDurationSeconds',
+  GAME_MAX_PLAYS_PER_ORDER: 'gameMaxPlaysPerOrder',
+  GAME_WIN_PROBABILITY: 'gameWinProbability',
+  GAME_COIN_REWARD_MIN: 'gameCoinRewardMin',
+  GAME_COIN_REWARD_MAX: 'gameCoinRewardMax',
 };
 
 /**
@@ -52,6 +63,19 @@ const DEFAULT_SELLER_RANKING_WEIGHTS = {
   workload: 0.15,
   availability: 0.10,
   adminBoost: 0.05,
+};
+
+/**
+ * CR-002 delivery-partner ranking weights. Same normalise-to-1 rule as
+ * DEFAULT_SELLER_RANKING_WEIGHTS. Mirrors DeliveryPartnerRankingService's own
+ * DEFAULT_PARTNER_WEIGHTS constant, which remains the last-resort fallback if
+ * this platform setting is ever absent.
+ */
+const DEFAULT_PARTNER_RANKING_WEIGHTS = {
+  pickupDistance: 0.45,
+  routeEta: 0.20,
+  workload: 0.25,
+  locationFreshness: 0.10,
 };
 
 const DEFAULT_PLATFORM_SETTINGS = {
@@ -84,6 +108,7 @@ const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.COURIER_FALLBACK_ENABLED]: true,
   [PLATFORM_SETTING_KEYS.MAX_SELLER_ATTEMPTS_PER_ORDER]: 3,
   [PLATFORM_SETTING_KEYS.SELLER_RANKING_WEIGHTS]: DEFAULT_SELLER_RANKING_WEIGHTS,
+  [PLATFORM_SETTING_KEYS.PARTNER_RANKING_WEIGHTS]: DEFAULT_PARTNER_RANKING_WEIGHTS,
   [PLATFORM_SETTING_KEYS.FULFILLMENT_SWEEPER_INTERVAL_SECONDS]: 15,
 
   // Conservative ship defaults — CR-002 goes live dark. Each of these three
@@ -92,6 +117,17 @@ const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.CROSS_SELLER_SUBSTITUTION_ENABLED]: false,
   [PLATFORM_SETTING_KEYS.ROUTING_PROVIDER_ENABLED]: false,
   [PLATFORM_SETTING_KEYS.ROUTING_FALLBACK_SPEED_KMPH]: 18,
+
+  // "Catch Your Delivery" — ships enabled with a conservative win rate and
+  // small coin range; every value admin-tunable without a deploy.
+  [PLATFORM_SETTING_KEYS.GAME_ENABLED]: true,
+  [PLATFORM_SETTING_KEYS.GAME_STARTS_AT]: null,
+  [PLATFORM_SETTING_KEYS.GAME_EXPIRES_AT]: null,
+  [PLATFORM_SETTING_KEYS.GAME_DURATION_SECONDS]: 45,
+  [PLATFORM_SETTING_KEYS.GAME_MAX_PLAYS_PER_ORDER]: 1,
+  [PLATFORM_SETTING_KEYS.GAME_WIN_PROBABILITY]: 0.6,
+  [PLATFORM_SETTING_KEYS.GAME_COIN_REWARD_MIN]: 5,
+  [PLATFORM_SETTING_KEYS.GAME_COIN_REWARD_MAX]: 25,
 };
 
 /**
@@ -108,6 +144,11 @@ const FULFILLMENT_SETTING_RANGES = {
   [PLATFORM_SETTING_KEYS.MAX_SELLER_ATTEMPTS_PER_ORDER]: { min: 1, max: 10 },
   [PLATFORM_SETTING_KEYS.FULFILLMENT_SWEEPER_INTERVAL_SECONDS]: { min: 5, max: 300 },
   [PLATFORM_SETTING_KEYS.ROUTING_FALLBACK_SPEED_KMPH]: { min: 5, max: 80 },
+  [PLATFORM_SETTING_KEYS.GAME_DURATION_SECONDS]: { min: 15, max: 90 },
+  [PLATFORM_SETTING_KEYS.GAME_MAX_PLAYS_PER_ORDER]: { min: 1, max: 5 },
+  [PLATFORM_SETTING_KEYS.GAME_WIN_PROBABILITY]: { min: 0, max: 1 },
+  [PLATFORM_SETTING_KEYS.GAME_COIN_REWARD_MIN]: { min: 1, max: 1000 },
+  [PLATFORM_SETTING_KEYS.GAME_COIN_REWARD_MAX]: { min: 1, max: 1000 },
 };
 
 const PLATFORM_CONFIG_CACHE_KEY = 'cache:platform:config';
@@ -117,6 +158,7 @@ module.exports = {
   PLATFORM_SETTING_KEYS,
   DEFAULT_PLATFORM_SETTINGS,
   DEFAULT_SELLER_RANKING_WEIGHTS,
+  DEFAULT_PARTNER_RANKING_WEIGHTS,
   FULFILLMENT_SETTING_RANGES,
   PLATFORM_CONFIG_CACHE_KEY,
   PLATFORM_CONFIG_CACHE_TTL,

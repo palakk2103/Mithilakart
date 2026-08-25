@@ -3,6 +3,8 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { getCategories, getCategoryProducts } from '../services/catalogApi';
 import { findCategoryByName, extractList, mapProductForCard } from '../utils/mappers';
 import { fetchCartCount } from '../utils/cartUtils';
+import SEO from '../../../shared/components/SEO';
+import { getCurrentMarketplaceTab } from '../../../shared/utils/marketplaceHelpers';
 import { 
   Heart, 
   Star, 
@@ -71,12 +73,6 @@ const CardBottomDivider = () => (
 
 const CategoryProductCard = React.memo(({ product }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
-  
-  // Stable pseudo-random rating count
-  const ratingCount = useMemo(() => {
-    const idNum = typeof product.id === 'string' ? product.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : product.id;
-    return (idNum % 450) + 50;
-  }, [product.id]);
 
   return (
     <Link
@@ -124,33 +120,41 @@ const CategoryProductCard = React.memo(({ product }) => {
           </div>
         )}
 
-        {/* Rating Badge on Image */}
-        <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 md:gap-1 bg-white/95 backdrop-blur-xs px-1 py-0.2 md:px-1.5 md:py-0.5 rounded-[4px] md:rounded-[6px] shadow-xs border border-[#EADCC9]/30">
-          <span className="text-[8px] md:text-[9.5px] font-black text-slate-800">{product.rating || '4.8'}</span>
-          <Star size={7} fill="currentColor" className="text-[#6FAE4A] stroke-none" />
-          <div className="w-[1px] h-2 bg-gray-300 mx-0.5" />
-          <span className="text-[7.5px] md:text-[8.5px] font-semibold text-gray-500">({product.reviews || ratingCount})</span>
-        </div>
+        {/* Rating Badge on Image — only shown when the product has a real rating */}
+        {product.rating > 0 && (
+          <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 md:gap-1 bg-white/95 backdrop-blur-xs px-1 py-0.2 md:px-1.5 md:py-0.5 rounded-[4px] md:rounded-[6px] shadow-xs border border-[#EADCC9]/30">
+            <span className="text-[8px] md:text-[9.5px] font-black text-slate-800">{product.rating}</span>
+            <Star size={7} fill="currentColor" className="text-[#6FAE4A] stroke-none" />
+            {product.reviewCount > 0 && (
+              <>
+                <div className="w-[1px] h-2 bg-gray-300 mx-0.5" />
+                <span className="text-[7.5px] md:text-[8.5px] font-semibold text-gray-500">({product.reviewCount})</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Details Section */}
       <div className="pt-1.5 pb-0.5 px-0.5 md:pt-2.5 md:pb-1 md:px-1.5 relative z-10 flex flex-col justify-between flex-1">
         <div>
           <h3 className="text-[10px] md:text-[12px] font-black text-[#3F2A20] line-clamp-1 leading-tight tracking-tight">
-            <span className="font-extrabold text-[#3F2A20]">{product.brand || 'Drasert'}</span> {product.name}
+            {product.brand && <span className="font-extrabold text-[#3F2A20]">{product.brand} </span>}
+            {product.name}
           </h3>
 
           <div className="mt-1 flex flex-col gap-0.5">
             <div className="flex items-center gap-1 md:gap-1.5 flex-wrap">
               <span className="text-[11px] md:text-[13.5px] font-black text-slate-900">₹{product.price}</span>
-              <span className="text-[8.5px] md:text-[10px] text-gray-400 line-through font-semibold">MRP ₹{product.oldPrice || '1,999'}</span>
-              <span className="border border-[#F26522]/45 text-[#F26522] bg-[#F26522]/5 text-[7px] md:text-[8px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-tight">
-                {product.off || '50% OFF'}
-              </span>
+              {product.oldPrice && (
+                <span className="text-[8.5px] md:text-[10px] text-gray-400 line-through font-semibold">MRP ₹{product.oldPrice}</span>
+              )}
+              {product.off && (
+                <span className="border border-[#F26522]/45 text-[#F26522] bg-[#F26522]/5 text-[7px] md:text-[8px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-tight">
+                  {product.off}
+                </span>
+              )}
             </div>
-            <p className="text-[8.5px] md:text-[9.5px] font-extrabold text-[#6FAE4A] tracking-tight mt-0.5">
-              ₹{Math.round(parseFloat(product.price.replace(/,/g, '')) * 0.9)} with UPI offer + more
-            </p>
           </div>
         </div>
 
@@ -164,6 +168,12 @@ const CategoryProductCard = React.memo(({ product }) => {
 const CategoryProducts = () => {
   const [searchParams] = useSearchParams();
   const category = searchParams.get('category') || 'Jewellery';
+  // Explicit ?tab= wins (shareable/crawlable URL); falls back to whatever
+  // marketplace tab the customer is currently browsing. Without this, the
+  // category and product lookups below were unscoped and returned listings
+  // from all four tabs mixed together — confirmed live against production
+  // data.
+  const marketplaceTab = searchParams.get('tab') || getCurrentMarketplaceTab();
   const [activeSort, setActiveSort] = useState('Popularity');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -193,13 +203,13 @@ const CategoryProducts = () => {
       setLoading(true);
       setError(null);
       try {
-        const categories = await getCategories();
+        const categories = await getCategories({ marketplaceTab });
         const match = findCategoryByName(categories, category);
         if (!match) {
           if (!cancelled) setProducts([]);
           return;
         }
-        const data = await getCategoryProducts(match.id, { limit: 40 });
+        const data = await getCategoryProducts(match.id, { limit: 40, marketplaceTab });
         if (!cancelled) {
           setProducts(extractList(data).map((p) => mapProductForCard(p)));
         }
@@ -214,7 +224,7 @@ const CategoryProducts = () => {
     return () => {
       cancelled = true;
     };
-  }, [category]);
+  }, [category, marketplaceTab]);
 
   // Sorting logic
   const sortedProducts = [...products].sort((a, b) => {
@@ -238,7 +248,13 @@ const CategoryProducts = () => {
   );
 
   return (
-    <div className="bg-gray-50 min-h-screen text-slate-900 transition-colors duration-300 pb-10 font-sans">
+    <>
+      <SEO
+        title={`${category} — Shop Online`}
+        description={`Browse ${category} products on Mithilakart — quick commerce delivery and standard shipping across India.`}
+        path={`/category-products?category=${encodeURIComponent(category)}`}
+      />
+      <div className="bg-gray-50 min-h-screen text-slate-900 transition-colors duration-300 pb-10 font-sans">
       {/* ── Dynamic Category Header ── */}
       <div className="sticky top-0 z-[100] bg-[#6FAE4A] text-white shadow-xs">
         {/* Row 1: Back + Title + Actions */}
@@ -391,7 +407,8 @@ const CategoryProducts = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

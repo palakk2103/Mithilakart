@@ -290,6 +290,27 @@ class MarketplaceListingService extends BaseService {
       filter.productId = { $in: productIds };
     }
 
+    // Production readiness audit (2026-08-25): searchPublic previously never
+    // reached this method at all — it only ever queried Product directly via
+    // the legacy commerceFlow filter, so `?marketplaceTab=` had no effect on
+    // search results whatsoever. Live-confirmed: searching "Atta" (a
+    // quick_shop-only product) with marketplaceTab=mithilak returned the same
+    // 4 results as no tab filter at all. Same intersect-then-filter pattern
+    // as the categoryId branch above: text-search Product first, then scope
+    // MarketplaceListing to that candidate set.
+    const searchTerm = query.q || query.search;
+    if (searchTerm) {
+      const matches = await this.productRepository.searchPublic(searchTerm, {}, { limit: 500 });
+      const matchIds = matches.map((p) => String(p._id));
+      const intersected = filter.productId
+        ? matchIds.filter((id) => filter.productId.$in.some((pid) => String(pid) === id))
+        : matchIds;
+      if (!intersected.length) {
+        return { items: [], meta: buildPaginationMeta(pagination.page, pagination.limit, 0) };
+      }
+      filter.productId = { $in: intersected };
+    }
+
     const [listings, total] = await Promise.all([
       this.marketplaceListingRepository.findPublic(filter, {
         sort: { sortBoost: -1, price: 1 },

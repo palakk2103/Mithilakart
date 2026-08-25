@@ -213,6 +213,15 @@ function createAdminHandlers(services) {
       const result = await services.fulfillment.forceCourier(req.params.orderId, req.user.id, req);
       return ApiResponse.success(res, result);
     }),
+
+    // ── "Catch Your Delivery" — engagement game configuration ───────────────
+    gameSettings: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.game.getSettings());
+    }),
+    updateGameSettings: asyncHandler(async (req, res) => {
+      const result = await services.game.updateSettings(req.body, req.user.id);
+      return ApiResponse.success(res, result);
+    }),
   };
 }
 

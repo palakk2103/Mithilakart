@@ -6,6 +6,7 @@ const {
   PLATFORM_SETTING_KEYS: K,
   FULFILLMENT_SETTING_RANGES,
   DEFAULT_SELLER_RANKING_WEIGHTS,
+  DEFAULT_PARTNER_RANKING_WEIGHTS,
 } = require('../../constants/platformSettings');
 const { DELIVERY_ASSIGNMENT_MODE_VALUES } = require('../../constants/fulfillment');
 
@@ -86,7 +87,13 @@ class AdminFulfillmentService extends BaseService {
   }
 
   static get MANAGED_KEYS() {
-    return [...NUMERIC_KEYS, ...BOOLEAN_KEYS, K.SELLER_RANKING_WEIGHTS, K.DELIVERY_ASSIGNMENT_MODE];
+    return [
+      ...NUMERIC_KEYS,
+      ...BOOLEAN_KEYS,
+      K.SELLER_RANKING_WEIGHTS,
+      K.PARTNER_RANKING_WEIGHTS,
+      K.DELIVERY_ASSIGNMENT_MODE,
+    ];
   }
 
   _rangeFor(key) {
@@ -147,7 +154,17 @@ class AdminFulfillmentService extends BaseService {
       }
 
       if (key === K.SELLER_RANKING_WEIGHTS) {
-        const weightErrors = this._validateWeights(value);
+        const weightErrors = this._validateWeights(value, K.SELLER_RANKING_WEIGHTS, DEFAULT_SELLER_RANKING_WEIGHTS);
+        if (weightErrors.length) {
+          errors.push(...weightErrors);
+          continue;
+        }
+        clean[key] = value;
+        continue;
+      }
+
+      if (key === K.PARTNER_RANKING_WEIGHTS) {
+        const weightErrors = this._validateWeights(value, K.PARTNER_RANKING_WEIGHTS, DEFAULT_PARTNER_RANKING_WEIGHTS);
         if (weightErrors.length) {
           errors.push(...weightErrors);
           continue;
@@ -166,27 +183,28 @@ class AdminFulfillmentService extends BaseService {
     return clean;
   }
 
-  _validateWeights(value) {
+  /** Shared validator for both seller and partner ranking-weight maps. */
+  _validateWeights(value, settingKey, defaults) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      return [{ field: K.SELLER_RANKING_WEIGHTS, message: 'must be an object' }];
+      return [{ field: settingKey, message: 'must be an object' }];
     }
 
-    const allowed = Object.keys(DEFAULT_SELLER_RANKING_WEIGHTS);
+    const allowed = Object.keys(defaults);
     const errors = [];
 
     for (const [factor, weight] of Object.entries(value)) {
       if (!allowed.includes(factor)) {
-        errors.push({ field: `sellerRankingWeights.${factor}`, message: 'is not a known ranking factor' });
+        errors.push({ field: `${settingKey}.${factor}`, message: 'is not a known ranking factor' });
         continue;
       }
       if (!isFiniteNumber(weight) || Number(weight) < 0 || Number(weight) > 1) {
-        errors.push({ field: `sellerRankingWeights.${factor}`, message: 'must be between 0 and 1' });
+        errors.push({ field: `${settingKey}.${factor}`, message: 'must be between 0 and 1' });
       }
     }
 
     const total = allowed.reduce((sum, f) => sum + toFiniteNumber(value[f], 0), 0);
     if (total <= 0) {
-      errors.push({ field: K.SELLER_RANKING_WEIGHTS, message: 'at least one weight must be greater than 0' });
+      errors.push({ field: settingKey, message: 'at least one weight must be greater than 0' });
     }
 
     return errors;
@@ -201,6 +219,7 @@ class AdminFulfillmentService extends BaseService {
       ranges: { ...FULFILLMENT_SETTING_RANGES, ...EXTRA_RANGES },
       deliveryAssignmentModes: DELIVERY_ASSIGNMENT_MODE_VALUES,
       rankingFactors: Object.keys(DEFAULT_SELLER_RANKING_WEIGHTS),
+      partnerRankingFactors: Object.keys(DEFAULT_PARTNER_RANKING_WEIGHTS),
       managedKeys: AdminFulfillmentService.MANAGED_KEYS,
     };
   }

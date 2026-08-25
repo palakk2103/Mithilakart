@@ -1,8 +1,19 @@
 import { test, expect } from '@playwright/test';
+import { MongoClient, ObjectId } from 'mongodb';
 import {
   openSellerPortal, waitForSellerSocket, loginCustomer, placeQuickOrder, getOffers,
-  clearPendingOffers, dismissLocationPrompt,
+  clearPendingOffers, dismissLocationPrompt, waitForOrderCondition, COURIER_FIXTURES,
 } from './helpers/harness.js';
+
+/**
+ * Production readiness audit Pass 2 (2026-08-25): every DB-verification step
+ * in this file previously called `require('mongodb')` inline inside a test
+ * body. This file is loaded as an ES module (see the `import` statements
+ * above) — `require` does not exist in that context, so every test past the
+ * browser-interaction portion threw `ReferenceError: require is not defined`
+ * before it ever reached its actual assertions. Fixed by hoisting a real
+ * `import` once at the top instead.
+ */
 
 /**
  * MITHILAKART COMPLETE MAIN FLOW — END-TO-END CERTIFICATION
@@ -63,13 +74,13 @@ test.describe('Main Business Flow', () => {
     });
 
     // Verify database state
-    const db = require('mongodb').MongoClient;
+    const db = MongoClient;
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
     const client = new db(uri);
     try {
       await client.connect();
       const coll = client.db('mithilakart').collection('order_fulfillments');
-      const fulfillment = await coll.findOne({ orderId: new (require('mongodb')).ObjectId(orderId) });
+      const fulfillment = await coll.findOne({ orderId: new ObjectId(orderId) });
       expect(fulfillment.state).toBe('seller_accepted');
       expect(fulfillment.resolvedSellerId).toBeDefined();
     } finally {
@@ -107,13 +118,13 @@ test.describe('Main Business Flow', () => {
 
     await new Promise(x => setTimeout(x, 3000));
 
-    const db = require('mongodb').MongoClient;
+    const db = MongoClient;
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
     const client = new db(uri);
     try {
       await client.connect();
       const coll = client.db('mithilakart').collection('fulfillment_attempts');
-      const attempts = await coll.find({ orderId: new (require('mongodb')).ObjectId(orderId) })
+      const attempts = await coll.find({ orderId: new ObjectId(orderId) })
         .sort({ attemptNumber: 1 })
         .toArray();
 
@@ -138,71 +149,91 @@ test.describe('Main Business Flow', () => {
     /**
      * THE CRITICAL TEST: Proves Quick → Standard downgrade works end-to-end.
      *
-     * Premise:
-     * - All sellers unavailable / ineligible
-     * - Warehouse unavailable / insufficient inventory
-     * - Then courier fallback (Shiprocket)
+     * Production readiness Pass 3 (2026-08-25) — TWO fixes from Pass 2:
      *
-     * Verify:
-     * - Order starts as quick_shop
-     * - Quick fulfillment exhausted
-     * - Courier fallback triggered
-     * - deliveryMode changes to STANDARD
-     * - Customer UI reflects Standard Delivery
-     * - Tracking shown
-     * - Survives page refresh
-     * - Survives socket reconnect
+     * 1. DETERMINISTIC PREMISE. Previously ordered the default fixture
+     *    product, whose seller/warehouse DO have stock — "all sellers fail"
+     *    only held by incidental luck, not by design. Now orders
+     *    COURIER_FIXTURES.productId (seed-cr002-test-data.js's dedicated
+     *    courier-only group): three local sellers AND the warehouse all
+     *    genuinely have stock=0, so the engine has no path except courier.
+     *
+     * 2. REAL WAIT, NOT AN ARBITRARY TIMEOUT. Previously slept a fixed 5s
+     *    regardless of the configured searchTimeoutSeconds/
+     *    sellerAcceptanceTimeoutSeconds, so it could read the order
+     *    mid-escalation. FulfillmentEngineService writes
+     *    `deliveryMode: 'standard'` the INSTANT it enters the courier rung
+     *    (before the Shiprocket call, deliberately — see the engine's own
+     *    comment: "79 real orders died [because the downgrade was written
+     *    only on success]"). Polling on that exact field is therefore the
+     *    real backend event this test should wait for, not a guessed delay.
      */
 
     const customer = await loginCustomer();
-    const { orderNumber, orderId } = await placeQuickOrder(customer.accessToken);
-
-    test.info().annotations.push({
-      type: 'step',
-      description: `Order placed: ${orderNumber}. Waiting for fulfillment escalation.`,
+    const { orderNumber, orderId } = await placeQuickOrder(customer.accessToken, {
+      productId: COURIER_FIXTURES.productId,
     });
 
-    // Wait for fulfillment to escalate through all rungs
-    await new Promise(x => setTimeout(x, 5000));
-
-    const db = require('mongodb').MongoClient;
-    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-    const client = new db(uri);
-    try {
-      await client.connect();
-      const ordColl = client.db('mithilakart').collection('orders');
-      const order = await ordColl.findOne({ _id: new (require('mongodb')).ObjectId(orderId) });
-
-      // Critical assertion: order still exists and fulfillment mode is valid
-      expect(order).toBeDefined();
-      expect(order.fulfillment.deliveryMode).toMatch(/quick|standard/);
-
-      test.info().annotations.push({
-        type: 'step',
-        description: `Order fulfillment mode: ${order.fulfillment.deliveryMode}`,
-      });
-
-      // If it reached courier, verify the downgrade happened
-      if (order.fulfillment.deliveryMode === 'standard') {
-        expect(order.fulfillment.estimatedDeliveryMinutes).toBeNull();
-        expect(order.fulfillment.source).toBeDefined();
-        test.info().annotations.push({
-          type: 'step',
-          description: `Downgrade confirmed: mode=standard, source=${order.fulfillment.source}`,
-        });
-      }
-    } finally {
-      await client.close();
-    }
-
-    // Verify page refresh preserves the state
-    await page.reload();
-    await new Promise(x => setTimeout(x, 2000));
-
-    // Order detail should show consistent state
     test.info().annotations.push({
       type: 'step',
-      description: `Page refreshed. Delivery mode state persisted.`,
+      description: `Order placed: ${orderNumber} (courier-only fixture — no local seller or warehouse has stock). Waiting for the real deliveryMode=standard transition.`,
+    });
+
+    // Waits for the ACTUAL backend event — deliveryMode flips to 'standard'
+    // the moment the engine enters the courier rung — not a fixed sleep.
+    const order = await waitForOrderCondition(
+      orderId,
+      (o) => o.fulfillment?.deliveryMode === 'standard',
+      { timeoutMs: 90_000, intervalMs: 1_000 }
+    );
+
+    expect(order.fulfillment.deliveryMode).toBe('standard');
+    // The downgrade is written unconditionally on entering the courier rung —
+    // the quick ETA must be gone even if the courier call itself later fails.
+    expect(order.fulfillment.estimatedDeliveryMinutes).toBeNull();
+    expect(order.fulfillment.fallbackLevel).toBe(3); // FALLBACK_LEVEL.COURIER
+    expect(order.fulfillment.source).toBe('courier');
+    expect(order.fulfillment.type).toBe('courier');
+
+    test.info().annotations.push({
+      type: 'step',
+      description: `Real backend transition confirmed: fallbackLevel=3 (courier), deliveryMode=standard, fallbackReason=${order.fulfillment.fallbackReason}`,
+    });
+
+    // Verify the CUSTOMER UI reflects the real backend state, not a client
+    // guess. /orders/:id/fulfillment is the customer-safe read path.
+    // page.request shares the browser context's network stack — this is a
+    // real HTTP call, not a Node-side fetch bypassing the browser.
+    await page.goto('/');
+    const fulfillmentRes = await page.request.get(
+      `http://127.0.0.1:5000/api/v1/orders/${orderId}/fulfillment`,
+      { headers: { Authorization: `Bearer ${customer.accessToken}` } }
+    );
+    expect(fulfillmentRes.ok()).toBe(true);
+    const fulfillmentBody = await fulfillmentRes.json();
+    expect(fulfillmentBody.data.deliveryMode).toBe('standard');
+    expect(fulfillmentBody.data.estimatedDeliveryMinutes).toBeNull();
+
+    test.info().annotations.push({
+      type: 'step',
+      description: 'Customer-facing GET /orders/:id/fulfillment confirms Standard Delivery — no stale quick-commerce ETA leaked to the API response the frontend actually reads.',
+    });
+
+    // Verify page refresh preserves the state — re-reads from the backend,
+    // does not trust anything cached client-side.
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    const afterRefresh = await waitForOrderCondition(
+      orderId,
+      (o) => o.fulfillment?.deliveryMode === 'standard',
+      { timeoutMs: 5_000, intervalMs: 500 }
+    );
+    expect(afterRefresh.fulfillment.deliveryMode).toBe('standard');
+
+    test.info().annotations.push({
+      type: 'step',
+      description: 'Page refreshed. Backend-persisted Standard Delivery state confirmed unchanged.',
     });
   });
 
@@ -223,13 +254,13 @@ test.describe('Main Business Flow', () => {
 
     await new Promise(x => setTimeout(x, 4000));
 
-    const db = require('mongodb').MongoClient;
+    const db = MongoClient;
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
     const client = new db(uri);
     try {
       await client.connect();
       const fulfillColl = client.db('mithilakart').collection('order_fulfillments');
-      const fulfillment = await fulfillColl.findOne({ orderId: new (require('mongodb')).ObjectId(orderId) });
+      const fulfillment = await fulfillColl.findOne({ orderId: new ObjectId(orderId) });
 
       if (fulfillment) {
         test.info().annotations.push({
@@ -331,13 +362,13 @@ test.describe('Main Business Flow', () => {
       .toHaveCount(0, { timeout: 30_000 });
 
     // Verify database: order still exists, fulfillment escalated
-    const db = require('mongodb').MongoClient;
+    const db = MongoClient;
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
     const client = new db(uri);
     try {
       await client.connect();
       const ordColl = client.db('mithilakart').collection('orders');
-      const order = await ordColl.findOne({ _id: new (require('mongodb')).ObjectId(orderId) });
+      const order = await ordColl.findOne({ _id: new ObjectId(orderId) });
       expect(order).toBeDefined();
       test.info().annotations.push({
         type: 'step',
