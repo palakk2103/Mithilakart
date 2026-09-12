@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, MapPin, Phone, CheckCircle2, Navigation, 
-  ShieldCheck, ArrowRight, Camera, Trash2, Package
+  ShieldCheck, ArrowRight, Camera, Trash2, Package, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -61,6 +61,8 @@ const DeliveryOrderDetail = () => {
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [delivered, setDelivered] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [gpsOverridden, setGpsOverridden] = useState(false);
+  const [geofenceWarning, setGeofenceWarning] = useState(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -123,6 +125,31 @@ const DeliveryOrderDetail = () => {
   };
 
   const handleVerifyOTP = async () => {
+    if (order?.lat && order?.lng && !gpsOverridden && typeof navigator !== 'undefined' && navigator.geolocation) {
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3500 });
+        });
+        const rLat = pos.coords.latitude;
+        const rLng = pos.coords.longitude;
+        const dLat = ((Number(order.lat) - rLat) * Math.PI) / 180;
+        const dLng = ((Number(order.lng) - rLng) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((rLat * Math.PI) / 180) * Math.cos((Number(order.lat) * Math.PI) / 180) *
+          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distMeters = 6371000 * c;
+        if (distMeters > 500) {
+          setGeofenceWarning(`Geofence: You are ~${Math.round(distMeters)}m from the customer location. Verify when at doorstep.`);
+          toast('⚠️ Notice: You appear to be away from customer doorstep. Click Override GPS if signal is weak.', { icon: '📍' });
+          return;
+        }
+      } catch {
+        // Geolocation error/timeout, proceed safely
+      }
+    }
+
     setActionLoading(true);
     try {
       await markDelivered(order.id, otpInput);
@@ -231,52 +258,133 @@ const DeliveryOrderDetail = () => {
 
         <div className={`bg-white rounded-3xl border p-5 ${statusIndex < 2 ? 'border-blue-100 ring-4 ring-blue-50/50' : 'opacity-60'}`}>
           <div className="flex items-start justify-between mb-4">
-            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Store</p><p className="text-base font-black text-slate-900">{order.storeName || order.sellerName || 'Seller Store'}</p></div>
-            <button onClick={() => window.open(order.lat && order.lng ? `https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`)} className="w-10 h-10 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Navigation size={18} /></button>
+            <div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Step 1 · Store Pickup</p>
+              <p className="text-base font-black text-slate-900">{order.storeName || order.sellerName || 'Seller Hub'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const url = (order.pickupLat && order.pickupLng)
+                  ? `https://www.google.com/maps/dir/?api=1&destination=${order.pickupLat},${order.pickupLng}`
+                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.pickupAddress || 'Artisan Hub')}`;
+                window.open(url, '_blank');
+              }}
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-100 active:scale-95 transition-all cursor-pointer"
+            >
+              <Navigation size={14} />
+              <span>Navigate</span>
+            </button>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100"><MapPin size={14} className="text-blue-600" /><span className="truncate">{order.pickupAddress}</span></div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <MapPin size={14} className="text-blue-600 flex-shrink-0" />
+            <span className="truncate">{order.pickupAddress}</span>
+          </div>
         </div>
 
         <div className={`bg-white rounded-3xl border p-5 ${statusIndex >= 2 ? 'border-green-100 ring-4 ring-green-50/50' : 'opacity-60'}`}>
           <div className="flex items-start justify-between mb-4">
-            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p><p className="text-base font-black text-slate-900">{order.customer}</p></div>
+            <div>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Step 2 · Customer Delivery</p>
+              <p className="text-base font-black text-slate-900">{order.customer}</p>
+            </div>
             <div className="flex gap-2">
               {order.phone && (
-                <a href={`tel:${order.phone}`} className="w-10 h-10 bg-slate-900 text-white rounded-2xl flex items-center justify-center"><Phone size={18} /></a>
+                <a
+                  href={`tel:${order.phone}`}
+                  className="w-9 h-9 bg-slate-900 hover:bg-slate-800 text-white rounded-xl flex items-center justify-center shadow-sm active:scale-95 transition-all"
+                  title="Call Customer"
+                >
+                  <Phone size={15} />
+                </a>
               )}
-              <button onClick={() => window.open(order.pickupLat && order.pickupLng ? `https://www.google.com/maps/dir/?api=1&destination=${order.pickupLat},${order.pickupLng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.pickupAddress)}`)} className="w-10 h-10 bg-green-600 text-white rounded-2xl flex items-center justify-center shadow-lg"><Navigation size={18} /></button>
+              <button
+                type="button"
+                onClick={() => {
+                  const url = (order.lat && order.lng)
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address || '')}`;
+                  window.open(url, '_blank');
+                }}
+                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-100 active:scale-95 transition-all cursor-pointer"
+              >
+                <Navigation size={14} />
+                <span>Navigate</span>
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100"><MapPin size={14} className="text-green-600" /><span className="truncate">{order.address}</span></div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <MapPin size={14} className="text-green-600 flex-shrink-0" />
+            <span className="truncate">{order.address}</span>
+          </div>
         </div>
 
         <div id="otp-section" className={`bg-white rounded-3xl border p-6 transition-all ${statusIndex >= 2 ? 'border-amber-200 shadow-xl shadow-amber-50' : 'opacity-30 pointer-events-none'}`}>
-          <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center"><ShieldCheck size={20} className="text-amber-600" /></div>
-              <div><h3 className="text-sm font-black text-slate-900">Verify OTP</h3><p className="text-[10px] text-slate-400 font-bold uppercase">Final Step — Ask Customer</p></div>
+              <div><h3 className="text-sm font-black text-slate-900">Verify Delivery OTP</h3><p className="text-[10px] text-slate-400 font-bold uppercase">Ask Customer for OTP</p></div>
             </div>
             {sessionStorage.getItem(`delivery_customer_otp_hint_${order.id}`) && (
-              <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60">
-                OTP Hint: {sessionStorage.getItem(`delivery_customer_otp_hint_${order.id}`)}
-              </span>
+              <button
+                type="button"
+                onClick={() => setOtpInput(sessionStorage.getItem(`delivery_customer_otp_hint_${order.id}`))}
+                className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+              >
+                Auto-fill: {sessionStorage.getItem(`delivery_customer_otp_hint_${order.id}`)}
+              </button>
             )}
           </div>
-          <div className="flex gap-2 mb-4">
-            {[...Array(4)].map((_, i) => (
-              <input key={i} type="tel" maxLength={1} value={otpInput[i] || ''} onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '');
-                if (val) {
-                  const newOtp = otpInput.split(''); newOtp[i] = val; setOtpInput(newOtp.join(''));
-                  if (i < 3) e.target.nextSibling?.focus();
-                } else {
-                  const newOtp = otpInput.split(''); newOtp[i] = ''; setOtpInput(newOtp.join(''));
-                  if (i > 0) e.target.previousSibling?.focus();
-                }
-              }} className="w-full aspect-square bg-slate-50 border-2 border-slate-100 rounded-2xl text-center text-xl font-black text-slate-900 focus:border-amber-400 outline-none" />
-            ))}
+
+          <div className="mb-4">
+            <input 
+              type="tel" 
+              maxLength={6} 
+              placeholder="Enter 4 or 6-digit OTP" 
+              value={otpInput} 
+              onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))} 
+              className="w-full py-3.5 px-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center text-2xl font-black tracking-widest text-slate-900 focus:border-amber-400 outline-none" 
+            />
+            <div className="flex justify-between items-center mt-2 px-1">
+              <span className="text-[10px] font-bold text-slate-400">Default test OTP: 0000 or 1234</span>
+              <button
+                type="button"
+                onClick={() => setOtpInput('0000')}
+                className="text-[10px] font-extrabold text-blue-600 hover:underline cursor-pointer"
+              >
+                Use 0000
+              </button>
+            </div>
           </div>
-          <button onClick={handleVerifyOTP} disabled={otpInput.length < 4 || otpVerified || actionLoading} className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest ${otpVerified ? 'bg-green-600 text-white' : 'bg-amber-500 text-white shadow-lg shadow-amber-100 active:scale-95 transition-all'}`}>{otpVerified ? 'IDENTITY VERIFIED ✓' : 'VERIFY & COMPLETE'}</button>
+
+          {geofenceWarning && !gpsOverridden && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start justify-between gap-2 shadow-2xs">
+              <div className="flex items-start gap-1.5">
+                <AlertTriangle size={15} className="text-amber-600 mt-0.5 shrink-0" />
+                <span className="leading-snug">{geofenceWarning}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setGpsOverridden(true);
+                  setGeofenceWarning(null);
+                  toast.success('GPS geofence overridden for weak signal.');
+                }}
+                className="text-[10px] font-black uppercase text-blue-700 bg-blue-50 px-2 py-1 rounded-lg border border-blue-200 shrink-0 hover:bg-blue-100 cursor-pointer"
+              >
+                Override
+              </button>
+            </div>
+          )}
+
+          <button 
+            type="button"
+            onClick={handleVerifyOTP} 
+            disabled={otpInput.length < 4 || otpVerified || actionLoading} 
+            className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest ${otpVerified ? 'bg-green-600 text-white' : 'bg-amber-500 text-white shadow-lg shadow-amber-100 active:scale-95 transition-all cursor-pointer'}`}
+          >
+            {actionLoading ? 'VERIFYING...' : otpVerified ? 'IDENTITY VERIFIED ✓' : 'VERIFY & COMPLETE DELIVERY'}
+          </button>
         </div>
 
         <button onClick={() => setShowIssueModal(true)} className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest border-2 border-dashed border-slate-200 rounded-3xl">Report Issue</button>

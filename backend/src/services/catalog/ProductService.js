@@ -310,6 +310,9 @@ class ProductService extends BaseService {
       description: product.description,
       tags: product.tags,
       attributes: product.attributes,
+      pickupCoordinates: product.pickupCoordinates || null,
+      pickupAddress: product.pickupAddress || null,
+      city: product.city || null,
       variants: variants.map((variant) => ({
         id: variant._id,
         name: variant.name,

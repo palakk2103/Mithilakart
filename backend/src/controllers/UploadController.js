@@ -24,7 +24,13 @@ class UploadController extends BaseController {
       throw AppError.upload('File is required');
     }
 
-    const storageKey = req.params.storageKey || req.body.storageKey;
+    const rawKey = req.params.storageKey || req.body.storageKey;
+    let storageKey = rawKey;
+    try {
+      storageKey = decodeURIComponent(String(rawKey || ''));
+    } catch {
+      throw AppError.validation('Invalid storage key');
+    }
     const data = await this.service.saveLocalUpload(storageKey, req.file.buffer);
     return ApiResponse.success(res, data);
   });

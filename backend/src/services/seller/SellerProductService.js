@@ -2,6 +2,13 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { assertSellerResource } = require('../../helpers/sellerScope');
 const { PRODUCT_STATUS, COMMERCE_FLOWS } = require('../../constants/catalog');
+const {
+  MARKETPLACE_TABS,
+  DELIVERY_TYPE,
+  LISTING_STATUS,
+  LEGACY_FLOW_TO_TAB,
+} = require('../../constants/marketplace');
+const MarketplaceListing = require('../../models/MarketplaceListing');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
 const { buildListFilters } = require('../../utils/filter');
 const { buildSortQuery } = require('../../utils/sort');
@@ -62,10 +69,25 @@ class SellerProductService extends BaseService {
     }
 
     let initialStatus = PRODUCT_STATUS.PENDING;
+    let pickupCoordinates = data.pickupCoordinates || null;
+    let pickupAddress = data.pickupAddress || null;
+    let city = data.city || null;
+
     if (this.sellerRepository) {
       const seller = await this.sellerRepository.findById(sellerId);
-      if (seller && seller.kycStatus === 'approved' && seller.status === 'active') {
-        initialStatus = PRODUCT_STATUS.APPROVED;
+      if (seller) {
+        if (seller.kycStatus === 'approved' && seller.status === 'active') {
+          initialStatus = PRODUCT_STATUS.APPROVED;
+        }
+        if (!pickupCoordinates && seller.latitude != null && seller.longitude != null) {
+          pickupCoordinates = { latitude: seller.latitude, longitude: seller.longitude };
+        }
+        if (!pickupAddress) {
+          pickupAddress = seller.geocodedAddress || seller.addressLine || null;
+        }
+        if (!city) {
+          city = seller.city || null;
+        }
       }
     }
 
@@ -79,6 +101,9 @@ class SellerProductService extends BaseService {
 
     const product = await this.productRepository.create({
       ...data,
+      pickupCoordinates,
+      pickupAddress,
+      city,
       sku: finalSku,
       sellerId,
       status: initialStatus,
@@ -87,7 +112,50 @@ class SellerProductService extends BaseService {
     });
 
     eventBus.publish('product.created', { productId: product._id, sellerId });
+    await this._syncListings(product);
     return product;
+  }
+
+  async _syncListings(product) {
+    if (!product) return;
+    try {
+      const flows = Array.isArray(product.commerceFlows) && product.commerceFlows.length
+        ? product.commerceFlows
+        : ['standard'];
+
+      for (const flow of flows) {
+        const tab = LEGACY_FLOW_TO_TAB[flow] || flow;
+        if (!tab) continue;
+
+        const isQuick = tab === MARKETPLACE_TABS.QUICK_SHOP || tab === MARKETPLACE_TABS.GROCERIES_FRESH;
+        const isApproved = product.status === PRODUCT_STATUS.APPROVED || product.status === 'active';
+
+        await MarketplaceListing.findOneAndUpdate(
+          { productId: product._id, marketplaceTab: tab },
+          {
+            $setOnInsert: {
+              productId: product._id,
+              sellerId: product.sellerId,
+              marketplaceTab: tab,
+            },
+            $set: {
+              price: product.price,
+              mrp: product.mrp || product.price,
+              listingStatus: isApproved ? LISTING_STATUS.APPROVED : LISTING_STATUS.PENDING,
+              isVisible: isApproved,
+              deliveryType: isQuick ? DELIVERY_TYPE.FIXED_PROMISE : DELIVERY_TYPE.STANDARD,
+              deliveryPromiseMinutes: isQuick ? 30 : null,
+              publishedAt: product.createdAt || new Date(),
+              approvedAt: isApproved ? new Date() : null,
+              deletedAt: null,
+            },
+          },
+          { upsert: true, new: true }
+        );
+      }
+    } catch {
+      // Non-blocking for product operations
+    }
   }
 
   async update(sellerId, productId, data) {
@@ -110,12 +178,15 @@ class SellerProductService extends BaseService {
       data.sku = finalSku;
     }
 
-    return this.productRepository.updateById(productId, data);
+    const updated = await this.productRepository.updateById(productId, data);
+    await this._syncListings(updated);
+    return updated;
   }
 
   async delete(sellerId, productId) {
     const product = await this.productRepository.findOne({ _id: productId, sellerId, deletedAt: null });
     if (!product) throw AppError.notFound('Product not found');
+    await MarketplaceListing.updateMany({ productId }, { deletedAt: new Date(), isVisible: false });
     return this.productRepository.updateById(productId, { deletedAt: new Date() });
   }
 
@@ -147,6 +218,7 @@ class SellerProductService extends BaseService {
       brand: product.brand,
       attributes: product.attributes,
     });
+    await this._syncListings(copy);
     return copy;
   }
 
@@ -154,7 +226,9 @@ class SellerProductService extends BaseService {
     const product = await this.productRepository.findOne({ _id: productId, sellerId, deletedAt: null });
     if (!product) throw AppError.notFound('Product not found');
     assertSellerResource(product.sellerId, sellerId);
-    return this.productRepository.updateStatus(productId, status);
+    const updated = await this.productRepository.updateStatus(productId, status);
+    await this._syncListings(updated);
+    return updated;
   }
 }
 

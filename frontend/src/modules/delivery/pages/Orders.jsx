@@ -100,12 +100,13 @@ const SwipeAction = ({ children, onAccept, onDecline }) => {
 
       <motion.div
         drag="x"
+        dragElastic={0.8}
         dragConstraints={{ left: 0, right: 0 }}
         onDragEnd={(e, info) => {
-          if (info.offset.x > 100) onAccept();
-          if (info.offset.x < -100) onDecline();
+          if (info.offset.x > 40) onAccept();
+          if (info.offset.x < -40) onDecline();
         }}
-        className="relative z-10 cursor-grab active:cursor-grabbing bg-white border border-slate-100 shadow-sm rounded-2xl"
+        className="relative z-10 cursor-grab active:cursor-grabbing select-none touch-none bg-white border border-slate-100 shadow-sm rounded-2xl"
       >
         {children}
       </motion.div>
@@ -150,6 +151,14 @@ const DeliveryOrders = () => {
   useDeliverySocket((payload) => {
     if (payload?.type === 'new_assignment') {
       toast.success(`New delivery assignment${payload.orderNumber ? `: ${payload.orderNumber}` : ''}`);
+    } else if (payload?.type === 'assignment_withdrawn') {
+      toast('Order was accepted by another delivery partner', { icon: 'ℹ️' });
+      if (payload.orderId) {
+        setOrders(prev => ({
+          ...prev,
+          pending: prev.pending.filter(o => String(o.id) !== String(payload.orderId) && String(o.orderId) !== String(payload.orderId)),
+        }));
+      }
     }
     loadOrders();
   });

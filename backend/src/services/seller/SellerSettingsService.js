@@ -1,5 +1,7 @@
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
+const { parseLocationFields } = require('../../utils/geoHelper');
+const Product = require('../../models/Product');
 
 class SellerSettingsService extends BaseService {
   constructor({ sellerRepository, passwordService }) {
@@ -15,7 +17,34 @@ class SellerSettingsService extends BaseService {
   }
 
   async updateProfile(sellerId, data) {
-    const seller = await this.sellerRepository.updateById(sellerId, data);
+    const updateData = { ...data };
+    if (updateData.address && !updateData.addressLine) {
+      updateData.addressLine = updateData.address;
+    }
+    if (updateData.latitude !== undefined || updateData.longitude !== undefined) {
+      const geo = parseLocationFields({ latitude: updateData.latitude, longitude: updateData.longitude });
+      updateData.latitude = geo.latitude;
+      updateData.longitude = geo.longitude;
+      updateData.location = geo.location;
+      updateData.lastLocationUpdatedAt = new Date();
+    }
+    const seller = await this.sellerRepository.updateById(sellerId, updateData);
+    if (updateData.latitude != null && updateData.longitude != null) {
+      try {
+        await Product.updateMany(
+          { sellerId, deletedAt: null },
+          {
+            $set: {
+              pickupCoordinates: { latitude: updateData.latitude, longitude: updateData.longitude },
+              pickupAddress: updateData.addressLine || seller?.addressLine || null,
+              city: updateData.city || seller?.city || null,
+            },
+          }
+        );
+      } catch (err) {
+        // Continue safely
+      }
+    }
     return this._serializeProfile(seller);
   }
 
@@ -63,6 +92,15 @@ class SellerSettingsService extends BaseService {
       email: seller.email,
       storeName: seller.storeName,
       phone: seller.phone,
+      addressLine: seller.addressLine,
+      city: seller.city,
+      state: seller.state,
+      pincode: seller.pincode,
+      geocodedAddress: seller.geocodedAddress,
+      latitude: seller.latitude,
+      longitude: seller.longitude,
+      isOnline: seller.isOnline !== false,
+      lastLocationUpdatedAt: seller.lastLocationUpdatedAt,
       status: seller.status,
       kycStatus: seller.kycStatus,
       bankDetails: seller.bankDetails,

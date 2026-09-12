@@ -64,6 +64,14 @@ const sellerSettingsProfileSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100).optional(),
   storeName: Joi.string().trim().max(100).optional(),
   phone: Joi.string().pattern(/^[6-9]\d{9}$/).optional(),
+  addressLine: Joi.string().trim().max(300).allow('', null).optional(),
+  address: Joi.string().trim().max(300).allow('', null).optional(),
+  city: Joi.string().trim().max(100).allow('', null).optional(),
+  state: Joi.string().trim().max(100).allow('', null).optional(),
+  pincode: Joi.string().pattern(/^\d{6}$/).allow('', null).optional(),
+  latitude: Joi.number().min(-90).max(90).allow(null).optional(),
+  longitude: Joi.number().min(-180).max(180).allow(null).optional(),
+  geocodedAddress: Joi.string().trim().max(300).allow('', null).optional(),
 });
 
 const sellerSettingsBankSchema = Joi.object({

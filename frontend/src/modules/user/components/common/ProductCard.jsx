@@ -23,6 +23,27 @@ const ProductCard = ({ product, onClick }) => {
     });
   };
 
+  const imageSrc = product.image || product.img || product.imageUrl || product.images?.[0]?.url || product.images?.[0] || "https://via.placeholder.com/300x300";
+  const title = product.title || product.name || '';
+  const rating = product.rating || product.ratingAvg || 0;
+  const reviewCount = product.reviewCount || product.ratingCount || 0;
+  const oldPrice = product.oldPrice || product.mrp;
+  const price = product.price;
+
+  const deliveryBadge = product.deliveryEtaText ? (
+    <>
+      <span className={`${primaryText} font-bold`}>⚡ Quick</span> {product.deliveryEtaText}
+    </>
+  ) : product.deliveryPromiseMinutes ? (
+    <>
+      <span className={`${primaryText} font-bold`}>⚡ Quick</span> {product.deliveryPromiseMinutes} mins
+    </>
+  ) : (
+    <>
+      <span className={`${primaryText} font-bold`}>Prime</span> {t('product.deliveryTomorrow')}
+    </>
+  );
+
   return (
     <div
       role="button"
@@ -38,8 +59,8 @@ const ProductCard = ({ product, onClick }) => {
     >
       <div className="relative aspect-square overflow-hidden bg-white p-2 md:p-4">
         <img
-          src={product.image || product.img || "https://via.placeholder.com/300x300"}
-          alt={product.title || product.name}
+          src={imageSrc}
+          alt={title}
           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
         />
         <button
@@ -51,35 +72,35 @@ const ProductCard = ({ product, onClick }) => {
         </button>
       </div>
       <div className="p-2 md:p-3 flex flex-col flex-1">
-        <h3 className="text-[11px] md:text-sm font-medium text-slate-800 line-clamp-2 leading-snug min-h-[30px] md:min-h-[40px]" title={product.title || product.name}>
-          {product.title || product.name}
+        <h3 className="text-[11px] md:text-sm font-medium text-slate-800 line-clamp-2 leading-snug min-h-[30px] md:min-h-[40px]" title={title}>
+          {title}
         </h3>
 
-        {product.rating > 0 && (
+        {rating > 0 && (
           <div className="mt-1 md:mt-2 flex items-center gap-1.5">
             <div className={`${primaryBg} text-white text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded flex items-center font-bold`}>
-              {product.rating} ★
+              {rating} ★
             </div>
-            {product.reviewCount > 0 && (
-              <span className="text-slate-400 text-[10px] md:text-xs font-medium">({product.reviewCount})</span>
+            {reviewCount > 0 && (
+              <span className="text-slate-400 text-[10px] md:text-xs font-medium">({reviewCount})</span>
             )}
           </div>
         )}
 
         <div className="mt-1.5 md:mt-3 flex flex-col">
           <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-            <span className="text-xs md:text-base font-bold text-slate-900">₹{product.price}</span>
-            {product.oldPrice && (
-              <span className="text-[10px] md:text-xs text-slate-400 line-through">{t('product.mrp')} ₹{product.oldPrice}</span>
+            <span className="text-xs md:text-base font-bold text-slate-900">₹{price}</span>
+            {oldPrice && (
+              <span className="text-[10px] md:text-xs text-slate-400 line-through">{t('product.mrp')} ₹{oldPrice}</span>
             )}
-            {product.oldPrice && (
+            {oldPrice && (
               <span className={`border ${primaryBorder} ${primaryText} text-[8px] md:text-[9px] px-1 md:px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tight`}>
-                {Math.round(((parseInt(product.oldPrice?.toString().replace(/,/g, '')) - parseInt(product.price?.toString().replace(/,/g, ''))) / parseInt(product.oldPrice?.toString().replace(/,/g, ''))) * 100)}% {t('product.off')}
+                {Math.round(((parseInt(oldPrice?.toString().replace(/,/g, '')) - parseInt(price?.toString().replace(/,/g, ''))) / parseInt(oldPrice?.toString().replace(/,/g, ''))) * 100)}% {t('product.off')}
               </span>
             )}
           </div>
           <p className="text-[9px] md:text-[10px] text-slate-500 mt-0.5 md:mt-1 flex items-center gap-1">
-            <span className={`${primaryText} font-bold`}>Prime</span> {t('product.deliveryTomorrow')}
+            {deliveryBadge}
           </p>
         </div>
       </div>

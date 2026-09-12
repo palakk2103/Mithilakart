@@ -7,7 +7,7 @@ class FlashSaleProductRepository extends BaseRepository {
   }
 
   async findByFlashSale(flashSaleId) {
-    return this.find({ flashSaleId, deletedAt: null });
+    return this.model.find({ flashSaleId, deletedAt: null }).populate('productId').lean();
   }
 
   async findActiveForProduct(productId, now = new Date()) {

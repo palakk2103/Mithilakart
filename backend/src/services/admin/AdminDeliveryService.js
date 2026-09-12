@@ -4,9 +4,10 @@ const { parsePagination, buildPaginationMeta } = require('../../utils/pagination
 const { DELIVERY_STATUS } = require('../../constants/auth');
 
 class AdminDeliveryService extends BaseService {
-  constructor({ deliveryPartnerRepository }) {
+  constructor({ deliveryPartnerRepository, transactionLedgerRepository = null }) {
     super();
     this.deliveryPartnerRepository = deliveryPartnerRepository;
+    this.transactionLedgerRepository = transactionLedgerRepository;
   }
 
   async list(query = {}) {
@@ -29,6 +30,62 @@ class AdminDeliveryService extends BaseService {
     const partner = await this.deliveryPartnerRepository.findById(id);
     if (!partner) throw AppError.notFound('Delivery partner not found');
     return partner;
+  }
+
+  async getDues(id) {
+    const partner = await this.deliveryPartnerRepository.findById(id);
+    if (!partner) throw AppError.notFound('Delivery partner not found');
+
+    let ledger = [];
+    if (this.transactionLedgerRepository) {
+      ledger = await this.transactionLedgerRepository.findByParty('delivery_partner', id);
+    }
+
+    return {
+      partnerId: partner._id,
+      name: partner.name || partner.fullName,
+      phone: partner.phone,
+      codDuesBalance: partner.codDuesBalance || 0,
+      totalCodCollected: partner.totalCodCollected || 0,
+      totalEarnings: partner.totalEarnings || partner.balance || 0,
+      ledger,
+    };
+  }
+
+  async settleDues(id, { amount, notes = null, settledBy = null }) {
+    const partner = await this.deliveryPartnerRepository.findById(id);
+    if (!partner) throw AppError.notFound('Delivery partner not found');
+
+    const currentDues = partner.codDuesBalance || 0;
+    const settleAmount = amount != null ? Number(amount) : currentDues;
+    if (settleAmount <= 0) {
+      throw AppError.validation('Settlement amount must be greater than zero');
+    }
+
+    const remainingDues = Math.max(0, currentDues - settleAmount);
+    await this.deliveryPartnerRepository.updateById(id, { codDuesBalance: remainingDues });
+
+    let ledgerEntry = null;
+    if (this.transactionLedgerRepository) {
+      ledgerEntry = await this.transactionLedgerRepository.recordSettlement({
+        party: 'delivery_partner',
+        partyId: id,
+        amount: settleAmount,
+        settledBy,
+        metadata: {
+          previousDues: currentDues,
+          remainingDues,
+          notes,
+        },
+      });
+    }
+
+    return {
+      settled: true,
+      settledAmount: settleAmount,
+      remainingDues,
+      ledgerEntry,
+    };
   }
 
   async approve(id) {

@@ -8,6 +8,7 @@ const config = require('./config');
 const { createApp } = require('./app');
 const { connectDatabase, disconnectDatabase } = require('./config/database');
 const { connectRedis, disconnectRedis } = require('./config/redis');
+// Trigger clean startup
 const { resetContainer, getContainer } = require('./bootstrap/container');
 const { logger } = require('./utils/logger');
 const { eventBus, EVENT_TYPES } = require('./events/EventBus');

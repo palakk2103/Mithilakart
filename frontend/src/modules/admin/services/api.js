@@ -187,6 +187,8 @@ export const financeApi = {
 export const deliveryApi = {
   getAll: (params) => asyncHandler(() => api.get('/delivery', { params })),
   getById: (id) => asyncHandler(() => api.get(`/delivery/${id}`)),
+  getDues: (id) => asyncHandler(() => api.get(`/delivery/${id}/dues`)),
+  settleDues: (id, data) => asyncHandler(() => api.post(`/delivery/${id}/settle-dues`, data)),
   create: (data) => asyncHandler(() => api.post('/delivery', data)),
   approve: (id) => asyncHandler(() => api.patch(`/delivery/${id}/approve`)),
   reject: (id) => asyncHandler(() => api.patch(`/delivery/${id}/reject`)),

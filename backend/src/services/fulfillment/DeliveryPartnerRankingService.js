@@ -55,11 +55,11 @@ class DeliveryPartnerRankingService extends BaseService {
     }
   }
 
-  _locationFreshness(partner) {
+  _locationFreshness(partner, now = Date.now()) {
     const stamp = partner.lastLocationAt || partner.updatedAt;
     if (!stamp) return 0;
 
-    const ageMs = Date.now() - new Date(stamp).getTime();
+    const ageMs = now - new Date(stamp).getTime();
     if (!Number.isFinite(ageMs) || ageMs < 0) return 1;
 
     return Math.min(Math.max(1 - (ageMs / LOCATION_STALE_AFTER_MS), 0), 1);
@@ -112,6 +112,7 @@ class DeliveryPartnerRankingService extends BaseService {
 
     const ranked = [];
     const rejected = [];
+    const now = Date.now();
 
     for (const partner of partners) {
       const workload = await this._workload(partner._id);
@@ -151,7 +152,7 @@ class DeliveryPartnerRankingService extends BaseService {
           : DeliveryPartnerRankingService.normInv(routeEtaMinutes, maxEta),
         workload: workload == null ? null
           : DeliveryPartnerRankingService.normInv(workload, maxConcurrent || 10),
-        locationFreshness: this._locationFreshness(partner),
+        locationFreshness: this._locationFreshness(partner, now),
       };
 
       // Redistribute the weight of unavailable factors instead of scoring them
