@@ -49,16 +49,17 @@ export const LocationProvider = ({ children }) => {
   }, []);
 
   const resolveAddressForCoords = useCallback(async (coords) => {
+    lastGeocodeRef.current = Date.now();
     try {
       const resolved = await reverseGeocode(coords.latitude, coords.longitude);
-      if (resolved?.shortLabel || resolved?.formattedAddress || resolved?.city) {
+      if (resolved && (resolved.shortLabel || resolved.formattedAddress || resolved.city)) {
         return resolved;
       }
     } catch {
       // use coord fallback below
     }
     return {
-      formattedAddress: `Near ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`,
+      formattedAddress: `Near ${Number(coords.latitude).toFixed(4)}, ${Number(coords.longitude).toFixed(4)}`,
       city: null,
     };
   }, []);

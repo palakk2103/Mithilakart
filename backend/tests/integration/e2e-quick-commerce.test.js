@@ -605,7 +605,7 @@ describe('E2E Quick Commerce — Full Pipeline', () => {
 
     const acceptResult = await ctx.deliveryOrderService.acceptOrder(ctx.partnerId, ctx.orderId);
     expect(acceptResult.assignment.status).toBe(ASSIGNMENT_STATUS.ACCEPTED);
-    expect(acceptResult.pickupOtp).toMatch(/^\d{4}$/);
+    expect(acceptResult.pickupOtp).toMatch(/^\d{4,6}$/);
   });
 
   it('8. Delivery partner confirms pickup → order SHIPPED', async () => {
@@ -631,7 +631,7 @@ describe('E2E Quick Commerce — Full Pipeline', () => {
 
     const pickupResult = await ctx.deliveryOrderService.confirmPickup(ctx.partnerId, ctx.orderId, pickupOtp);
     expect(pickupResult.status).toBe(ASSIGNMENT_STATUS.PICKED_UP);
-    expect(pickupResult.deliveryOtp).toMatch(/^\d{4}$/);
+    expect(pickupResult.deliveryOtp).toMatch(/^\d{4,6}$/);
 
     expect(ctx.orders[ctx.orderId].status).toBe(ORDER_STATUS.SHIPPED);
   });

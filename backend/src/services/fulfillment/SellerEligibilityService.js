@@ -266,7 +266,7 @@ class SellerEligibilityService extends BaseService {
     const nearby = await this.sellerRepository.findNearby({
       latitude: customerLocation.lat,
       longitude: customerLocation.lng,
-      radiusKm: Number(config.sellerSearchRadiusKm),
+      radiusKm: Number(config?.sellerSearchRadiusKm || 10),
     });
 
     // A warehouse is a Seller, but it is fallback level 2 — it must not be

@@ -25,3 +25,8 @@ export const createProductReview = (productId, data) =>
 
 export const askProductQuestion = (productId, data) =>
   customerApi.post(`/products/${productId}/questions`, data);
+
+export const getDeals = () => customerApi.get('/deals');
+
+export const getOffers = () => customerApi.get('/offers');
+

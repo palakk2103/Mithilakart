@@ -11,25 +11,41 @@ export default function useOrderSocket(orderId, portal = 'customer', handlers = 
     const socket = getSocket(portal);
     if (!socket) return undefined;
 
+    const isMatch = (payload) => {
+      if (!payload) return false;
+      const target = String(orderId);
+      return (
+        String(payload.orderId) === target ||
+        String(payload.orderNumber) === target ||
+        String(payload.id) === target ||
+        String(payload.mongoId) === target
+      );
+    };
+
     const onStatus = (payload) => {
-      if (String(payload?.orderId) === String(orderId)) {
+      if (isMatch(payload)) {
         handlersRef.current.onStatusUpdate?.(payload);
       }
     };
     const onLocation = (payload) => {
-      if (String(payload?.orderId) === String(orderId)) {
+      if (isMatch(payload)) {
         handlersRef.current.onLocationUpdate?.(payload);
       }
     };
     const onSync = (payload) => {
-      if (String(payload?.orderId) === String(orderId)) {
+      if (isMatch(payload)) {
         handlersRef.current.onSyncState?.(payload);
       }
     };
     // CR-002 — fulfillment progress (searching / preparing / mode change).
     const onFulfillment = (payload) => {
-      if (String(payload?.orderId) === String(orderId)) {
+      if (isMatch(payload)) {
         handlersRef.current.onFulfillmentUpdate?.(payload);
+      }
+    };
+    const onDeliveryOtp = (payload) => {
+      if (isMatch(payload)) {
+        handlersRef.current.onDeliveryOtp?.(payload);
       }
     };
 
@@ -44,6 +60,7 @@ export default function useOrderSocket(orderId, portal = 'customer', handlers = 
     socket.on('location_update', onLocation);
     socket.on('sync_state', onSync);
     socket.on('fulfillment_update', onFulfillment);
+    socket.on('delivery_otp', onDeliveryOtp);
 
     return () => {
       socket.off('connect', join);
@@ -51,6 +68,7 @@ export default function useOrderSocket(orderId, portal = 'customer', handlers = 
       socket.off('location_update', onLocation);
       socket.off('sync_state', onSync);
       socket.off('fulfillment_update', onFulfillment);
+      socket.off('delivery_otp', onDeliveryOtp);
     };
   }, [orderId, portal]);
 }

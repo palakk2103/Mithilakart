@@ -22,7 +22,7 @@ import DealsPage from '../pages/DealsPage';
 import Search from '../pages/Search';
 import ContinueShopping from '../pages/ContinueShopping';
 import TermsOfUse from '../pages/TermsOfUse';
-import PrivacyPolicy from '../pages/PrivacyPolicy';
+import LegalPrivacy from '../pages/LegalPrivacy';
 import CancellationReturns from '../pages/CancellationReturns';
 import ShippingPolicy from '../pages/ShippingPolicy';
 import QuickShop from '../pages/QuickShop';
@@ -59,7 +59,7 @@ const MarketRoutes = () => {
       <Route path="/checkout" element={<Checkout />} />
       <Route path="/order-confirmation" element={<OrderConfirmation />} />
       <Route path="/terms" element={<TermsOfUse />} />
-      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/privacy" element={<LegalPrivacy />} />
       <Route path="/cancellation-returns" element={<CancellationReturns />} />
       <Route path="/shipping" element={<ShippingPolicy />} />
 
@@ -68,6 +68,9 @@ const MarketRoutes = () => {
         <Route path="/home" element={<Home />} />
         <Route path="/products" element={<Products />} />
         <Route path="/product-detail" element={<ProductDetail />} />
+        <Route path="/product-detail/:id" element={<ProductDetail />} />
+        <Route path="product-detail" element={<ProductDetail />} />
+        <Route path="product-detail/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/bag" element={<Bag />} />
         <Route path="/wishlist" element={<Wishlist />} />

@@ -2,8 +2,10 @@
  * Centralized User App Header Tabs Configuration
  *
  * Exposes dynamic getters & setters so the Admin Panel can add, remove,
- * rename, reorder, and toggle tab visibility in real-time.
+ * rename, reorder, and toggle tab visibility in real-time with backend persistence.
  */
+
+import customerApi, { adminApiClient } from '../shared/api/client';
 
 export const DEFAULT_USER_APP_TABS = [
   {
@@ -72,17 +74,44 @@ export const getStoredHeaderTabs = () => {
   return DEFAULT_USER_APP_TABS;
 };
 
-export const saveHeaderTabsConfig = (tabs) => {
+export const fetchHeaderTabsFromBackend = async () => {
+  try {
+    const res = await customerApi.get('/storefront/header-tabs');
+    const data = res?.data !== undefined ? res.data : res;
+    if (Array.isArray(data) && data.length > 0) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user_app_tabs_config', JSON.stringify(data));
+        window.dispatchEvent(new Event('user_app_tabs_updated'));
+      }
+      return data;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch header tabs from backend, using cache/defaults:', err?.message || err);
+  }
+  return getStoredHeaderTabs();
+};
+
+export const saveHeaderTabsConfig = async (tabs) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('user_app_tabs_config', JSON.stringify(tabs));
     window.dispatchEvent(new Event('user_app_tabs_updated'));
   }
+  try {
+    await adminApiClient.put('/settings/header-tabs', { tabs });
+  } catch (err) {
+    console.warn('Failed to sync header tabs with backend:', err?.message || err);
+  }
 };
 
-export const resetHeaderTabsConfig = () => {
+export const resetHeaderTabsConfig = async () => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('user_app_tabs_config');
     window.dispatchEvent(new Event('user_app_tabs_updated'));
+  }
+  try {
+    await adminApiClient.put('/settings/header-tabs', { tabs: DEFAULT_USER_APP_TABS });
+  } catch (err) {
+    console.warn('Failed to reset header tabs on backend:', err?.message || err);
   }
 };
 

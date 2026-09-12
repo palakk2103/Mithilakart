@@ -146,8 +146,37 @@ export async function loginCustomer({ force = false } = {}) {
   });
   if (!verify.ok) throw new Error(`Customer login failed: ${JSON.stringify(verify.json)}`);
 
-  customerSession = { accessToken: verify.body.tokens.accessToken };
+  customerSession = {
+    accessToken: verify.body?.tokens?.accessToken,
+    refreshToken: verify.body?.tokens?.refreshToken,
+    user: verify.body?.user,
+  };
   return customerSession;
+}
+
+/** Seeds customer tokens into localStorage so the browser is authenticated as customer. */
+export async function seedCustomerAuth(page, auth = null) {
+  const session = auth || await loginCustomer();
+  await page.goto('/login');
+  await page.evaluate(([access, refresh, user]) => {
+    localStorage.setItem('customer_access_token', access);
+    if (refresh) localStorage.setItem('customer_refresh_token', refresh);
+    if (user) localStorage.setItem('customer_user', JSON.stringify(user));
+    localStorage.setItem('isAuthenticated', 'true');
+    window.dispatchEvent(new Event('customer-auth-changed'));
+  }, [session.accessToken, session.refreshToken || '', session.user || {}]);
+}
+
+/** Lands the browser on any customer page with authentication pre-seeded. */
+export async function openCustomerPortal(page, { path = '/' } = {}) {
+  await seedCustomerAuth(page);
+  await page.goto(path);
+  await dismissLocationPrompt(page);
+}
+
+/** Helper to create cart item structure. */
+export async function createCartItem(productId, quantity = 1) {
+  return { productId, quantity };
 }
 
 /** Places a REAL quick_shop order. The engine picks the seller, not this code. */
@@ -175,6 +204,7 @@ export async function openSellerPortal(page, { path = '/seller/dashboard' } = {}
   // Must be on the origin before localStorage is writable.
   await page.goto('/seller/login');
   await page.evaluate(([access, refresh, data]) => {
+    sessionStorage.setItem('splashShown', 'true');
     localStorage.setItem('seller_token', access);
     localStorage.setItem('seller_refresh_token', refresh);
     localStorage.setItem('seller_data', data);

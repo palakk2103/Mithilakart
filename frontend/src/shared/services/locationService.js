@@ -82,8 +82,24 @@ export const formatLocationLabel = (location) => {
   if (!location) return 'Set delivery location';
 
   const primary = location.shortLabel || location.addressLine;
+  const city = location.city;
+  const state = location.state;
+
+  if (primary && city && !primary.toLowerCase().includes(city.toLowerCase())) {
+    const combined = `${primary}, ${city}`;
+    return combined.length > 52 ? `${combined.slice(0, 52)}…` : combined;
+  }
+
   if (primary) {
     return primary.length > 52 ? `${primary.slice(0, 52)}…` : primary;
+  }
+
+  if (city) {
+    if (state && !city.toLowerCase().includes(state.toLowerCase())) {
+      const cityState = `${city}, ${state}`;
+      return cityState.length > 52 ? `${cityState.slice(0, 52)}…` : cityState;
+    }
+    return city;
   }
 
   if (location.formattedAddress) {
@@ -91,9 +107,9 @@ export const formatLocationLabel = (location) => {
     return cleaned.length > 52 ? `${cleaned.slice(0, 52)}…` : cleaned;
   }
 
-  if (location.city) return location.city;
   if (location.latitude != null && location.longitude != null) {
-    return `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
+    return `Near ${Number(location.latitude).toFixed(4)}, ${Number(location.longitude).toFixed(4)}`;
   }
   return 'Set delivery location';
 };
+

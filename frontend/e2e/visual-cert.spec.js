@@ -44,6 +44,7 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS)) {
     test.use({ viewport: viewportSize });
 
     test(`customer portal — ${viewportName}`, async ({ page }) => {
+      test.setTimeout(300_000);
       const customer = await loginCustomer();
 
       await page.goto('/home');

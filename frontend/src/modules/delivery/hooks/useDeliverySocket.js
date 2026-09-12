@@ -15,13 +15,16 @@ export default function useDeliverySocket(onEvent) {
       handlerRef.current?.(payload);
     };
     const onStatus = (payload) => handlerRef.current?.(payload);
+    const onWithdrawn = (payload) => handlerRef.current?.(payload);
 
     socket.on('new_assignment', onAssignment);
     socket.on('status_update', onStatus);
+    socket.on('assignment_withdrawn', onWithdrawn);
 
     return () => {
       socket.off('new_assignment', onAssignment);
       socket.off('status_update', onStatus);
+      socket.off('assignment_withdrawn', onWithdrawn);
     };
   }, []);
 }

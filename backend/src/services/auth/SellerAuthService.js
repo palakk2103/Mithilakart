@@ -3,7 +3,7 @@ const { AppError } = require('../../utils/AppError');
 const { PORTALS } = require('../../constants/portals');
 const { SELLER_STATUS, KYC_STATUS } = require('../../constants/auth');
 
-const { parseLocationFields } = require('../../utils/geoHelper');
+const { parseLocationFields, haversineKm } = require('../../utils/geoHelper');
 
 class SellerAuthService extends BaseService {
   constructor(dependencies) {
@@ -94,6 +94,9 @@ class SellerAuthService extends BaseService {
       longitude: geo.longitude,
       placeId: resolvedPlaceId,
       location: geo.location,
+      geocodedAddress: resolvedAddressLine,
+      isOnline: true,
+      lastLocationUpdatedAt: geo.latitude != null ? new Date() : null,
       status: SELLER_STATUS.INACTIVE,
       kycStatus: KYC_STATUS.PENDING,
     });
@@ -104,7 +107,7 @@ class SellerAuthService extends BaseService {
     };
   }
 
-  async login({ email, password, deviceId }, sessionMeta) {
+  async login({ email, password, deviceId, latitude, longitude }, sessionMeta) {
     const seller = await this.sellerRepository.findByEmail(email);
 
     if (!seller) {
@@ -145,6 +148,39 @@ class SellerAuthService extends BaseService {
     }
 
     await this.sellerRepository.resetFailedAttempts(seller._id);
+
+    if (latitude != null && longitude != null && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))) {
+      const newLat = Number(latitude);
+      const newLng = Number(longitude);
+      const shouldUpdate = seller.latitude == null || seller.longitude == null ||
+        haversineKm(seller.latitude, seller.longitude, newLat, newLng) > 0.1;
+
+      if (shouldUpdate) {
+        const geo = parseLocationFields({ latitude: newLat, longitude: newLng });
+        let newAddress = seller.geocodedAddress || seller.addressLine;
+        if (this.geocodingService?.isEnabled()) {
+          try {
+            const rev = await this.geocodingService.reverseGeocode({ latitude: newLat, longitude: newLng });
+            if (rev?.formattedAddress) {
+              newAddress = rev.formattedAddress;
+            }
+          } catch {
+            // keep existing address
+          }
+        }
+        await this.sellerRepository.updateById(seller._id, {
+          latitude: geo.latitude,
+          longitude: geo.longitude,
+          location: geo.location,
+          geocodedAddress: newAddress,
+          lastLocationUpdatedAt: new Date(),
+        });
+        seller.latitude = geo.latitude;
+        seller.longitude = geo.longitude;
+        seller.geocodedAddress = newAddress;
+        seller.lastLocationUpdatedAt = new Date();
+      }
+    }
 
     const tokens = await this.tokenService.issueTokenPair({
       portal: PORTALS.SELLER,
@@ -190,8 +226,11 @@ class SellerAuthService extends BaseService {
       countryCode: seller.countryCode,
       city: seller.city,
       addressLine: seller.addressLine,
+      geocodedAddress: seller.geocodedAddress,
       latitude: seller.latitude,
       longitude: seller.longitude,
+      isOnline: seller.isOnline !== false,
+      lastLocationUpdatedAt: seller.lastLocationUpdatedAt,
       status: seller.status,
       kycStatus: seller.kycStatus,
     };

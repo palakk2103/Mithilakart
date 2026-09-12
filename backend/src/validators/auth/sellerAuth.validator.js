@@ -7,6 +7,8 @@ const sellerLoginSchema = Joi.object({
   email: Joi.string().trim().email().required(),
   password: Joi.string().min(6).required(),
   deviceId: Joi.string().trim().max(100).optional(),
+  latitude: Joi.number().optional(),
+  longitude: Joi.number().optional(),
 });
 
 const sellerSendPhoneOtpSchema = Joi.object({

@@ -49,6 +49,7 @@ class SellerRepository extends BaseRepository {
         deletedAt: null,
         status: 'active',
         kycStatus: 'approved',
+        isOnline: { $ne: false },
         location: {
           $near: {
             $geometry: { type: 'Point', coordinates: [longitude, latitude] },
@@ -72,6 +73,7 @@ class SellerRepository extends BaseRepository {
       deletedAt: null,
       status: 'active',
       kycStatus: 'approved',
+      isOnline: { $ne: false },
       latitude: { $ne: null },
       longitude: { $ne: null },
     });

@@ -70,6 +70,13 @@ class StorefrontService extends BaseService {
     return this.platformConfigService.getPublicConfig();
   }
 
+  async getHeaderTabs() {
+    if (!this.platformConfigService) {
+      return null;
+    }
+    return this.platformConfigService.getHeaderTabs();
+  }
+
   _serializeBanner(banner) {
     return {
       id: banner._id,

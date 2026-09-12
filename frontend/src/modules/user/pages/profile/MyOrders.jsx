@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, ChevronRight, Search, ListFilter, Star, 
   Edit3, ShoppingBag, X, Check, Calendar, Package, Filter, MessageSquare,
-  Upload, Loader2, Image, Film
+  Upload, Loader2, Image, Film, RotateCcw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,10 +10,12 @@ import { toast } from 'react-hot-toast';
 import useAccountStore from '../../../../store/useAccountStore';
 import SearchInput from '../../../../shared/components/SearchInput';
 import { getOrders } from '../../services/ordersApi';
+import { addCartItem } from '../../services/cartApi';
 import { createProductReview } from '../../services/catalogApi';
 import { uploadReviewMedia } from '../../../../shared/services/uploadService';
 import { extractList, mapOrderForList } from '../../utils/mappers';
 import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
+import { getSocket } from '../../../../shared/services/socket';
 
 // Real Images from Assets
 // Real Images from Assets
@@ -234,6 +236,55 @@ const MyOrders = () => {
       cancelled = true;
     };
   }, [setOrders]); 
+
+  // Real-time socket updates for order status changes
+  useEffect(() => {
+    const socket = getSocket('customer');
+    if (!socket) return undefined;
+
+    const handleStatusUpdate = (payload) => {
+      if (!payload?.orderId && !payload?.orderNumber) return;
+      setOrders((prevOrders) =>
+        prevOrders.map((o) => {
+          const isMatch =
+            String(o.mongoId || o.id) === String(payload.orderId) ||
+            String(o.orderNumber || o.id) === String(payload.orderNumber) ||
+            String(o.id) === String(payload.orderId);
+          if (isMatch && payload.status) {
+            const formatted = payload.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+            return { ...o, status: formatted, rawStatus: payload.status };
+          }
+          return o;
+        })
+      );
+      getOrders().then((data) => {
+        setOrders(extractList(data).map(mapOrderForList));
+      }).catch(() => {});
+    };
+
+    socket.on('status_update', handleStatusUpdate);
+    return () => {
+      socket.off('status_update', handleStatusUpdate);
+    };
+  }, [setOrders]);
+
+  // Resilient silent background polling if any active order is in progress
+  useEffect(() => {
+    const hasActiveOrders = orders.some((o) => {
+      const st = (o.rawStatus || o.status || '').toLowerCase().replace(/\s+/g, '_');
+      return ['pending', 'placed', 'confirmed', 'packed', 'shipped', 'out_for_delivery'].includes(st);
+    });
+    if (!hasActiveOrders) return undefined;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await getOrders();
+        setOrders(extractList(data).map(mapOrderForList));
+      } catch {}
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [orders, setOrders]);
   
   const [activeFilters, setActiveFilters] = useState({
     status: 'All',
@@ -304,15 +355,40 @@ const MyOrders = () => {
                   ))}
                 </div>
               </div>
-              {order.status === 'Delivered' && (
-                <button 
-                  onClick={() => setShowReviewModal(order.id)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 border border-primary-green/30 bg-primary-light/50 rounded-lg text-primary-dark text-[10px] font-black uppercase tracking-tight active:scale-95 transition-transform"
+              <div className="flex items-center gap-1.5">
+                {order.status === 'Delivered' && (
+                  <button 
+                    onClick={() => setShowReviewModal(order.id)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 border border-primary-green/30 bg-primary-light/50 rounded-lg text-primary-dark text-[10px] font-black uppercase tracking-tight active:scale-95 transition-transform"
+                  >
+                    <Edit3 size={11} />
+                    Review
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      for (const item of (order.items || [])) {
+                        const pId = item.productId || item.id;
+                        if (pId) {
+                          await addCartItem({ productId: pId, quantity: item.quantity || 1 }).catch(() => {});
+                        }
+                      }
+                      toast.success('Items added to bag!');
+                      navigate('/cart');
+                    } catch {
+                      toast.error('Could not reorder items');
+                    }
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-black uppercase tracking-tight active:scale-95 transition-transform cursor-pointer"
+                  title="Reorder items into cart"
                 >
-                  <Edit3 size={11} />
-                  Write Review
+                  <RotateCcw size={11} />
+                  Reorder
                 </button>
-              )}
+              </div>
             </div>
             {currentOrderRating.review && (
               <p className="mt-1.5 text-[11px] text-gray-500 italic line-clamp-1 border-l-2 border-green-500 pl-2">

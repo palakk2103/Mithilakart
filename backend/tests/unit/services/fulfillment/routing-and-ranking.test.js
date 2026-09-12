@@ -434,5 +434,91 @@ describe('SellerRankingService', () => {
 
       expect(ranked[0].rankBreakdown.distance.weight).toBe(0);
     });
+
+    describe('Requirement 4: Price + Distance Seller Ranking (A/B testing)', () => {
+      it('scores lower price higher on the price factor', async () => {
+        const service = buildService();
+        const sellerA = candidate('seller-A', {
+          distanceKm: 2,
+          resolvedItems: [{ productId: 'A', quantity: 1, unitPrice: 200, availableStock: 10 }],
+        });
+        const sellerB = candidate('seller-B', {
+          distanceKm: 4,
+          resolvedItems: [{ productId: 'A', quantity: 1, unitPrice: 100, availableStock: 10 }],
+        });
+
+        const ranked = await service.rank({
+          candidates: [sellerA, sellerB],
+          customerLocation: DELHI,
+          config: CONFIG,
+        });
+
+        const rankedA = ranked.find((r) => r.sellerId === 'seller-A');
+        const rankedB = ranked.find((r) => r.sellerId === 'seller-B');
+
+        expect(rankedB.rankBreakdown.price.raw).toBe(1.0); // lowest price gets top score
+        expect(rankedA.rankBreakdown.price.raw).toBe(0.0); // highest price gets bottom score
+      });
+
+      it('A/B Test: Nearer seller wins when distance weight dominates, cheaper seller wins when price weight dominates', async () => {
+        const service = buildService();
+        // Seller A: nearer (2 km), higher price (₹250)
+        const sellerA = candidate('seller-A-near-costly', {
+          distanceKm: 2,
+          resolvedItems: [{ productId: 'A', quantity: 1, unitPrice: 250, availableStock: 10 }],
+          seller: { _id: 'seller-A-near-costly', latitude: 28.61, longitude: 77.20, preparationTimeMinutes: 5 },
+        });
+        // Seller B: farther (7 km), lower price (₹120)
+        const sellerB = candidate('seller-B-far-cheap', {
+          distanceKm: 7,
+          resolvedItems: [{ productId: 'A', quantity: 1, unitPrice: 120, availableStock: 10 }],
+          seller: { _id: 'seller-B-far-cheap', latitude: 28.67, longitude: 77.27, preparationTimeMinutes: 5 },
+        });
+
+        // Config 1: Admin configures distance dominance (distance: 0.70, price: 0.05)
+        const distanceFavoredConfig = {
+          ...CONFIG,
+          rankingWeights: {
+            distance: 0.70,
+            price: 0.05,
+            routeEta: 0.10,
+            preparation: 0.05,
+            workload: 0.05,
+            availability: 0.05,
+          },
+        };
+
+        const rankedByDistance = await service.rank({
+          candidates: [sellerA, sellerB],
+          customerLocation: DELHI,
+          config: distanceFavoredConfig,
+        });
+
+        // Nearer seller wins under distance-favored configuration
+        expect(rankedByDistance[0].sellerId).toBe('seller-A-near-costly');
+
+        // Config 2: Admin switches configuration to price dominance (price: 0.70, distance: 0.05)
+        const priceFavoredConfig = {
+          ...CONFIG,
+          rankingWeights: {
+            distance: 0.05,
+            price: 0.70,
+            routeEta: 0.10,
+            preparation: 0.05,
+            workload: 0.05,
+            availability: 0.05,
+          },
+        };
+
+        const rankedByPrice = await service.rank({
+          candidates: [sellerA, sellerB],
+          customerLocation: DELHI,
+          config: priceFavoredConfig,
+        });
+
+        // Cheaper seller wins under price-favored configuration!
+        expect(rankedByPrice[0].sellerId).toBe('seller-B-far-cheap');
+      });
+    });
   });
 });

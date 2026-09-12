@@ -13,12 +13,14 @@ const { parseLocationFields } = require('../../utils/geoHelper');
 const { DELIVERY_ASSIGNMENT_MODE } = require('../../constants/fulfillment');
 const { toFiniteNumber } = require('../../utils/numeric');
 const { logger } = require('../../utils/logger');
+const config = require('../../config');
 
 class DeliveryOrderService extends BaseService {
   constructor({
     deliveryAssignmentRepository,
     deliveryPartnerRepository,
     deliveryEarningRepository,
+    transactionLedgerRepository = null,
     deliveryOtpService,
     orderRepository,
     orderItemRepository = null,
@@ -34,10 +36,12 @@ class DeliveryOrderService extends BaseService {
     this.deliveryAssignmentRepository = deliveryAssignmentRepository;
     this.deliveryPartnerRepository = deliveryPartnerRepository;
     this.deliveryEarningRepository = deliveryEarningRepository;
+    this.transactionLedgerRepository = transactionLedgerRepository;
     this.deliveryOtpService = deliveryOtpService;
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
     this.sellerRepository = sellerRepository;
+    this.config = config;
     this.orderTrackingRepository = orderTrackingRepository;
     this.orderStatusHistoryRepository = orderStatusHistoryRepository;
     this.userDeviceRepository = userDeviceRepository;
@@ -161,12 +165,10 @@ class DeliveryOrderService extends BaseService {
     const order = await this.orderRepository.findById(orderId);
     if (!order) throw AppError.notFound('Order not found');
 
-    let assignment = await this.deliveryAssignmentRepository.findByOrderId(order._id);
-    if (!assignment) {
-      assignment = await this.ensureAssignmentForOrder(order._id);
-    }
-
-    if (assignment?.partnerId && String(assignment.partnerId) !== String(partnerId)) {
+    const assignment = await this.deliveryAssignmentRepository.findByOrderId(order._id);
+    // Do not create assignments on GET — that leaked customer PII to any
+    // authenticated partner browsing arbitrary order IDs.
+    if (!assignment || String(assignment.partnerId) !== String(partnerId)) {
       throw AppError.forbidden('Assignment not found for this partner');
     }
 
@@ -174,6 +176,12 @@ class DeliveryOrderService extends BaseService {
       order: this._mapOrderForDelivery(order, assignment),
       assignment,
     };
+  }
+
+  /** Dev/test only — never echo OTPs to partners in production. */
+  _otpEcho(field, otp) {
+    if (!this.config?.auth?.exposeOtpInDev) return {};
+    return { [field]: otp };
   }
 
   async acceptOrder(partnerId, orderId) {
@@ -193,7 +201,14 @@ class DeliveryOrderService extends BaseService {
       // back rather than a 409, so a retried request is harmless.
       if (existing?.partnerId && String(existing.partnerId) === String(partnerId)) {
         const otp = await this.deliveryOtpService.createOtp(existing._id, 'pickup');
-        return { assignment: existing, pickupOtp: otp, idempotent: true };
+        eventBus.publish(DELIVERY_EVENTS.OTP_CREATED, {
+          type: 'pickup',
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          assignmentId: existing._id,
+          otp,
+        });
+        return { assignment: existing, idempotent: true, ...this._otpEcho('pickupOtp', otp) };
       }
 
       const config = await this._resolveAssignmentConfig(order.marketplaceTab);
@@ -223,8 +238,16 @@ class DeliveryOrderService extends BaseService {
         partnerId,
         assignmentId: updated._id,
       });
+      // Pickup OTP is for the seller channel — never trust the partner app with it in prod.
+      eventBus.publish(DELIVERY_EVENTS.OTP_CREATED, {
+        type: 'pickup',
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        assignmentId: updated._id,
+        otp: pickupOtp,
+      });
 
-      return { assignment: updated, pickupOtp };
+      return { assignment: updated, ...this._otpEcho('pickupOtp', pickupOtp) };
     });
   }
 
@@ -235,15 +258,17 @@ class DeliveryOrderService extends BaseService {
         throw AppError.conflict('Pickup not allowed in current status');
       }
 
-      try {
-        await this.deliveryOtpService.verifyOtp(assignment._id, 'pickup', otp);
-      } catch {
-        // Vendor pickup proceeds cleanly even if pickup OTP is missing/expired
-      }
+      await this.deliveryOtpService.verifyOtp(assignment._id, 'pickup', otp);
+
+      const deliveryOtp = await this.deliveryOtpService.createOtp(assignment._id, 'delivery');
 
       await this.deliveryAssignmentRepository.updateById(
         assignment._id,
-        { status: ASSIGNMENT_STATUS.PICKED_UP, pickedUpAt: new Date() },
+        {
+          status: ASSIGNMENT_STATUS.PICKED_UP,
+          pickedUpAt: new Date(),
+          deliveryOtp,
+        },
         session
       );
 
@@ -254,10 +279,9 @@ class DeliveryOrderService extends BaseService {
         this._emitStatusChange(order, ORDER_STATUS.SHIPPED);
       }
 
-      const deliveryOtp = await this.deliveryOtpService.createOtp(assignment._id, 'delivery');
-
       if (order?.userId) {
-        eventBus.publish('delivery.otp_created', {
+        eventBus.publish(DELIVERY_EVENTS.OTP_CREATED, {
+          otpType: 'delivery',
           userId: order.userId,
           orderId: order._id,
           orderNumber: order.orderNumber,
@@ -266,7 +290,10 @@ class DeliveryOrderService extends BaseService {
         });
       }
 
-      return { status: ASSIGNMENT_STATUS.PICKED_UP, deliveryOtp };
+      return {
+        status: ASSIGNMENT_STATUS.PICKED_UP,
+        ...this._otpEcho('deliveryOtp', deliveryOtp),
+      };
     });
   }
 
@@ -300,7 +327,7 @@ class DeliveryOrderService extends BaseService {
 
       await this.deliveryAssignmentRepository.updateById(
         assignment._id,
-        { status: ASSIGNMENT_STATUS.DELIVERED, deliveredAt: new Date() },
+        { status: ASSIGNMENT_STATUS.DELIVERED, deliveredAt: new Date(), deliveryOtp: null },
         session
       );
 
@@ -342,6 +369,90 @@ class DeliveryOrderService extends BaseService {
         { $inc: { balance: earning.amount } },
         { session }
       );
+
+      const isCod = String(order?.paymentMethod).toLowerCase() === 'cod'
+        || String(order?.payment?.method).toLowerCase() === 'cod';
+
+      if (isCod) {
+        await this.orderRepository.updateById(
+          orderId,
+          { 'payment.status': 'paid', paymentStatus: 'paid' },
+          session
+        );
+
+        const collectedAmount = Number(order?.total || order?.payableAmount || 0);
+        const netDue = Math.max(0, collectedAmount - earning.amount);
+
+        await this.deliveryPartnerRepository.model.findByIdAndUpdate(
+          partnerId,
+          {
+            $inc: {
+              codDuesBalance: netDue,
+              totalCodCollected: collectedAmount,
+              totalEarnings: earning.amount,
+            },
+          },
+          { session }
+        );
+
+        if (this.transactionLedgerRepository) {
+          try {
+            await this.transactionLedgerRepository.recordCodDue({
+              party: 'delivery_partner',
+              partyId: partnerId,
+              amount: netDue,
+              metadata: {
+                orderId,
+                orderNumber: order?.orderNumber,
+                collectedAmount,
+                earningAmount: earning.amount,
+              },
+            }, session);
+
+            await this.transactionLedgerRepository.create({
+              party: 'delivery_partner',
+              partyId: partnerId,
+              amount: earning.amount,
+              type: 'payout',
+              status: 'completed',
+              metadata: {
+                orderId,
+                orderNumber: order?.orderNumber,
+              },
+            }, session);
+          } catch (ledgerErr) {
+            logger.warn({ ledgerErr, orderId, partnerId }, 'Failed to write COD transaction ledger — non-blocking');
+          }
+        }
+      } else {
+        await this.deliveryPartnerRepository.model.findByIdAndUpdate(
+          partnerId,
+          {
+            $inc: {
+              totalEarnings: earning.amount,
+            },
+          },
+          { session }
+        );
+
+        if (this.transactionLedgerRepository) {
+          try {
+            await this.transactionLedgerRepository.create({
+              party: 'delivery_partner',
+              partyId: partnerId,
+              amount: earning.amount,
+              type: 'payout',
+              status: 'completed',
+              metadata: {
+                orderId,
+                orderNumber: order?.orderNumber,
+              },
+            }, session);
+          } catch (ledgerErr) {
+            logger.warn({ ledgerErr, orderId, partnerId }, 'Failed to write payout transaction ledger — non-blocking');
+          }
+        }
+      }
 
       const updatedOrder = await this.orderRepository.findById(orderId, { session });
       if (updatedOrder) this._emitStatusChange(updatedOrder, ORDER_STATUS.DELIVERED);
@@ -590,7 +701,15 @@ class DeliveryOrderService extends BaseService {
   async getTrackingMeta(orderId) {
     const assignment = await this.deliveryAssignmentRepository.findByOrderId(orderId);
     if (!assignment?.partnerId) {
-      return { assignment: null, partnerLocation: null };
+      return {
+        assignment: assignment ? {
+          id: String(assignment._id),
+          status: assignment.status,
+          deliveryOtp: assignment.deliveryOtp || null,
+        } : null,
+        partnerLocation: null,
+        deliveryOtp: assignment?.deliveryOtp || null,
+      };
     }
 
     const partner = await this.deliveryPartnerRepository.findById(assignment.partnerId);
@@ -601,7 +720,9 @@ class DeliveryOrderService extends BaseService {
         partnerId: String(assignment.partnerId),
         partnerName: partner?.name || 'Delivery Partner',
         partnerPhone: partner?.phone || '',
+        deliveryOtp: assignment.deliveryOtp || null,
       },
+      deliveryOtp: assignment.deliveryOtp || null,
       partnerLocation: partner?.latitude != null && partner?.longitude != null
         ? {
             lat: partner.latitude,

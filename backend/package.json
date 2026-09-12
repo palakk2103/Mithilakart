@@ -1,11 +1,11 @@
 {
   "name": "mithilakart-backend",
   "version": "0.1.0",
-  "description": "Mithilakart API — Phase 10 production hardening",
+  "description": "Mithilakart API \u2014 Phase 10 production hardening",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start": "node api.js && node src/server.js",
+    "dev": "node api.js && nodemon src/server.js",
     "test": "jest --runInBand --testPathIgnorePatterns=tests/layer2",
     "test:watch": "jest --watch --runInBand",
     "test:integration": "jest --runInBand tests/integration",

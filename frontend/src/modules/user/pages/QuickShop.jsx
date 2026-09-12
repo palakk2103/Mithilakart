@@ -3,9 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight } from 'lucide-react';
 import CategoryCard from '../components/vendor/CategoryCard';
 import useVendorStore from '../../../store/useVendorStore';
-import { getCategories, getNearbyProducts } from '../services/catalogApi';
+import { getCategories, getNearbyProducts, getDeals } from '../services/catalogApi';
 import { mapCategorySections, extractList, mapProductForCard } from '../utils/mappers';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
+import { getImageUrl, handleImageError } from '../../../shared/utils/imageUtils';
 
 const parseQuickShopPrice = (value) => {
   const n = parseInt(String(value ?? '').replace(/,/g, ''), 10);
@@ -205,40 +206,79 @@ const QuickShop = () => {
   // Simulated active tab for the filters
   const [activeFilter, setActiveFilter] = React.useState('All');
 
-  // Timer simulation
+  // Real Flash Deals from backend
+  const [activeFlashSale, setActiveFlashSale] = React.useState(null);
+  const [flashDeals, setFlashDeals] = React.useState([]);
+  const [dealsLoading, setDealsLoading] = React.useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDealsLoading(true);
+    getDeals()
+      .then((res) => {
+        if (cancelled) return;
+        const data = res?.data ?? res;
+        const dealsList = Array.isArray(data) ? data : [];
+        if (dealsList.length > 0) {
+          const first = dealsList[0];
+          setActiveFlashSale(first.sale || null);
+          setFlashDeals(first.products || []);
+        } else {
+          setActiveFlashSale(null);
+          setFlashDeals([]);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch flash deals:', err);
+        if (!cancelled) {
+          setActiveFlashSale(null);
+          setFlashDeals([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDealsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Timer: real endsAt countdown with smooth fallback
   const [timeLeft, setTimeLeft] = React.useState({ h: '02', m: '45', s: '12' });
   React.useEffect(() => {
-    const timer = setInterval(() => {
-      const h = parseInt(timeLeft.h, 10);
-      const m = parseInt(timeLeft.m, 10);
-      const s = parseInt(timeLeft.s, 10);
-      
-      let nextS = s - 1;
-      let nextM = m;
-      let nextH = h;
-      
-      if (nextS < 0) {
-        nextS = 59;
-        nextM -= 1;
+    const updateTimer = () => {
+      if (activeFlashSale?.endsAt) {
+        const diff = new Date(activeFlashSale.endsAt).getTime() - Date.now();
+        if (diff <= 0) {
+          setTimeLeft({ h: '00', m: '00', s: '00' });
+          return;
+        }
+        const totalSec = Math.floor(diff / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        setTimeLeft({
+          h: String(h).padStart(2, '0'),
+          m: String(m).padStart(2, '0'),
+          s: String(s).padStart(2, '0'),
+        });
+      } else {
+        setTimeLeft((prev) => {
+          const s = parseInt(prev.s, 10) - 1;
+          if (s >= 0) return { ...prev, s: String(s).padStart(2, '0') };
+          const m = parseInt(prev.m, 10) - 1;
+          if (m >= 0) return { ...prev, m: String(m).padStart(2, '0'), s: '59' };
+          const h = parseInt(prev.h, 10) - 1;
+          if (h >= 0) return { h: String(h).padStart(2, '0'), m: '59', s: '59' };
+          return { h: '02', m: '45', s: '12' };
+        });
       }
-      if (nextM < 0) {
-        nextM = 59;
-        nextH -= 1;
-      }
-      if (nextH < 0) {
-        nextH = 2;
-        nextM = 45;
-        nextS = 12;
-      }
+    };
 
-      setTimeLeft({
-        h: String(nextH).padStart(2, '0'),
-        m: String(nextM).padStart(2, '0'),
-        s: String(nextS).padStart(2, '0')
-      });
-    }, 1000);
+    const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [activeFlashSale?.endsAt]);
 
   const isFreshGrocery = window.location.pathname.includes('/fresh-grocery');
 
@@ -319,59 +359,50 @@ const QuickShop = () => {
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
-              {[
-                {
-                  name: 'Apple',
-                  weight: '1 kg',
-                  oldPrice: 148,
-                  price: 120,
-                  discount: '15% OFF',
-                  img: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=200&auto=format&fit=crop&q=80',
-                },
-                {
-                  name: 'Banana',
-                  weight: '1 dozen',
-                  oldPrice: 50,
-                  price: 40,
-                  discount: '20% OFF',
-                  img: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=200&auto=format&fit=crop&q=80',
-                },
-                {
-                  name: 'Rice',
-                  weight: '1 kg',
-                  oldPrice: 80,
-                  price: 70,
-                  discount: '10% OFF',
-                  img: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&auto=format&fit=crop&q=80',
-                },
-              ].map((prod, idx) => (
-                <div 
-                  key={idx}
-                  onClick={() => navigate('/product-detail', { state: { product: prod } })}
-                  className="bg-white rounded-2xl border border-[#EADCC9]/30 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform shadow-xs"
-                >
-                  <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none">
-                    {prod.discount}
-                  </div>
+              {nearbyProducts.slice(0, 3).map((prod) => {
+                const discount = prod.oldPrice > prod.price
+                  ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
+                  : null;
+                return (
+                  <div 
+                    key={prod.id}
+                    onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
+                    className="bg-white rounded-2xl border border-[#EADCC9]/30 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform shadow-xs"
+                  >
+                    {discount && (
+                      <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none">
+                        {discount}
+                      </div>
+                    )}
 
-                  <div className="h-20 flex items-center justify-center my-3">
-                    <img 
-                      src={prod.img} 
-                      alt={prod.name} 
-                      className="max-h-full max-w-full object-contain rounded-lg" 
-                    />
-                  </div>
+                    <div className="h-20 flex items-center justify-center my-3">
+                      <img 
+                        src={getImageUrl(prod.image)} 
+                        alt={prod.name} 
+                        className="max-h-full max-w-full object-contain rounded-lg" 
+                        onError={handleImageError}
+                      />
+                    </div>
 
-                  <div>
-                    <h3 className="text-[11.5px] font-black text-[#3F2A20] leading-tight">{prod.name}</h3>
-                    <span className="text-[#3F2A20]/50 text-[9px] font-bold">{prod.weight}</span>
-                    <div className="flex items-baseline gap-1 mt-1">
-                      <span className="text-[9.5px] text-[#3F2A20]/45 line-through">₹{prod.oldPrice}</span>
-                      <span className="text-[12.5px] font-black text-[#3F2A20]">₹{prod.price}</span>
+                    <div>
+                      <h3 className="text-[11.5px] font-black text-[#3F2A20] leading-tight truncate">{prod.name}</h3>
+                      <div className="flex items-baseline gap-1 mt-1">
+                        {prod.oldPrice > prod.price && (
+                          <span className="text-[9.5px] text-[#3F2A20]/45 line-through">₹{prod.oldPrice}</span>
+                        )}
+                        <span className="text-[12.5px] font-black text-[#3F2A20]">₹{prod.price}</span>
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+              {nearbyProducts.length === 0 && (
+                <div className="col-span-3 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#EADCC9]">
+                  <p className="text-[11.5px] font-bold text-[#3F2A20]/70">
+                    {notDeliverable ? 'Share location to see offers from nearby stores' : 'Loading best offers...'}
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -398,7 +429,7 @@ const QuickShop = () => {
           {/* ── FLASH DEALS SECTION ── */}
           <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(217,162,27,0.015)]">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">Flash Deals</h2>
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{activeFlashSale?.title || 'Flash Deals'}</h2>
               <div className="text-slate-850 text-[12.5px] font-black flex items-center gap-1.5">
                 <span>Ends in</span>
                 <span className="font-mono bg-[#3F2A20] text-white px-1.5 py-0.5 rounded text-[11px]">{timeLeft.h}</span>
@@ -410,148 +441,62 @@ const QuickShop = () => {
             </div>
 
             {/* Flash Deals Cards grid */}
-            <div className="grid grid-cols-3 gap-2.5">
-              {/* Product 1: L'Oreal Shampoo */}
-              <div 
-                onClick={() => navigate('/product-detail', { 
-                  state: { 
-                    product: { 
-                      id: "AMT-QS-LOREAL",
-                      productId: "AMT-QS-LOREAL",
-                      name: "L'Oreal Paris Hyaluron Moisture", 
-                      title: "L'Oreal Paris Hyaluron Moisture Shampoo 200ml",
-                      price: 225, 
-                      oldPrice: 230, 
-                      mrp: 230,
-                      rating: '4.3',
-                      discount: '12% OFF',
-                      image: "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=300&auto=format&fit=crop&q=60",
-                      img: "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=300&auto=format&fit=crop&q=60",
-                      marketplaceTab: 'quick_shop',
-                    } 
-                  } 
-                })}
-                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-              >
-                <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-                  12% OFF
-                </div>
-                
-                <div className="h-20 flex items-center justify-center my-3">
-                  <img 
-                    src="https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=300&auto=format&fit=crop&q=60" 
-                    alt="L'Oreal Shampoo" 
-                    className="max-h-full object-contain mix-blend-multiply" 
-                  />
-                </div>
+            {dealsLoading && (
+              <p className="text-center text-[11px] text-slate-500 py-6">Loading flash deals...</p>
+            )}
 
-                <div>
-                  <span className="text-slate-400 text-[9px] font-bold">200 ml</span>
-                  <h3 className="text-[11px] font-black text-[#3F2A20] leading-tight mt-0.5">L'Oreal Paris</h3>
-                  <p className="text-[9.5px] text-slate-550 font-semibold leading-tight truncate">Hyaluron Moisture</p>
-                  <div className="flex items-baseline gap-1 mt-1.5">
-                    <span className="text-[10px] text-slate-400 line-through">₹230</span>
-                    <span className="text-[12px] font-black text-slate-900">₹225</span>
-                  </div>
-                </div>
+            {!dealsLoading && flashDeals.length === 0 && (
+              <div className="text-center py-6 px-4 bg-[#FFF8EE]/50 rounded-xl border border-dashed border-[#EADCC9]">
+                <p className="text-[12px] font-bold text-[#3F2A20]/70">No active flash deals at the moment.</p>
+                <p className="text-[10px] text-[#3F2A20]/50 mt-1">Check back soon for exclusive limited-time discounts!</p>
               </div>
+            )}
 
-              {/* Product 2: Wellcore Creatine */}
-              <div 
-                onClick={() => navigate('/product-detail', { 
-                  state: { 
-                    product: { 
-                      id: "AMT-QS-WELLCORE",
-                      productId: "AMT-QS-WELLCORE",
-                      name: "Wellcore Creatine", 
-                      title: "Wellcore Creatine 122g",
-                      price: 530, 
-                      oldPrice: 699, 
-                      mrp: 699,
-                      rating: '4.5',
-                      discount: '12% OFF',
-                      image: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300&auto=format&fit=crop&q=60",
-                      img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300&auto=format&fit=crop&q=60",
-                      marketplaceTab: 'quick_shop',
-                    } 
-                  } 
-                })}
-                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-              >
-                <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-                  12% OFF
-                </div>
+            {!dealsLoading && flashDeals.length > 0 && (
+              <div className="grid grid-cols-3 gap-2.5">
+                {flashDeals.map((prod) => (
+                  <div 
+                    key={prod.id || prod.productId}
+                    onClick={() => navigate(`/product-detail/${prod.productId || prod.id}`, { 
+                      state: { 
+                        product: { 
+                          ...prod,
+                          id: prod.productId || prod.id,
+                          productId: prod.productId || prod.id,
+                          marketplaceTab: 'quick_shop',
+                        } 
+                      } 
+                    })}
+                    className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
+                  >
+                    {prod.discount && (
+                      <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
+                        {prod.discount}
+                      </div>
+                    )}
+                    
+                    <div className="h-20 flex items-center justify-center my-3">
+                      <img 
+                        src={getImageUrl(prod.image)} 
+                        alt={prod.title || prod.name} 
+                        className="max-h-full object-contain mix-blend-multiply" 
+                        onError={handleImageError}
+                      />
+                    </div>
 
-                <div className="h-20 flex items-center justify-center my-3">
-                  <img 
-                    src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300&auto=format&fit=crop&q=60" 
-                    alt="Wellcore Creatine" 
-                    className="max-h-full object-contain mix-blend-multiply" 
-                  />
-                </div>
-
-                <div>
-                  <span className="text-slate-400 text-[9px] font-bold">122 g</span>
-                  <h3 className="text-[11px] font-black text-[#3F2A20] leading-tight mt-0.5">Wellcore</h3>
-                  <p className="text-[9.5px] text-slate-550 font-semibold leading-tight truncate">Creatine</p>
-                  <div className="flex items-baseline gap-1 mt-1.5">
-                    <span className="text-[10px] text-slate-400 line-through">₹699</span>
-                    <span className="text-[12px] font-black text-slate-900">₹530</span>
+                    <div>
+                      <h3 className="text-[11px] font-black text-[#3F2A20] leading-tight mt-0.5 truncate">{prod.title || prod.name}</h3>
+                      <div className="flex items-baseline gap-1 mt-1.5">
+                        {prod.oldPrice > prod.price && (
+                          <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
+                        )}
+                        <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1 bg-[#FFF2EB] text-[#E25822] border border-[#FFD9C7]/40 rounded-sm text-[8px] font-black text-center py-0.5 leading-none">
-                    ₹400 with UPI
-                  </div>
-                </div>
+                ))}
               </div>
-
-              {/* Product 3: Pilgrim Face Serum */}
-              <div 
-                onClick={() => navigate('/product-detail', { 
-                  state: { 
-                    product: { 
-                      id: "AMT-QS-PILGRIM",
-                      productId: "AMT-QS-PILGRIM",
-                      name: "Pilgrim 10% Niacinamide", 
-                      title: "Pilgrim 10% Niacinamide Serum 30ml",
-                      price: 202, 
-                      oldPrice: 249, 
-                      mrp: 249,
-                      rating: '4.4',
-                      discount: '20% OFF',
-                      image: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&auto=format&fit=crop&q=60",
-                      img: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&auto=format&fit=crop&q=60",
-                      marketplaceTab: 'quick_shop',
-                    } 
-                  } 
-                })}
-                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-              >
-                <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-                  20% OFF
-                </div>
-
-                <div className="h-20 flex items-center justify-center my-3">
-                  <img 
-                    src="https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=300&auto=format&fit=crop&q=60" 
-                    alt="Pilgrim Face Serum" 
-                    className="max-h-full object-contain mix-blend-multiply" 
-                  />
-                </div>
-
-                <div>
-                  <span className="text-slate-400 text-[9px] font-bold">10 ml</span>
-                  <h3 className="text-[11px] font-black text-[#3F2A20] leading-tight mt-0.5">Pilgrim 10%</h3>
-                  <p className="text-[9.5px] text-slate-550 font-semibold leading-tight truncate">Niacinamide</p>
-                  <div className="flex items-baseline gap-1 mt-1.5">
-                    <span className="text-[10px] text-slate-400 line-through">₹249</span>
-                    <span className="text-[12px] font-black text-slate-900">₹202</span>
-                  </div>
-                  <button className="mt-1 w-full bg-white text-slate-700 border border-slate-200 rounded-full text-[8.5px] font-black py-0.5 text-center shadow-3xs active:scale-95 transition-transform">
-                    SaveExtra
-                  </button>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* ── SHARE LOCATION BANNER ── */}
@@ -576,137 +521,50 @@ const QuickShop = () => {
 
             {/* Deals grid */}
             <div className="grid grid-cols-3 gap-2.5">
-              {/* Potato */}
-              <div 
-                onClick={() => navigate('/product-detail', { 
-                  state: { 
-                    product: { 
-                      id: "AMT-GR-POTATO-1KG",
-                      productId: "AMT-GR-POTATO-1KG",
-                      name: "Potato", 
-                      title: "Fresh Potato 1kg",
-                      price: 25, 
-                      oldPrice: 30,
-                      mrp: 30,
-                      rating: 4.5,
-                      discount: '15% OFF',
-                      image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60",
-                      img: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60",
-                      marketplaceTab: 'quick_shop',
-                    } 
-                  } 
-                })}
-                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-              >
-                <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-                  15% OFF
-                </div>
-                
-                <div className="h-20 flex items-center justify-center my-3">
-                  <img 
-                    src="https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60" 
-                    alt="Potato" 
-                    className="max-h-full object-contain mix-blend-multiply" 
-                  />
-                </div>
+              {(nearbyProducts.length > 3 ? nearbyProducts.slice(3, 6) : nearbyProducts.slice(0, 3)).map((prod) => {
+                const discount = prod.oldPrice > prod.price
+                  ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
+                  : null;
+                return (
+                  <div 
+                    key={prod.id}
+                    onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
+                    className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
+                  >
+                    {discount && (
+                      <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
+                        {discount}
+                      </div>
+                    )}
+                    
+                    <div className="h-20 flex items-center justify-center my-3">
+                      <img 
+                        src={getImageUrl(prod.image)} 
+                        alt={prod.name} 
+                        className="max-h-full object-contain mix-blend-multiply" 
+                        onError={handleImageError}
+                      />
+                    </div>
 
-                <div>
-                  <span className="text-slate-450 text-[9px] font-bold">1 kg</span>
-                  <h3 className="text-[11px] font-black text-[#3F2A20] leading-tight mt-0.5">Potato</h3>
-                  <div className="flex items-baseline gap-1 mt-1.5">
-                    <span className="text-[10px] text-slate-400 line-through">₹30</span>
-                    <span className="text-[12px] font-black text-slate-900">₹25</span>
+                    <div>
+                      <h3 className="text-[11px] font-black text-[#3F2A20] leading-tight mt-0.5 truncate">{prod.name}</h3>
+                      <div className="flex items-baseline gap-1 mt-1.5">
+                        {prod.oldPrice > prod.price && (
+                          <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
+                        )}
+                        <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
+                      </div>
+                    </div>
                   </div>
+                );
+              })}
+              {nearbyProducts.length === 0 && (
+                <div className="col-span-3 text-center py-6 px-3 bg-[#FFF8EE]/50 rounded-xl border border-dashed border-[#EADCC9]">
+                  <p className="text-[11.5px] font-bold text-[#3F2A20]/70">
+                    {notDeliverable ? 'Share location to explore special deals near you' : 'No deals available right now'}
+                  </p>
                 </div>
-              </div>
-
-              {/* Tomato */}
-              <div 
-                onClick={() => navigate('/product-detail', { 
-                  state: { 
-                    product: { 
-                      id: "AMT-GR-001",
-                      productId: "AMT-GR-001",
-                      name: "Tomato", 
-                      title: "Fresh Tomatoes 1kg",
-                      price: 22, 
-                      oldPrice: 25,
-                      mrp: 25,
-                      rating: 4.4,
-                      discount: '12% OFF',
-                      image: "https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60",
-                      img: "https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60",
-                      marketplaceTab: 'quick_shop',
-                    } 
-                  } 
-                })}
-                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-              >
-                <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-                  12% OFF
-                </div>
-                
-                <div className="h-20 flex items-center justify-center my-3">
-                  <img 
-                    src="https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60" 
-                    alt="Tomato" 
-                    className="max-h-full object-contain mix-blend-multiply" 
-                  />
-                </div>
-
-                <div>
-                  <span className="text-slate-455 text-[9px] font-bold">500 g</span>
-                  <h3 className="text-[11px] font-black text-[#3F2A20] leading-tight mt-0.5">Tomato</h3>
-                  <div className="flex items-baseline gap-1 mt-1.5">
-                    <span className="text-[10px] text-slate-400 line-through">₹25</span>
-                    <span className="text-[12px] font-black text-slate-900">₹22</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Milk */}
-              <div 
-                onClick={() => navigate('/product-detail', { 
-                  state: { 
-                    product: { 
-                      id: "AMT-GR-MILK-1L",
-                      productId: "AMT-GR-MILK-1L",
-                      name: "Milk", 
-                      title: "Fresh Cow Milk 1L",
-                      price: 48, 
-                      oldPrice: 60,
-                      mrp: 60,
-                      rating: 4.8,
-                      discount: '10% OFF',
-                      image: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60",
-                      img: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60",
-                      marketplaceTab: 'quick_shop',
-                    } 
-                  } 
-                })}
-                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-              >
-                <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-                  10% OFF
-                </div>
-                
-                <div className="h-20 flex items-center justify-center my-3">
-                  <img 
-                    src="https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60" 
-                    alt="Milk" 
-                    className="max-h-full object-contain mix-blend-multiply" 
-                  />
-                </div>
-
-                <div>
-                  <span className="text-slate-455 text-[9px] font-bold">1 L</span>
-                  <h3 className="text-[11px] font-black text-[#3F2A20] leading-tight mt-0.5">Milk</h3>
-                  <div className="flex items-baseline gap-1 mt-1.5">
-                    <span className="text-[10px] text-slate-400 line-through">₹60</span>
-                    <span className="text-[12px] font-black text-slate-900">₹48</span>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -759,10 +617,11 @@ const QuickShop = () => {
                         {/* Image container */}
                         <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-slate-50 border border-slate-100/60 flex items-center justify-center p-0 group-hover:bg-slate-100/65 transition-colors duration-300">
                           <img
-                            src={item.img}
+                            src={getImageUrl(item.img)}
                             alt={item.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"
+                            onError={handleImageError}
                           />
                         </div>
                         <span className="text-[13px] font-black text-center text-[#3F2A20] leading-tight tracking-tight mt-1 group-hover:text-[#D9A21B] transition-colors">
@@ -858,7 +717,7 @@ const QuickShop = () => {
             return (
               <div
                 key={product.id}
-                onClick={() => navigate(`/product-detail/${product.id}`)}
+                onClick={() => navigate(`/product-detail/${product.id}`, { state: { product } })}
                 className="bg-white rounded-xl border border-slate-100 p-1.5 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
               >
                 {discount && (
@@ -867,7 +726,7 @@ const QuickShop = () => {
                   </div>
                 )}
                 <div className="h-14 flex items-center justify-center my-1.5">
-                  <img src={product.image} alt={product.name} className="max-h-full object-contain mix-blend-multiply" />
+                  <img src={getImageUrl(product.image)} alt={product.name} className="max-h-full object-contain mix-blend-multiply" onError={handleImageError} />
                 </div>
                 <div>
                   {product.distanceKm != null && (
@@ -913,137 +772,50 @@ const QuickShop = () => {
 
         {/* Deals grid */}
         <div className="grid grid-cols-3 gap-2.5">
-          {/* Potato */}
-          <div 
-            onClick={() => navigate('/product-detail', { 
-              state: { 
-                product: { 
-                  id: "AMT-GR-POTATO-1KG",
-                  productId: "AMT-GR-POTATO-1KG",
-                  name: "Potato", 
-                  title: "Fresh Potato 1kg",
-                  price: 25, 
-                  oldPrice: 30,
-                  mrp: 30,
-                  rating: 4.5,
-                  discount: '15% OFF',
-                  image: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60",
-                  img: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60",
-                  marketplaceTab: 'quick_shop',
-                } 
-              } 
-            })}
-            className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-          >
-            <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-              15% OFF
-            </div>
-            
-            <div className="h-20 flex items-center justify-center my-3">
-              <img 
-                src="https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=300&auto=format&fit=crop&q=60" 
-                alt="Potato" 
-                className="max-h-full object-contain mix-blend-multiply" 
-              />
-            </div>
+          {(nearbyProducts.length > 3 ? nearbyProducts.slice(3, 6) : nearbyProducts.slice(0, 3)).map((prod) => {
+            const discount = prod.oldPrice > prod.price
+              ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
+              : null;
+            return (
+              <div 
+                key={prod.id}
+                onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
+                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
+              >
+                {discount && (
+                  <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
+                    {discount}
+                  </div>
+                )}
+                
+                <div className="h-20 flex items-center justify-center my-3">
+                  <img 
+                    src={getImageUrl(prod.image)} 
+                    alt={prod.name} 
+                    className="max-h-full object-contain mix-blend-multiply" 
+                    onError={handleImageError}
+                  />
+                </div>
 
-            <div>
-              <span className="text-slate-400 text-[9px] font-bold">1 kg</span>
-              <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5">Potato</h3>
-              <div className="flex items-baseline gap-1 mt-1.5">
-                <span className="text-[10px] text-slate-400 line-through">₹30</span>
-                <span className="text-[12px] font-black text-slate-900">₹25</span>
+                <div>
+                  <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5 truncate">{prod.name}</h3>
+                  <div className="flex items-baseline gap-1 mt-1.5">
+                    {prod.oldPrice > prod.price && (
+                      <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
+                    )}
+                    <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
+                  </div>
+                </div>
               </div>
+            );
+          })}
+          {nearbyProducts.length === 0 && (
+            <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
+              <p className="text-[11.5px] font-bold text-slate-700">
+                {notDeliverable ? 'Share location to explore special deals in your area' : 'No deals available right now'}
+              </p>
             </div>
-          </div>
-
-          {/* Tomato */}
-          <div 
-            onClick={() => navigate('/product-detail', { 
-              state: { 
-                product: { 
-                  id: "AMT-GR-001",
-                  productId: "AMT-GR-001",
-                  name: "Tomato", 
-                  title: "Fresh Tomatoes 1kg",
-                  price: 22, 
-                  oldPrice: 25,
-                  mrp: 25,
-                  rating: 4.4,
-                  discount: '12% OFF',
-                  image: "https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60",
-                  img: "https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60",
-                  marketplaceTab: 'quick_shop',
-                } 
-              } 
-            })}
-            className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-          >
-            <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-              12% OFF
-            </div>
-            
-            <div className="h-20 flex items-center justify-center my-3">
-              <img 
-                src="https://images.unsplash.com/photo-1597362925123-77861d3fbac7?w=300&auto=format&fit=crop&q=60" 
-                alt="Tomato" 
-                className="max-h-full object-contain mix-blend-multiply" 
-              />
-            </div>
-
-            <div>
-              <span className="text-slate-400 text-[9px] font-bold">500 g</span>
-              <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5">Tomato</h3>
-              <div className="flex items-baseline gap-1 mt-1.5">
-                <span className="text-[10px] text-slate-400 line-through">₹25</span>
-                <span className="text-[12px] font-black text-slate-900">₹22</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Milk */}
-          <div 
-            onClick={() => navigate('/product-detail', { 
-              state: { 
-                product: { 
-                  id: "AMT-GR-MILK-1L",
-                  productId: "AMT-GR-MILK-1L",
-                  name: "Milk", 
-                  title: "Fresh Cow Milk 1L",
-                  price: 48, 
-                  oldPrice: 60,
-                  mrp: 60,
-                  rating: 4.8,
-                  discount: '10% OFF',
-                  image: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60",
-                  img: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60",
-                  marketplaceTab: 'quick_shop',
-                } 
-              } 
-            })}
-            className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-          >
-            <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none">
-              10% OFF
-            </div>
-            
-            <div className="h-20 flex items-center justify-center my-3">
-              <img 
-                src="https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300&auto=format&fit=crop&q=60" 
-                alt="Milk" 
-                className="max-h-full object-contain mix-blend-multiply" 
-              />
-            </div>
-
-            <div>
-              <span className="text-slate-400 text-[9px] font-bold">1 L</span>
-              <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5">Milk</h3>
-              <div className="flex items-baseline gap-1 mt-1.5">
-                <span className="text-[10px] text-slate-400 line-through">₹60</span>
-                <span className="text-[12px] font-black text-slate-900">₹48</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -1096,10 +868,11 @@ const QuickShop = () => {
                     {/* Image container */}
                     <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-slate-50 border border-slate-100/60 flex items-center justify-center p-0 group-hover:bg-slate-100/65 transition-colors duration-300">
                       <img
-                        src={item.img}
+                        src={getImageUrl(item.img)}
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
+                        onError={handleImageError}
                       />
                     </div>
                     <span className="text-[13px] font-black text-center text-slate-850 leading-tight tracking-tight mt-1 group-hover:text-[#F26522] transition-colors">

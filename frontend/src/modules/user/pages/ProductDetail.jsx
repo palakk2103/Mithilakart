@@ -6,8 +6,9 @@ import {
   ShieldCheck, HelpCircle, Flame, Award, Sparkles, Filter, ThumbsUp,
   Upload, Film, Loader2
 } from 'lucide-react';
-import { formatPrice } from '../../../shared/utils/priceFormatter';
-import { useLocation as useRouterLocation, useNavigate, Link } from 'react-router-dom';
+import { formatPrice, parsePrice } from '../../../shared/utils/priceFormatter';
+import { getImageUrl, handleImageError, DEFAULT_PRODUCT_IMAGE } from '../../../shared/utils/imageUtils';
+import { useLocation as useRouterLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import useAccountStore from '../../../store/useAccountStore';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
@@ -18,6 +19,7 @@ import { getOrders } from '../services/ordersApi';
 import { addToWishlist, removeFromWishlist as removeWishlistItem } from '../services/userApi';
 import { mapProductForDetail, mapProductForCard, extractList, mapReview, mapQuestion } from '../utils/mappers';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import { customerApi } from '../../../shared/api/client';
 import { toast } from 'react-hot-toast';
 import { addProductToCart, fetchCartCount } from '../utils/cartUtils';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
@@ -35,6 +37,7 @@ const ProductDetail = () => {
   const { t } = useTranslation();
   const location = useRouterLocation();
   const navigate = useNavigate();
+  const { id: paramId } = useParams();
   const { location: liveLocation } = useLiveLocation();
   const { savedAddresses, selectedAddressId } = useAccountStore();
   useHydrateAddresses();
@@ -61,6 +64,14 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState('S');
   const { wishlist, addToWishlist: addToWishlistStore, removeFromWishlist } = useAccountStore();
   const [product, setProduct] = useState(null);
+  const isQuickProduct = Boolean(
+    product?.commerceFlows?.includes('quick_shop') ||
+    product?.commerceFlows?.includes('fresh_grocery') ||
+    product?.marketplaceTab === 'quick_shop' ||
+    product?.marketplaceTab === 'groceries_fresh' ||
+    isQuickShopFlow ||
+    isFreshGroceryFlow
+  );
   const [similarProducts, setSimilarProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [questions, setQuestions] = useState([]);
@@ -95,7 +106,8 @@ const ProductDetail = () => {
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('');
-  const [pincodeStatus, setPincodeStatus] = useState(null); // 'loading' | 'available' | 'invalid' | null
+  const [pincodeStatus, setPincodeStatus] = useState(null); // 'loading' | 'available' | 'unavailable' | 'invalid' | null
+  const [availableCoupons, setAvailableCoupons] = useState([]);
   const [copiedCoupon, setCopiedCoupon] = useState(null);
   const [specSearchQuery, setSpecSearchQuery] = useState('');
   const [reviewSort, setReviewSort] = useState('recent');
@@ -254,7 +266,7 @@ const ProductDetail = () => {
     // resolve to the right product without navigation state — the state-only
     // path above still wins when present (no extra fetch on in-app navigation).
     const queryId = new URLSearchParams(location.search).get('id');
-    const productId = location.state?.productId || incomingProduct?.id || incomingProduct?._id || incomingProduct?.productId || queryId;
+    const productId = paramId || location.state?.productId || incomingProduct?.id || incomingProduct?._id || incomingProduct?.productId || queryId;
     const isValidId = typeof productId === 'string' && productId.length >= 3;
 
     const load = async () => {
@@ -299,7 +311,7 @@ const ProductDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [location.state, location.search]);
+  }, [paramId, location.state, location.search]);
 
   useEffect(() => {
     let cancelled = false;
@@ -325,6 +337,34 @@ const ProductDetail = () => {
       cancelled = true;
     };
   }, [product?.categoryId, product?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    customerApi.get('/coupons')
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+        setAvailableCoupons(list.map((c) => ({
+          code: c.code,
+          description: c.description || `${c.discountType === 'percent' ? c.discountValue + '%' : '₹' + c.discountValue} off on orders above ₹${c.minOrderAmount || 0}`,
+          minPurchase: c.minOrderAmount || 0,
+        })));
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableCoupons([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const availableSizes = useMemo(() => {
+    if (Array.isArray(product?.sizes) && product.sizes.length > 0) return product.sizes;
+    if (Array.isArray(product?.variants) && product.variants.some((v) => v.size)) {
+      return [...new Set(product.variants.map((v) => v.size).filter(Boolean))];
+    }
+    return [];
+  }, [product]);
 
   const detailsData = useMemo(() => {
     if (!product) return { highlights: [], specs: [] };
@@ -435,14 +475,14 @@ const ProductDetail = () => {
     if (Array.isArray(product.images) && product.images.length > 0) {
       product.images.forEach((img) => {
         const url = typeof img === 'string' ? img : img?.url;
-        if (url) items.push({ type: 'image', url });
+        if (url) items.push({ type: 'image', url: getImageUrl(url) });
       });
     } else if (product.image) {
-      items.push({ type: 'image', url: product.image });
+      items.push({ type: 'image', url: getImageUrl(product.image) });
     } else if (product.img) {
-      items.push({ type: 'image', url: product.img });
+      items.push({ type: 'image', url: getImageUrl(product.img) });
     } else if (product.imageUrl) {
-      items.push({ type: 'image', url: product.imageUrl });
+      items.push({ type: 'image', url: getImageUrl(product.imageUrl) });
     }
     if (Array.isArray(product.videos) && product.videos.length > 0) {
       product.videos.forEach((vid) => {
@@ -451,12 +491,21 @@ const ProductDetail = () => {
       });
     }
     if (!items.length) {
-      items.push({ type: 'image', url: product.image || product.img || product.imageUrl || PlumShampoo });
+      items.push({ type: 'image', url: getImageUrl(product.image || product.img || product.imageUrl || PlumShampoo) });
     }
     return items;
   }, [product]);
 
-  const activeMedia = mediaList[currentSlide] || mediaList[0] || { type: 'image', url: product?.image || product?.img || PlumShampoo };
+  const activeMedia = mediaList[currentSlide] || mediaList[0] || { type: 'image', url: getImageUrl(product?.image || product?.img || PlumShampoo) };
+
+  // Safe pricing derivations - handles string numbers with commas ('50,000') safely without NaN
+  const unitPrice = useMemo(() => parsePrice(product?.price), [product?.price]);
+  const unitOldPrice = useMemo(() => parsePrice(product?.oldPrice || product?.mrp), [product?.oldPrice, product?.mrp]);
+  const effectiveOldPrice = useMemo(() => (unitOldPrice > unitPrice ? unitOldPrice : 0), [unitOldPrice, unitPrice]);
+  const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
+  const totalOldPrice = useMemo(() => effectiveOldPrice * quantity, [effectiveOldPrice, quantity]);
+  const unitSavings = useMemo(() => (effectiveOldPrice > unitPrice ? (effectiveOldPrice - unitPrice) : 0), [effectiveOldPrice, unitPrice]);
+  const totalSavings = useMemo(() => unitSavings * quantity, [unitSavings, quantity]);
 
   const handleShare = async () => {
     const shareData = {
@@ -494,13 +543,6 @@ const ProductDetail = () => {
     }
   };
 
-  // Coupons data & copy helper
-  const AVAILABLE_COUPONS = [
-    { code: 'MITHILA50', description: 'Get 50% discount on first order', minPurchase: 500 },
-    { code: 'FESTIVE25', description: 'Save 25% on festive special items', minPurchase: 800 },
-    { code: 'FREESHIP', description: 'Free shipping on all premium items', minPurchase: 0 }
-  ];
-
   const handleCopyCoupon = (code) => {
     navigator.clipboard.writeText(code);
     setCopiedCoupon(code);
@@ -508,13 +550,21 @@ const ProductDetail = () => {
     setTimeout(() => setCopiedCoupon(null), 2500);
   };
 
-  // Pincode availability simulated checker
-  const handlePincodeCheck = () => {
+  // Pincode availability checker using backend serviceability API
+  const handlePincodeCheck = async () => {
     if (pincode.length === 6 && /^\d+$/.test(pincode)) {
       setPincodeStatus('loading');
-      setTimeout(() => {
+      try {
+        const res = await customerApi.get(`/shipping/serviceability?pincode=${pincode}`);
+        const data = res?.data?.data || res?.data;
+        if (data?.serviceable !== false) {
+          setPincodeStatus('available');
+        } else {
+          setPincodeStatus('unavailable');
+        }
+      } catch {
         setPincodeStatus('available');
-      }, 700);
+      }
     } else {
       setPincodeStatus('invalid');
     }
@@ -680,8 +730,9 @@ const ProductDetail = () => {
                 />
               ) : (
                 <img 
-                  src={activeMedia.url} 
+                  src={getImageUrl(activeMedia.url)} 
                   alt={product.name} 
+                  onError={handleImageError}
                   style={zoomPos.isZooming ? {
                     transform: 'scale(2)',
                     transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
@@ -745,7 +796,7 @@ const ProductDetail = () => {
                       </div>
                     </div>
                   ) : (
-                    <img src={item.url} className="w-full h-full object-cover" alt={`preview-${idx}`} />
+                    <img src={getImageUrl(item.url)} onError={handleImageError} className="w-full h-full object-cover" alt={`preview-${idx}`} />
                   )}
                 </button>
               ))}
@@ -782,10 +833,14 @@ const ProductDetail = () => {
                     {/* Coupon style side cutouts */}
                     <div className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full border-r border-slate-100"></div>
                     <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full border-l border-slate-100"></div>
-                    {formatPrice(product.price)}
+                    {formatPrice(unitPrice)}
                   </div>
-                  <span className="text-sm text-slate-400 line-through">MRP {formatPrice(product.oldPrice)}</span>
-                  <span className="text-emerald-600 text-sm font-bold">({product.discount || '45% OFF'})</span>
+                  {effectiveOldPrice > unitPrice && (
+                    <span className="text-sm text-slate-400 line-through">MRP {formatPrice(effectiveOldPrice)}</span>
+                  )}
+                  {unitSavings > 0 && (
+                    <span className="text-emerald-600 text-sm font-bold">({product.discount || `${Math.round((unitSavings / effectiveOldPrice) * 100)}% OFF`})</span>
+                  )}
                 </div>
                 <div className="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100 font-extrabold">
                   Inclusive of GST
@@ -793,7 +848,11 @@ const ProductDetail = () => {
               </div>
               
               <div className="mt-2 text-xs text-slate-500 flex items-center justify-between">
-                <div>You save <span className="text-slate-800 font-bold">{formatPrice(parseFloat(product.oldPrice || 2999) - parseFloat(product.price || 1559))}</span> on this purchase</div>
+                {unitSavings > 0 ? (
+                  <div>You save <span className="text-slate-800 font-bold">{formatPrice(unitSavings)}</span> on this purchase</div>
+                ) : (
+                  <div className="text-emerald-700 font-semibold">Direct Artisan & Verified Seller Deal</div>
+                )}
                 <div className="text-red-500 font-semibold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span> Offer ends soon!
                 </div>
@@ -833,76 +892,81 @@ const ProductDetail = () => {
           </div>
 
           {/* Copyable Coupon Code blocks */}
-          <div className="px-4 py-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
-              Apply Coupons
-            </span>
-            <div className="grid grid-cols-1 gap-2.5">
-              {AVAILABLE_COUPONS.map((coupon) => (
-                <div key={coupon.code} className="bg-white border border-dashed border-gray-300 rounded-2xl p-3 flex items-center justify-between shadow-xs hover:border-slate-400 transition-colors">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-amber-100 text-amber-800 font-extrabold text-[11px] px-2 py-0.5 rounded-md border border-amber-200">
-                        {coupon.code}
-                      </span>
-                      {copiedCoupon === coupon.code && (
-                        <span className="text-emerald-600 text-[10px] font-black flex items-center gap-0.5">
-                          <Check size={10} /> Copied
+          {availableCoupons.length > 0 && (
+            <div className="px-4 py-3">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
+                Apply Coupons
+              </span>
+              <div className="grid grid-cols-1 gap-2.5">
+                {availableCoupons.map((coupon) => (
+                  <div key={coupon.code} className="bg-white border border-dashed border-gray-300 rounded-2xl p-3 flex items-center justify-between shadow-xs hover:border-slate-400 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-amber-100 text-amber-800 font-extrabold text-[11px] px-2 py-0.5 rounded-md border border-amber-200">
+                          {coupon.code}
                         </span>
-                      )}
+                        {copiedCoupon === coupon.code && (
+                          <span className="text-emerald-600 text-[10px] font-black flex items-center gap-0.5">
+                            <Check size={10} /> Copied
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-600 font-semibold mt-1">{coupon.description}</p>
                     </div>
-                    <p className="text-[11px] text-slate-600 font-semibold mt-1">{coupon.description}</p>
+                    <button 
+                      onClick={() => handleCopyCoupon(coupon.code)}
+                      className="p-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 rounded-xl transition-all active:scale-90"
+                    >
+                      <Copy size={14} className="text-slate-600" />
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => handleCopyCoupon(coupon.code)}
-                    className="p-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 rounded-xl transition-all active:scale-90"
-                  >
-                    <Copy size={14} className="text-slate-600" />
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Size Variant Selector */}
-          <div className="px-4 py-3 mt-1">
-            <div className="flex justify-between items-center mb-2.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                {t('product.selectSize') || 'Select Size'}
-              </span>
-              <span className="text-[10px] text-slate-500 font-extrabold underline cursor-pointer hover:text-slate-800">
-                Size Chart Helper
-              </span>
+          {availableSizes.length > 0 && (
+            <div className="px-4 py-3 mt-1">
+              <div className="flex justify-between items-center mb-2.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  {t('product.selectSize') || 'Select Size'}
+                </span>
+                <span className="text-[10px] text-slate-500 font-extrabold underline cursor-pointer hover:text-slate-800">
+                  Size Chart Helper
+                </span>
+              </div>
+              <div className="flex gap-3">
+                {availableSizes.map((size) => {
+                  const variant = product?.variants?.find((v) => v.size === size);
+                  const isOutOfStock = variant ? (variant.stock <= 0) : false;
+                  const isLowStock = variant ? (variant.stock > 0 && variant.stock <= 3) : false;
+                  
+                  return (
+                    <button
+                      key={size}
+                      disabled={isOutOfStock}
+                      onClick={() => setSelectedSize(size)}
+                      className={`relative w-11 h-11 rounded-full text-[11px] font-black transition-all flex flex-col items-center justify-center border ${
+                        isOutOfStock
+                          ? 'bg-slate-50 text-slate-350 border-slate-200 cursor-not-allowed line-through opacity-50'
+                          : selectedSize === size
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-105'
+                          : 'bg-white text-slate-850 border-gray-250 hover:border-slate-300'
+                      }`}
+                    >
+                      <span>{size}</span>
+                      {isLowStock && !isOutOfStock && (
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[7px] px-1 rounded-full font-black scale-90 whitespace-nowrap">
+                          {variant?.stock} left
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex gap-3">
-              {['XS', 'S', 'M', 'L', 'XL'].map((size) => {
-                const isOutOfStock = size === 'XS'; // Mocked Out of stock
-                const isLowStock = size === 'M'; // Mocked low stock
-                
-                return (
-                  <button
-                    key={size}
-                    disabled={isOutOfStock}
-                    onClick={() => setSelectedSize(size)}
-                    className={`relative w-11 h-11 rounded-full text-[11px] font-black transition-all flex flex-col items-center justify-center border ${
-                      isOutOfStock
-                        ? 'bg-slate-50 text-slate-350 border-slate-200 cursor-not-allowed line-through opacity-50'
-                        : selectedSize === size
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-105'
-                        : 'bg-white text-slate-850 border-gray-250 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>{size}</span>
-                    {isLowStock && !isOutOfStock && (
-                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[7px] px-1 rounded-full font-black scale-90 whitespace-nowrap">
-                        1 left
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           {/* Desktop Quantity & Action Buttons */}
           <div className="hidden md:block px-4 py-3 mt-2">
@@ -912,17 +976,27 @@ const ProductDetail = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-white border border-slate-200 rounded-full px-2.5 py-1">
                 <button 
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setQuantity(q => Math.max(1, q - 1));
+                  }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all cursor-pointer"
+                  aria-label="Decrease quantity"
                 >
-                  <Minus size={14} />
+                  <Minus size={14} className="stroke-[2.5]" />
                 </button>
-                <span className="w-10 text-center text-sm font-black text-slate-800">{quantity}</span>
+                <span className="w-10 text-center text-sm font-black text-slate-800 select-none">{quantity}</span>
                 <button 
-                  onClick={() => setQuantity(q => q + 1)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setQuantity(q => q + 1);
+                  }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all cursor-pointer"
+                  aria-label="Increase quantity"
                 >
-                  <Plus size={14} />
+                  <Plus size={14} className="stroke-[2.5]" />
                 </button>
               </div>
 
@@ -982,11 +1056,12 @@ const ProductDetail = () => {
 
               {pincodeStatus === 'loading' && <p className="text-[10px] text-slate-500 font-bold">Verifying availability...</p>}
               {pincodeStatus === 'invalid' && <p className="text-[10px] text-red-500 font-bold">Please enter a valid 6-digit Pincode.</p>}
+              {pincodeStatus === 'unavailable' && <p className="text-[10px] text-red-500 font-bold">Sorry, delivery is not available to this pincode.</p>}
               {pincodeStatus === 'available' && (
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2.5 text-xs text-emerald-800 space-y-1">
                   <p className="font-extrabold flex items-center gap-1"><Check size={12} /> Delivery Available to this location</p>
-                  <p className="text-[11px] font-medium text-emerald-700">Estimated Delivery: Tomorrow by 6:00 PM</p>
-                  <p className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded w-fit">Express Delivery Badge</p>
+                  <p className="text-[11px] font-medium text-emerald-700">Estimated Delivery: {product?.deliveryEtaText ? product.deliveryEtaText : (isQuickProduct ? '15-30 mins' : '2-4 business days')}</p>
+                  <p className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded w-fit">Serviceable</p>
                 </div>
               )}
 
@@ -994,9 +1069,17 @@ const ProductDetail = () => {
                 <Truck size={18} className="text-[#3E5A44]" />
                 <div>
                   <p className="text-[12px] font-black text-slate-800">
-                    {product?.attributes?.deliveryEstimate ? `Estimated Delivery: ${product.attributes.deliveryEstimate}` : 'Delivery by Sat, 16 May'}
+                    {product?.attributes?.deliveryEstimate
+                      ? `Estimated Delivery: ${product.attributes.deliveryEstimate}`
+                      : product?.deliveryEtaText
+                      ? `Delivery in ${product.deliveryEtaText}`
+                      : isQuickProduct
+                      ? '⚡ Quick Delivery (15-30 mins)'
+                      : 'Standard Delivery (2-4 business days)'}
                   </p>
-                  <p className="text-[10px] text-orange-600 font-bold mt-0.5">Order in 00h 00m 14s</p>
+                  {(product?.deliveryEtaText || isQuickProduct) && (
+                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5">⚡ Fast delivery available</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1393,46 +1476,31 @@ const ProductDetail = () => {
           
           <div className="space-y-4.5 mb-5">
             {questions.length === 0 ? (
-              // Mock Q&As to show advanced UI
-              [
-                { id: 'q-1', question: 'Is this shirts fabric machine washable?', answer: 'Yes, it is machine washable. We recommend washing with light colors on a gentle cycle.', isSellerAnswered: true, likes: 12 },
-                { id: 'q-2', question: 'Does this shirt bleed color?', answer: 'No, color is stable. However, washing separately for the first time is recommended.', isSellerAnswered: true, likes: 6 }
-              ].map(q => (
-                <div key={q.id} className="border-b border-slate-50 pb-3 last:border-0">
-                  <div className="flex items-start justify-between">
-                    <p className="text-[12px] font-extrabold text-slate-800">Q: {q.question}</p>
-                    <button 
-                      onClick={() => handleLikeQuestion(q.id)}
-                      className={`flex items-center gap-1 text-[10px] font-extrabold ${likedQuestions[q.id] ? 'text-emerald-600' : 'text-slate-400'}`}
-                    >
-                      <ThumbsUp size={10} />
-                      <span>{q.likes + (likedQuestions[q.id] ? 1 : 0)}</span>
-                    </button>
-                  </div>
-                  {q.answer && (
-                    <div className="mt-1.5 pl-3 border-l-2 border-slate-200">
-                      <p className="text-[12px] text-slate-600 font-medium">A: {q.answer}</p>
-                      {q.isSellerAnswered && (
-                        <span className="text-[8px] bg-slate-900 text-white font-black uppercase px-2 py-0.5 rounded-full inline-block mt-1">
-                          Seller Answer
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
+              <div className="py-6 text-center text-slate-400">
+                <p className="text-xs font-medium">No questions asked yet for this item.</p>
+                <p className="text-[11px] text-slate-400/80 mt-1">Have a query? Ask the artisan/seller below!</p>
+              </div>
             ) : (
               questions.map((q) => (
                 <div key={q.id} className="border-b border-slate-50 pb-3 last:border-0">
                   <div className="flex items-start justify-between">
                     <p className="text-[12px] font-bold text-slate-800">Q: {q.question}</p>
+                    <button 
+                      onClick={() => handleLikeQuestion(q.id)}
+                      className={`flex items-center gap-1 text-[10px] font-extrabold ${likedQuestions[q.id] ? 'text-emerald-600' : 'text-slate-400'}`}
+                    >
+                      <ThumbsUp size={10} />
+                      <span>{(q.likes || 0) + (likedQuestions[q.id] ? 1 : 0)}</span>
+                    </button>
                   </div>
                   {q.answer && (
                     <div className="mt-1.5 pl-3 border-l-2 border-slate-200">
                       <p className="text-[12px] text-slate-600">A: {q.answer}</p>
-                      <span className="text-[8px] bg-slate-900 text-white font-black uppercase px-2 py-0.5 rounded-full inline-block mt-1">
-                        Seller Answer
-                      </span>
+                      {q.isSellerAnswered && (
+                        <span className="text-[8px] bg-slate-900 text-white font-black uppercase px-2 py-0.5 rounded-full inline-block mt-1">
+                          Seller Answer
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1810,44 +1878,67 @@ const ProductDetail = () => {
         {/* Unit and Price Details */}
         <div className="flex flex-col justify-center select-none">
           <span className="text-[10px] font-extrabold text-slate-500 leading-none mb-1">
-            {product.pack || '1 unit'}
+            {product.pack || `${quantity} unit${quantity > 1 ? 's' : ''}`}
           </span>
           <div className="flex items-center gap-1.5">
             <span className="text-slate-900 text-[18px] font-black">
-              {formatPrice(product.price * quantity)}
+              {formatPrice(totalPrice)}
             </span>
-            <span className="text-[11px] text-slate-400 line-through leading-none">
-              {formatPrice(product.oldPrice * quantity)}
-            </span>
+            {totalOldPrice > totalPrice && (
+              <span className="text-[11px] text-slate-400 line-through leading-none">
+                {formatPrice(totalOldPrice)}
+              </span>
+            )}
           </div>
-          <span className="text-[9px] text-emerald-600 font-bold mt-0.5 leading-none">
-            You save {formatPrice((parseFloat(product.oldPrice) - parseFloat(product.price)) * quantity)}
-          </span>
+          {totalSavings > 0 ? (
+            <span className="text-[9px] text-emerald-600 font-bold mt-0.5 leading-none">
+              You save {formatPrice(totalSavings)}
+            </span>
+          ) : (
+            <span className="text-[9px] text-slate-500 font-semibold mt-0.5 leading-none">
+              Inclusive of GST
+            </span>
+          )}
         </div>
 
         {/* Quantity selector & Add to Cart */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-1.5 py-0.5">
+          <div className="flex items-center bg-slate-100 border border-slate-200/80 rounded-xl p-1 gap-1">
             <button 
-              onClick={() => setQuantity(q => Math.max(1, q - 1))}
-              className="p-1 hover:bg-white rounded transition-colors"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setQuantity(q => Math.max(1, q - 1));
+              }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 active:scale-90 transition-all text-slate-700 shadow-xs cursor-pointer select-none"
+              aria-label="Decrease quantity"
             >
-              <Minus size={12} className="text-slate-600" />
+              <Minus size={14} className="text-slate-700 stroke-[2.5]" />
             </button>
-            <span className="w-6 text-center text-xs font-black text-slate-800">{quantity}</span>
+            <span className="min-w-[24px] text-center text-xs font-black text-slate-900 select-none">
+              {quantity}
+            </span>
             <button 
-              onClick={() => setQuantity(q => q + 1)}
-              className="p-1 hover:bg-white rounded transition-colors"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setQuantity(q => q + 1);
+              }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 active:scale-90 transition-all text-slate-700 shadow-xs cursor-pointer select-none"
+              aria-label="Increase quantity"
             >
-              <Plus size={12} className="text-slate-600" />
+              <Plus size={14} className="text-slate-700 stroke-[2.5]" />
             </button>
           </div>
 
           <button 
+            type="button"
             onClick={handleAddToCart}
             className={`${primaryBg} ${primaryBgHover} text-white font-extrabold px-5 py-2.5 rounded-[12px] active:scale-95 transition-all text-[12px] flex items-center justify-center cursor-pointer shadow-sm`}
           >
-            {t('cart.addToCart') || 'Add to cart'}
+            {t('cart.addToCart') || 'Add to Bag'}
           </button>
         </div>
       </div>

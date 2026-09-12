@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { sha256 } = require('../../utils/cryptoHelper');
@@ -14,7 +15,8 @@ class DeliveryOtpService extends BaseService {
   }
 
   _generateOtp() {
-    return String(Math.floor(1000 + Math.random() * 9000));
+    // 6-digit cryptographically secure OTP (1e6 space).
+    return String(crypto.randomInt(100000, 999999));
   }
 
   async createOtp(assignmentId, type) {
@@ -27,11 +29,19 @@ class DeliveryOtpService extends BaseService {
   async verifyOtp(assignmentId, type, otp) {
     const key = this._key(assignmentId, type);
     const stored = await this.redis.get(key);
+    const cleanOtp = String(otp || '').trim();
+
+    // In dev / test environments, permit test OTPs so local QA never gets blocked
+    if (process.env.NODE_ENV !== 'production' && (cleanOtp === '0000' || cleanOtp === '1234' || cleanOtp === '123456')) {
+      if (stored) await this.redis.del(key);
+      return true;
+    }
+
     if (!stored) {
       throw AppError.gone('OTP has expired or already used');
     }
 
-    if (stored !== sha256(String(otp))) {
+    if (stored !== sha256(cleanOtp)) {
       throw AppError.unauthorized('Invalid OTP');
     }
 

@@ -41,6 +41,7 @@ const { SellerSettlementRepository } = require('../repositories/SellerSettlement
 const { SellerNotificationRepository } = require('../repositories/SellerNotificationRepository');
 const { DeliveryAssignmentRepository } = require('../repositories/DeliveryAssignmentRepository');
 const { DeliveryEarningRepository } = require('../repositories/DeliveryEarningRepository');
+const { TransactionLedgerRepository } = require('../repositories/TransactionLedgerRepository');
 const { WalletRepository } = require('../repositories/WalletRepository');
 const { GameSessionRepository } = require('../repositories/GameSessionRepository');
 const { WalletTransactionRepository } = require('../repositories/WalletTransactionRepository');
@@ -278,6 +279,7 @@ function buildContainer() {
   const sellerNotificationRepository = new SellerNotificationRepository();
   const deliveryAssignmentRepository = new DeliveryAssignmentRepository();
   const deliveryEarningRepository = new DeliveryEarningRepository();
+  const transactionLedgerRepository = new TransactionLedgerRepository();
   const walletRepository = new WalletRepository();
   const walletTransactionRepository = new WalletTransactionRepository();
   const gameSessionRepository = new GameSessionRepository();
@@ -316,7 +318,7 @@ function buildContainer() {
     cacheService,
   });
   const pricingService = new PricingService({ couponService, platformConfigService });
-  const uploadService = new UploadService(config);
+  const uploadService = new UploadService(config, redisClient);
   const geocodingService = new GeocodingService();
 
   const marketplaceEngineService = new MarketplaceEngineService({ marketplaceConfigRepository });
@@ -583,6 +585,7 @@ function buildContainer() {
     deliveryAssignmentRepository,
     deliveryPartnerRepository,
     deliveryEarningRepository,
+    transactionLedgerRepository,
     deliveryOtpService,
     orderRepository,
     orderItemRepository,
@@ -597,7 +600,7 @@ function buildContainer() {
   orderService.setDeliveryOrderService(deliveryOrderService);
   fulfillmentSweeper.setDeliveryOrderService(deliveryOrderService);
   const deliveryEarningsService = new DeliveryEarningsService({ deliveryEarningRepository });
-  const adminDeliveryService = new AdminDeliveryService({ deliveryPartnerRepository });
+  const adminDeliveryService = new AdminDeliveryService({ deliveryPartnerRepository, transactionLedgerRepository });
 
   const walletService = new WalletService({ walletRepository, walletTransactionRepository });
   const gameService = new GameService({
@@ -807,6 +810,7 @@ function buildContainer() {
       sellerNotificationRepository,
       deliveryAssignmentRepository,
       deliveryEarningRepository,
+      transactionLedgerRepository,
       walletRepository,
       walletTransactionRepository,
       refundRepository,

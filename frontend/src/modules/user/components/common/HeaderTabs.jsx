@@ -5,7 +5,7 @@ import { Plane, Zap, ShoppingBag, Clock, Tag, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import useVendorStore from '../../../../store/useVendorStore';
-import { getEnabledHeaderTabs } from '../../../../config/userAppTabs';
+import { getEnabledHeaderTabs, fetchHeaderTabsFromBackend } from '../../../../config/userAppTabs';
 
 const iconMap = {
   clock: Clock,
@@ -25,6 +25,10 @@ const HeaderTabs = () => {
   const [enabledTabs, setEnabledTabs] = React.useState(() => getEnabledHeaderTabs());
 
   React.useEffect(() => {
+    fetchHeaderTabsFromBackend().then(() => {
+      setEnabledTabs(getEnabledHeaderTabs());
+    });
+
     const handleTabsUpdate = () => {
       setEnabledTabs(getEnabledHeaderTabs());
     };
