@@ -57,7 +57,13 @@ class PlatformConfigService extends BaseService {
       quickCommerceEnabled: config.quickCommerceEnabled !== false,
       ecommerceEnabled: config.ecommerceEnabled !== false,
       razorpayEnabled: config.razorpayEnabled !== false,
+      headerTabs: config.headerTabsConfig || null,
     };
+  }
+
+  async getHeaderTabs() {
+    const config = await this.getConfig();
+    return config.headerTabsConfig || null;
   }
 
   async invalidateCache() {

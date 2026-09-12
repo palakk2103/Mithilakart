@@ -56,6 +56,28 @@ class AdminPlatformSettingsService extends BaseService {
     if (this.platformConfigService) await this.platformConfigService.invalidateCache();
     return created;
   }
+
+  async getHeaderTabs() {
+    const setting = await this.platformSettingRepository.findByKey('headerTabsConfig');
+    return setting?.value || null;
+  }
+
+  async updateHeaderTabs(tabs, adminId) {
+    if (!Array.isArray(tabs)) {
+      throw AppError.validation('Header tabs must be an array');
+    }
+    const existing = await this.platformSettingRepository.findByKey('headerTabsConfig');
+    let result;
+    if (existing) {
+      result = await this.platformSettingRepository.updateById(existing._id, { value: tabs, updatedBy: adminId });
+    } else {
+      result = await this.platformSettingRepository.create({ key: 'headerTabsConfig', value: tabs, updatedBy: adminId });
+    }
+    if (this.platformConfigService) {
+      await this.platformConfigService.invalidateCache();
+    }
+    return result;
+  }
 }
 
 module.exports = { AdminPlatformSettingsService };

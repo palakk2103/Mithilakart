@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Eye } from 'lucide-react';
+import { ShoppingCart, Eye, Bell, Volume2, VolumeX } from 'lucide-react';
 import { PageHeader, StatusBadge, SearchFilter, DataTable } from '../../components/common';
 import { getOrders } from '../../services/sellerApi';
 import { formatCurrency, formatDate } from '../../utils/formatters';
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import DispatchDelayTimer from '../../../../shared/components/DispatchDelayTimer';
 import FulfillmentOffers from '../../components/common/FulfillmentOffers';
 import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
+import { soundEffects } from '../../../../shared/utils/soundEffects';
 
 const tabs = [
   { key: 'all', label: 'All Orders' },
@@ -29,6 +30,7 @@ const OrderList = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [soundMuted, setSoundMuted] = useState(false);
   const debouncedSearch = useDebounce(searchQuery);
 
   const fetchOrders = useCallback(async (silent = false) => {
@@ -51,9 +53,23 @@ const OrderList = () => {
   useSellerOrderStream((payload) => {
     if (payload?.type === 'new_order') {
       toast.success(`New order received${payload.orderNumber ? `: ${payload.orderNumber}` : ''}`);
+      if (!soundMuted) soundEffects.startOrderAlertSiren();
     }
     fetchOrders(true);
   });
+
+  const pendingNewOrdersCount = useMemo(() => orders.filter((o) => o.status === 'placed').length, [orders]);
+
+  useEffect(() => {
+    if (pendingNewOrdersCount > 0 && !soundMuted) {
+      soundEffects.startOrderAlertSiren();
+    } else {
+      soundEffects.stopOrderAlertSiren();
+    }
+    return () => {
+      soundEffects.stopOrderAlertSiren();
+    };
+  }, [pendingNewOrdersCount, soundMuted]);
 
   const filteredOrders = useMemo(() => {
     let result = [...orders];
@@ -140,6 +156,45 @@ const OrderList = () => {
   return (
     <div className="space-y-4 pb-6">
       <PageHeader title="Orders" subtitle={`${filteredOrders.length} orders found`} />
+
+      {pendingNewOrdersCount > 0 && (
+        <div className="bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-lg shadow-rose-500/20 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+              <Bell size={20} className="animate-bounce" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider">
+                Action Required: {pendingNewOrdersCount} New Order{pendingNewOrdersCount > 1 ? 's' : ''} Received!
+              </p>
+              <p className="text-[11px] text-white/90">
+                Please review and accept to prepare items for delivery dispatch.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setActiveTab('placed');
+                soundEffects.stopOrderAlertSiren();
+              }}
+              className="px-3.5 py-1.5 bg-white text-rose-700 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-rose-50 shadow-sm cursor-pointer"
+            >
+              Review ({pendingNewOrdersCount})
+            </button>
+            <button
+              onClick={() => {
+                soundEffects.stopOrderAlertSiren();
+                setSoundMuted((m) => !m);
+              }}
+              className="p-2 bg-white/20 hover:bg-white/30 rounded-xl text-white cursor-pointer"
+              title={soundMuted ? 'Unmute Sound' : 'Mute Sound'}
+            >
+              {soundMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CR-002 — offers awaiting this seller's response. */}
       <FulfillmentOffers onAccepted={() => fetchOrders(true)} />

@@ -78,6 +78,21 @@ class NearbyService extends BaseService {
     }));
   }
 
+  _calculateDeliveryEta(distanceKm) {
+    if (distanceKm == null || !Number.isFinite(distanceKm)) {
+      return { estimatedDeliveryMinutes: 30, deliveryEtaText: '30 mins' };
+    }
+    const dist = Number(distanceKm.toFixed(2));
+    const travelMinutes = Math.round(dist / (25 / 60)); // 25 km/h avg speed
+    const prepMinutes = 10;
+    const bufferMinutes = 5;
+    const estimatedDeliveryMinutes = Math.max(15, travelMinutes + prepMinutes + bufferMinutes);
+    const deliveryEtaText = estimatedDeliveryMinutes <= 45
+      ? `${estimatedDeliveryMinutes} mins`
+      : `${(estimatedDeliveryMinutes / 60).toFixed(1)} hrs`;
+    return { estimatedDeliveryMinutes, deliveryEtaText };
+  }
+
   async nearbyProducts(query) {
     const coords = this._parseCoords(query);
     const pagination = parsePagination(query);
@@ -95,6 +110,7 @@ class NearbyService extends BaseService {
     }
 
     const sellerIds = sellers.map((s) => s._id);
+    const sellerMap = new Map(sellers.map((s) => [String(s._id), s]));
     const distanceBySeller = Object.fromEntries(
       sellers.map((s) => [String(s._id), s.distanceKm])
     );
@@ -106,6 +122,7 @@ class NearbyService extends BaseService {
         coords,
         pagination,
         sellerIds,
+        sellerMap,
         distanceBySeller,
         tab,
       });
@@ -140,17 +157,36 @@ class NearbyService extends BaseService {
     });
 
     return {
-      items: filteredItems.map((item) => ({
-        id: item._id,
-        title: item.title,
-        price: item.price,
-        mrp: item.mrp,
-        imageUrl: item.imageUrl,
-        brand: item.brand,
-        commerceFlows: item.commerceFlows,
-        sellerId: item.sellerId,
-        distanceKm: distanceBySeller[String(item.sellerId)] ?? null,
-      })),
+      items: filteredItems.map((item) => {
+        const seller = sellerMap.get(String(item.sellerId));
+        const sellerDistance = distanceBySeller[String(item.sellerId)] ?? null;
+        const eta = this._calculateDeliveryEta(sellerDistance);
+
+        return {
+          id: item._id,
+          title: item.title,
+          name: item.title,
+          price: item.price,
+          mrp: item.mrp,
+          oldPrice: item.mrp,
+          imageUrl: item.imageUrl || item.images?.[0]?.url,
+          image: item.imageUrl || item.images?.[0]?.url,
+          images: item.images,
+          brand: item.brand,
+          rating: item.ratingAvg || 0,
+          ratingAvg: item.ratingAvg || 0,
+          reviewCount: item.ratingCount || 0,
+          ratingCount: item.ratingCount || 0,
+          stock: item.inventoryQuantity ?? item.stock ?? 10,
+          commerceFlows: item.commerceFlows,
+          sellerId: item.sellerId,
+          sellerName: seller?.storeName || seller?.name || null,
+          storeName: seller?.storeName || null,
+          distanceKm: sellerDistance != null ? Number(sellerDistance.toFixed(2)) : null,
+          estimatedDeliveryMinutes: eta.estimatedDeliveryMinutes,
+          deliveryEtaText: eta.deliveryEtaText,
+        };
+      }),
       meta: buildPaginationMeta(pagination.page, pagination.limit, total),
       location: coords,
       sellerCount: sellerIds.length,
@@ -159,7 +195,7 @@ class NearbyService extends BaseService {
     };
   }
 
-  async _nearbyListings({ query, coords, pagination, sellerIds, distanceBySeller, tab }) {
+  async _nearbyListings({ query, coords, pagination, sellerIds, sellerMap, distanceBySeller, tab }) {
     const listingFilter = {
       marketplaceTab: tab,
       sellerId: { $in: sellerIds },
@@ -187,25 +223,40 @@ class NearbyService extends BaseService {
       .map((listing) => {
         const product = productMap.get(String(listing.productId));
         if (!product) return null;
+        const seller = sellerMap?.get(String(listing.sellerId));
         const sellerDistance = distanceBySeller[String(listing.sellerId)];
         if (sellerDistance == null) return null;
         const radius = Number(product.attributes?.serviceableRadius);
         if (Number.isFinite(radius) && radius > 0 && sellerDistance > radius) {
           return null;
         }
+        const eta = this._calculateDeliveryEta(sellerDistance);
+
         return {
           id: listing._id,
           listingId: String(listing._id),
           productId: String(product._id),
           title: product.title,
+          name: product.title,
           price: listing.price,
           mrp: listing.mrp,
+          oldPrice: listing.mrp,
           imageUrl: product.images?.[0]?.url || product.imageUrl,
+          image: product.images?.[0]?.url || product.imageUrl,
+          images: product.images,
           brand: product.brand,
+          rating: product.ratingAvg || 0,
+          ratingAvg: product.ratingAvg || 0,
+          reviewCount: product.ratingCount || 0,
+          ratingCount: product.ratingCount || 0,
           marketplaceTab: tab,
-          deliveryPromiseMinutes: listing.deliveryPromiseMinutes,
+          deliveryPromiseMinutes: listing.deliveryPromiseMinutes || eta.estimatedDeliveryMinutes,
+          estimatedDeliveryMinutes: eta.estimatedDeliveryMinutes,
+          deliveryEtaText: eta.deliveryEtaText,
           sellerId: listing.sellerId,
-          distanceKm: sellerDistance ?? null,
+          sellerName: seller?.storeName || seller?.name || null,
+          storeName: seller?.storeName || null,
+          distanceKm: Number(sellerDistance.toFixed(2)),
         };
       })
       .filter(Boolean);

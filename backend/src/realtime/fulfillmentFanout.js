@@ -88,9 +88,15 @@ function registerFulfillmentFanout(io, rooms, unsubscribes = []) {
   // Admin sees every fulfillment event, in full.
   const toAdmin = (payload, name) => io.to(ROOM_ADMIN).emit('fulfillment_monitor', adminView(name, payload));
 
+  const emitOrder = (payload, eventName, data) => {
+    if (payload.orderId) io.to(roomOrder(String(payload.orderId))).emit(eventName, data);
+    if (payload.orderNumber) io.to(roomOrder(String(payload.orderNumber))).emit(eventName, data);
+    if (payload.userId && rooms.roomCustomer) io.to(rooms.roomCustomer(String(payload.userId))).emit(eventName, data);
+  };
+
   on(FULFILLMENT_EVENTS.SELLER_ASSIGNED, (payload, name) => {
     // Customer: coarse progress only. Deliberately NOT told which seller.
-    io.to(roomOrder(payload.orderId)).emit('fulfillment_update', customerView(payload));
+    emitOrder(payload, 'fulfillment_update', customerView(payload));
 
     // Seller: the offer, addressed only to them.
     if (payload.sellerId) {
@@ -107,7 +113,7 @@ function registerFulfillmentFanout(io, rooms, unsubscribes = []) {
   });
 
   on(FULFILLMENT_EVENTS.SELLER_ACCEPTED, (payload, name) => {
-    io.to(roomOrder(payload.orderId)).emit('fulfillment_update', customerView(payload));
+    emitOrder(payload, 'fulfillment_update', customerView(payload));
 
     if (payload.sellerId) {
       io.to(roomSeller(String(payload.sellerId))).emit('offer_closed', {
@@ -139,7 +145,7 @@ function registerFulfillmentFanout(io, rooms, unsubscribes = []) {
 
   on(FULFILLMENT_EVENTS.COURIER_FALLBACK, (payload, name) => {
     // The customer must see the REAL mode change, not a stale quick promise.
-    io.to(roomOrder(payload.orderId)).emit('fulfillment_update', {
+    emitOrder(payload, 'fulfillment_update', {
       ...customerView(payload),
       deliveryMode: 'standard',
       estimatedDeliveryMinutes: null,
@@ -156,7 +162,7 @@ function registerFulfillmentFanout(io, rooms, unsubscribes = []) {
     // alarm a customer whose order is fine.
     const afterDowngrade = payload.deliveryMode === 'standard';
 
-    io.to(roomOrder(payload.orderId)).emit('fulfillment_update', {
+    emitOrder(payload, 'fulfillment_update', {
       ...view,
       message: afterDowngrade
         ? 'Standard delivery — we are confirming your shipment'
@@ -168,7 +174,7 @@ function registerFulfillmentFanout(io, rooms, unsubscribes = []) {
   });
 
   on(DELIVERY_EVENTS.ASSIGNMENT_ACCEPTED, (payload, name) => {
-    io.to(roomOrder(payload.orderId)).emit('status_update', {
+    emitOrder(payload, 'status_update', {
       type: 'status_update',
       orderId: String(payload.orderId),
       status: 'delivery_assigned',
@@ -182,6 +188,12 @@ function registerFulfillmentFanout(io, rooms, unsubscribes = []) {
         assignmentId: payload.assignmentId ? String(payload.assignmentId) : null,
       });
     }
+
+    io.to('portal:delivery').emit('assignment_withdrawn', {
+      type: 'assignment_withdrawn',
+      orderId: String(payload.orderId),
+      acceptedBy: payload.partnerId ? String(payload.partnerId) : null,
+    });
 
     toAdmin(payload, name);
   });

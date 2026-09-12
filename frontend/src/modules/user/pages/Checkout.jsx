@@ -239,11 +239,42 @@ const Checkout = () => {
 
         const paymentMethod = PAYMENT_METHOD_MAP[selectedPayment] || 'upi';
 
+        // Detect cart commerce flow and marketplace tab from cart items
+        let resolvedFlow = isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'fresh_grocery' : getCommerceFlow();
+        let resolvedTab = getMarketplaceTab();
+
+        const hasQuickItem = checkoutItems.some((it) =>
+          it.marketplaceTab === 'quick_shop' ||
+          it.commerceFlow === 'quick_shop' ||
+          it.commerceFlows?.includes('quick_shop')
+        );
+        const hasGroceryItem = checkoutItems.some((it) =>
+          it.marketplaceTab === 'groceries_fresh' ||
+          it.commerceFlow === 'fresh_grocery' ||
+          it.commerceFlows?.includes('fresh_grocery')
+        );
+        const hasMithilakItem = checkoutItems.some((it) =>
+          it.marketplaceTab === 'mithilak' ||
+          it.commerceFlow === 'mithilak' ||
+          it.commerceFlows?.includes('mithilak')
+        );
+
+        if (hasQuickItem) {
+          resolvedFlow = 'quick_shop';
+          resolvedTab = 'quick_shop';
+        } else if (hasGroceryItem) {
+          resolvedFlow = 'fresh_grocery';
+          resolvedTab = 'groceries_fresh';
+        } else if (hasMithilakItem) {
+          resolvedFlow = 'mithilak';
+          resolvedTab = 'mithilak';
+        }
+
         const result = await createOrder({
           addressId,
           paymentMethod,
-          commerceFlow: isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'fresh_grocery' : 'standard',
-          marketplaceTab: getMarketplaceTab(),
+          commerceFlow: resolvedFlow,
+          marketplaceTab: resolvedTab,
           ...(couponApplied && couponCode ? { couponCode: couponCode.trim().toUpperCase() } : {}),
         });
 
@@ -431,7 +462,25 @@ const Checkout = () => {
             </div>
             <div className="flex items-center gap-2 pt-3.5 border-t border-slate-50 mt-4">
               <Truck size={16} className={primaryText} />
-              <p className="text-[12px] text-slate-800 font-medium"><span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>Quick</span> {t('checkout.deliveryText') || 'Delivery in 2 days'}</p>
+              <p className="text-[12px] text-slate-800 font-medium">
+                {item.deliveryEtaText ? (
+                  <>
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in {item.deliveryEtaText}
+                  </>
+                ) : item.deliveryPromiseMinutes ? (
+                  <>
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in {item.deliveryPromiseMinutes} mins
+                  </>
+                ) : isQuickShopFlow ? (
+                  <>
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in 15-30 mins
+                  </>
+                ) : (
+                  <>
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>Standard</span> {t('checkout.deliveryText') || 'Estimated delivery in 2-4 business days'}
+                  </>
+                )}
+              </p>
             </div>
           </div>
         ))}

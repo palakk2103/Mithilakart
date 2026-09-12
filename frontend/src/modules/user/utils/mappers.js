@@ -50,8 +50,12 @@ export const mapProductForCard = (product, fallbackImage = '') => {
     listingId,
     productId,
     marketplaceTab: product.marketplaceTab,
+    commerceFlows: product.commerceFlows || (product.marketplaceTab ? [product.marketplaceTab] : []),
     deliveryPromiseMinutes: product.deliveryPromiseMinutes,
     deliveryLabel: product.deliveryLabel,
+    deliveryEtaText: product.deliveryEtaText || (product.deliveryPromiseMinutes ? `${product.deliveryPromiseMinutes} mins` : undefined),
+    pickupCoordinates: product.pickupCoordinates || null,
+    city: product.city || null,
     title: product.title || product.name || 'Product',
     name: product.title || product.name || 'Product',
     brand: product.brand || '',
@@ -83,6 +87,10 @@ export const mapProductForDetail = (product, fallbackImage = '') => {
     ...card,
     name: card.title,
     description: product.description || '',
+    commerceFlows: product.commerceFlows || card.commerceFlows || [],
+    deliveryEtaText: product.deliveryEtaText || card.deliveryEtaText || undefined,
+    pickupCoordinates: product.pickupCoordinates || card.pickupCoordinates || null,
+    city: product.city || card.city || null,
     images: Array.isArray(product.images)
       ? product.images.map((img) => (typeof img === 'string' ? img : img.url)).filter(Boolean)
       : [card.image].filter(Boolean),
@@ -175,6 +183,7 @@ export const mapOrderDetail = (data) => {
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     fulfilmentType: order.fulfilmentType,
+    commerceFlow: order.commerceFlow || data?.commerceFlow || null,
     address: {
       name: addr.name || '',
       phone: addr.phone || '',
@@ -200,6 +209,7 @@ export const mapOrderDetail = (data) => {
     assignment: data?.assignment || null,
     partnerLocation: data?.partnerLocation || null,
     destination: data?.destination || null,
+    deliveryOtp: data?.deliveryOtp || data?.assignment?.deliveryOtp || null,
   };
 };
 
@@ -401,13 +411,24 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
       };
     });
 
-    result[key] = result[key]?.length ? result[key] : mappedProducts;
+    result[key] = mappedProducts.length ? mappedProducts : (result[key] || []);
   });
 
   return result;
 };
 
-export const mapHomeBanners = () => {
+export const mapHomeBanners = (banners, fallback = []) => {
+  if (Array.isArray(banners) && banners.length > 0) {
+    return banners.map((b, idx) => ({
+      id: b.id || b._id || `banner-${idx}`,
+      image: b.imageUrl || b.image || b.mobileImageUrl || '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png',
+      title: b.title || b.name || 'Mithilakart Special',
+      link: b.linkUrl || b.link || b.actionUrl || '',
+    }));
+  }
+  if (Array.isArray(fallback) && fallback.length > 0) {
+    return fallback;
+  }
   return [
     { id: 'g1', image: '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png', title: 'Shop More Save More' },
     { id: 'g2', image: '/Gemini_Generated_Image_rhy76srhy76srhy7.png', title: 'Authentic Mithila Artistry' },

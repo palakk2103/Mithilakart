@@ -38,6 +38,10 @@ const deliveryPartnerSchema = new mongoose.Schema(
     },
     lastLocationAt: { type: Date, default: null },
     balance: { type: Number, default: 0, min: 0 },
+    codDuesBalance: { type: Number, default: 0, min: 0 },
+    commissionRate: { type: Number, default: 0.10, min: 0, max: 1 },
+    totalCodCollected: { type: Number, default: 0, min: 0 },
+    totalEarnings: { type: Number, default: 0, min: 0 },
     deletedAt: { type: Date, default: null },
   },
   {

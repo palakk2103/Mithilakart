@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Printer, Package, MapPin, CreditCard, User, Clock, CheckCircle2, Truck, ShoppingBag, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Printer, Package, MapPin, CreditCard, User, Clock, CheckCircle2, Truck, ShoppingBag, AlertCircle, FileText } from 'lucide-react';
 import { PageHeader, StatusBadge } from '../../components/common';
 import { Button, Card } from '../../components/ui';
 import { getOrder, updateOrderStatus, getShipmentLabel } from '../../services/sellerApi';
@@ -15,7 +15,10 @@ import toast from 'react-hot-toast';
 import DispatchDelayBanner from '../../../../shared/components/DispatchDelayBanner';
 import DispatchDelayTimer from '../../../../shared/components/DispatchDelayTimer';
 import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
+import OrderInvoiceModal from '../../../../shared/components/OrderInvoiceModal';
+import PackingSlipModal from '../../../../shared/components/PackingSlipModal';
 
+// Base actions map — extended dynamically per order fulfillment type (Courier vs Hyperlocal)
 const STATUS_ACTIONS = {
   placed: [
     { label: 'Accept Order', status: 'confirmed', variant: 'primary' },
@@ -33,6 +36,8 @@ const OrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showPackingSlipModal, setShowPackingSlipModal] = useState(false);
 
   const fetchOrder = async () => {
     try {
@@ -69,7 +74,48 @@ const OrderDetail = () => {
     }
   };
 
-  const availableActions = STATUS_ACTIONS[order?.status] || [];
+  const isCourierOrder = order?.fulfilmentType === 'courier' || order?.commerceFlow === 'standard' || order?.commerceFlow === 'mithilak';
+
+  const availableActions = useMemo(() => {
+    if (!order?.status) return [];
+    if (order.status === 'placed') {
+      return [
+        { label: 'Accept Order', status: 'confirmed', variant: 'primary' },
+        { label: 'Reject Order', status: 'cancelled', variant: 'danger' },
+      ];
+    }
+    if (order.status === 'confirmed') {
+      return [
+        { label: 'Mark as Packed', status: 'packed', variant: 'primary' },
+      ];
+    }
+    if (order.status === 'packed') {
+      if (isCourierOrder) {
+        return [
+          { label: 'Handover to Courier (Mark Shipped)', status: 'shipped', variant: 'primary' },
+        ];
+      }
+      return [];
+    }
+    if (order.status === 'shipped') {
+      if (isCourierOrder) {
+        return [
+          { label: 'Mark Out for Delivery', status: 'out_for_delivery', variant: 'secondary' },
+          { label: 'Mark Delivered by Courier', status: 'delivered', variant: 'primary' },
+        ];
+      }
+      return [];
+    }
+    if (order.status === 'out_for_delivery') {
+      if (isCourierOrder) {
+        return [
+          { label: 'Confirm Delivered by Courier', status: 'delivered', variant: 'primary' },
+        ];
+      }
+      return [];
+    }
+    return [];
+  }, [order?.status, isCourierOrder]);
 
   useEffect(() => {
     fetchOrder();
@@ -126,13 +172,12 @@ const OrderDetail = () => {
     }
   };
 
-  const isCourierOrder = order.fulfilmentType === 'courier' || order.commerceFlow === 'standard' || order.commerceFlow === 'mithilak';
-
   return (
     <div className="space-y-4 pb-6">
       <PageHeader title={`Order #${order.orderNumber || order.id}`} subtitle={`Placed on ${formatDate(order.placedAt, 'long')}`}>
         <Button variant="secondary" size="sm" icon={ArrowLeft} onClick={() => navigate('/seller/orders')}>Back</Button>
-        <Button variant="secondary" size="sm" icon={Printer} onClick={handlePrint}>Print Invoice</Button>
+        <Button variant="secondary" size="sm" icon={FileText} onClick={() => setShowPackingSlipModal(true)}>Packing Slip (KOT)</Button>
+        <Button variant="secondary" size="sm" icon={Printer} onClick={() => setShowInvoiceModal(true)}>Print Invoice</Button>
         {isCourierOrder && order.shipment?.labelUrl && (
           <Button variant="secondary" size="sm" icon={Truck} onClick={handleDownloadLabel}>Shipping Label</Button>
         )}
@@ -233,14 +278,44 @@ const OrderDetail = () => {
               {order.trackingId && (
                 <p className="text-xs text-gray-400 mt-3">Tracking ID: <span className="font-mono text-gray-600">{order.trackingId}</span></p>
               )}
-              {isCourierOrder && order.shipment?.awb && (
-                <div className="text-xs text-gray-500 space-y-1 mt-3 pt-3 border-t border-gray-100">
-                  <p>AWB: <span className="font-mono text-gray-700">{order.shipment.awb}</span></p>
-                  {order.shipment.courierName && (
-                    <p>Courier: <span className="font-medium text-gray-700">{order.shipment.courierName}</span></p>
-                  )}
-                  {order.shipment.status && (
-                    <p>Shipment: <span className="font-medium text-gray-700">{order.shipment.status.replace(/_/g, ' ')}</span></p>
+              {isCourierOrder && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-xs text-slate-700 space-y-2.5 mt-3 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      📦 National Courier Shipment
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-800">
+                      Standard
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Courier Partner:</span>
+                      <span className="font-bold text-slate-900">{order.shipment?.courierName || 'Mithilakart Logistics / Shiprocket'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">AWB Tracking:</span>
+                      <span className="font-mono font-bold text-emerald-700">{order.shipment?.awb || 'Auto-generated on confirmation'}</span>
+                    </div>
+                    {order.shipment?.status && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Courier Status:</span>
+                        <span className="font-semibold capitalize text-slate-800">{order.shipment.status.replace(/_/g, ' ')}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {order.shipment?.labelUrl && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={Truck}
+                      onClick={handleDownloadLabel}
+                      className="w-full mt-1"
+                    >
+                      Download Shipping Label
+                    </Button>
                   )}
                 </div>
               )}
@@ -301,6 +376,17 @@ const OrderDetail = () => {
           )}
         </div>
       </div>
+
+      <OrderInvoiceModal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        order={order}
+      />
+      <PackingSlipModal
+        isOpen={showPackingSlipModal}
+        onClose={() => setShowPackingSlipModal(false)}
+        order={order}
+      />
     </div>
   );
 };

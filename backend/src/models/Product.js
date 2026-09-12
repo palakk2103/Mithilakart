@@ -63,6 +63,14 @@ const productSchema = new mongoose.Schema(
      */
     catalogKey: { type: String, default: null, trim: true },
 
+    pickupCoordinates: {
+      latitude: { type: Number, default: null },
+      longitude: { type: Number, default: null },
+    },
+    pickupAddress: { type: String, trim: true, default: null },
+    city: { type: String, trim: true, default: null },
+    pickupPointId: { type: mongoose.Schema.Types.ObjectId, default: null },
+
     deletedAt: { type: Date, default: null },
   },
   {

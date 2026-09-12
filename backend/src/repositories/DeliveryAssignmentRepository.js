@@ -11,7 +11,7 @@ class DeliveryAssignmentRepository extends BaseRepository {
   }
 
   async findAvailable(limit = 20) {
-    return this.find({ status: 'pending', partnerId: null, deletedAt: null }, { sort: { createdAt: -1 }, limit });
+    return this.find({ status: { $in: ['pending', 'assigned'] }, partnerId: null, deletedAt: null }, { sort: { createdAt: -1 }, limit });
   }
 
   async findByPartner(partnerId, filter = {}, options = {}) {

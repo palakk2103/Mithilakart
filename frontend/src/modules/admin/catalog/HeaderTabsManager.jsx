@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   getStoredHeaderTabs, 
+  fetchHeaderTabsFromBackend,
   saveHeaderTabsConfig, 
   resetHeaderTabsConfig, 
   DEFAULT_USER_APP_TABS 
@@ -37,6 +38,14 @@ const HeaderTabsManager = () => {
   const [tabs, setTabs] = useState(() => getStoredHeaderTabs());
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetchHeaderTabsFromBackend().then((remoteTabs) => {
+      if (Array.isArray(remoteTabs) && remoteTabs.length > 0) {
+        setTabs(remoteTabs);
+      }
+    });
+  }, []);
 
   const [newTab, setNewTab] = useState({
     id: '',
@@ -108,15 +117,15 @@ const HeaderTabsManager = () => {
     }
   };
 
-  const handleSave = () => {
-    saveHeaderTabsConfig(tabs);
+  const handleSave = async () => {
+    await saveHeaderTabsConfig(tabs);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (window.confirm('Reset all header tabs to default configuration?')) {
-      resetHeaderTabsConfig();
+      await resetHeaderTabsConfig();
       setTabs(DEFAULT_USER_APP_TABS);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);

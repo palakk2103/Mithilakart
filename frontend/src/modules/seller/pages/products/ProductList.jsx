@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Grid3X3, List, Edit3, Trash2, Copy, Eye, Package, MoreVertical, Star } from 'lucide-react';
 import { PageHeader, StatusBadge, SearchFilter, ConfirmModal, DataTable } from '../../components/common';
 import { Button, EmptyState } from '../../components/ui';
-import { getProducts, deleteProduct, duplicateProduct } from '../../services/sellerApi';
+import { getProducts, deleteProduct, duplicateProduct, updateProduct } from '../../services/sellerApi';
 import { formatCurrency } from '../../utils/formatters';
 import usePagination from '../../hooks/usePagination';
 import useDebounce from '../../hooks/useDebounce';
@@ -42,6 +42,29 @@ const ProductList = () => {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  const handleToggleStock = async (product) => {
+    const isCurrentlyInStock = product.status === 'active' && (product.stock > 0 || product.inStock !== false);
+    const newStatus = isCurrentlyInStock ? 'out_of_stock' : 'active';
+    const newStock = isCurrentlyInStock ? 0 : 25;
+
+    // Optimistic UI update
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, status: newStatus, stock: newStock } : p))
+    );
+
+    try {
+      await updateProduct(product.id, {
+        status: newStatus,
+        stock: newStock,
+        inStock: !isCurrentlyInStock,
+      });
+      toast.success(`"${product.title}" marked as ${newStatus === 'active' ? 'In Stock' : 'Out of Stock'}`);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update stock status');
+      fetchProducts();
+    }
+  };
 
   // Filter and search products
   const filteredProducts = useMemo(() => {
@@ -128,15 +151,30 @@ const ProductList = () => {
         {row.discountPrice && <p className="text-[10px] text-slate-400 line-through">{formatCurrency(row.price)}</p>}
       </div>
     )},
-    { key: 'stock', label: 'Stock', render: (val) => (
-      <div className="flex items-center gap-1.5">
-        <span className={`text-xs font-bold ${val === 0 ? 'text-rose-600' : val < 10 ? 'text-amber-600' : 'text-slate-800'}`}>{val}</span>
-        <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${val === 0 ? 'bg-rose-500' : val < 10 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-               style={{ width: `${Math.min((val / 200) * 100, 100)}%` }} />
+    { key: 'stock', label: 'Stock & Availability', render: (val, row) => {
+      const isAvailable = row.status === 'active' && val > 0;
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleStock(row);
+            }}
+            className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer ${
+              isAvailable
+                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+            }`}
+            title="Click to toggle In Stock / Out of Stock instantly"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+            <span>{isAvailable ? 'In Stock' : 'Out of Stock'}</span>
+          </button>
+          <span className="text-[11px] font-semibold text-slate-400">({val})</span>
         </div>
-      </div>
-    )},
+      );
+    }},
     { key: 'status', label: 'Status', align: 'center', render: (val) => <StatusBadge status={val} size="sm" /> },
     { key: 'sales', label: 'Sales', align: 'center', render: (val) => (
       <span className="text-xs font-semibold text-slate-600">{val || 0}</span>
@@ -242,9 +280,24 @@ const ProductList = () => {
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
-                    <span className={`text-xs font-medium ${product.stock === 0 ? 'text-red-500' : product.stock < 10 ? 'text-amber-500' : 'text-gray-500'}`}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleStock(product);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border ${
+                        product.stock === 0
+                          ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                          : product.stock < 10
+                          ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                      }`}
+                      title="Click to toggle In-Stock / Out-of-Stock status"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${product.stock === 0 ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`} />
                       {product.stock === 0 ? 'Out of stock' : `${product.stock} in stock`}
-                    </span>
+                    </button>
                     <span className="text-xs text-gray-400">{product.sales || 0} sold</span>
                   </div>
                 </div>

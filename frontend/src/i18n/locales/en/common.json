@@ -163,7 +163,12 @@
     "status": "Status",
     "date": "Date",
     "total": "Total",
-    "track": "Track Order"
+    "track": "Track Order",
+    "reorder": "Reorder Items",
+    "cancelOrder": "Cancel Order",
+    "rateExperience": "Rate Your Experience",
+    "liveTracking": "Live GPS Tracking",
+    "deliveryOtp": "Delivery Verification OTP"
   },
   "checkout": {
     "title": "Checkout",

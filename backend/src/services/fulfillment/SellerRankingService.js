@@ -96,6 +96,17 @@ class SellerRankingService extends BaseService {
         toFiniteNumber(config.defaultPreparationTimeMinutes, 0)
       );
 
+      let totalPrice = isFiniteNumber(candidate.totalPrice) ? Number(candidate.totalPrice) : null;
+      if (totalPrice == null && Array.isArray(candidate.resolvedItems) && candidate.resolvedItems.length > 0) {
+        const hasPrices = candidate.resolvedItems.some((it) => isFiniteNumber(it.unitPrice));
+        if (hasPrices) {
+          totalPrice = candidate.resolvedItems.reduce(
+            (sum, it) => sum + (toFiniteNumber(it.unitPrice, 0) * (toFiniteNumber(it.quantity, 1) || 1)),
+            0
+          );
+        }
+      }
+
       enriched.push({
         ...candidate,
         distanceKm,
@@ -104,7 +115,26 @@ class SellerRankingService extends BaseService {
         preparationMinutes,
         workload: await this._currentWorkload(seller._id),
         adminBoost: toFiniteNumber(seller.rankingBoost, 0),
+        totalPrice,
       });
+    }
+
+    const validPrices = enriched.map((c) => c.totalPrice).filter((p) => isFiniteNumber(p) && p > 0);
+    const minPrice = validPrices.length ? Math.min(...validPrices) : null;
+    const maxPrice = validPrices.length ? Math.max(...validPrices) : null;
+
+    for (const c of enriched) {
+      if (c.priceScore != null) {
+        // already explicitly assigned
+      } else if (c.totalPrice != null && minPrice != null) {
+        if (maxPrice === minPrice) {
+          c.priceScore = 1.0;
+        } else {
+          c.priceScore = SellerRankingService.normInv(c.totalPrice - minPrice, maxPrice - minPrice);
+        }
+      } else {
+        c.priceScore = null;
+      }
     }
 
     return enriched;
@@ -135,6 +165,15 @@ class SellerRankingService extends BaseService {
           / Math.max(1, toFiniteNumber(config.routingFallbackSpeedKmph, 18))) * 60
       );
       raw.routeEta = SellerRankingService.normInv(candidate.routeEtaMinutes, maxEta);
+    }
+
+    if (candidate.priceScore != null) {
+      available.push('price');
+      raw.price = candidate.priceScore;
+    } else if (candidate.totalPrice != null) {
+      available.push('price');
+      const refPrice = Math.max(100, Number(candidate.totalPrice) * 2);
+      raw.price = SellerRankingService.normInv(candidate.totalPrice, refPrice);
     }
 
     if (candidate.preparationMinutes != null) {

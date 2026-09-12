@@ -23,11 +23,36 @@ class PromotionService extends BaseService {
     const deals = [];
 
     for (const sale of flashSales) {
-      const products = await this.flashSaleProductRepository.findByFlashSale(sale._id);
+      const items = await this.flashSaleProductRepository.findByFlashSale(sale._id);
+      const formattedProducts = (items || []).map((item) => {
+        const prod = item.productId || {};
+        const mrp = prod.mrp || prod.price || item.salePrice;
+        const price = item.salePrice;
+        const discount = mrp > price ? `${Math.round(((mrp - price) / mrp) * 100)}% OFF` : null;
+        return {
+          id: prod._id || prod.id || item._id,
+          productId: prod._id || prod.id || item._id,
+          title: prod.title || prod.name || '',
+          name: prod.title || prod.name || '',
+          price,
+          salePrice: price,
+          oldPrice: mrp,
+          mrp,
+          discount,
+          image: prod.images?.[0]?.url || prod.image || '',
+          images: prod.images || [],
+          rating: prod.rating || 0,
+          flashSaleId: sale._id,
+          startsAt: sale.startsAt,
+          endsAt: sale.endsAt,
+          rawProduct: prod,
+        };
+      });
+
       deals.push({
         type: 'flash_sale',
         sale,
-        products,
+        products: formattedProducts,
       });
     }
 

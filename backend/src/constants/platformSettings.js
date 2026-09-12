@@ -49,6 +49,9 @@ const PLATFORM_SETTING_KEYS = {
   GAME_WIN_PROBABILITY: 'gameWinProbability',
   GAME_COIN_REWARD_MIN: 'gameCoinRewardMin',
   GAME_COIN_REWARD_MAX: 'gameCoinRewardMax',
+
+  // ── Header Tabs Dynamic Navigation Configuration ───────────────────────────
+  HEADER_TABS_CONFIG: 'headerTabsConfig',
 };
 
 /**
@@ -57,11 +60,12 @@ const PLATFORM_SETTING_KEYS = {
  * disables that factor entirely.
  */
 const DEFAULT_SELLER_RANKING_WEIGHTS = {
-  distance: 0.30,
-  routeEta: 0.25,
+  distance: 0.25,
+  routeEta: 0.20,
+  price: 0.15,
   preparation: 0.15,
   workload: 0.15,
-  availability: 0.10,
+  availability: 0.05,
   adminBoost: 0.05,
 };
 
@@ -128,6 +132,7 @@ const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.GAME_WIN_PROBABILITY]: 0.6,
   [PLATFORM_SETTING_KEYS.GAME_COIN_REWARD_MIN]: 5,
   [PLATFORM_SETTING_KEYS.GAME_COIN_REWARD_MAX]: 25,
+  [PLATFORM_SETTING_KEYS.HEADER_TABS_CONFIG]: null,
 };
 
 /**

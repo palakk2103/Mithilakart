@@ -19,27 +19,6 @@ import CategoryProductsSection from '../components/vendor/CategoryProductsSectio
 import SaleBanner from '../components/vendor/SaleBanner';
 import BannerCarousel from '../components/vendor/BannerCarousel';
 
-// Import Assets
-import SamsungS24 from '../../../assets/products/product01.jpg';
-import EarbudsDeal from '../../../assets/products/product02.jpg';
-import LorealShampoo from '../../../assets/products/product03.jpg';
-import PlumShampoo from '../../../assets/products/product04.jpg';
-import LipGloss from '../../../assets/products/product05.jpg';
-import JewelleryImg from '../../../assets/products/product06.jpg';
-import FashionHero from '../../../assets/products/product07.jpg';
-import ElectronicsHero from '../../../assets/products/product08.jpg';
-import MakeupHero from '../../../assets/products/product09.jpg';
-import FashionTabProduct from '../../../assets/products/product10.jpg';
-import ForYouProduct from '../../../assets/products/product11.webp';
-import BeautyTab from '../../../assets/products/product12.jpg';
-import ToysTab from '../../../assets/products/product13.jpg';
-import StationeryTab from '../../../assets/products/product14.jpg';
-import ClothesImg from '../../../assets/products/product15.webp';
-import LipstickDeal from '../../../assets/products/product01.jpg';
-import Suitcase from '../../../assets/products/product02.jpg';
-import CardImg from '../../../assets/products/product03.jpg';
-import FashionTabImg from '../../../assets/products/product04.jpg';
-
 // Banner Assets
 
 import useVendorStore from '../../../store/useVendorStore';
@@ -64,7 +43,7 @@ const Home = () => {
       { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: 'Special Festival Handicrafts' }
     ];
 
-    const homeBannerList = fallbackBanners;
+    const homeBannerList = mapHomeBanners(homeBanners, fallbackBanners);
 
     return {
       'Home': homeBannerList,
@@ -76,7 +55,7 @@ const Home = () => {
       'Cosmetics': homeBannerList,
       'Fashion': homeBannerList
     };
-  }, []);
+  }, [homeBanners]);
 
   const mainCategoriesList = useMemo(() => {
     const iconMap = {
@@ -103,19 +82,6 @@ const Home = () => {
     }));
   }, [homeChips]);
 
-  const data = useMemo(() => ({
-    ratings: [
-      { name: 'SONATA...', fullName: 'SONATA NP7987YM06W So...', date: 'Delivered on Apr 13, 2026', img: JewelleryImg },
-      { name: 'LAKME...', fullName: 'LAKME 9TO5 VITAMIN C+...', date: 'Delivered on Apr 10, 2026', img: MakeupHero }
-    ],
-    tabs: [
-      { label: 'You Buy', img: ForYouProduct },
-      { label: 'Stationery', img: StationeryTab },
-      { label: 'Fashion', img: FashionTabProduct },
-      { label: 'Beauty', img: BeautyTab },
-      { label: 'Toys', img: ToysTab }
-    ]
-  }), []);
 
   const handleTabClick = useCallback((label) => {
     if (label === 'Toys') {

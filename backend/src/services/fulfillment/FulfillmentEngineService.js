@@ -424,6 +424,27 @@ class FulfillmentEngineService extends BaseService {
       attemptId: attempt._id,
     });
 
+    try {
+      const order = await this.orderRepository.findById(fulfillment.orderId);
+      if (order && (order.status === 'placed' || order.status === 'pending')) {
+        await this.orderRepository.updateById(order._id, {
+          status: 'confirmed',
+          confirmedAt: new Date(),
+        });
+        eventBus.publish('order.status_changed', {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          previousStatus: order.status,
+          currentStatus: 'confirmed',
+          status: 'confirmed',
+          changedBy: 'seller',
+          changedById: attempt.sellerId,
+        });
+      }
+    } catch (statusErr) {
+      logger.warn({ statusErr, orderId: fulfillment.orderId }, 'Auto-confirm order on seller accept failed');
+    }
+
     logger.info({ traceId: fulfillment.traceId, sellerId: String(attempt.sellerId) },
       'CR-002 seller accepted');
 

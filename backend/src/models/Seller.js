@@ -55,12 +55,25 @@ const sellerSchema = new mongoose.Schema(
     /** null -> inherit `sellerSearchRadiusKm` from platform settings. */
     fulfillmentRadiusKm: { type: Number, default: null, min: 0 },
     addressLine: { type: String, trim: true, default: null },
+    geocodedAddress: { type: String, trim: true, default: null },
     city: { type: String, trim: true, default: null },
     state: { type: String, trim: true, default: null },
     pincode: { type: String, trim: true, default: null },
     latitude: { type: Number, default: null },
     longitude: { type: Number, default: null },
     placeId: { type: String, trim: true, default: null },
+    isOnline: { type: Boolean, default: true, index: true },
+    lastLocationUpdatedAt: { type: Date, default: null },
+    pickupPoints: [
+      {
+        name: { type: String, trim: true },
+        addressLine: { type: String, trim: true },
+        city: { type: String, trim: true },
+        latitude: { type: Number },
+        longitude: { type: Number },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
     location: {
       type: {
         type: String,

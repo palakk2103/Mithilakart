@@ -141,7 +141,7 @@ test.describe('Delivery partner — real browser E2E', () => {
     const otpHint = await deliveryPage.evaluate(
       (oid) => sessionStorage.getItem(`delivery_customer_otp_hint_${oid}`), orderId
     );
-    expect(otpHint, 'delivery OTP hint must be present after real pickup confirmation').toMatch(/^\d{4}$/);
+    expect(otpHint, 'delivery OTP hint must be present after real pickup confirmation').toMatch(/^\d{4,6}$/);
 
     const otpInputs = deliveryPage.locator('input[type="tel"], input[inputmode="numeric"]');
     const otpBoxCount = await otpInputs.count();

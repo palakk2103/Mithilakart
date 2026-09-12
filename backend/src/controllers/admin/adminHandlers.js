@@ -126,6 +126,13 @@ function createAdminHandlers(services) {
     updateCommission: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.settings.updateCommission(req.body.rate, req.user.id));
     }),
+    getHeaderTabs: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.settings.getHeaderTabs());
+    }),
+    updateHeaderTabs: asyncHandler(async (req, res) => {
+      const tabs = req.body.tabs !== undefined ? req.body.tabs : req.body;
+      return ApiResponse.success(res, await services.settings.updateHeaderTabs(tabs, req.user.id));
+    }),
 
     financeEarnings: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.finance.getPlatformEarnings());

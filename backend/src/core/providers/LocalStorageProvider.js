@@ -3,6 +3,7 @@ const fs = require('fs');
 const { BaseProvider } = require('./index');
 const { randomUuid } = require('../../utils/cryptoHelper');
 const config = require('../../config');
+const { AppError } = require('../../utils/AppError');
 
 class LocalStorageProvider extends BaseProvider {
   constructor() {
@@ -14,8 +15,35 @@ class LocalStorageProvider extends BaseProvider {
     this.markConfigured();
   }
 
+  /**
+   * Resolve a storage key to an absolute path that is guaranteed to stay
+   * under this.basePath. Rejects traversal (`..`), absolute paths, and
+   * null-byte tricks.
+   */
   _resolvePath(relativePath) {
-    return path.join(this.basePath, relativePath);
+    if (!relativePath || typeof relativePath !== 'string') {
+      throw AppError.validation('Invalid storage key');
+    }
+
+    const normalizedKey = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+    if (
+      !normalizedKey
+      || normalizedKey.includes('\0')
+      || normalizedKey.split('/').some((segment) => segment === '..')
+      || path.isAbsolute(normalizedKey)
+    ) {
+      throw AppError.validation('Invalid storage key');
+    }
+
+    const resolved = path.resolve(this.basePath, normalizedKey);
+    const base = path.resolve(this.basePath);
+    const prefix = base.endsWith(path.sep) ? base : `${base}${path.sep}`;
+
+    if (resolved !== base && !resolved.startsWith(prefix)) {
+      throw AppError.forbidden('Storage path escape blocked');
+    }
+
+    return resolved;
   }
 
   async getPresignedUploadUrl({ context, fileName, mimeType }) {

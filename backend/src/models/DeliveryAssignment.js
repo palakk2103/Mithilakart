@@ -11,6 +11,7 @@ const deliveryAssignmentSchema = new mongoose.Schema(
     acceptedAt: { type: Date, default: null },
     pickedUpAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
+    deliveryOtp: { type: String, default: null },
     cancelledAt: { type: Date, default: null },
     cancelReason: { type: String, default: null },
 

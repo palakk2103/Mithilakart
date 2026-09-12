@@ -11,6 +11,11 @@ function createAdminDeliveryRoutes(controller, middleware) {
 
   router.get('/delivery', authAdmin, requirePermission('orders.view'), controller.list);
   router.get('/delivery/:id', authAdmin, requirePermission('orders.view'), validateParams(Joi.object({ id: objectIdSchema })), controller.getById);
+  router.get('/delivery/:id/dues', authAdmin, requirePermission('orders.view'), validateParams(Joi.object({ id: objectIdSchema })), controller.getDues);
+  router.post('/delivery/:id/settle-dues', authAdmin, requirePermission('orders.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({
+    amount: Joi.number().positive().optional(),
+    notes: Joi.string().max(500).optional().allow('', null),
+  })), controller.settleDues);
   router.post('/delivery', authAdmin, requirePermission('orders.edit'), validateBody(Joi.object({
     name: Joi.string().required(),
     phone: Joi.string().required(),

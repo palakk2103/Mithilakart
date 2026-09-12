@@ -1,12 +1,12 @@
 import SearchInput from '../../../../shared/components/SearchInput';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { deliveryApi } from '../../services/api';
 import { extractList, mapDeliveryPartner } from '../../utils/mappers';
 import { 
   Truck, User, Star, MapPin, 
   Phone, Mail, CheckCircle2, XCircle,
   Clock, Search, Filter, MoreVertical,
-  Plus, Calendar
+  Plus, Calendar, IndianRupee, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,24 +15,54 @@ const DeliveryPartners = () => {
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [settlePartner, setSettlePartner] = useState(null);
+  const [settleAmount, setSettleAmount] = useState('');
+  const [settleNotes, setSettleNotes] = useState('');
+  const [settling, setSettling] = useState(false);
+
+  const fetchPartners = useCallback(async () => {
+    setLoading(true);
+    const { data, error: apiError } = await deliveryApi.getAll();
+    if (apiError) {
+      setError(apiError);
+      setPartners([]);
+    } else {
+      setError(null);
+      setPartners(extractList(data).map(mapDeliveryPartner));
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      const { data, error: apiError } = await deliveryApi.getAll();
-      if (cancelled) return;
-      if (apiError) {
-        setError(apiError);
-        setPartners([]);
-      } else {
-        setError(null);
-        setPartners(extractList(data).map(mapDeliveryPartner));
-      }
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    fetchPartners();
+  }, [fetchPartners]);
+
+  const handleOpenSettle = (partner) => {
+    setSettlePartner(partner);
+    setSettleAmount(String(partner.codDuesBalance || ''));
+    setSettleNotes('');
+  };
+
+  const handleConfirmSettle = async (e) => {
+    e.preventDefault();
+    if (!settlePartner) return;
+    const amount = Number(settleAmount);
+    if (!amount || amount <= 0) return;
+
+    setSettling(true);
+    try {
+      await deliveryApi.settleDues(settlePartner.id, {
+        amount,
+        notes: settleNotes || 'Admin manual settlement',
+      });
+      setSettlePartner(null);
+      await fetchPartners();
+    } catch (err) {
+      alert(err?.message || 'Failed to settle dues');
+    } finally {
+      setSettling(false);
+    }
+  };
 
   const filteredPartners = partners.filter((partner) =>
     partner.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,13 +70,18 @@ const DeliveryPartners = () => {
     partner.zone.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const totalFleet = partners.length;
+  const activeNow = partners.filter((p) => p.isOnline || p.status === 'Active' || p.status === 'Busy').length;
+  const totalOrders = partners.reduce((sum, p) => sum + (p.orders || 0), 0);
+  const totalCodDues = partners.reduce((sum, p) => sum + (p.codDuesBalance || 0), 0);
+
   return (
     <div className="space-y-6 pb-10 animate-in fade-in duration-700">
       {/* Header */}
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-semibold text-slate-900 tracking-tight font-montserrat uppercase">Logistics Partners</h1>
-          <p className="text-slate-500 font-medium mt-1 font-raleway">Manage platform delivery fleet, active zones, and agent performance.</p>
+          <p className="text-slate-500 font-medium mt-1 font-raleway">Manage platform delivery fleet, active zones, COD dues, and agent performance.</p>
         </div>
         <button className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:scale-105 active:scale-95 transition-all">
           <Plus size={16} />
@@ -57,10 +92,10 @@ const DeliveryPartners = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Fleet', value: '145', icon: Truck, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { label: 'Active Now', value: '82', icon: Activity, color: 'text-green-500', bg: 'bg-green-50' },
-          { label: 'Avg Delivery', value: '32 Min', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-          { label: 'Zones Covered', value: '12', icon: MapPin, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+          { label: 'Total Fleet', value: String(totalFleet), icon: Truck, color: 'text-blue-500', bg: 'bg-blue-50' },
+          { label: 'Active Now', value: String(activeNow), icon: Activity, color: 'text-green-500', bg: 'bg-green-50' },
+          { label: 'Total Deliveries', value: String(totalOrders), icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+          { label: 'COD Dues Balance', value: `₹${totalCodDues.toLocaleString()}`, icon: MapPin, color: 'text-indigo-500', bg: 'bg-indigo-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
             <div className={`w-11 h-11 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center shadow-inner`}>
@@ -98,13 +133,14 @@ const DeliveryPartners = () => {
                 <th className="px-6 py-4">Contact</th>
                 <th className="px-6 py-4">Zone / Area</th>
                 <th className="px-6 py-4">Orders</th>
+                <th className="px-6 py-4">COD Dues</th>
                 <th className="px-6 py-4">Rating</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
-              {filteredPartners.map((partner, i) => (
+              {filteredPartners.map((partner) => (
                 <tr key={partner.id} className="group hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">
@@ -127,6 +163,11 @@ const DeliveryPartners = () => {
                      </div>
                   </td>
                   <td className="px-6 py-5 font-black text-slate-900 font-roboto">{partner.orders.toLocaleString()}</td>
+                  <td className="px-6 py-5 font-black text-slate-900 font-roboto">
+                    <span className={partner.codDuesBalance > 0 ? 'text-amber-600 font-bold' : 'text-slate-400'}>
+                      ₹{(partner.codDuesBalance || 0).toLocaleString()}
+                    </span>
+                  </td>
                   <td className="px-6 py-5">
                      <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-lg w-fit text-xs font-black">
                         <Star size={12} fill="currentColor" />
@@ -141,8 +182,16 @@ const DeliveryPartners = () => {
                         {partner.status}
                      </span>
                   </td>
-                  <td className="px-6 py-5 text-right">
-                    <button className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-100 transition-all">
+                  <td className="px-6 py-5 text-right space-x-2">
+                    {partner.codDuesBalance > 0 && (
+                      <button
+                        onClick={() => handleOpenSettle(partner)}
+                        className="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs rounded-lg transition-all"
+                      >
+                        Settle Dues
+                      </button>
+                    )}
+                    <button className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-100 transition-all inline-flex items-center">
                        <MoreVertical size={16} />
                     </button>
                   </td>
@@ -152,6 +201,78 @@ const DeliveryPartners = () => {
           </table>
         </div>
       </div>
+
+      {/* Settle Dues Modal */}
+      <AnimatePresence>
+        {settlePartner && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 space-y-4"
+            >
+              <div className="flex justify-between items-center border-b pb-3">
+                <h3 className="text-lg font-black text-slate-900">Settle COD Dues</h3>
+                <button
+                  onClick={() => setSettlePartner(null)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-2xl space-y-1">
+                <p className="text-xs text-slate-500 font-bold">Partner: <span className="text-slate-800 font-black">{settlePartner.name}</span></p>
+                <p className="text-xs text-slate-500 font-bold">Current Dues Balance: <span className="text-amber-600 font-black">₹{settlePartner.codDuesBalance?.toLocaleString()}</span></p>
+              </div>
+
+              <form onSubmit={handleConfirmSettle} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">Settlement Amount (₹)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={settlePartner.codDuesBalance || undefined}
+                    value={settleAmount}
+                    onChange={(e) => setSettleAmount(e.target.value)}
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:border-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">Notes / Transaction Reference</label>
+                  <input
+                    type="text"
+                    value={settleNotes}
+                    onChange={(e) => setSettleNotes(e.target.value)}
+                    placeholder="e.g. Bank transfer / Cash collected at hub"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:border-slate-900"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setSettlePartner(null)}
+                    className="px-4 py-2 text-xs font-black rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={settling}
+                    className="px-5 py-2 text-xs font-black rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    {settling ? 'Settling...' : 'Confirm Settlement'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
