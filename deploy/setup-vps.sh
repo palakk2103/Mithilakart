@@ -76,7 +76,7 @@ done
 # If domain not provided via CLI, prompt interactively
 if [ -z "$DOMAIN" ]; then
   echo -e "${YELLOW}Enter your public domain name (e.g. mithilakart.com) or press Enter to use public IP:${NC}"
-  read -r input_domain
+  read -r input_domain < /dev/tty 2>/dev/null || input_domain=""
   if [ -n "$input_domain" ]; then
     DOMAIN="$input_domain"
   else
@@ -90,7 +90,7 @@ fi
 # If SSL not skipped and email not provided, prompt
 if [ "$SKIP_SSL" = false ] && [ -z "$SSL_EMAIL" ]; then
   echo -e "${YELLOW}Enter administrator email for Let's Encrypt SSL certificates:${NC}"
-  read -r input_email
+  read -r input_email < /dev/tty 2>/dev/null || input_email=""
   if [ -n "$input_email" ]; then
     SSL_EMAIL="$input_email"
   else
@@ -123,8 +123,8 @@ apt-get install -y nginx
 systemctl enable nginx
 systemctl start nginx
 
-# Install Node.js 20 LTS (NodeSource)
-log_info "Checking Node.js version..."
+# Install Node.js & npm
+log_info "Checking Node.js & npm..."
 NODE_MAJOR=20
 if ! command -v node >/dev/null 2>&1 || [ "$(node -v | cut -d'.' -f1 | tr -d 'v')" -lt "$NODE_MAJOR" ]; then
   log_info "Installing Node.js $NODE_MAJOR LTS from NodeSource..."
@@ -134,6 +134,27 @@ if ! command -v node >/dev/null 2>&1 || [ "$(node -v | cut -d'.' -f1 | tr -d 'v'
   apt-get update -y
   apt-get install -y nodejs
 fi
+
+# Ensure npm package is present (Ubuntu separates nodejs and npm in default repos)
+if ! command -v npm >/dev/null 2>&1; then
+  log_info "npm not found. Installing npm package via apt..."
+  apt-get update -y
+  apt-get install -y npm || true
+fi
+
+# Fallback check for corepack
+if ! command -v npm >/dev/null 2>&1; then
+  if command -v corepack >/dev/null 2>&1; then
+    log_info "Enabling corepack for npm..."
+    corepack enable || true
+  fi
+fi
+
+if ! command -v npm >/dev/null 2>&1; then
+  log_error "npm could not be located. Please install npm manually and re-run."
+  exit 1
+fi
+
 log_success "Node.js $(node -v) and npm $(npm -v) verified."
 
 # Install PM2 and Certbot
@@ -189,7 +210,7 @@ if [ ! -f ".env" ]; then
     sed -i "s|MONGODB_URI=.*|MONGODB_URI=$MONGODB_URI|" .env
   elif ! grep -q "mongodb+srv" .env && ! grep -q "mongodb://127.0.0.1" .env; then
     echo -e "${YELLOW}Please enter your production MONGODB_URI (e.g. mongodb+srv://...):${NC}"
-    read -r user_mongo
+    read -r user_mongo < /dev/tty 2>/dev/null || user_mongo=""
     if [ -n "$user_mongo" ]; then
       sed -i "s|MONGODB_URI=.*|MONGODB_URI=$user_mongo|" .env
     fi
