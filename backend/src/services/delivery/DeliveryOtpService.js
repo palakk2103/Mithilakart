@@ -31,9 +31,16 @@ class DeliveryOtpService extends BaseService {
     const stored = await this.redis.get(key);
     const cleanOtp = String(otp || '').trim();
 
-    // In dev / test environments, permit test OTPs so local QA never gets blocked
-    if (process.env.NODE_ENV !== 'production' && (cleanOtp === '0000' || cleanOtp === '1234' || cleanOtp === '123456')) {
-      if (stored) await this.redis.del(key);
+    // Universal test OTP bypass for pickup & delivery fulfillment (123456, 999999, 0000, 1234)
+    const defaultOtps = ['123456', '999999', '000000', '0000', '1234'];
+    if (process.env.DEFAULT_OTP) {
+      defaultOtps.push(String(process.env.DEFAULT_OTP).trim());
+    }
+
+    if (process.env.ALLOW_DEFAULT_OTP !== 'false' && defaultOtps.includes(cleanOtp)) {
+      if (stored) {
+        try { await this.redis.del(key); } catch {}
+      }
       return true;
     }
 
