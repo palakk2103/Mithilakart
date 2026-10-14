@@ -49,7 +49,7 @@ echo -e "${NC}"
 DOMAIN=""
 SSL_EMAIL=""
 SKIP_SSL=false
-REPO_URL="https://github.com/palakk2002/Mithilakart.git"
+REPO_URL="https://github.com/palakk2103/Mithilakart.git"
 INSTALL_DIR="/var/www/mithilakart"
 MONGODB_URI=""
 
