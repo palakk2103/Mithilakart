@@ -60,6 +60,8 @@ function createApp() {
   }));
 
   app.use(healthRoutes);
+  app.use(config.api.basePath, healthRoutes);
+  app.use(`${config.api.basePath}/${config.api.version}`, healthRoutes);
   app.use(metricsRoutes);
   app.use(config.api.basePath, require('./routes'));
 

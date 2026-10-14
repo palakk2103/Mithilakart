@@ -228,6 +228,7 @@ if [ ! -f ".env" ]; then
   sed -i "s|LOG_PRETTY=.*|LOG_PRETTY=false|" .env
   sed -i "s|RATE_LIMIT_ENABLED=.*|RATE_LIMIT_ENABLED=true|" .env
   sed -i "s|METRICS_ENABLED=.*|METRICS_ENABLED=true|" .env
+  grep -q "ALLOW_MOCK_PAYMENT=" .env && sed -i "s|ALLOW_MOCK_PAYMENT=.*|ALLOW_MOCK_PAYMENT=true|" .env || echo "ALLOW_MOCK_PAYMENT=true" >> .env
 
   # Update CORS origin to match domain
   if [ "$SKIP_SSL" = true ]; then
@@ -244,6 +245,7 @@ else
   # Ensure production flag and port are correct
   sed -i "s|PORT=.*|PORT=5000|" .env
   sed -i "s|NODE_ENV=.*|NODE_ENV=production|" .env
+  grep -q "ALLOW_MOCK_PAYMENT=" .env || echo "ALLOW_MOCK_PAYMENT=true" >> .env
 fi
 
 # Install backend dependencies

@@ -16,11 +16,11 @@ function bootstrapProviders() {
   const paymentProvider = String(process.env.PAYMENT_PROVIDER || '').toLowerCase();
   const useMockPayment = paymentProvider === 'mock' || (!config.razorpay?.enabled && paymentProvider !== 'razorpay');
 
-  if (useMockPayment && config.isProduction) {
+  if (useMockPayment && config.isProduction && process.env.ALLOW_MOCK_PAYMENT !== 'true') {
     throw new Error(
       'Refusing to start in production with the mock payment provider. ' +
         'Set PAYMENT_PROVIDER=razorpay and configure RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET, ' +
-        'or unset NODE_ENV=production for local/staging use.'
+        'or set ALLOW_MOCK_PAYMENT=true in .env to allow mock payments during staging/setup.'
     );
   }
 

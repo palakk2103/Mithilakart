@@ -15,6 +15,7 @@ module.exports = {
         LOG_PRETTY: 'false',
         RATE_LIMIT_ENABLED: 'true',
         METRICS_ENABLED: 'true',
+        ALLOW_MOCK_PAYMENT: 'true',
       },
       error_file: '/var/log/pm2/mithilakart-api-error.log',
       out_file: '/var/log/pm2/mithilakart-api-out.log',
