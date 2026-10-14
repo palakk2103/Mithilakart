@@ -207,12 +207,12 @@ if [ ! -f ".env" ]; then
 
   # If user supplied mongo-uri or prompt
   if [ -n "$MONGODB_URI" ]; then
-    sed -i "s|MONGODB_URI=.*|MONGODB_URI=$MONGODB_URI|" .env
+    node -e "const fs=require('fs'); let c=fs.readFileSync('.env','utf8'); c=c.replace(/^MONGODB_URI=.*$/m, 'MONGODB_URI=' + process.argv[1]); fs.writeFileSync('.env', c);" "$MONGODB_URI"
   elif ! grep -q "mongodb+srv" .env && ! grep -q "mongodb://127.0.0.1" .env; then
     echo -e "${YELLOW}Please enter your production MONGODB_URI (e.g. mongodb+srv://...):${NC}"
     read -r user_mongo < /dev/tty 2>/dev/null || user_mongo=""
     if [ -n "$user_mongo" ]; then
-      sed -i "s|MONGODB_URI=.*|MONGODB_URI=$user_mongo|" .env
+      node -e "const fs=require('fs'); let c=fs.readFileSync('.env','utf8'); c=c.replace(/^MONGODB_URI=.*$/m, 'MONGODB_URI=' + process.argv[1]); fs.writeFileSync('.env', c);" "$user_mongo"
     fi
   fi
 
