@@ -168,10 +168,15 @@ apt-get install -y certbot python3-certbot-nginx
 log_info "Step 2/8: Preparing project codebase at $INSTALL_DIR..."
 mkdir -p /var/log/pm2
 
-CURRENT_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT_DETECTED=$(cd "$CURRENT_SCRIPT_DIR/.." && pwd)
+CURRENT_SCRIPT_DIR=""
+REPO_ROOT_DETECTED=""
 
-if [ -f "$REPO_ROOT_DETECTED/package.json" ] && [ -d "$REPO_ROOT_DETECTED/backend" ]; then
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+  CURRENT_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  REPO_ROOT_DETECTED=$(cd "$CURRENT_SCRIPT_DIR/.." && pwd)
+fi
+
+if [ -n "$REPO_ROOT_DETECTED" ] && [ -f "$REPO_ROOT_DETECTED/package.json" ] && [ -d "$REPO_ROOT_DETECTED/backend" ]; then
   # Script is running directly inside a cloned repository
   if [ "$REPO_ROOT_DETECTED" != "$INSTALL_DIR" ]; then
     log_info "Syncing local workspace to $INSTALL_DIR..."
