@@ -67,7 +67,7 @@ export const DELIVERY_FIXTURES = {
  * be a no-op under NODE_ENV=production regardless, so leaving it unset here
  * simply means the real rate limit applies, same as any other client.
  */
-const E2E_TEST_TOKEN = process.env.E2E_TEST_TOKEN || null;
+const E2E_TEST_TOKEN = process.env.E2E_TEST_TOKEN || 'mithilakart-e2e-secret-2026';
 
 export async function api(path, { method = 'GET', body = null, token = null } = {}) {
   const res = await fetch(API + path, {

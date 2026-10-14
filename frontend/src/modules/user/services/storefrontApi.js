@@ -11,3 +11,5 @@ export const getBanners = (commerceFlow) =>
 export const getCmsPage = (slug) => customerApi.get(`/cms/${slug}`);
 
 export const getLegalPage = (type) => customerApi.get(`/cms/legal/${type}`);
+
+export const getStorefrontConfig = () => customerApi.get('/storefront/config');

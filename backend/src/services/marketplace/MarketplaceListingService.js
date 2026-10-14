@@ -79,12 +79,21 @@ class MarketplaceListingService extends BaseService {
     const category = await this.categoryRepository.findById(categoryId);
     if (!category || category.deletedAt) throw AppError.notFound('Category not found');
 
-    const tabs = category.visibleTabs?.length
+    let tabs = category.visibleTabs?.length
       ? category.visibleTabs
       : (category.commerceFlows || []).map((f) => normalizeMarketplaceTab(f)).filter(Boolean);
 
+    if ((!tabs || tabs.length === 0) && category.parentId) {
+      const parent = await this.categoryRepository.findById(category.parentId);
+      if (parent && !parent.deletedAt) {
+        tabs = parent.visibleTabs?.length
+          ? parent.visibleTabs
+          : (parent.commerceFlows || []).map((f) => normalizeMarketplaceTab(f)).filter(Boolean);
+      }
+    }
+
     const normalized = normalizeMarketplaceTab(tab);
-    if (!tabs.includes(normalized)) {
+    if (!tabs || !tabs.includes(normalized)) {
       throw AppError.validation('Product category is not visible on selected marketplace tab');
     }
   }

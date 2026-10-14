@@ -7,6 +7,21 @@
 class SoundSynthesizer {
   constructor() {
     this.ctx = null;
+    this._hasUserGesture = false;
+    if (typeof window !== 'undefined') {
+      const handleGesture = () => {
+        this._hasUserGesture = true;
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        window.removeEventListener('click', handleGesture, true);
+        window.removeEventListener('keydown', handleGesture, true);
+        window.removeEventListener('touchstart', handleGesture, true);
+      };
+      window.addEventListener('click', handleGesture, true);
+      window.addEventListener('keydown', handleGesture, true);
+      window.addEventListener('touchstart', handleGesture, true);
+    }
   }
 
   _initContext() {
@@ -16,7 +31,7 @@ class SoundSynthesizer {
         this.ctx = new AudioCtx();
       }
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
+    if (this.ctx && this.ctx.state === 'suspended' && this._hasUserGesture) {
       this.ctx.resume().catch(() => {});
     }
     return this.ctx;

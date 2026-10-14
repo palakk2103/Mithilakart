@@ -16,10 +16,12 @@ import useTabTheme from '../../../shared/hooks/useTabTheme';
 import { getWishlist, addToWishlist as addToWishlistApi, removeFromWishlist as removeFromWishlistApi } from '../services/userApi';
 import { extractList, mapWishlistItem } from '../utils/mappers';
 import { addProductToCart } from '../utils/cartUtils';
+import { getStorefrontConfig } from '../services/storefrontApi';
 
 const Cart = () => {
   const { t } = useTranslation();
   const [cartItems, setCartItems] = useState([]);
+  const [shippingConfig, setShippingConfig] = useState({ threshold: 500, fee: 39 });
   const navigate = useNavigate();
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   const { savedAddresses, selectedAddressId, wishlist, addToWishlist: addToWishlistStore, removeFromWishlist: removeFromWishlistStore } = useAccountStore();
@@ -79,6 +81,14 @@ const Cart = () => {
     let cancelled = false;
     loadCart();
     loadWishlistItems();
+    getStorefrontConfig().then((cfg) => {
+      if (!cancelled && cfg) {
+        setShippingConfig({
+          threshold: Number(cfg.freeShippingThreshold) || 500,
+          fee: Number(cfg.defaultDeliveryCharge) || 39,
+        });
+      }
+    }).catch(() => {});
 
     const onCartUpdated = () => loadCart();
     window.addEventListener('cartUpdated', onCartUpdated);
@@ -192,7 +202,7 @@ const Cart = () => {
   }, 0);
 
   const savings = totalOldPrice - totalPrice;
-  const shippingCost = totalPrice > 500 ? 0 : 39;
+  const shippingCost = totalPrice >= shippingConfig.threshold ? 0 : shippingConfig.fee;
 
   return (
     <div className={`min-h-screen pb-32 font-sans text-slate-800 flex flex-col transition-colors duration-300 relative ${

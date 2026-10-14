@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Package, Clock, Check, X, MapPin, Volume2, VolumeX, IndianRupee,
@@ -46,8 +48,10 @@ function useCountdown(expiresAt) {
 }
 
 export default function IncomingOfferModal() {
+  const navigate = useNavigate();
   const ctx = useFulfillmentOffers();
   const [showReasons, setShowReasons] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
 
   // One offer at a time: a modal stack would be unusable under load, and the
   // engine only ever holds one live offer per seller in practice.
@@ -55,6 +59,28 @@ export default function IncomingOfferModal() {
   const remaining = useCountdown(offer?.expiresAt);
 
   useEffect(() => { setShowReasons(false); }, [offer?.attemptId]);
+
+  const handleAccept = async () => {
+    if (!offer || isAccepting) return;
+    const targetOrderId = offer.orderId;
+    const orderNumber = offer.orderNumber;
+    setIsAccepting(true);
+    try {
+      const result = await ctx.accept(offer);
+      if (result?.ok) {
+        toast.success(orderNumber ? `Order #${orderNumber} accepted!` : 'Order accepted successfully!');
+        if (targetOrderId) {
+          navigate(`/seller/orders/${targetOrderId}`);
+        } else {
+          navigate('/seller/orders');
+        }
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Failed to accept order');
+    } finally {
+      setIsAccepting(false);
+    }
+  };
 
   if (!ctx || !offer) return null;
 
@@ -253,12 +279,12 @@ export default function IncomingOfferModal() {
                 </button>
                 <button
                   type="button"
-                  disabled={busy}
-                  onClick={() => ctx.accept(offer)}
-                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-black text-[14px] disabled:opacity-60 transition-colors"
+                  disabled={busy || isAccepting}
+                  onClick={handleAccept}
+                  className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-black text-[14px] disabled:opacity-60 transition-colors cursor-pointer active:scale-98"
                 >
                   <Check size={17} strokeWidth={3} />
-                  {busy ? 'Accepting…' : 'Accept order'}
+                  {busy || isAccepting ? 'Accepting…' : 'Accept order'}
                 </button>
               </div>
             )}

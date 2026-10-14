@@ -396,8 +396,8 @@ class OrderService extends BaseService {
       return { addressId };
     }
 
-    let latitude = address.latitude;
-    let longitude = address.longitude;
+    let latitude = address.location?.coordinates?.[1] ?? address.latitude;
+    let longitude = address.location?.coordinates?.[0] ?? address.longitude;
     let placeId = address.placeId;
 
     if ((latitude == null || longitude == null) && this.geocodingService?.isEnabled()) {
@@ -795,11 +795,22 @@ class OrderService extends BaseService {
 
     const addr = order.addressSnapshot || {};
 
+    const deliveryMode = order.fulfillment?.deliveryMode
+      || (order.fulfilmentType === 'courier' ? 'standard' : (order.deliveryType === 'quick' ? 'quick' : 'standard'));
+
     return {
       orderId: order._id,
       status: order.status,
       orderNumber: order.orderNumber,
+      commerceFlow: order.commerceFlow,
+      marketplaceTab: order.marketplaceTab || null,
       fulfilmentType: order.fulfilmentType,
+      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+      fulfillment: order.fulfillment || null,
+      deliveryMode,
+      deliveryPromiseMinutes: deliveryMode === 'standard' ? null : (order.deliveryPromiseMinutes || null),
+      estimatedDeliveryAt: deliveryMode === 'standard' ? null : (order.estimatedDeliveryAt || order.fulfillment?.estimatedDeliveryAt || null),
+      fallbackReason: order.fulfillment?.fallbackReason || null,
       shipment: order.shipment || null,
       destination: {
         lat: addr.lat ?? addr.latitude ?? null,
@@ -888,7 +899,6 @@ class OrderService extends BaseService {
   }
 
   _isValidStatusTransition(fromStatus, toStatus) {
-    if (fromStatus === toStatus) return true;
     if (toStatus === ORDER_STATUS.CANCELLED) return fromStatus !== ORDER_STATUS.DELIVERED;
     if (fromStatus === ORDER_STATUS.SHIPPED && toStatus === ORDER_STATUS.DELIVERED) return true;
     const chain = [
@@ -910,10 +920,6 @@ class OrderService extends BaseService {
     return withTransaction(async (session) => {
       const order = await this.orderRepository.findActiveById(orderId);
       if (!order) throw AppError.notFound('Order not found');
-
-      if (order.status === toStatus) {
-        return { orderId: order._id, status: toStatus };
-      }
 
       const items = await this.orderItemRepository.listByOrderId(order._id);
       const hasSellerItem = items.some((it) => String(it.sellerId) === String(sellerId));
@@ -947,7 +953,9 @@ class OrderService extends BaseService {
       if (
         toStatus === ORDER_STATUS.PACKED
         && this.deliveryOrderService
-        && (order.fulfilmentType === 'local_delivery' || LOCAL_DELIVERY_FLOWS.has(order.commerceFlow))
+        && order.fulfilmentType === 'local_delivery'
+        && order.fulfillment?.type !== 'courier'
+        && order.fulfillment?.deliveryMode !== 'standard'
       ) {
         await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
       }
@@ -960,10 +968,6 @@ class OrderService extends BaseService {
     return withTransaction(async (session) => {
       const order = await this.orderRepository.findActiveById(orderId);
       if (!order) throw AppError.notFound('Order not found');
-
-      if (order.status === toStatus) {
-        return { orderId: order._id, status: toStatus };
-      }
 
       if (!this._isValidStatusTransition(order.status, toStatus)) {
         throw AppError.validation('Invalid status transition');
@@ -989,6 +993,16 @@ class OrderService extends BaseService {
       );
 
       this._emitStatusChange(order, toStatus);
+
+      if (
+        toStatus === ORDER_STATUS.PACKED
+        && this.deliveryOrderService
+        && order.fulfilmentType === 'local_delivery'
+        && order.fulfillment?.type !== 'courier'
+        && order.fulfillment?.deliveryMode !== 'standard'
+      ) {
+        await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
+      }
 
       return { orderId: order._id, status: toStatus };
     });
@@ -1036,11 +1050,19 @@ class OrderService extends BaseService {
       shippingCharge: order.deliveryCharge,
       discount: order.discount || order.couponDiscount || 0,
       commerceFlow: order.commerceFlow,
+      marketplaceTab: order.marketplaceTab || null,
+      fulfilmentType: order.fulfilmentType,
+      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+      fulfillment: order.fulfillment || null,
+      deliveryMode: order.fulfillment?.deliveryMode || (order.fulfilmentType === 'courier' ? 'standard' : 'quick'),
+      shipment: order.shipment || null,
     };
   }
 
   _serializeOrder(order) {
     const addr = order.addressSnapshot || {};
+    const deliveryMode = order.fulfillment?.deliveryMode
+      || (order.fulfilmentType === 'courier' ? 'standard' : (order.deliveryType === 'quick' ? 'quick' : null));
     return {
       id: order._id,
       orderNumber: order.orderNumber,
@@ -1048,12 +1070,24 @@ class OrderService extends BaseService {
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       commerceFlow: order.commerceFlow,
+      marketplaceTab: order.marketplaceTab || null,
       fulfilmentType: order.fulfilmentType,
+      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+      fulfillment: order.fulfillment || null,
+      fulfillmentStatus: order.fulfillmentStatus || order.fulfillment?.status || null,
+      deliveryMode,
+      deliveryPromiseMinutes: deliveryMode === 'standard' ? null : (order.deliveryPromiseMinutes || null),
+      estimatedDeliveryAt: deliveryMode === 'standard' ? null : (order.estimatedDeliveryAt || order.fulfillment?.estimatedDeliveryAt || null),
+      fallbackReason: order.fulfillment?.fallbackReason || null,
+      shipment: order.shipment || null,
       subtotal: order.subtotal,
       couponDiscount: order.couponDiscount,
       discount: order.discount,
       tax: order.tax,
       deliveryCharge: order.deliveryCharge,
+      shippingCharge: order.deliveryCharge,
+      platformFee: order.platformFee || 0,
+      packagingFee: order.packagingFee || 0,
       total: order.total,
       sellerSubOrders: order.sellerSubOrders,
       addressSnapshot: order.addressSnapshot,

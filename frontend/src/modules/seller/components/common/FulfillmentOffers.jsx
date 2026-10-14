@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { Clock, Check, X, Package, Loader2 } from 'lucide-react';
 import { useFulfillmentOffers } from '../../context/FulfillmentOfferContext';
 
@@ -56,12 +58,21 @@ export default function FulfillmentOffers({ onAccepted }) {
 
   if (!offers.length) return null;
 
+  const navigate = useNavigate();
   const respond = async (offer, action, reason) => {
+    const targetOrderId = offer.orderId;
+    const orderNumber = offer.orderNumber;
     const result = action === 'accept'
       ? await ctx.accept(offer)
       : await ctx.reject(offer, reason);
 
-    if (action === 'accept' && result?.ok) onAccepted?.(offer.orderId);
+    if (action === 'accept' && result?.ok) {
+      toast.success(orderNumber ? `Order #${orderNumber} accepted!` : 'Order accepted successfully!');
+      if (onAccepted) onAccepted(targetOrderId);
+      if (targetOrderId) {
+        navigate(`/seller/orders/${targetOrderId}`);
+      }
+    }
   };
 
   return (

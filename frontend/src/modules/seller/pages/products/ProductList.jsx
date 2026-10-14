@@ -44,22 +44,20 @@ const ProductList = () => {
   }, []);
 
   const handleToggleStock = async (product) => {
-    const isCurrentlyInStock = product.status === 'active' && (product.stock > 0 || product.inStock !== false);
-    const newStatus = isCurrentlyInStock ? 'out_of_stock' : 'active';
+    const currentStock = Number(product.stock ?? 0);
+    const isCurrentlyInStock = currentStock > 0 && product.status !== 'rejected';
     const newStock = isCurrentlyInStock ? 0 : 25;
 
     // Optimistic UI update
     setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, status: newStatus, stock: newStock } : p))
+      prev.map((p) => (p.id === product.id ? { ...p, stock: newStock } : p))
     );
 
     try {
       await updateProduct(product.id, {
-        status: newStatus,
         stock: newStock,
-        inStock: !isCurrentlyInStock,
       });
-      toast.success(`"${product.title}" marked as ${newStatus === 'active' ? 'In Stock' : 'Out of Stock'}`);
+      toast.success(`"${product.title}" marked as ${newStock > 0 ? 'In Stock' : 'Out of Stock'}`);
     } catch (err) {
       toast.error(err?.message || 'Failed to update stock status');
       fetchProducts();
@@ -74,7 +72,15 @@ const ProductList = () => {
       result = result.filter((p) => p.title?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q));
     }
     if (filters.status && filters.status !== 'all') {
-      result = result.filter((p) => p.status === filters.status);
+      if (filters.status === 'in_stock') {
+        result = result.filter((p) => Number(p.stock ?? 0) > 0 && p.status !== 'rejected');
+      } else if (filters.status === 'out_of_stock') {
+        result = result.filter((p) => Number(p.stock ?? 0) <= 0 || p.status === 'rejected');
+      } else if (filters.status === 'active' || filters.status === 'approved') {
+        result = result.filter((p) => p.status === 'approved' || p.status === 'active');
+      } else {
+        result = result.filter((p) => p.status === filters.status);
+      }
     }
     if (filters.category && filters.category !== 'all') {
       result = result.filter((p) => p.category === filters.category);
@@ -110,9 +116,12 @@ const ProductList = () => {
   };
 
   const filterConfig = [
-    { key: 'status', label: 'Status', options: [
-      { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' },
-      { value: 'out_of_stock', label: 'Out of Stock' }, { value: 'draft', label: 'Draft' },
+    { key: 'status', label: 'Stock & Status', options: [
+      { value: 'approved', label: 'Approved' },
+      { value: 'in_stock', label: 'In Stock' },
+      { value: 'out_of_stock', label: 'Out of Stock' },
+      { value: 'pending', label: 'Pending Approval' },
+      { value: 'rejected', label: 'Rejected' },
     ]},
     { key: 'category', label: 'Category', options: [
       { value: 'Handicraft', label: 'Handicraft' }, { value: 'Food & Grocery', label: 'Food & Grocery' },
@@ -152,7 +161,8 @@ const ProductList = () => {
       </div>
     )},
     { key: 'stock', label: 'Stock & Availability', render: (val, row) => {
-      const isAvailable = row.status === 'active' && val > 0;
+      const stockCount = Number(val ?? row.stock ?? 0);
+      const isAvailable = stockCount > 0 && row.status !== 'rejected';
       return (
         <div className="flex items-center gap-2">
           <button
@@ -171,7 +181,7 @@ const ProductList = () => {
             <span className={`w-1.5 h-1.5 rounded-full ${isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
             <span>{isAvailable ? 'In Stock' : 'Out of Stock'}</span>
           </button>
-          <span className="text-[11px] font-semibold text-slate-400">({val})</span>
+          <span className="text-[11px] font-semibold text-slate-400">({stockCount})</span>
         </div>
       );
     }},

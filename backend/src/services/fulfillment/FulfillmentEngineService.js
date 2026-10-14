@@ -823,6 +823,7 @@ class FulfillmentEngineService extends BaseService {
         decidedAt: new Date(),
         configSnapshot: fulfillment.configSnapshot || null,
       },
+      fulfillmentStatus: fulfillment.state,
       ...legacyExtra,
     };
 

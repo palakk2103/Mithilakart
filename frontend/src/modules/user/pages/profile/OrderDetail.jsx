@@ -214,9 +214,16 @@ const OrderDetail = () => {
 
   const isCourierOrder = Boolean(
     order?.fulfilmentType === 'courier' ||
+    order?.fulfillmentType === 'courier' ||
+    order?.fulfillment?.type === 'courier' ||
+    order?.deliveryMode === 'standard' ||
+    order?.fulfillment?.deliveryMode === 'standard' ||
     order?.commerceFlow === 'standard' ||
     order?.commerceFlow === 'mithilak' ||
-    trackingData?.fulfilmentType === 'courier'
+    trackingData?.fulfilmentType === 'courier' ||
+    trackingData?.fulfillmentType === 'courier' ||
+    trackingData?.deliveryMode === 'standard' ||
+    trackingData?.fulfillment?.type === 'courier'
   );
 
   const deliveryUpdates = useMemo(() => {
@@ -426,7 +433,7 @@ const OrderDetail = () => {
                 <span className="text-[9px] font-black uppercase tracking-widest text-emerald-200">Current Status</span>
                 <h2 className="text-[18px] font-black tracking-tight mt-0.5">{order.status}</h2>
                 <p className="text-[11.5px] font-medium text-emerald-100/70 mt-1 leading-normal">
-                  {order.fulfilmentType === 'courier' && (trackingData?.shipment?.awb || order?.shipment?.awb) ? (
+                  {isCourierOrder && (trackingData?.shipment?.awb || order?.shipment?.awb) ? (
                     <>
                       AWB: <span className="text-yellow-400 font-bold">{trackingData?.shipment?.awb || order.shipment.awb}</span>
                       {(trackingData?.shipment?.courierName || order?.shipment?.courierName) && (

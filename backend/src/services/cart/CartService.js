@@ -75,6 +75,8 @@ class CartService extends BaseService {
           title: product.title,
           brand: product.brand || '',
           mrp: product.mrp,
+          unitPrice: product.price,
+          price: product.price,
           image: imageUrl,
           imageUrl,
           availableStock,
@@ -92,7 +94,7 @@ class CartService extends BaseService {
     const rawItems = state?.items || [];
     const items = await this._hydrateCartItems(rawItems);
     const pricing = await this.pricingService.calculateTotals({
-      items: rawItems,
+      items,
       couponCode: couponCode || state?.couponCode || null,
       userId,
     });

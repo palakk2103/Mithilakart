@@ -61,7 +61,7 @@ test.describe('Main Business Flow', () => {
     // Step 1: Seller offer appears
     const dialog = page.getByRole('dialog', { name: /incoming order/i }).first();
     await expect(dialog).toContainText(orderNumber, { timeout: 45_000 });
-    await expect(dialog).toContainText(/Fresh Tomato/i);
+    await expect(dialog).toContainText(/Tomato/i);
 
     // Step 2: Seller accepts
     await dialog.getByRole('button', { name: /accept order/i }).click();

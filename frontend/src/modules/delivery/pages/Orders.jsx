@@ -27,13 +27,15 @@ const mapAssignment = (assignment = {}) => {
   const order = assignment.order || assignment.orderId || {};
   const shipping = order.shippingAddress || order.addressSnapshot || assignment.shippingAddress || {};
   const pickup = order.pickupAddress || assignment.pickupAddress || {};
+  const pickupAddressStr = typeof pickup === 'string' && pickup !== 'Vendor location'
+    ? pickup
+    : (typeof pickup === 'object' && formatAddress(pickup)) || order.pickupAddress || assignment.pickupAddress || 'Vendor location';
   return {
     id: order.id || order._id || assignment.orderId || assignment._id,
+    storeName: order.storeName || assignment.storeName || 'Seller Hub',
     customer: shipping.name || order.customerName || assignment.customerName || 'Customer',
     address: formatAddress(shipping) || assignment.address || '—',
-    pickupAddress: typeof pickup === 'string'
-      ? pickup
-      : formatAddress(pickup) || assignment.pickupAddress || 'Vendor location',
+    pickupAddress: pickupAddressStr,
     items: order.itemCount || assignment.items || 1,
     distance: assignment.distance || '—',
     earning: assignment.earningAmount ?? assignment.earning ?? 0,

@@ -55,10 +55,14 @@ async function driveOrderToPacked(sellerToken, orderId) {
   });
   if (!accept.ok) throw new Error(`Seller offer accept failed: ${JSON.stringify(accept.json)}`);
 
-  const confirm = await api(`/seller/orders/${orderId}/status`, {
-    method: 'PATCH', token: sellerToken, body: { status: 'confirmed' },
-  });
-  if (!confirm.ok) throw new Error(`Seller status->confirmed failed: ${JSON.stringify(confirm.json)}`);
+  const orderRes = await api(`/seller/orders/${orderId}`, { token: sellerToken });
+  const currentStatus = orderRes.body?.order?.status || orderRes.body?.status;
+  if (currentStatus !== 'confirmed' && currentStatus !== 'packed') {
+    const confirm = await api(`/seller/orders/${orderId}/status`, {
+      method: 'PATCH', token: sellerToken, body: { status: 'confirmed' },
+    });
+    if (!confirm.ok) throw new Error(`Seller status->confirmed failed: ${JSON.stringify(confirm.json)}`);
+  }
 
   const packed = await api(`/seller/orders/${orderId}/status`, {
     method: 'PATCH', token: sellerToken, body: { status: 'packed' },

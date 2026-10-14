@@ -68,6 +68,11 @@ const orderSchema = new mongoose.Schema(
       default: 'local_delivery',
       index: true,
     },
+    fulfillmentStatus: {
+      type: String,
+      default: null,
+      index: true,
+    },
     shipment: {
       type: mongoose.Schema.Types.Mixed,
       default: null,

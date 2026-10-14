@@ -77,8 +77,60 @@ class DeliveryOrderService extends BaseService {
     }
   }
 
-  _mapOrderForDelivery(order, assignment = null) {
+  async _resolveSellerForOrder(order) {
+    if (!order) return null;
+    const sellerId = order.fulfillment?.sellerId
+      || (order.sellerSubOrders || [])[0]?.sellerId;
+
+    if (sellerId && this.sellerRepository) {
+      const seller = await this.sellerRepository.findById(sellerId);
+      if (seller) return seller;
+    }
+
+    if (this.orderItemRepository && this.sellerRepository && order._id) {
+      const items = await this.orderItemRepository.listByOrderId(order._id);
+      for (const it of items) {
+        if (it.sellerId) {
+          const seller = await this.sellerRepository.findById(it.sellerId);
+          if (seller) return seller;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  _mapOrderForDelivery(order, assignment = null, seller = null) {
     const addr = order?.addressSnapshot || {};
+
+    let storeName = 'Seller Hub';
+    let sellerName = 'Seller Hub';
+    let sellerPhone = '';
+    let pickupAddress = 'Vendor location';
+    let pickupLat = null;
+    let pickupLng = null;
+
+    if (seller) {
+      storeName = seller.storeName || seller.name || 'Seller Hub';
+      sellerName = seller.name || seller.storeName || 'Seller Hub';
+      sellerPhone = seller.phone || '';
+
+      const addrParts = [
+        seller.addressLine || seller.geocodedAddress,
+        seller.city,
+        seller.state,
+        seller.pincode,
+      ].filter(Boolean);
+
+      pickupAddress = addrParts.length > 0 ? addrParts.join(', ') : storeName;
+      pickupLat = seller.latitude != null
+        ? Number(seller.latitude)
+        : (seller.location?.coordinates?.[1] != null ? Number(seller.location.coordinates[1]) : null);
+      pickupLng = seller.longitude != null
+        ? Number(seller.longitude)
+        : (seller.location?.coordinates?.[0] != null ? Number(seller.location.coordinates[0]) : null);
+    }
+
     return {
       id: String(order?._id || assignment?.orderId),
       orderId: order?._id || assignment?.orderId,
@@ -93,6 +145,13 @@ class DeliveryOrderService extends BaseService {
       lng: addr.lng ?? addr.longitude ?? null,
       earningAmount: assignment?.earningAmount ?? DEFAULT_DELIVERY_EARNING_AMOUNT,
       assignment,
+      // Vendor / Store details
+      storeName,
+      sellerName,
+      sellerPhone,
+      pickupAddress,
+      pickupLat,
+      pickupLng,
     };
   }
 
@@ -146,17 +205,45 @@ class DeliveryOrderService extends BaseService {
       : [];
     const orderMap = new Map(orders.map((o) => [String(o._id), o]));
 
-    const available = availableRaw.map((assignment) => ({
-      ...assignment.toObject?.() || assignment,
-      order: this._mapOrderForDelivery(orderMap.get(String(assignment.orderId)), assignment),
-      orderId: orderMap.get(String(assignment.orderId)) || assignment.orderId,
-    }));
+    const sellerIds = [...new Set(
+      orders.map((o) => o.fulfillment?.sellerId || (o.sellerSubOrders || [])[0]?.sellerId).filter(Boolean)
+    )];
+    const sellers = (sellerIds.length && this.sellerRepository)
+      ? await this.sellerRepository.find({ _id: { $in: sellerIds } })
+      : [];
+    const sellerMap = new Map(sellers.map((s) => [String(s._id), s]));
 
-    const assigned = assignedRaw.map((assignment) => ({
-      ...assignment.toObject?.() || assignment,
-      order: this._mapOrderForDelivery(orderMap.get(String(assignment.orderId)), assignment),
-      orderId: orderMap.get(String(assignment.orderId)) || assignment.orderId,
-    }));
+    const available = availableRaw
+      .filter((assignment) => {
+        const order = orderMap.get(String(assignment.orderId));
+        return (
+          order &&
+          order.fulfilmentType !== 'courier' &&
+          order.fulfillment?.type !== 'courier' &&
+          order.fulfillment?.deliveryMode !== 'standard'
+        );
+      })
+      .map((assignment) => {
+        const ord = orderMap.get(String(assignment.orderId));
+        const sId = ord?.fulfillment?.sellerId || (ord?.sellerSubOrders || [])[0]?.sellerId;
+        const seller = sId ? sellerMap.get(String(sId)) : null;
+        return {
+          ...assignment.toObject?.() || assignment,
+          order: this._mapOrderForDelivery(ord, assignment, seller),
+          orderId: ord || assignment.orderId,
+        };
+      });
+
+    const assigned = assignedRaw.map((assignment) => {
+      const ord = orderMap.get(String(assignment.orderId));
+      const sId = ord?.fulfillment?.sellerId || (ord?.sellerSubOrders || [])[0]?.sellerId;
+      const seller = sId ? sellerMap.get(String(sId)) : null;
+      return {
+        ...assignment.toObject?.() || assignment,
+        order: this._mapOrderForDelivery(ord, assignment, seller),
+        orderId: ord || assignment.orderId,
+      };
+    });
 
     return { available, assigned };
   }
@@ -172,15 +259,18 @@ class DeliveryOrderService extends BaseService {
       throw AppError.forbidden('Assignment not found for this partner');
     }
 
+    const seller = await this._resolveSellerForOrder(order);
+
     return {
-      order: this._mapOrderForDelivery(order, assignment),
+      order: this._mapOrderForDelivery(order, assignment, seller),
       assignment,
     };
   }
 
   /** Dev/test only — never echo OTPs to partners in production. */
   _otpEcho(field, otp) {
-    if (!this.config?.auth?.exposeOtpInDev) return {};
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd && !this.config?.auth?.exposeOtpInDev) return {};
     return { [field]: otp };
   }
 
@@ -191,6 +281,13 @@ class DeliveryOrderService extends BaseService {
 
       const order = await this.orderRepository.findById(orderId, { session });
       if (!order) throw AppError.notFound('Order not found');
+      if (
+        order.fulfilmentType === 'courier' ||
+        order.fulfillment?.type === 'courier' ||
+        order.fulfillment?.deliveryMode === 'standard'
+      ) {
+        throw AppError.conflict('Order is fulfilled via standard courier — local delivery is unavailable');
+      }
       if (![ORDER_STATUS.CONFIRMED, ORDER_STATUS.PACKED, ORDER_STATUS.SHIPPED, ORDER_STATUS.OUT_FOR_DELIVERY].includes(order.status)) {
         throw AppError.conflict('Order is not ready for delivery assignment');
       }
@@ -494,6 +591,15 @@ class DeliveryOrderService extends BaseService {
   async notifyNearbyPartnersForOrder(orderId, session = null) {
     const order = await this.orderRepository.findById(orderId, { session });
     if (!order) return null;
+
+    if (
+      order.fulfilmentType === 'courier' ||
+      order.fulfillment?.type === 'courier' ||
+      order.fulfillment?.deliveryMode === 'standard'
+    ) {
+      logger.info({ orderId: String(orderId) }, 'Order is fulfilled via courier — skipping local delivery partner assignment');
+      return null;
+    }
 
     await this.ensureAssignmentForOrder(orderId, session);
 

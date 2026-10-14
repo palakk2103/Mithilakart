@@ -54,6 +54,8 @@ class PlatformConfigService extends BaseService {
       packagingFee: Number(config.packagingFee) || 0,
       freeShippingThreshold: Number(config.freeShippingThreshold) || 500,
       defaultDeliveryCharge: Number(config.defaultDeliveryCharge) || 39,
+      taxRate: Number(config.taxRate) || (Number(config.gst) ? Number(config.gst) / 100 : 0),
+      gst: config.gst || '',
       quickCommerceEnabled: config.quickCommerceEnabled !== false,
       ecommerceEnabled: config.ecommerceEnabled !== false,
       razorpayEnabled: config.razorpayEnabled !== false,
@@ -63,7 +65,47 @@ class PlatformConfigService extends BaseService {
 
   async getHeaderTabs() {
     const config = await this.getConfig();
-    return config.headerTabsConfig || null;
+    if (Array.isArray(config.headerTabsConfig) && config.headerTabsConfig.length > 0) {
+      return config.headerTabsConfig;
+    }
+    return [
+      {
+        id: 'mithilakart',
+        tabId: 'mithilakart',
+        name: 'Mithilakart',
+        label: 'Mithilakart',
+        route: '/home',
+        commerceFlow: 'mithilakart',
+        enabled: true,
+      },
+      {
+        id: 'quickshop',
+        tabId: 'quickshop',
+        name: 'Quick Shop',
+        label: 'Quick Shop',
+        route: '/quick-shop',
+        commerceFlow: 'quick_shop',
+        enabled: true,
+      },
+      {
+        id: 'mithilak',
+        tabId: 'mithilak',
+        name: 'Mithilak',
+        label: 'Mithilak',
+        route: '/mithilak',
+        commerceFlow: 'mithilak',
+        enabled: true,
+      },
+      {
+        id: 'freshgrocery',
+        tabId: 'freshgrocery',
+        name: 'Groceries & Fresh',
+        label: 'Groceries & Fresh',
+        route: '/fresh-grocery',
+        commerceFlow: 'fresh_grocery',
+        enabled: true,
+      },
+    ];
   }
 
   async invalidateCache() {

@@ -2,7 +2,7 @@
  * Order Detail Page
  * Full order details with timeline, customer info, products, and invoice.
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Printer, Package, MapPin, CreditCard, User, Clock, CheckCircle2, Truck, ShoppingBag, AlertCircle, FileText } from 'lucide-react';
@@ -75,6 +75,11 @@ const OrderDetail = () => {
   };
 
   const isCourierOrder = order?.fulfilmentType === 'courier' || order?.commerceFlow === 'standard' || order?.commerceFlow === 'mithilak';
+  const isEscalatedFromQuick = Boolean(
+    order?.fulfilmentType === 'courier' &&
+    (order?.commerceFlow === 'quick_shop' || order?.commerceFlow === 'fresh_grocery' || order?.marketplaceTab === 'quick_shop')
+  );
+  const isQuickHyperlocal = order?.fulfilmentType === 'local_delivery' || (!isCourierOrder && (order?.commerceFlow === 'quick_shop' || order?.commerceFlow === 'fresh_grocery'));
 
   const availableActions = useMemo(() => {
     if (!order?.status) return [];
@@ -278,16 +283,55 @@ const OrderDetail = () => {
               {order.trackingId && (
                 <p className="text-xs text-gray-400 mt-3">Tracking ID: <span className="font-mono text-gray-600">{order.trackingId}</span></p>
               )}
+              {isQuickHyperlocal && (
+                <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-3.5 text-xs text-emerald-950 space-y-2.5 mt-3 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                      ⚡ Hyperlocal Quick Delivery
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-200 text-emerald-900">
+                      ~10-15 Min
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-[11px] text-emerald-900">
+                    <p className="leading-relaxed">
+                      Local Delivery Partner will arrive at your store for pickup once packed.
+                    </p>
+                    {order.status === 'confirmed' && (
+                      <p className="text-amber-800 font-semibold">
+                        ⏳ Please prepare and pack items, then click "Mark as Packed".
+                      </p>
+                    )}
+                    {order.status === 'packed' && (
+                      <div className="p-2 rounded-xl bg-white/80 border border-emerald-300 font-medium text-emerald-800">
+                        📦 Order is packed. Waiting for assigned delivery rider to arrive for pickup.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {isCourierOrder && (
                 <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-xs text-slate-700 space-y-2.5 mt-3 pt-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
                       📦 National Courier Shipment
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-800">
-                      Standard
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${isEscalatedFromQuick ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {isEscalatedFromQuick ? 'Escalated from Quick' : 'Standard'}
                     </span>
                   </div>
+
+                  {isEscalatedFromQuick && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                      <p className="font-bold flex items-center gap-1">
+                        ⚠️ Quick-to-Standard Courier Escalation
+                      </p>
+                      <p className="text-[10.5px] leading-relaxed text-amber-800">
+                        Customer placed order in Quick Commerce, but local inventory/riders were unavailable. The system escalated to National Courier (Shiprocket). Please package with shipping label for courier pickup.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="space-y-1.5 text-[11px]">
                     <div className="flex justify-between">

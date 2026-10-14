@@ -8,7 +8,7 @@ const config = require('./config');
 const { createApp } = require('./app');
 const { connectDatabase, disconnectDatabase } = require('./config/database');
 const { connectRedis, disconnectRedis } = require('./config/redis');
-// Trigger clean startup
+// Trigger clean startup with updated env and redis fallback
 const { resetContainer, getContainer } = require('./bootstrap/container');
 const { logger } = require('./utils/logger');
 const { eventBus, EVENT_TYPES } = require('./events/EventBus');
@@ -55,6 +55,10 @@ async function startServer() {
     },
     'Mithilakart API server started'
   );
+
+  if (process.send) {
+    process.send('ready');
+  }
 
   return server;
 }

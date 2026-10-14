@@ -35,16 +35,31 @@ const mapApiOrder = (data = {}) => {
   const shipping = order.addressSnapshot || order.shippingAddress || data.shippingAddress || {};
   const pickup = order.pickupAddress || data.pickupAddress || {};
 
+  const pickupLat = (typeof pickup === 'object' && pickup?.lat != null)
+    ? pickup.lat
+    : (order.pickupLat ?? data.pickupLat ?? null);
+
+  const pickupLng = (typeof pickup === 'object' && pickup?.lng != null)
+    ? pickup.lng
+    : (order.pickupLng ?? data.pickupLng ?? null);
+
+  const pickupAddressStr = typeof pickup === 'string' && pickup !== 'Vendor location'
+    ? pickup
+    : (typeof pickup === 'object' && formatAddress(pickup)) || order.pickupAddress || data.pickupAddress || 'Vendor location';
+
   return {
     id: order.id || order._id || assignment.orderId || data._id,
+    orderNumber: order.orderNumber || data.orderNumber || '',
+    storeName: order.storeName || data.storeName || order.sellerName || data.sellerName || 'Seller Hub',
+    sellerPhone: order.sellerPhone || data.sellerPhone || '',
     customer: shipping.name || order.customerName || data.customerName || 'Customer',
     phone: shipping.phone || order.customerPhone || data.phone || '',
     address: formatAddress(shipping) || data.address || '—',
-    lat: shipping.lat || data.lat,
-    lng: shipping.lng || data.lng,
-    pickupAddress: typeof pickup === 'string' ? pickup : formatAddress(pickup) || data.pickupAddress || 'Vendor location',
-    pickupLat: pickup.lat || data.pickupLat,
-    pickupLng: pickup.lng || data.pickupLng,
+    lat: shipping.lat || data.lat || order.lat,
+    lng: shipping.lng || data.lng || order.lng,
+    pickupAddress: pickupAddressStr,
+    pickupLat,
+    pickupLng,
     items: order.itemCount || data.items || 1,
     earning: assignment.earningAmount ?? data.earningAmount ?? data.earning ?? 0,
     status: mapAssignmentStatus(assignment.status || data.status),
@@ -262,19 +277,30 @@ const DeliveryOrderDetail = () => {
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Step 1 · Store Pickup</p>
               <p className="text-base font-black text-slate-900">{order.storeName || order.sellerName || 'Seller Hub'}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const url = (order.pickupLat && order.pickupLng)
-                  ? `https://www.google.com/maps/dir/?api=1&destination=${order.pickupLat},${order.pickupLng}`
-                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.pickupAddress || 'Artisan Hub')}`;
-                window.open(url, '_blank');
-              }}
-              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-100 active:scale-95 transition-all cursor-pointer"
-            >
-              <Navigation size={14} />
-              <span>Navigate</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {order.sellerPhone && (
+                <a
+                  href={`tel:${order.sellerPhone}`}
+                  className="w-8 h-8 bg-slate-900 hover:bg-slate-800 text-white rounded-xl flex items-center justify-center shadow-xs active:scale-95 transition-all"
+                  title="Call Vendor"
+                >
+                  <Phone size={14} />
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  const url = (order.pickupLat && order.pickupLng)
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${order.pickupLat},${order.pickupLng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.pickupAddress && order.pickupAddress !== 'Vendor location' ? order.pickupAddress : (order.storeName || 'Vendor'))}`;
+                  window.open(url, '_blank');
+                }}
+                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-100 active:scale-95 transition-all cursor-pointer"
+              >
+                <Navigation size={14} />
+                <span>Navigate</span>
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500 font-bold bg-slate-50 p-3 rounded-2xl border border-slate-100">
             <MapPin size={14} className="text-blue-600 flex-shrink-0" />

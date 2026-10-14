@@ -118,6 +118,12 @@ function createSellerRoutes(controllers, middleware) {
   router.put('/settings/password', ...sellerScope, validateBody(sellerSettingsPasswordSchema), controllers.settings.updatePassword);
   router.put('/settings/notifications', ...sellerScope, validateBody(sellerSettingsNotificationsSchema), controllers.settings.updateNotifications);
 
+  // Aliased SSE route for seller notifications/stream (supports /api/v1/seller/stream)
+  const { sellerOrderStreamService } = require('../../services/realtime/SellerOrderStreamService');
+  router.get('/stream', authSeller, (req, res) => {
+    sellerOrderStreamService.subscribe(req.user.sellerId, res);
+  });
+
   return router;
 }
 

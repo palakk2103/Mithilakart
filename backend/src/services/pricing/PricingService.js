@@ -86,7 +86,11 @@ class PricingService extends BaseService {
       codHandlingFee = Number(config.codHandlingFee) || 0;
     }
 
-    const tax = this.computeTax(discountedSubtotal, taxRate);
+    const resolvedTaxRate = (taxRate != null && taxRate !== PRICING.DEFAULT_TAX_RATE)
+      ? taxRate
+      : (Number(config.taxRate) || (Number(config.gst) ? Number(config.gst) / 100 : 0));
+
+    const tax = this.computeTax(discountedSubtotal, resolvedTaxRate);
     const total = Math.round(
       (discountedSubtotal + deliveryCharge + platformFee + packagingFee + codHandlingFee + tax) * 100
     ) / 100;
@@ -101,6 +105,7 @@ class PricingService extends BaseService {
       packagingFee,
       codHandlingFee,
       tax,
+      taxRate: resolvedTaxRate,
       total,
       minOrderAmount,
     };

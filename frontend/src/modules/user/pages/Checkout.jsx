@@ -10,7 +10,8 @@ import useAccountStore from '../../../store/useAccountStore';
 import { createOrder, initiatePayment, verifyPayment, validateCoupon } from '../services/ordersApi';
 import { checkShippingServiceability } from '../services/shippingApi';
 import { getAddresses } from '../services/userApi';
-import { fetchCartItems, getMarketplaceTab, clearCart, dispatchCartUpdated } from '../utils/cartUtils';
+import { fetchCartItems, getCommerceFlow, getMarketplaceTab, clearCart, dispatchCartUpdated } from '../utils/cartUtils';
+import { getStorefrontConfig } from '../services/storefrontApi';
 import { openRazorpayCheckout } from '../../../shared/services/razorpay';
 import { toast } from 'react-hot-toast';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
@@ -51,6 +52,8 @@ const Checkout = () => {
   const [loading, setLoading] = useState(true);
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [platformFee, setPlatformFee] = useState(0);
+  const [taxAmount, setTaxAmount] = useState(0);
   const [courierServiceable, setCourierServiceable] = useState(null);
   const [checkingServiceability, setCheckingServiceability] = useState(false);
 
@@ -62,7 +65,23 @@ const Checkout = () => {
     const load = async () => {
       if (location.state?.product) {
         if (!cancelled) {
-          setCheckoutItems([location.state.product]);
+          const buyProduct = location.state.product;
+          setCheckoutItems([buyProduct]);
+          try {
+            const config = await getStorefrontConfig();
+            const threshold = Number(config?.freeShippingThreshold) || 500;
+            const fee = Number(config?.defaultDeliveryCharge) || 39;
+            const pFee = Number(config?.platformFee) || 0;
+            const tRate = Number(config?.taxRate) || 0;
+            const itemSubtotal = (Number(buyProduct.price) || 0) * (Number(buyProduct.quantity || buyProduct.qty) || 1);
+            setDeliveryFee(itemSubtotal >= threshold ? 0 : fee);
+            setPlatformFee(pFee);
+            setTaxAmount(Math.round(itemSubtotal * tRate * 100) / 100);
+          } catch {
+            setDeliveryFee(39);
+            setPlatformFee(0);
+            setTaxAmount(0);
+          }
           setLoading(false);
         }
         return;
@@ -73,11 +92,15 @@ const Checkout = () => {
         if (!cancelled) {
           setCheckoutItems(items.length ? items : []);
           setDeliveryFee(Number(cart?.deliveryCharge ?? cart?.shippingFee ?? 0) || 0);
+          setPlatformFee(Number(cart?.platformFee ?? 0) || 0);
+          setTaxAmount(Number(cart?.tax ?? 0) || 0);
         }
       } catch {
         if (!cancelled) {
           setCheckoutItems([]);
           setDeliveryFee(0);
+          setPlatformFee(0);
+          setTaxAmount(0);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -194,7 +217,7 @@ const Checkout = () => {
     window.scrollTo(0, 0);
   }, [currentStep]);
 
-  const payableTotal = Math.max(0, totalPrice + deliveryFee - couponDiscount);
+  const payableTotal = Math.max(0, totalPrice + deliveryFee + platformFee + taxAmount - couponDiscount);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -270,11 +293,21 @@ const Checkout = () => {
           resolvedTab = 'mithilak';
         }
 
+        const buyNowItem = location.state?.product;
+        const buyNowItems = buyNowItem ? [
+          {
+            productId: buyNowItem._id || buyNowItem.id,
+            variantId: buyNowItem.variantId || null,
+            quantity: Number(buyNowItem.quantity || buyNowItem.qty) || 1,
+          }
+        ] : null;
+
         const result = await createOrder({
           addressId,
           paymentMethod,
           commerceFlow: resolvedFlow,
           marketplaceTab: resolvedTab,
+          ...(buyNowItems ? { items: buyNowItems } : {}),
           ...(couponApplied && couponCode ? { couponCode: couponCode.trim().toUpperCase() } : {}),
         });
 
@@ -516,9 +549,23 @@ const Checkout = () => {
           <span className="text-slate-800 font-black">{formatPrice(totalOldPrice)}</span>
         </div>
         <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-          <span>{t('checkout.platformFees') || 'Platform Fees'}</span>
-          <span className="text-slate-800 font-black">{formatPrice(deliveryFee)}</span>
+          <span>{t('checkout.deliveryCharges') || 'Delivery Charges'}</span>
+          <span className={deliveryFee === 0 ? "text-emerald-600 font-black uppercase text-xs" : "text-slate-800 font-black"}>
+            {deliveryFee === 0 ? (t('cart.free') || 'FREE') : formatPrice(deliveryFee)}
+          </span>
         </div>
+        {platformFee > 0 && (
+          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
+            <span>{t('checkout.platformFees') || 'Platform Fee'}</span>
+            <span className="text-slate-800 font-black">{formatPrice(platformFee)}</span>
+          </div>
+        )}
+        {taxAmount > 0 && (
+          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
+            <span>Taxes & GST</span>
+            <span className="text-slate-800 font-black">{formatPrice(taxAmount)}</span>
+          </div>
+        )}
         {couponDiscount > 0 && (
           <div className="flex justify-between items-center text-[13px] text-green-700 font-bold">
             <span>Coupon Discount</span>

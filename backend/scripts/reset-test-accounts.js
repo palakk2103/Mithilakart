@@ -102,8 +102,9 @@ async function run() {
         state: 'Bihar',
         pincode: '800001',
         addressLine: 'Boring Road, Patna',
-        latitude: 25.6000,
-        longitude: 85.1400,
+        latitude: 25.5941,
+        longitude: 85.1376,
+        location: { type: 'Point', coordinates: [85.1376, 25.5941] },
       }
     }
   );

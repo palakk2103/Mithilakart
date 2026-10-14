@@ -16,7 +16,9 @@ async function connectRedis(config) {
 
   const Redis = require('ioredis');
   redisClient = new Redis(config.redis.url, {
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: 1,
+    connectTimeout: 2000,
+    retryStrategy: () => null,
     lazyConnect: true,
   });
 
@@ -25,9 +27,17 @@ async function connectRedis(config) {
     logger.error({ err: error }, 'Redis connection error');
   });
 
-  await redisClient.connect();
-  isConnected = true;
-  return redisClient;
+  try {
+    await redisClient.connect();
+    isConnected = true;
+    return redisClient;
+  } catch (err) {
+    const { logger } = require('../utils/logger');
+    logger.warn({ err: err?.message || err }, 'Failed to connect to external Redis — gracefully falling back to MemoryRedisClient');
+    redisClient = new MemoryRedisClient();
+    isConnected = true;
+    return redisClient;
+  }
 }
 
 async function disconnectRedis() {
@@ -46,6 +56,10 @@ async function disconnectRedis() {
 }
 
 function getRedisClient() {
+  if (!redisClient) {
+    redisClient = new MemoryRedisClient();
+    isConnected = true;
+  }
   return redisClient;
 }
 

@@ -127,6 +127,8 @@ export const mapOrderForList = (order) => ({
   orderNumber: order.orderNumber || getEntityId(order),
   mongoId: getEntityId(order),
   status: order.status || 'Pending',
+  createdAt: order.createdAt || null,
+  placedAt: order.createdAt || null,
   date: order.createdAt
     ? new Date(order.createdAt).toLocaleDateString('en-GB', {
         day: 'numeric',
@@ -168,6 +170,8 @@ export const mapOrderDetail = (data) => {
     orderNumber: order.orderNumber || getEntityId(order),
     status: formatStatus(order.status),
     rawStatus: order.status || 'pending',
+    createdAt: order.createdAt || data?.createdAt || null,
+    placedAt: order.createdAt || data?.createdAt || null,
     date: order.createdAt
       ? new Date(order.createdAt).toLocaleDateString('en-GB', {
           day: 'numeric',
@@ -183,7 +187,10 @@ export const mapOrderDetail = (data) => {
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     fulfilmentType: order.fulfilmentType,
+    fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
     commerceFlow: order.commerceFlow || data?.commerceFlow || null,
+    fulfillment: order.fulfillment || data?.fulfillment || null,
+    deliveryMode: order.fulfillment?.deliveryMode || order.deliveryMode || null,
     address: {
       name: addr.name || '',
       phone: addr.phone || '',
