@@ -5,22 +5,23 @@ export function applyOtpSendResult(result, { setOtp, setSuccess, setOtpSent, set
   setOtpSent(true);
   if (setTimer) setTimer(60);
 
-  if (result?.devOtp) {
-    setOtp?.(result.devOtp);
+  const otpCode = result?.devOtp || result?.defaultOtp;
+  if (otpCode) {
+    setOtp?.(otpCode);
     setSuccess(
       result.smsSent === false
-        ? `OTP: ${result.devOtp} (SMS not delivered — use this code)`
-        : `OTP sent. If SMS is delayed, use: ${result.devOtp}`
+        ? `OTP: ${otpCode} (SMS not required — test code active)`
+        : `OTP sent. Test code: ${otpCode}`
     );
     return;
   }
 
   if (result?.smsSent === false) {
-    setSuccess('OTP generated. Check your phone or try again shortly.');
+    setSuccess('OTP generated. Use test code 123456 if SMS is not received.');
     return;
   }
 
-  setSuccess('OTP sent successfully to your phone');
+  setSuccess('OTP sent successfully to your phone (Test code: 123456)');
 }
 
 export function mapDeliveryVehicleType(value) {
