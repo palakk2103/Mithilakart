@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight } from 'lucide-react';
 import CategoryCard from '../components/vendor/CategoryCard';
 import useVendorStore from '../../../store/useVendorStore';
+import useAccountStore from '../../../store/useAccountStore';
 import { getCategories, getNearbyProducts, getDeals } from '../services/catalogApi';
 import { mapCategorySections, extractList, mapProductForCard } from '../utils/mappers';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
@@ -127,6 +128,11 @@ const QuickShop = () => {
   const { fetchHomeSections } = useVendorStore();
   const [categorySections, setCategorySections] = React.useState([]);
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
+  const { savedAddresses, selectedAddressId } = useAccountStore();
+  const selectedAddr = savedAddresses?.find((a) => a.id === selectedAddressId) || savedAddresses?.[0];
+  const effectiveLat = liveLocation?.latitude ?? selectedAddr?.latitude ?? 28.5385859;
+  const effectiveLng = liveLocation?.longitude ?? selectedAddr?.longitude ?? 77.1182734;
+
   const [nearbyProducts, setNearbyProducts] = React.useState([]);
   const [nearbyLoading, setNearbyLoading] = React.useState(false);
   const [notDeliverable, setNotDeliverable] = React.useState(false);
@@ -157,18 +163,12 @@ const QuickShop = () => {
   useEffect(() => {
     let cancelled = false;
 
-    if (liveLocation?.latitude == null || liveLocation?.longitude == null) {
-      setNearbyProducts([]);
-      setNotDeliverable(true);
-      return undefined;
-    }
-
     setNearbyLoading(true);
     getNearbyProducts({
-      lat: liveLocation.latitude,
-      lng: liveLocation.longitude,
+      lat: effectiveLat,
+      lng: effectiveLng,
       commerceFlow: 'quick_shop',
-      limit: 6,
+      limit: 12,
     })
       .then((response) => {
         const payload = response?.data ?? response;
@@ -185,13 +185,13 @@ const QuickShop = () => {
         });
         if (!cancelled) {
           setNearbyProducts(items);
-          setNotDeliverable(payload?.deliverable === false || items.length === 0);
+          setNotDeliverable(payload?.deliverable === false && items.length === 0);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setNearbyProducts([]);
-          setNotDeliverable(true);
+          setNotDeliverable(false);
         }
       })
       .finally(() => {
@@ -201,7 +201,7 @@ const QuickShop = () => {
     return () => {
       cancelled = true;
     };
-  }, [liveLocation?.latitude, liveLocation?.longitude]);
+  }, [effectiveLat, effectiveLng]);
 
   // Simulated active tab for the filters
   const [activeFilter, setActiveFilter] = React.useState('All');
