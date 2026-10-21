@@ -224,15 +224,29 @@ export const mapCategorySections = (categories, fallbackSections = []) => {
   const list = extractList(categories);
   if (!list.length) return fallbackSections;
 
-  return list.map((cat) => ({
-    title: cat.name,
-    items: (cat.children || []).map((child) => ({
-      name: child.name,
-      img: child.imageUrl || child.iconUrl || cat.imageUrl || '',
-      path: `/vendor/category-products?category=${encodeURIComponent(child.name)}`,
-      id: getEntityId(child),
-    })),
-  }));
+  return list.map((cat) => {
+    const rawChildren = Array.isArray(cat.children) ? cat.children : [];
+    const items = rawChildren.length > 0
+      ? rawChildren.map((child) => ({
+          name: child.name,
+          img: getImageUrl(child.imageUrl || child.iconUrl || cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
+          path: `/vendor/category-products?category=${encodeURIComponent(child.name)}`,
+          id: getEntityId(child),
+        }))
+      : [
+          {
+            name: cat.name,
+            img: getImageUrl(cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
+            path: `/vendor/category-products?category=${encodeURIComponent(cat.name)}`,
+            id: getEntityId(cat),
+          },
+        ];
+
+    return {
+      title: cat.name,
+      items,
+    };
+  });
 };
 
 export const findCategoryByName = (categories, name) => {
