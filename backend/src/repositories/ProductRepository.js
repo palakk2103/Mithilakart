@@ -25,7 +25,12 @@ class ProductRepository extends BaseRepository {
   }
 
   async findPublicById(id) {
-    return this.findOne(this._publicFilter({ _id: id }));
+    if (!id) return null;
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      return this.findOne(this._publicFilter({ $or: [{ _id: id }, { sku: id }, { catalogKey: id }] }));
+    }
+    return this.findOne(this._publicFilter({ $or: [{ sku: id }, { catalogKey: id }] }));
   }
 
   getAvailableStock(product) {

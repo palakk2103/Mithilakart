@@ -79,12 +79,21 @@ class MarketplaceListingService extends BaseService {
     const category = await this.categoryRepository.findById(categoryId);
     if (!category || category.deletedAt) throw AppError.notFound('Category not found');
 
-    const tabs = category.visibleTabs?.length
+    let tabs = category.visibleTabs?.length
       ? category.visibleTabs
       : (category.commerceFlows || []).map((f) => normalizeMarketplaceTab(f)).filter(Boolean);
 
+    if ((!tabs || tabs.length === 0) && category.parentId) {
+      const parent = await this.categoryRepository.findById(category.parentId);
+      if (parent && !parent.deletedAt) {
+        tabs = parent.visibleTabs?.length
+          ? parent.visibleTabs
+          : (parent.commerceFlows || []).map((f) => normalizeMarketplaceTab(f)).filter(Boolean);
+      }
+    }
+
     const normalized = normalizeMarketplaceTab(tab);
-    if (!tabs.includes(normalized)) {
+    if (!tabs || !tabs.includes(normalized)) {
       throw AppError.validation('Product category is not visible on selected marketplace tab');
     }
   }
@@ -290,6 +299,27 @@ class MarketplaceListingService extends BaseService {
       filter.productId = { $in: productIds };
     }
 
+    // Production readiness audit (2026-08-25): searchPublic previously never
+    // reached this method at all — it only ever queried Product directly via
+    // the legacy commerceFlow filter, so `?marketplaceTab=` had no effect on
+    // search results whatsoever. Live-confirmed: searching "Atta" (a
+    // quick_shop-only product) with marketplaceTab=mithilak returned the same
+    // 4 results as no tab filter at all. Same intersect-then-filter pattern
+    // as the categoryId branch above: text-search Product first, then scope
+    // MarketplaceListing to that candidate set.
+    const searchTerm = query.q || query.search;
+    if (searchTerm) {
+      const matches = await this.productRepository.searchPublic(searchTerm, {}, { limit: 500 });
+      const matchIds = matches.map((p) => String(p._id));
+      const intersected = filter.productId
+        ? matchIds.filter((id) => filter.productId.$in.some((pid) => String(pid) === id))
+        : matchIds;
+      if (!intersected.length) {
+        return { items: [], meta: buildPaginationMeta(pagination.page, pagination.limit, 0) };
+      }
+      filter.productId = { $in: intersected };
+    }
+
     const [listings, total] = await Promise.all([
       this.marketplaceListingRepository.findPublic(filter, {
         sort: { sortBoost: -1, price: 1 },
@@ -348,7 +378,7 @@ class MarketplaceListingService extends BaseService {
 
     if (tab) {
       const listing = await this.marketplaceListingRepository.findPublicOne({
-        productId,
+        productId: product._id,
         marketplaceTab: tab,
       });
 
@@ -360,7 +390,7 @@ class MarketplaceListingService extends BaseService {
       }
     }
 
-    const listings = await this.marketplaceListingRepository.findPublic({ productId });
+    const listings = await this.marketplaceListingRepository.findPublic({ productId: product._id });
     const activeListing = listings[0] || null;
 
     if (activeListing) {
@@ -381,7 +411,30 @@ class MarketplaceListingService extends BaseService {
   }
 
   async resolveListingForCart(listingId) {
-    const listing = await this.marketplaceListingRepository.findPublicOne({ _id: listingId });
+    if (!listingId) {
+      throw AppError.badRequest('Listing ID is required');
+    }
+    const mongoose = require('mongoose');
+    let listing = null;
+    if (mongoose.Types.ObjectId.isValid(listingId)) {
+      listing = await this.marketplaceListingRepository.findPublicOne({ _id: listingId });
+    }
+
+    if (!listing) {
+      // Lookup product by SKU / ID and find active listing
+      const product = await this.productRepository.findPublicById(listingId);
+      if (product) {
+        listing = await this.marketplaceListingRepository.findPublicOne({ productId: product._id });
+        if (listing) {
+          const availableStock = this.productRepository.getAvailableStock(product);
+          if (availableStock <= 0) {
+            throw AppError.conflict('Product is out of stock');
+          }
+          return { listing, product };
+        }
+      }
+    }
+
     if (!listing) {
       throw AppError.notFound('Listing not found or not available', [{ code: 'LISTING_NOT_FOUND' }]);
     }

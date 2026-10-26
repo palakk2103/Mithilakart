@@ -47,6 +47,8 @@ import LegalPolicies from '../pages/content/LegalPolicies';
 // Operations
 import Returns from '../pages/operations/Returns';
 import OrderDetail from '../pages/operations/OrderDetail';
+import FulfillmentMonitor from '../pages/operations/FulfillmentMonitor';
+import FulfillmentSettings from '../pages/operations/FulfillmentSettings';
 import Refunds from '../pages/operations/Refunds';
 
 // Support
@@ -80,6 +82,7 @@ const AdminRoutes = () => {
   return (
     <Routes>
       <Route path="auth" element={<Auth />} />
+      <Route path="login" element={<Auth />} />
 
       <Route element={<AdminProtectedRoute />}>
         <Route path="dashboard" element={<Dashboard />} />
@@ -101,6 +104,9 @@ const AdminRoutes = () => {
         <Route path="inventory/alerts" element={<StockAlerts />} />
         <Route path="orders" element={<Orders />} />
         <Route path="orders/:orderId" element={<OrderDetail />} />
+        {/* CR-002 — fulfillment diagnostics & configuration */}
+        <Route path="fulfillment" element={<FulfillmentMonitor />} />
+        <Route path="fulfillment/settings" element={<FulfillmentSettings />} />
 
         {/* Operations */}
         <Route path="operations/returns" element={<Returns />} />

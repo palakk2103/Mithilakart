@@ -72,10 +72,14 @@ const BannerCarousel = ({ banners = [] }) => {
             className="absolute inset-0"
           >
             <img
-              src={currentBanner?.image}
+              src={currentBanner?.image || '/hero_banner.png'}
               alt={currentBanner?.title || "Hero Banner"}
               className="h-full w-full object-cover"
               loading="eager"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/hero_banner.png';
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
               <span className="text-[#e2a750] font-bold text-[10px] uppercase tracking-widest mb-0.5">Special Collection</span>
@@ -110,10 +114,14 @@ const BannerCarousel = ({ banners = [] }) => {
               className="absolute inset-0"
             >
               <img
-                src={currentBanner?.image}
+                src={currentBanner?.image || '/hero_banner.png'}
                 alt={currentBanner?.title || "Hero Banner"}
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading="eager"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/hero_banner.png';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-8">
                 <span className="text-[#e2a750] font-bold text-sm uppercase tracking-widest mb-1 animate-pulse">Exclusive Collection</span>
@@ -153,10 +161,14 @@ const BannerCarousel = ({ banners = [] }) => {
                 className="relative flex-1 aspect-[16/7] w-full overflow-hidden rounded-2xl shadow-md bg-gray-50 cursor-pointer group hover:shadow-xl transition-all duration-300 border border-[#EADCC9]/40"
               >
                 <img
-                  src={sideBanner.image}
+                  src={sideBanner.image || '/hero_banner.png'}
                   alt={sideBanner.title || "Promo Banner"}
                   className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/hero_banner.png';
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
                   <h4 className="text-white text-sm font-black tracking-tight leading-tight line-clamp-1">

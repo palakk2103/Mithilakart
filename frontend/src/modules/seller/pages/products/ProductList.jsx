@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Grid3X3, List, Edit3, Trash2, Copy, Eye, Package, MoreVertical, Star } from 'lucide-react';
 import { PageHeader, StatusBadge, SearchFilter, ConfirmModal, DataTable } from '../../components/common';
 import { Button, EmptyState } from '../../components/ui';
-import { getProducts, deleteProduct, duplicateProduct } from '../../services/sellerApi';
+import { getProducts, deleteProduct, duplicateProduct, updateProduct } from '../../services/sellerApi';
 import { formatCurrency } from '../../utils/formatters';
 import usePagination from '../../hooks/usePagination';
 import useDebounce from '../../hooks/useDebounce';
@@ -43,6 +43,27 @@ const ProductList = () => {
     fetchProducts();
   }, []);
 
+  const handleToggleStock = async (product) => {
+    const currentStock = Number(product.stock ?? 0);
+    const isCurrentlyInStock = currentStock > 0 && product.status !== 'rejected';
+    const newStock = isCurrentlyInStock ? 0 : 25;
+
+    // Optimistic UI update
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, stock: newStock } : p))
+    );
+
+    try {
+      await updateProduct(product.id, {
+        stock: newStock,
+      });
+      toast.success(`"${product.title}" marked as ${newStock > 0 ? 'In Stock' : 'Out of Stock'}`);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update stock status');
+      fetchProducts();
+    }
+  };
+
   // Filter and search products
   const filteredProducts = useMemo(() => {
     let result = [...products];
@@ -51,7 +72,15 @@ const ProductList = () => {
       result = result.filter((p) => p.title?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q));
     }
     if (filters.status && filters.status !== 'all') {
-      result = result.filter((p) => p.status === filters.status);
+      if (filters.status === 'in_stock') {
+        result = result.filter((p) => Number(p.stock ?? 0) > 0 && p.status !== 'rejected');
+      } else if (filters.status === 'out_of_stock') {
+        result = result.filter((p) => Number(p.stock ?? 0) <= 0 || p.status === 'rejected');
+      } else if (filters.status === 'active' || filters.status === 'approved') {
+        result = result.filter((p) => p.status === 'approved' || p.status === 'active');
+      } else {
+        result = result.filter((p) => p.status === filters.status);
+      }
     }
     if (filters.category && filters.category !== 'all') {
       result = result.filter((p) => p.category === filters.category);
@@ -87,9 +116,12 @@ const ProductList = () => {
   };
 
   const filterConfig = [
-    { key: 'status', label: 'Status', options: [
-      { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' },
-      { value: 'out_of_stock', label: 'Out of Stock' }, { value: 'draft', label: 'Draft' },
+    { key: 'status', label: 'Stock & Status', options: [
+      { value: 'approved', label: 'Approved' },
+      { value: 'in_stock', label: 'In Stock' },
+      { value: 'out_of_stock', label: 'Out of Stock' },
+      { value: 'pending', label: 'Pending Approval' },
+      { value: 'rejected', label: 'Rejected' },
     ]},
     { key: 'category', label: 'Category', options: [
       { value: 'Handicraft', label: 'Handicraft' }, { value: 'Food & Grocery', label: 'Food & Grocery' },
@@ -102,74 +134,107 @@ const ProductList = () => {
     { key: 'title', label: 'Product', render: (_, row) => {
       const imgUrl = getProductImage(row.images?.[0]?.url || row.image || row.gallery?.[0]?.url || row.gallery?.[0]);
       return (
-        <div className="flex items-center gap-3 min-w-[200px]">
-          <div className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-gray-100 overflow-hidden">
+        <div className="flex items-center gap-2.5 min-w-[180px]">
+          <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 border border-slate-200/60 overflow-hidden">
             {imgUrl ? (
-              <img src={imgUrl} alt={row.title || 'Product'} className="w-full h-full object-cover rounded-xl" />
+              <img src={imgUrl} alt={row.title || 'Product'} className="w-full h-full object-cover rounded-lg" />
             ) : (
-              <Package size={20} className="text-gray-300" />
+              <Package size={16} className="text-slate-400" />
             )}
           </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-900 line-clamp-1">{row.title}</p>
-            <p className="text-[11px] text-gray-400">SKU: {row.sku}</p>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-900 line-clamp-1 truncate">{row.title}</p>
+            <p className="text-[10px] text-slate-400 truncate">SKU: {row.sku}</p>
           </div>
         </div>
       );
     }},
     { key: 'category', label: 'Category', render: (val, row) => (
-      <span className="text-xs font-medium text-gray-600 bg-gray-50 px-2.5 py-1 rounded-lg">
+      <span className="text-[10.5px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
         {row.category?.name || row.category || row.categoryId?.name || val || 'General'}
       </span>
     )},
     { key: 'price', label: 'Price', render: (_, row) => (
       <div>
-        <p className="text-sm font-semibold text-gray-900">{formatCurrency(row.discountPrice || row.price)}</p>
-        {row.discountPrice && <p className="text-xs text-gray-400 line-through">{formatCurrency(row.price)}</p>}
+        <p className="text-xs font-bold text-slate-900">{formatCurrency(row.discountPrice || row.price)}</p>
+        {row.discountPrice && <p className="text-[10px] text-slate-400 line-through">{formatCurrency(row.price)}</p>}
       </div>
     )},
-    { key: 'stock', label: 'Stock', render: (val) => (
-      <div className="flex items-center gap-2">
-        <span className={`text-sm font-semibold ${val === 0 ? 'text-red-500' : val < 10 ? 'text-amber-500' : 'text-gray-900'}`}>{val}</span>
-        <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${val === 0 ? 'bg-red-500' : val < 10 ? 'bg-amber-500' : 'bg-blue-500'}`}
-               style={{ width: `${Math.min((val / 200) * 100, 100)}%` }} />
+    { key: 'stock', label: 'Stock & Availability', render: (val, row) => {
+      const stockCount = Number(val ?? row.stock ?? 0);
+      const isAvailable = stockCount > 0 && row.status !== 'rejected';
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleStock(row);
+            }}
+            className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer ${
+              isAvailable
+                ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+            }`}
+            title="Click to toggle In Stock / Out of Stock instantly"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+            <span>{isAvailable ? 'In Stock' : 'Out of Stock'}</span>
+          </button>
+          <span className="text-[11px] font-semibold text-slate-400">({stockCount})</span>
         </div>
-      </div>
-    )},
+      );
+    }},
     { key: 'status', label: 'Status', align: 'center', render: (val) => <StatusBadge status={val} size="sm" /> },
-    { key: 'sales', label: 'Sales', render: (val) => <span className="text-sm font-medium text-gray-600">{val || 0}</span> },
-    { key: 'actions', label: 'Actions', sortable: false, align: 'center', render: (_, row) => (
-      <div className="flex items-center gap-1 justify-center">
-        <button onClick={(e) => { e.stopPropagation(); navigate(`/seller/products/edit/${row.id}`); }}
-                className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors" title="Edit">
-          <Edit3 size={16} />
+    { key: 'sales', label: 'Sales', align: 'center', render: (val) => (
+      <span className="text-xs font-semibold text-slate-600">{val || 0}</span>
+    )},
+    { key: 'actions', label: '', sortable: false, render: (_, row) => (
+      <div className="flex items-center gap-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate(`/seller/products/edit/${row.id}`); }}
+          className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
+          title="Edit"
+        >
+          <Edit3 size={14} />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); handleDuplicate(row); }}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Duplicate">
-          <Copy size={16} />
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDuplicate(row); }}
+          className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
+          title="Duplicate"
+        >
+          <Copy size={14} />
         </button>
-        <button onClick={(e) => { e.stopPropagation(); handleDelete(row); }}
-                className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
-          <Trash2 size={16} />
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDelete(row); }}
+          className="p-1 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+          title="Delete"
+        >
+          <Trash2 size={14} />
         </button>
       </div>
     )},
   ];
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-6">
       <PageHeader title="Products" subtitle={`${filteredProducts.length} products in your store`}>
         <div className="flex items-center gap-2">
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('table')} className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'}`}>
-              <List size={16} />
+          <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200/60">
+            <button onClick={() => setViewMode('table')} className={`p-1.5 rounded-md transition-colors cursor-pointer ${viewMode === 'table' ? 'bg-white shadow-2xs text-slate-900' : 'text-slate-400'}`} title="Table view">
+              <List size={15} />
             </button>
-            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400'}`}>
-              <Grid3X3 size={16} />
+            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-white shadow-2xs text-slate-900' : 'text-slate-400'}`} title="Grid view">
+              <Grid3X3 size={15} />
             </button>
           </div>
-          <Button icon={Plus} onClick={() => navigate('/seller/products/add')}>Add Product</Button>
+          <button
+            onClick={() => navigate('/seller/products/add')}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg
+                       shadow-2xs hover:bg-slate-800 transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus size={15} /> Add Product
+          </button>
         </div>
       </PageHeader>
 
@@ -225,9 +290,24 @@ const ProductList = () => {
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
-                    <span className={`text-xs font-medium ${product.stock === 0 ? 'text-red-500' : product.stock < 10 ? 'text-amber-500' : 'text-gray-500'}`}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleStock(product);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border ${
+                        product.stock === 0
+                          ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                          : product.stock < 10
+                          ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                      }`}
+                      title="Click to toggle In-Stock / Out-of-Stock status"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${product.stock === 0 ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'}`} />
                       {product.stock === 0 ? 'Out of stock' : `${product.stock} in stock`}
-                    </span>
+                    </button>
                     <span className="text-xs text-gray-400">{product.sales || 0} sold</span>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, Sparkles, Gift, Monitor, Gem, Shirt, Gamepad2, BookOpen, Zap, ChevronRight } from 'lucide-react';
+import SEO from '../../../shared/components/SEO';
 
 // Import Home Components
 import LazySection from '../components/vendor/home/LazySection';
@@ -17,27 +18,6 @@ import TrendingThisWeek from '../components/vendor/home/TrendingThisWeek';
 import CategoryProductsSection from '../components/vendor/CategoryProductsSection';
 import SaleBanner from '../components/vendor/SaleBanner';
 import BannerCarousel from '../components/vendor/BannerCarousel';
-
-// Import Assets
-import SamsungS24 from '../../../assets/products/product01.jpg';
-import EarbudsDeal from '../../../assets/products/product02.jpg';
-import LorealShampoo from '../../../assets/products/product03.jpg';
-import PlumShampoo from '../../../assets/products/product04.jpg';
-import LipGloss from '../../../assets/products/product05.jpg';
-import JewelleryImg from '../../../assets/products/product06.jpg';
-import FashionHero from '../../../assets/products/product07.jpg';
-import ElectronicsHero from '../../../assets/products/product08.jpg';
-import MakeupHero from '../../../assets/products/product09.jpg';
-import FashionTabProduct from '../../../assets/products/product10.jpg';
-import ForYouProduct from '../../../assets/products/product11.webp';
-import BeautyTab from '../../../assets/products/product12.jpg';
-import ToysTab from '../../../assets/products/product13.jpg';
-import StationeryTab from '../../../assets/products/product14.jpg';
-import ClothesImg from '../../../assets/products/product15.webp';
-import LipstickDeal from '../../../assets/products/product01.jpg';
-import Suitcase from '../../../assets/products/product02.jpg';
-import CardImg from '../../../assets/products/product03.jpg';
-import FashionTabImg from '../../../assets/products/product04.jpg';
 
 // Banner Assets
 
@@ -63,7 +43,7 @@ const Home = () => {
       { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: 'Special Festival Handicrafts' }
     ];
 
-    const homeBannerList = fallbackBanners;
+    const homeBannerList = mapHomeBanners(homeBanners, fallbackBanners);
 
     return {
       'Home': homeBannerList,
@@ -75,7 +55,7 @@ const Home = () => {
       'Cosmetics': homeBannerList,
       'Fashion': homeBannerList
     };
-  }, []);
+  }, [homeBanners]);
 
   const mainCategoriesList = useMemo(() => {
     const iconMap = {
@@ -102,19 +82,6 @@ const Home = () => {
     }));
   }, [homeChips]);
 
-  const data = useMemo(() => ({
-    ratings: [
-      { name: 'SONATA...', fullName: 'SONATA NP7987YM06W So...', date: 'Delivered on Apr 13, 2026', img: JewelleryImg },
-      { name: 'LAKME...', fullName: 'LAKME 9TO5 VITAMIN C+...', date: 'Delivered on Apr 10, 2026', img: MakeupHero }
-    ],
-    tabs: [
-      { label: 'You Buy', img: ForYouProduct },
-      { label: 'Stationery', img: StationeryTab },
-      { label: 'Fashion', img: FashionTabProduct },
-      { label: 'Beauty', img: BeautyTab },
-      { label: 'Toys', img: ToysTab }
-    ]
-  }), []);
 
   const handleTabClick = useCallback((label) => {
     if (label === 'Toys') {
@@ -127,7 +94,13 @@ const Home = () => {
   // Main horizontal category tabs (from admin category chips)
 
   return (
-    <div
+    <>
+      <SEO
+        title="Quick Commerce & Everyday Essentials"
+        description="Shop Mithilakart for groceries, fashion, electronics, beauty and authentic Mithila crafts — fast quick-commerce delivery and standard shipping, all in one place."
+        path="/home"
+      />
+      <div
       className="pb-2 overflow-x-hidden bg-transparent text-primary-dark"
       style={{
         WebkitBackfaceVisibility: 'hidden',
@@ -350,7 +323,8 @@ const Home = () => {
           <CategoryProductsSection selectedCategory={selectedCategory} />
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

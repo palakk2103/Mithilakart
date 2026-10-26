@@ -300,3 +300,17 @@ export const changePassword = async (data) => api.put('/settings/password', data
 
 export const updateNotificationPrefs = async (data) =>
   api.put('/settings/notifications', data);
+
+// ── CR-002 — FULFILLMENT OFFERS ───────────────────────────────────────────
+// Live offers addressed to this seller. Backend decides which seller is
+// offered an order; the panel only displays and responds.
+export const getFulfillmentOffers = async () => {
+  const data = await api.get('/fulfillment/offers');
+  return data?.items ?? [];
+};
+
+export const acceptFulfillmentOffer = (orderId, attemptId) =>
+  api.post(`/orders/${orderId}/accept`, { attemptId });
+
+export const rejectFulfillmentOffer = (orderId, attemptId, reason) =>
+  api.post(`/orders/${orderId}/reject`, { attemptId, reason });

@@ -25,6 +25,7 @@ const DeliveryRoutes = () => {
   return (
     <Routes>
       <Route path="auth" element={<DeliveryAuth />} />
+      <Route path="login" element={<Navigate to="/delivery/auth" replace />} />
       <Route path="signup" element={<DeliverySignup />} />
       <Route element={<DeliveryProtectedRoute />}>
         <Route path="dashboard" element={<DeliveryDashboard />} />
@@ -38,6 +39,7 @@ const DeliveryRoutes = () => {
         <Route path="about" element={<About />} />
         <Route path="" element={<Navigate to="dashboard" replace />} />
       </Route>
+      <Route path="*" element={<Navigate to="/delivery/auth" replace />} />
     </Routes>
   );
 };

@@ -6,7 +6,7 @@ import {
   Truck, Store, Key, Settings, ChevronDown, ChevronRight,
   UserPlus, DollarSign, BarChart3, HelpCircle, FileText, Image, LayoutGrid, Layout,
   Tag, Zap, MessageSquare, RotateCcw, Inbox,
-  Banknote, Percent, AlertCircle, CheckCircle2, Lock
+  Banknote, Percent, AlertCircle, CheckCircle2, Lock, SlidersHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchInput from '../../../shared/components/SearchInput';
@@ -108,6 +108,14 @@ const AdminLayout = () => {
           ]
         },
         { name: 'Orders', path: '/admin/orders', icon: <ShoppingCart size={18} /> },
+        {
+          name: 'Fulfillment',
+          icon: <SlidersHorizontal size={18} />,
+          subItems: [
+            { name: 'Monitor', path: '/admin/fulfillment' },
+            { name: 'Ranking Settings', path: '/admin/fulfillment/settings' },
+          ]
+        },
         {
           name: 'Returns & Refunds',
           icon: <RotateCcw size={18} />,

@@ -7,7 +7,7 @@ class FlashSaleProductRepository extends BaseRepository {
   }
 
   async findByFlashSale(flashSaleId) {
-    return this.find({ flashSaleId, deletedAt: null });
+    return this.model.find({ flashSaleId, deletedAt: null }).populate('productId').lean();
   }
 
   async findActiveForProduct(productId, now = new Date()) {
@@ -31,6 +31,38 @@ class FlashSaleProductRepository extends BaseRepository {
         },
       },
       { $limit: 1 },
+    ]);
+  }
+
+  async findActiveForProducts(productIds = [], now = new Date()) {
+    if (!productIds.length) return [];
+    const ids = productIds.map((id) => id);
+    return this.model.aggregate([
+      { $match: { productId: { $in: ids }, deletedAt: null } },
+      {
+        $lookup: {
+          from: 'flash_sales',
+          localField: 'flashSaleId',
+          foreignField: '_id',
+          as: 'sale',
+        },
+      },
+      { $unwind: '$sale' },
+      {
+        $match: {
+          'sale.isActive': true,
+          'sale.deletedAt': null,
+          'sale.startsAt': { $lte: now },
+          'sale.endsAt': { $gte: now },
+        },
+      },
+      { $sort: { salePrice: 1 } },
+      {
+        $group: {
+          _id: '$productId',
+          salePrice: { $first: '$salePrice' },
+        },
+      },
     ]);
   }
 }

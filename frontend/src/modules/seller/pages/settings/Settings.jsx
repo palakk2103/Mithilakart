@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Store, Landmark, Shield, Bell, Save, ArrowLeft } from 'lucide-react';
+import { Store, Landmark, Shield, Bell, Save, ArrowLeft, MapPin } from 'lucide-react';
 import { PageHeader } from '../../components/common';
 import { Card, Button, Toggle } from '../../components/ui';
 import {
@@ -24,10 +24,34 @@ const Settings = () => {
   const [notifications, setNotifications] = useState(defaultNotificationPrefs);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [detectingLocation, setDetectingLocation] = useState(false);
 
-  const { register: registerProfile, handleSubmit: handleProfileSubmit, reset: resetProfile } = useForm();
+  const { register: registerProfile, handleSubmit: handleProfileSubmit, reset: resetProfile, setValue: setProfileValue } = useForm();
   const { register: registerBank, handleSubmit: handleBankSubmit, reset: resetBank } = useForm();
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, reset: resetPassword } = useForm();
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setProfileValue('latitude', lat, { shouldDirty: true });
+        setProfileValue('longitude', lng, { shouldDirty: true });
+        toast.success(`Store location captured: ${lat}, ${lng}`);
+        setDetectingLocation(false);
+      },
+      (err) => {
+        toast.error('Could not detect live location. Please allow browser location access or enter coordinates manually.');
+        setDetectingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -40,7 +64,12 @@ const Settings = () => {
           storeName: profile?.storeName || '',
           email: profile?.email || '',
           phone: profile?.phone || '',
-          address: profile?.address || profile?.storeDescription || '',
+          address: profile?.addressLine || profile?.address || profile?.storeDescription || '',
+          city: profile?.city || '',
+          state: profile?.state || '',
+          pincode: profile?.pincode || '',
+          latitude: profile?.latitude ?? '',
+          longitude: profile?.longitude ?? '',
         });
         const bank = profile?.bankDetails || profile?.bank || {};
         resetBank({
@@ -171,11 +200,72 @@ const Settings = () => {
                     <input {...registerProfile('phone')} className={inputClass} />
                   </div>
                 </div>
-                <div>
-                  <label className={labelClass}>Store Address Description</label>
-                  <textarea {...registerProfile('address')} rows={3} className={inputClass} />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className={labelClass}>City</label>
+                    <input {...registerProfile('city')} placeholder="e.g. Indore" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>State</label>
+                    <input {...registerProfile('state')} placeholder="e.g. Madhya Pradesh" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Pincode</label>
+                    <input {...registerProfile('pincode')} placeholder="e.g. 452001" className={inputClass} />
+                  </div>
                 </div>
-                <div className="flex justify-end">
+
+                <div>
+                  <label className={labelClass}>Store Address Line</label>
+                  <textarea {...registerProfile('address')} rows={2} placeholder="Complete shop address for customer delivery and courier pickup" className={inputClass} />
+                </div>
+
+                {/* Store GPS Coordinates & Live Location Button */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        <MapPin size={16} className="text-emerald-600" /> Store GPS Location (For 10-30 min Quick Delivery)
+                      </h4>
+                      <p className="text-xs text-slate-500">Accurate store coordinates ensure nearby customers see live 10-30m delivery ETA</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDetectLocation}
+                      disabled={detectingLocation}
+                      className="text-xs shrink-0"
+                    >
+                      {detectingLocation ? 'Detecting GPS...' : '📍 Auto-Detect Live Store Location'}
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 block mb-1">Latitude</label>
+                      <input
+                        type="number"
+                        step="any"
+                        {...registerProfile('latitude')}
+                        placeholder="e.g. 22.7248"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 block mb-1">Longitude</label>
+                      <input
+                        type="number"
+                        step="any"
+                        {...registerProfile('longitude')}
+                        placeholder="e.g. 75.8839"
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
                   <Button type="submit" icon={Save}>Save Profile Details</Button>
                 </div>
               </form>

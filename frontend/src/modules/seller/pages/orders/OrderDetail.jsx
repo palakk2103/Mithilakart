@@ -2,10 +2,10 @@
  * Order Detail Page
  * Full order details with timeline, customer info, products, and invoice.
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Printer, Package, MapPin, CreditCard, User, Clock, CheckCircle2, Truck, ShoppingBag, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Printer, Package, MapPin, CreditCard, User, Clock, CheckCircle2, Truck, ShoppingBag, AlertCircle, FileText } from 'lucide-react';
 import { PageHeader, StatusBadge } from '../../components/common';
 import { Button, Card } from '../../components/ui';
 import { getOrder, updateOrderStatus, getShipmentLabel } from '../../services/sellerApi';
@@ -15,7 +15,10 @@ import toast from 'react-hot-toast';
 import DispatchDelayBanner from '../../../../shared/components/DispatchDelayBanner';
 import DispatchDelayTimer from '../../../../shared/components/DispatchDelayTimer';
 import { getDispatchSlaInfo } from '../../../../shared/utils/dispatchDelayUtils';
+import OrderInvoiceModal from '../../../../shared/components/OrderInvoiceModal';
+import PackingSlipModal from '../../../../shared/components/PackingSlipModal';
 
+// Base actions map — extended dynamically per order fulfillment type (Courier vs Hyperlocal)
 const STATUS_ACTIONS = {
   placed: [
     { label: 'Accept Order', status: 'confirmed', variant: 'primary' },
@@ -33,6 +36,8 @@ const OrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [showPackingSlipModal, setShowPackingSlipModal] = useState(false);
 
   const fetchOrder = async () => {
     try {
@@ -69,7 +74,53 @@ const OrderDetail = () => {
     }
   };
 
-  const availableActions = STATUS_ACTIONS[order?.status] || [];
+  const isCourierOrder = order?.fulfilmentType === 'courier' || order?.commerceFlow === 'standard' || order?.commerceFlow === 'mithilak';
+  const isEscalatedFromQuick = Boolean(
+    order?.fulfilmentType === 'courier' &&
+    (order?.commerceFlow === 'quick_shop' || order?.commerceFlow === 'fresh_grocery' || order?.marketplaceTab === 'quick_shop')
+  );
+  const isQuickHyperlocal = order?.fulfilmentType === 'local_delivery' || (!isCourierOrder && (order?.commerceFlow === 'quick_shop' || order?.commerceFlow === 'fresh_grocery'));
+
+  const availableActions = useMemo(() => {
+    if (!order?.status) return [];
+    if (order.status === 'placed') {
+      return [
+        { label: 'Accept Order', status: 'confirmed', variant: 'primary' },
+        { label: 'Reject Order', status: 'cancelled', variant: 'danger' },
+      ];
+    }
+    if (order.status === 'confirmed') {
+      return [
+        { label: 'Mark as Packed', status: 'packed', variant: 'primary' },
+      ];
+    }
+    if (order.status === 'packed') {
+      if (isCourierOrder) {
+        return [
+          { label: 'Handover to Courier (Mark Shipped)', status: 'shipped', variant: 'primary' },
+        ];
+      }
+      return [];
+    }
+    if (order.status === 'shipped') {
+      if (isCourierOrder) {
+        return [
+          { label: 'Mark Out for Delivery', status: 'out_for_delivery', variant: 'secondary' },
+          { label: 'Mark Delivered by Courier', status: 'delivered', variant: 'primary' },
+        ];
+      }
+      return [];
+    }
+    if (order.status === 'out_for_delivery') {
+      if (isCourierOrder) {
+        return [
+          { label: 'Confirm Delivered by Courier', status: 'delivered', variant: 'primary' },
+        ];
+      }
+      return [];
+    }
+    return [];
+  }, [order?.status, isCourierOrder]);
 
   useEffect(() => {
     fetchOrder();
@@ -126,74 +177,73 @@ const OrderDetail = () => {
     }
   };
 
-  const isCourierOrder = order.fulfilmentType === 'courier' || order.commerceFlow === 'standard' || order.commerceFlow === 'mithilak';
-
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-6">
       <PageHeader title={`Order #${order.orderNumber || order.id}`} subtitle={`Placed on ${formatDate(order.placedAt, 'long')}`}>
-        <Button variant="secondary" icon={ArrowLeft} onClick={() => navigate('/seller/orders')}>Back</Button>
-        <Button variant="secondary" icon={Printer} onClick={handlePrint}>Print Invoice</Button>
+        <Button variant="secondary" size="sm" icon={ArrowLeft} onClick={() => navigate('/seller/orders')}>Back</Button>
+        <Button variant="secondary" size="sm" icon={FileText} onClick={() => setShowPackingSlipModal(true)}>Packing Slip (KOT)</Button>
+        <Button variant="secondary" size="sm" icon={Printer} onClick={() => setShowInvoiceModal(true)}>Print Invoice</Button>
         {isCourierOrder && order.shipment?.labelUrl && (
-          <Button variant="secondary" icon={Truck} onClick={handleDownloadLabel}>Shipping Label</Button>
+          <Button variant="secondary" size="sm" icon={Truck} onClick={handleDownloadLabel}>Shipping Label</Button>
         )}
       </PageHeader>
 
       <DispatchDelayBanner order={order} role="seller" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           {/* Order Timeline */}
           <Card title="Order Timeline">
-            <div className="flex items-center justify-between mt-4 relative">
+            <div className="flex items-center justify-between mt-3 px-2 relative">
               {/* Progress Line */}
-              <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-100 z-0" />
-              <div className="absolute top-5 left-0 h-0.5 bg-[#2563EB] z-0"
-                   style={{ width: `${(timelineSteps.filter(s => s.done).length - 1) / (timelineSteps.length - 1) * 100}%` }} />
+              <div className="absolute top-4 left-4 right-4 h-0.5 bg-slate-100 z-0" />
+              <div className="absolute top-4 left-4 h-0.5 bg-slate-900 z-0 transition-all duration-300"
+                   style={{ width: `${(timelineSteps.filter(s => s.done).length - 1) / Math.max(1, timelineSteps.length - 1) * 100}%` }} />
 
               {timelineSteps.map((step) => (
                 <div key={step.label} className="flex flex-col items-center relative z-10">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-transform duration-200 ${
                     step.isWarning
-                      ? 'bg-red-500 border-red-500 text-white'
+                      ? 'bg-rose-500 border-rose-500 text-white'
                       : step.done
-                      ? 'bg-[#2563EB] border-[#2563EB] text-white'
-                      : 'bg-white border-gray-200 text-gray-300'
+                      ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
+                      : 'bg-white border-slate-200 text-slate-300'
                   }`}>
-                    <step.icon size={18} />
+                    <step.icon size={14} />
                   </div>
-                  <p className={`text-xs font-medium mt-2 ${step.isWarning ? 'text-red-600 font-bold' : step.done ? 'text-gray-900' : 'text-gray-400'}`}>{step.label}</p>
-                  {step.date && <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(step.date, 'short')}</p>}
+                  <p className={`text-[11px] font-bold mt-1.5 ${step.isWarning ? 'text-rose-600' : step.done ? 'text-slate-900' : 'text-slate-400'}`}>{step.label}</p>
+                  {step.date && <p className="text-[9.5px] text-slate-400 mt-0.2">{formatDate(step.date, 'short')}</p>}
                 </div>
               ))}
             </div>
           </Card>
 
           {/* Products */}
-          <Card title="Products">
-            <div className="space-y-3 mt-4">
+          <Card title="Ordered Items">
+            <div className="space-y-2.5 mt-2">
               {(order.products || []).map((product) => (
-                <div key={product.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-gray-100">
-                      <Package size={20} className="text-gray-300" />
+                <div key={product.id} className="flex items-center justify-between p-3 bg-slate-50/80 border border-slate-100 rounded-xl">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-200/60 shrink-0">
+                      <Package size={16} className="text-slate-400" />
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{product.title}</p>
-                      <p className="text-xs text-gray-400">Qty: {product.qty || product.quantity || 1}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate">{product.title}</p>
+                      <p className="text-[10.5px] text-slate-400">Qty: {product.qty || product.quantity || 1}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{formatCurrency((product.price || 0) * (product.qty || product.quantity || 1))}</p>
+                  <p className="text-xs font-black text-slate-900 shrink-0 pl-3">{formatCurrency((product.price || 0) * (product.qty || product.quantity || 1))}</p>
                 </div>
               ))}
             </div>
 
             {/* Price Summary */}
-            <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Subtotal</span><span className="text-gray-900">{formatCurrency(order.totalAmount || 0)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Shipping</span><span className="text-gray-900">{order.shippingCharge ? formatCurrency(order.shippingCharge) : 'Free'}</span></div>
-              {(order.discount || 0) > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500">Discount</span><span className="text-green-600">-{formatCurrency(order.discount)}</span></div>}
-              <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-100"><span>Total</span><span>{formatCurrency(order.finalAmount || order.totalAmount || 0)}</span></div>
+            <div className="mt-3.5 pt-3 border-t border-slate-100 space-y-1.5">
+              <div className="flex justify-between text-xs"><span className="text-slate-500">Subtotal</span><span className="font-semibold text-slate-800">{formatCurrency(order.totalAmount || 0)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-slate-500">Delivery Fee</span><span className="font-semibold text-slate-800">{order.shippingCharge ? formatCurrency(order.shippingCharge) : 'Free'}</span></div>
+              {(order.discount || 0) > 0 && <div className="flex justify-between text-xs"><span className="text-slate-500">Discount</span><span className="font-semibold text-emerald-600">-{formatCurrency(order.discount)}</span></div>}
+              <div className="flex justify-between text-sm font-black pt-2 border-t border-slate-100 text-slate-900"><span>Total</span><span>{formatCurrency(order.finalAmount || order.totalAmount || 0)}</span></div>
             </div>
           </Card>
 
@@ -233,14 +283,83 @@ const OrderDetail = () => {
               {order.trackingId && (
                 <p className="text-xs text-gray-400 mt-3">Tracking ID: <span className="font-mono text-gray-600">{order.trackingId}</span></p>
               )}
-              {isCourierOrder && order.shipment?.awb && (
-                <div className="text-xs text-gray-500 space-y-1 mt-3 pt-3 border-t border-gray-100">
-                  <p>AWB: <span className="font-mono text-gray-700">{order.shipment.awb}</span></p>
-                  {order.shipment.courierName && (
-                    <p>Courier: <span className="font-medium text-gray-700">{order.shipment.courierName}</span></p>
+              {isQuickHyperlocal && (
+                <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-3.5 text-xs text-emerald-950 space-y-2.5 mt-3 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1">
+                      ⚡ Hyperlocal Quick Delivery
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-200 text-emerald-900">
+                      ~10-15 Min
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-[11px] text-emerald-900">
+                    <p className="leading-relaxed">
+                      Local Delivery Partner will arrive at your store for pickup once packed.
+                    </p>
+                    {order.status === 'confirmed' && (
+                      <p className="text-amber-800 font-semibold">
+                        ⏳ Please prepare and pack items, then click "Mark as Packed".
+                      </p>
+                    )}
+                    {order.status === 'packed' && (
+                      <div className="p-2 rounded-xl bg-white/80 border border-emerald-300 font-medium text-emerald-800">
+                        📦 Order is packed. Waiting for assigned delivery rider to arrive for pickup.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isCourierOrder && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-xs text-slate-700 space-y-2.5 mt-3 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                      📦 National Courier Shipment
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${isEscalatedFromQuick ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {isEscalatedFromQuick ? 'Escalated from Quick' : 'Standard'}
+                    </span>
+                  </div>
+
+                  {isEscalatedFromQuick && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                      <p className="font-bold flex items-center gap-1">
+                        ⚠️ Quick-to-Standard Courier Escalation
+                      </p>
+                      <p className="text-[10.5px] leading-relaxed text-amber-800">
+                        Customer placed order in Quick Commerce, but local inventory/riders were unavailable. The system escalated to National Courier (Shiprocket). Please package with shipping label for courier pickup.
+                      </p>
+                    </div>
                   )}
-                  {order.shipment.status && (
-                    <p>Shipment: <span className="font-medium text-gray-700">{order.shipment.status.replace(/_/g, ' ')}</span></p>
+
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Courier Partner:</span>
+                      <span className="font-bold text-slate-900">{order.shipment?.courierName || 'Mithilakart Logistics / Shiprocket'}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">AWB Tracking:</span>
+                      <span className="font-mono font-bold text-emerald-700">{order.shipment?.awb || 'Auto-generated on confirmation'}</span>
+                    </div>
+                    {order.shipment?.status && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Courier Status:</span>
+                        <span className="font-semibold capitalize text-slate-800">{order.shipment.status.replace(/_/g, ' ')}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {order.shipment?.labelUrl && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={Truck}
+                      onClick={handleDownloadLabel}
+                      className="w-full mt-1"
+                    >
+                      Download Shipping Label
+                    </Button>
                   )}
                 </div>
               )}
@@ -301,6 +420,17 @@ const OrderDetail = () => {
           )}
         </div>
       </div>
+
+      <OrderInvoiceModal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        order={order}
+      />
+      <PackingSlipModal
+        isOpen={showPackingSlipModal}
+        onClose={() => setShowPackingSlipModal(false)}
+        order={order}
+      />
     </div>
   );
 };

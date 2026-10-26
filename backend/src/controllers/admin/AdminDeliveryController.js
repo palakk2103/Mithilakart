@@ -5,7 +5,7 @@ const { asyncHandler } = require('../../utils/asyncHandler');
 class AdminDeliveryController extends BaseController {
   constructor(adminDeliveryService) {
     super(adminDeliveryService);
-    this.bindMethods(['list', 'getById', 'approve', 'reject', 'suspend', 'create']);
+    this.bindMethods(['list', 'getById', 'approve', 'reject', 'suspend', 'create', 'getDues', 'settleDues']);
   }
 
   list = asyncHandler(async (req, res) => {
@@ -15,6 +15,20 @@ class AdminDeliveryController extends BaseController {
 
   getById = asyncHandler(async (req, res) => {
     const data = await this.service.getById(req.params.id);
+    return ApiResponse.success(res, data);
+  });
+
+  getDues = asyncHandler(async (req, res) => {
+    const data = await this.service.getDues(req.params.id);
+    return ApiResponse.success(res, data);
+  });
+
+  settleDues = asyncHandler(async (req, res) => {
+    const data = await this.service.settleDues(req.params.id, {
+      amount: req.body.amount,
+      notes: req.body.notes,
+      settledBy: req.user?.id || null,
+    });
     return ApiResponse.success(res, data);
   });
 

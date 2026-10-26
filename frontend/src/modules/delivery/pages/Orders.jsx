@@ -27,13 +27,15 @@ const mapAssignment = (assignment = {}) => {
   const order = assignment.order || assignment.orderId || {};
   const shipping = order.shippingAddress || order.addressSnapshot || assignment.shippingAddress || {};
   const pickup = order.pickupAddress || assignment.pickupAddress || {};
+  const pickupAddressStr = typeof pickup === 'string' && pickup !== 'Vendor location'
+    ? pickup
+    : (typeof pickup === 'object' && formatAddress(pickup)) || order.pickupAddress || assignment.pickupAddress || 'Vendor location';
   return {
     id: order.id || order._id || assignment.orderId || assignment._id,
+    storeName: order.storeName || assignment.storeName || 'Seller Hub',
     customer: shipping.name || order.customerName || assignment.customerName || 'Customer',
     address: formatAddress(shipping) || assignment.address || '—',
-    pickupAddress: typeof pickup === 'string'
-      ? pickup
-      : formatAddress(pickup) || assignment.pickupAddress || 'Vendor location',
+    pickupAddress: pickupAddressStr,
     items: order.itemCount || assignment.items || 1,
     distance: assignment.distance || '—',
     earning: assignment.earningAmount ?? assignment.earning ?? 0,
@@ -100,12 +102,13 @@ const SwipeAction = ({ children, onAccept, onDecline }) => {
 
       <motion.div
         drag="x"
+        dragElastic={0.8}
         dragConstraints={{ left: 0, right: 0 }}
         onDragEnd={(e, info) => {
-          if (info.offset.x > 100) onAccept();
-          if (info.offset.x < -100) onDecline();
+          if (info.offset.x > 40) onAccept();
+          if (info.offset.x < -40) onDecline();
         }}
-        className="relative z-10 cursor-grab active:cursor-grabbing bg-white border border-slate-100 shadow-sm rounded-2xl"
+        className="relative z-10 cursor-grab active:cursor-grabbing select-none touch-none bg-white border border-slate-100 shadow-sm rounded-2xl"
       >
         {children}
       </motion.div>
@@ -150,6 +153,14 @@ const DeliveryOrders = () => {
   useDeliverySocket((payload) => {
     if (payload?.type === 'new_assignment') {
       toast.success(`New delivery assignment${payload.orderNumber ? `: ${payload.orderNumber}` : ''}`);
+    } else if (payload?.type === 'assignment_withdrawn') {
+      toast('Order was accepted by another delivery partner', { icon: 'ℹ️' });
+      if (payload.orderId) {
+        setOrders(prev => ({
+          ...prev,
+          pending: prev.pending.filter(o => String(o.id) !== String(payload.orderId) && String(o.orderId) !== String(payload.orderId)),
+        }));
+      }
     }
     loadOrders();
   });

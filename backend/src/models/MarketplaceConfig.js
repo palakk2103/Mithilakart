@@ -19,6 +19,18 @@ const marketplaceConfigSchema = new mongoose.Schema(
     },
     minCartValue: { type: Number, default: 0 },
     serviceablePincodes: { type: [String], default: [] },
+
+    /**
+     * CR-002 — per-tab overrides. null means "inherit the platform setting".
+     * Resolution order: this -> PlatformSetting -> DEFAULT_PLATFORM_SETTINGS.
+     */
+    fulfillmentOverrides: {
+      sellerSearchRadiusKm: { type: Number, default: null },
+      quickFulfillmentSearchTimeoutSeconds: { type: Number, default: null },
+      sellerAcceptanceTimeoutSeconds: { type: Number, default: null },
+      warehouseFallbackEnabled: { type: Boolean, default: null },
+      courierFallbackEnabled: { type: Boolean, default: null },
+    },
   },
   {
     timestamps: true,

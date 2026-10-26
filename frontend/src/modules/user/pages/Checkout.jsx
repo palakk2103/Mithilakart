@@ -10,7 +10,8 @@ import useAccountStore from '../../../store/useAccountStore';
 import { createOrder, initiatePayment, verifyPayment, validateCoupon } from '../services/ordersApi';
 import { checkShippingServiceability } from '../services/shippingApi';
 import { getAddresses } from '../services/userApi';
-import { fetchCartItems, getMarketplaceTab, clearCart, dispatchCartUpdated } from '../utils/cartUtils';
+import { fetchCartItems, getCommerceFlow, getMarketplaceTab, clearCart, dispatchCartUpdated } from '../utils/cartUtils';
+import { getStorefrontConfig } from '../services/storefrontApi';
 import { openRazorpayCheckout } from '../../../shared/services/razorpay';
 import { toast } from 'react-hot-toast';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
@@ -51,6 +52,8 @@ const Checkout = () => {
   const [loading, setLoading] = useState(true);
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [platformFee, setPlatformFee] = useState(0);
+  const [taxAmount, setTaxAmount] = useState(0);
   const [courierServiceable, setCourierServiceable] = useState(null);
   const [checkingServiceability, setCheckingServiceability] = useState(false);
 
@@ -62,7 +65,23 @@ const Checkout = () => {
     const load = async () => {
       if (location.state?.product) {
         if (!cancelled) {
-          setCheckoutItems([location.state.product]);
+          const buyProduct = location.state.product;
+          setCheckoutItems([buyProduct]);
+          try {
+            const config = await getStorefrontConfig();
+            const threshold = Number(config?.freeShippingThreshold) || 500;
+            const fee = Number(config?.defaultDeliveryCharge) || 39;
+            const pFee = Number(config?.platformFee) || 0;
+            const tRate = Number(config?.taxRate) || 0;
+            const itemSubtotal = (Number(buyProduct.price) || 0) * (Number(buyProduct.quantity || buyProduct.qty) || 1);
+            setDeliveryFee(itemSubtotal >= threshold ? 0 : fee);
+            setPlatformFee(pFee);
+            setTaxAmount(Math.round(itemSubtotal * tRate * 100) / 100);
+          } catch {
+            setDeliveryFee(39);
+            setPlatformFee(0);
+            setTaxAmount(0);
+          }
           setLoading(false);
         }
         return;
@@ -73,11 +92,15 @@ const Checkout = () => {
         if (!cancelled) {
           setCheckoutItems(items.length ? items : []);
           setDeliveryFee(Number(cart?.deliveryCharge ?? cart?.shippingFee ?? 0) || 0);
+          setPlatformFee(Number(cart?.platformFee ?? 0) || 0);
+          setTaxAmount(Number(cart?.tax ?? 0) || 0);
         }
       } catch {
         if (!cancelled) {
           setCheckoutItems([]);
           setDeliveryFee(0);
+          setPlatformFee(0);
+          setTaxAmount(0);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -194,7 +217,7 @@ const Checkout = () => {
     window.scrollTo(0, 0);
   }, [currentStep]);
 
-  const payableTotal = Math.max(0, totalPrice + deliveryFee - couponDiscount);
+  const payableTotal = Math.max(0, totalPrice + deliveryFee + platformFee + taxAmount - couponDiscount);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -239,11 +262,52 @@ const Checkout = () => {
 
         const paymentMethod = PAYMENT_METHOD_MAP[selectedPayment] || 'upi';
 
+        // Detect cart commerce flow and marketplace tab from cart items
+        let resolvedFlow = isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'fresh_grocery' : getCommerceFlow();
+        let resolvedTab = getMarketplaceTab();
+
+        const hasQuickItem = checkoutItems.some((it) =>
+          it.marketplaceTab === 'quick_shop' ||
+          it.commerceFlow === 'quick_shop' ||
+          it.commerceFlows?.includes('quick_shop')
+        );
+        const hasGroceryItem = checkoutItems.some((it) =>
+          it.marketplaceTab === 'groceries_fresh' ||
+          it.commerceFlow === 'fresh_grocery' ||
+          it.commerceFlows?.includes('fresh_grocery')
+        );
+        const hasMithilakItem = checkoutItems.some((it) =>
+          it.marketplaceTab === 'mithilak' ||
+          it.commerceFlow === 'mithilak' ||
+          it.commerceFlows?.includes('mithilak')
+        );
+
+        if (hasQuickItem) {
+          resolvedFlow = 'quick_shop';
+          resolvedTab = 'quick_shop';
+        } else if (hasGroceryItem) {
+          resolvedFlow = 'fresh_grocery';
+          resolvedTab = 'groceries_fresh';
+        } else if (hasMithilakItem) {
+          resolvedFlow = 'mithilak';
+          resolvedTab = 'mithilak';
+        }
+
+        const buyNowItem = location.state?.product;
+        const buyNowItems = buyNowItem ? [
+          {
+            productId: buyNowItem._id || buyNowItem.id,
+            variantId: buyNowItem.variantId || null,
+            quantity: Number(buyNowItem.quantity || buyNowItem.qty) || 1,
+          }
+        ] : null;
+
         const result = await createOrder({
           addressId,
           paymentMethod,
-          commerceFlow: isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'fresh_grocery' : 'standard',
-          marketplaceTab: getMarketplaceTab(),
+          commerceFlow: resolvedFlow,
+          marketplaceTab: resolvedTab,
+          ...(buyNowItems ? { items: buyNowItems } : {}),
           ...(couponApplied && couponCode ? { couponCode: couponCode.trim().toUpperCase() } : {}),
         });
 
@@ -254,7 +318,9 @@ const Checkout = () => {
             ? result.payment
             : await initiatePayment({ orderId: result.orderId, paymentMethod });
 
-          if (paymentInit.paymentStatus === 'paid' || paymentInit.mockPayment || paymentInit.provider === 'mock') {
+          if (paymentInit.paymentStatus === 'paid') {
+            paymentStatus = 'paid';
+          } else if (import.meta.env.DEV && (paymentInit.mockPayment || paymentInit.provider === 'mock')) {
             paymentStatus = 'paid';
           } else if (paymentInit.keyId) {
             const razorpayResult = await openRazorpayCheckout({
@@ -402,13 +468,19 @@ const Checkout = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-[13.5px] font-black text-slate-800 line-clamp-1 leading-snug">{item.name}</h4>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-0.5">{item.brand || 'Premium Brand'}</p>
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <div className="flex items-center bg-green-700 text-white px-1.5 py-0.5 rounded-full text-[9px] font-black">
-                    {item.rating || '4.3'} <Star size={7} fill="white" className="ml-0.5" />
+                {item.brand && (
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-0.5">{item.brand}</p>
+                )}
+                {item.rating > 0 && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <div className="flex items-center bg-green-700 text-white px-1.5 py-0.5 rounded-full text-[9px] font-black">
+                      {item.rating} <Star size={7} fill="white" className="ml-0.5" />
+                    </div>
+                    {item.reviewCount > 0 && (
+                      <span className="text-[10.5px] text-slate-400 font-bold">({item.reviewCount} {t('home.ratingsTitle').toLowerCase()})</span>
+                    )}
                   </div>
-                  <span className="text-[10.5px] text-slate-400 font-bold">({item.reviews || '120'} {t('home.ratingsTitle').toLowerCase()})</span>
-                </div>
+                )}
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <span className="text-[16px] font-black text-slate-900">{formatPrice(item.price)}</span>
                   {item.oldPrice && <span className="text-[13px] text-slate-405 line-through">{t('product.mrp')} {formatPrice(item.oldPrice)}</span>}
@@ -423,7 +495,25 @@ const Checkout = () => {
             </div>
             <div className="flex items-center gap-2 pt-3.5 border-t border-slate-50 mt-4">
               <Truck size={16} className={primaryText} />
-              <p className="text-[12px] text-slate-800 font-medium"><span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>Quick</span> {t('checkout.deliveryText') || 'Delivery in 2 days'}</p>
+              <p className="text-[12px] text-slate-800 font-medium">
+                {item.deliveryEtaText ? (
+                  <>
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in {item.deliveryEtaText}
+                  </>
+                ) : item.deliveryPromiseMinutes ? (
+                  <>
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in {item.deliveryPromiseMinutes} mins
+                  </>
+                ) : isQuickShopFlow ? (
+                  <>
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in 15-30 mins
+                  </>
+                ) : (
+                  <>
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>Standard</span> {t('checkout.deliveryText') || 'Estimated delivery in 2-4 business days'}
+                  </>
+                )}
+              </p>
             </div>
           </div>
         ))}
@@ -459,9 +549,23 @@ const Checkout = () => {
           <span className="text-slate-800 font-black">{formatPrice(totalOldPrice)}</span>
         </div>
         <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-          <span>{t('checkout.platformFees') || 'Platform Fees'}</span>
-          <span className="text-slate-800 font-black">{formatPrice(deliveryFee)}</span>
+          <span>{t('checkout.deliveryCharges') || 'Delivery Charges'}</span>
+          <span className={deliveryFee === 0 ? "text-emerald-600 font-black uppercase text-xs" : "text-slate-800 font-black"}>
+            {deliveryFee === 0 ? (t('cart.free') || 'FREE') : formatPrice(deliveryFee)}
+          </span>
         </div>
+        {platformFee > 0 && (
+          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
+            <span>{t('checkout.platformFees') || 'Platform Fee'}</span>
+            <span className="text-slate-800 font-black">{formatPrice(platformFee)}</span>
+          </div>
+        )}
+        {taxAmount > 0 && (
+          <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
+            <span>Taxes & GST</span>
+            <span className="text-slate-800 font-black">{formatPrice(taxAmount)}</span>
+          </div>
+        )}
         {couponDiscount > 0 && (
           <div className="flex justify-between items-center text-[13px] text-green-700 font-bold">
             <span>Coupon Discount</span>
@@ -494,30 +598,9 @@ const Checkout = () => {
     <div className="animate-in fade-in slide-in-from-right duration-300 pb-32">
       {/* Price Summary Card */}
       <div className="bg-[#f4faf6] px-4 py-4 border border-[#e1f0e7] shadow-[0_4px_16px_rgba(8,66,36,0.02)] mx-4 mt-2 rounded-[24px]">
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center">
           <span className="text-[13.5px] font-black text-slate-600">Total Amount</span>
           <span className="text-[18px] font-black text-slate-900 tracking-tight">{formatPrice(payableTotal)}</span>
-        </div>
-        <div className="flex justify-between items-center mb-3 border-t border-slate-200/50 pt-3">
-          <span className="text-[13px] text-slate-400 font-bold border-b border-dashed border-slate-350">Bank cashback</span>
-          <span className="text-[14px] font-black text-green-705">-₹50</span>
-        </div>
-        <div className="flex justify-between items-center border-t border-slate-100 pt-3">
-          <span className="text-[13.5px] font-black text-slate-650">Final Amount</span>
-          <span className="text-[17px] font-black text-slate-800">{formatPrice(Math.max(0, payableTotal - 50))}</span>
-        </div>
-      </div>
-
-      {/* Cashback Banner */}
-      <div className="bg-emerald-50/40 px-4 py-3 border border-emerald-100 mx-4 mt-3 rounded-[20px] flex items-center justify-between shadow-2xs">
-        <div className="flex flex-col">
-          <span className="text-[13px] font-black text-emerald-800">5% Cashback Applied</span>
-          <span className="text-[11px] text-emerald-700/80 font-semibold">Claimed automatically with payment offers</span>
-        </div>
-        <div className="flex items-center gap-1 bg-white px-2 py-1.5 rounded-full shadow-2xs border border-slate-100">
-           <div className="w-5 h-5 bg-orange-50 rounded-full flex items-center justify-center text-[7px] font-black text-orange-600 italic">IC</div>
-           <div className="w-5 h-5 bg-emerald-50 rounded-full flex items-center justify-center text-[7px] font-black text-emerald-800 italic">M</div>
-           <span className="text-[9.5px] font-black text-slate-400 ml-0.5">+3</span>
         </div>
       </div>
 
@@ -557,16 +640,12 @@ const Checkout = () => {
                              <span className="text-[13.5px] font-black text-slate-850">Paytm</span>
                              <span className={`text-[11px] font-black tracking-widest ${primaryText} uppercase`}>Paytm</span>
                           </div>
-                          <div className="flex items-center gap-1 mt-1">
-                             <CheckCircle size={10} className="text-green-700" />
-                             <span className="text-[10.5px] text-green-700 font-black">₹50 cashback applicable. Tap for info</span>
-                          </div>
                           {selectedUpi === 'paytm' && (
-                             <button 
+                             <button
                                 onClick={handleContinue}
                                 className={`w-full ${primaryBgHover} text-white py-3.5 rounded-full font-black uppercase text-[12px] tracking-widest mt-4 shadow-md active:scale-95 transition-transform`}
                              >
-                               Pay {formatPrice(Math.max(0, payableTotal - 50))}
+                               Pay {formatPrice(payableTotal)}
                              </button>
                           )}
                        </div>
@@ -599,7 +678,6 @@ const Checkout = () => {
                 <CreditCard size={18} className="text-slate-800" />
                 <div className="flex flex-col">
                   <h3 className="text-[14px] font-black text-slate-850">Credit / Debit / ATM Card</h3>
-                  <p className="text-[10px] text-green-700 font-black mt-0.5">Get upto 5% cashback • 2 offers available</p>
                 </div>
              </div>
              <ChevronRight size={18} className={`text-slate-400 transition-transform ${selectedPayment === 'CARD' ? 'rotate-90' : ''}`} />
@@ -639,7 +717,7 @@ const Checkout = () => {
              <div className="px-4 pb-5 pt-1 animate-in slide-in-from-top duration-200">
                 <div className="border border-slate-100 rounded-2xl p-5 bg-white">
                   <p className="text-[11.5px] text-slate-400 font-bold leading-relaxed mb-4">
-                    Due to handling costs, a nominal fee of ₹9 will be charged for orders placed using this option. Avoid this fee by paying online now.
+                    A Cash on Delivery handling fee may apply and will be shown in your order total before you place the order.
                   </p>
                   <button 
                     onClick={handleContinue}
@@ -796,7 +874,7 @@ const Checkout = () => {
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Amount</span>
           <div className="flex items-baseline gap-1">
             <span className="text-[18px] font-black text-slate-900">
-              {currentStep === 3 ? formatPrice(Math.max(0, payableTotal - 50)) : formatPrice(payableTotal)}
+              {formatPrice(payableTotal)}
             </span>
           </div>
         </div>

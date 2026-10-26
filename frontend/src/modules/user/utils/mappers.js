@@ -40,8 +40,8 @@ export const calcDiscountLabel = (price, mrp) => {
 
 export const mapProductForCard = (product, fallbackImage = '') => {
   const rawId = getEntityId(product);
-  const listingId = product.listingId || (product.marketplaceTab ? rawId : undefined);
-  const productId = product.productId || (!product.marketplaceTab ? rawId : undefined);
+  const listingId = product.listingId || undefined;
+  const productId = product.productId || rawId;
   const price = product.price ?? product.salePrice ?? 0;
   const mrp = product.mrp ?? product.oldPrice ?? product.mrp;
 
@@ -50,22 +50,29 @@ export const mapProductForCard = (product, fallbackImage = '') => {
     listingId,
     productId,
     marketplaceTab: product.marketplaceTab,
+    commerceFlows: product.commerceFlows || (product.marketplaceTab ? [product.marketplaceTab] : []),
     deliveryPromiseMinutes: product.deliveryPromiseMinutes,
     deliveryLabel: product.deliveryLabel,
+    deliveryEtaText: product.deliveryEtaText || (product.deliveryPromiseMinutes ? `${product.deliveryPromiseMinutes} mins` : undefined),
+    pickupCoordinates: product.pickupCoordinates || null,
+    city: product.city || null,
     title: product.title || product.name || 'Product',
     name: product.title || product.name || 'Product',
     brand: product.brand || '',
     price: formatDisplayPrice(price),
     oldPrice: mrp ? formatDisplayPrice(mrp) : undefined,
     mrp: mrp ? formatDisplayPrice(mrp) : undefined,
-    rating: String(product.rating ?? '4.2'),
-    reviews: String(product.reviewCount ?? product.reviews ?? '120'),
-    reviewCount: product.reviewCount ?? product.reviews ?? 0,
+    // Real rating/review data only — a product with none shows no badge
+    // rather than a fabricated "4.2 (120)".
+    rating: product.rating > 0 ? Number(product.rating) : 0,
+    reviewCount: product.reviewCount > 0 ? Number(product.reviewCount) : 0,
     image: getProductImage(product, fallbackImage),
     img: getProductImage(product, fallbackImage),
     discount: product.discount || calcDiscountLabel(price, mrp),
     off: product.off || product.discount || calcDiscountLabel(price, mrp),
-    delivery: product.deliveryLabel || product.delivery || 'Tomorrow',
+    // Delivery promise must come from the backend (courier serviceability /
+    // fulfillment ETA) — never fabricated here. undefined when not provided.
+    delivery: product.deliveryLabel || product.delivery || undefined,
     stock: product.stock ?? product.availableStock,
     categoryId: product.categoryId,
   };
@@ -80,6 +87,10 @@ export const mapProductForDetail = (product, fallbackImage = '') => {
     ...card,
     name: card.title,
     description: product.description || '',
+    commerceFlows: product.commerceFlows || card.commerceFlows || [],
+    deliveryEtaText: product.deliveryEtaText || card.deliveryEtaText || undefined,
+    pickupCoordinates: product.pickupCoordinates || card.pickupCoordinates || null,
+    city: product.city || card.city || null,
     images: Array.isArray(product.images)
       ? product.images.map((img) => (typeof img === 'string' ? img : img.url)).filter(Boolean)
       : [card.image].filter(Boolean),
@@ -116,6 +127,8 @@ export const mapOrderForList = (order) => ({
   orderNumber: order.orderNumber || getEntityId(order),
   mongoId: getEntityId(order),
   status: order.status || 'Pending',
+  createdAt: order.createdAt || null,
+  placedAt: order.createdAt || null,
   date: order.createdAt
     ? new Date(order.createdAt).toLocaleDateString('en-GB', {
         day: 'numeric',
@@ -157,6 +170,8 @@ export const mapOrderDetail = (data) => {
     orderNumber: order.orderNumber || getEntityId(order),
     status: formatStatus(order.status),
     rawStatus: order.status || 'pending',
+    createdAt: order.createdAt || data?.createdAt || null,
+    placedAt: order.createdAt || data?.createdAt || null,
     date: order.createdAt
       ? new Date(order.createdAt).toLocaleDateString('en-GB', {
           day: 'numeric',
@@ -172,6 +187,10 @@ export const mapOrderDetail = (data) => {
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     fulfilmentType: order.fulfilmentType,
+    fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+    commerceFlow: order.commerceFlow || data?.commerceFlow || null,
+    fulfillment: order.fulfillment || data?.fulfillment || null,
+    deliveryMode: order.fulfillment?.deliveryMode || order.deliveryMode || null,
     address: {
       name: addr.name || '',
       phone: addr.phone || '',
@@ -197,6 +216,7 @@ export const mapOrderDetail = (data) => {
     assignment: data?.assignment || null,
     partnerLocation: data?.partnerLocation || null,
     destination: data?.destination || null,
+    deliveryOtp: data?.deliveryOtp || data?.assignment?.deliveryOtp || null,
   };
 };
 
@@ -204,15 +224,29 @@ export const mapCategorySections = (categories, fallbackSections = []) => {
   const list = extractList(categories);
   if (!list.length) return fallbackSections;
 
-  return list.map((cat) => ({
-    title: cat.name,
-    items: (cat.children || []).map((child) => ({
-      name: child.name,
-      img: child.imageUrl || child.iconUrl || cat.imageUrl || '',
-      path: `/vendor/category-products?category=${encodeURIComponent(child.name)}`,
-      id: getEntityId(child),
-    })),
-  }));
+  return list.map((cat) => {
+    const rawChildren = Array.isArray(cat.children) ? cat.children : [];
+    const items = rawChildren.length > 0
+      ? rawChildren.map((child) => ({
+          name: child.name,
+          img: getImageUrl(child.imageUrl || child.iconUrl || cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
+          path: `/vendor/category-products?category=${encodeURIComponent(child.name)}`,
+          id: getEntityId(child),
+        }))
+      : [
+          {
+            name: cat.name,
+            img: getImageUrl(cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
+            path: `/vendor/category-products?category=${encodeURIComponent(cat.name)}`,
+            id: getEntityId(cat),
+          },
+        ];
+
+    return {
+      title: cat.name,
+      items,
+    };
+  });
 };
 
 export const findCategoryByName = (categories, name) => {
@@ -398,13 +432,24 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
       };
     });
 
-    result[key] = result[key]?.length ? result[key] : mappedProducts;
+    result[key] = mappedProducts.length ? mappedProducts : (result[key] || []);
   });
 
   return result;
 };
 
-export const mapHomeBanners = () => {
+export const mapHomeBanners = (banners, fallback = []) => {
+  if (Array.isArray(banners) && banners.length > 0) {
+    return banners.map((b, idx) => ({
+      id: b.id || b._id || `banner-${idx}`,
+      image: b.imageUrl || b.image || b.mobileImageUrl || '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png',
+      title: b.title || b.name || 'Mithilakart Special',
+      link: b.linkUrl || b.link || b.actionUrl || '',
+    }));
+  }
+  if (Array.isArray(fallback) && fallback.length > 0) {
+    return fallback;
+  }
   return [
     { id: 'g1', image: '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png', title: 'Shop More Save More' },
     { id: 'g2', image: '/Gemini_Generated_Image_rhy76srhy76srhy7.png', title: 'Authentic Mithila Artistry' },

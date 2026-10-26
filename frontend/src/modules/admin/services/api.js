@@ -187,6 +187,8 @@ export const financeApi = {
 export const deliveryApi = {
   getAll: (params) => asyncHandler(() => api.get('/delivery', { params })),
   getById: (id) => asyncHandler(() => api.get(`/delivery/${id}`)),
+  getDues: (id) => asyncHandler(() => api.get(`/delivery/${id}/dues`)),
+  settleDues: (id, data) => asyncHandler(() => api.post(`/delivery/${id}/settle-dues`, data)),
   create: (data) => asyncHandler(() => api.post('/delivery', data)),
   approve: (id) => asyncHandler(() => api.patch(`/delivery/${id}/approve`)),
   reject: (id) => asyncHandler(() => api.patch(`/delivery/${id}/reject`)),
@@ -263,6 +265,19 @@ export const contentApi = {
   moderateReview: (id, action, note) => asyncHandler(() => api.patch(`/content/reviews/${id}`, { action, note })),
   getQuestions: (params) => asyncHandler(() => api.get('/content/qna', { params })),
   moderateQuestion: (id, action) => asyncHandler(() => api.patch(`/content/qna/${id}`, { action })),
+};
+
+
+// ── CR-002 — FULFILLMENT CONFIG & MONITORING ──────────────────────────────
+// Validating facade over the same platform settings store; the backend
+// rejects out-of-range values rather than clamping them.
+export const fulfillmentApi = {
+  getSettings: (tab) => asyncHandler(() => api.get('/fulfillment/settings', { params: tab ? { tab } : {} })),
+  updateSettings: (updates) => asyncHandler(() => api.put('/fulfillment/settings', updates)),
+  list: (params) => asyncHandler(() => api.get('/fulfillment/orders', { params })),
+  getDetail: (orderId) => asyncHandler(() => api.get(`/fulfillment/orders/${orderId}`)),
+  retry: (orderId) => asyncHandler(() => api.post(`/fulfillment/orders/${orderId}/retry`)),
+  forceCourier: (orderId) => asyncHandler(() => api.post(`/fulfillment/orders/${orderId}/force-courier`)),
 };
 
 const adminApi = {

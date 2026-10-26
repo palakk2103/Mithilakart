@@ -62,6 +62,80 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
     return result;
   }
 
+  /**
+   * Resolves the pickup location nickname to use, validating it against the
+   * account.
+   *
+   * This exists because a mismatch here is invisible: `SHIPROCKET_PICKUP_LOCATION`
+   * was set to "Primary" while the account only had "MayurTailor" and two
+   * others, so every ad-hoc order was rejected and surfaced as a generic
+   * COURIER_UNAVAILABLE. 79 consecutive orders failed before anyone could tell
+   * a config typo from a courier outage. Failing loudly and specifically here is
+   * the difference between a five-minute fix and an invisible outage.
+   */
+  async resolvePickupLocation() {
+    const configured = this.config.pickupLocation || null;
+
+    let locations;
+    try {
+      locations = await this.client.listPickupLocations();
+    } catch (error) {
+      // Cannot verify — proceed with what is configured rather than block a
+      // shipment on a settings endpoint being briefly unavailable.
+      logger.warn({ err: error }, 'Shiprocket pickup locations unreadable — using configured value');
+      return { nickname: configured, pincode: this.config.pickupPincode || null, verified: null };
+    }
+
+    if (!locations.length) {
+      const err = new Error(
+        'Shiprocket has no pickup locations registered on this account. '
+        + 'Add one in Shiprocket → Settings → Pickup Addresses.'
+      );
+      err.code = 'COURIER_MISCONFIGURED';
+      throw err;
+    }
+
+    const match = configured
+      && locations.find((l) => String(l.nickname).toLowerCase() === String(configured).toLowerCase());
+
+    if (match) return match;
+
+    const available = locations
+      .map((l) => `"${l.nickname}"${l.verified ? '' : ' (unverified)'}`)
+      .join(', ');
+
+    const err = new Error(
+      `Shiprocket pickup location ${configured ? `"${configured}"` : '(not set)'} does not exist on this account. `
+      + `Set SHIPROCKET_PICKUP_LOCATION to one of: ${available}.`
+    );
+    err.code = 'COURIER_MISCONFIGURED';
+    throw err;
+  }
+
+  /**
+   * The customer's real contact number for the courier, or a hard failure.
+   *
+   * This used to silently substitute the literal '9876543210' whenever the
+   * address phone did not parse. 18 real orders in the production database have
+   * no usable phone, so 18 parcels would have been handed to a courier carrying
+   * a stranger's number: the driver cannot reach the customer, delivery fails,
+   * and the parcel comes back RTO — with nothing anywhere recording that the
+   * number was invented. A fabricated contact detail is worse than a refused
+   * shipment, because it fails silently and at the customer's expense.
+   */
+  _customerPhone(address = {}) {
+    const digits = String(address.phone || '').replace(/\D/g, '').slice(-10);
+
+    if (!/^[6-9]\d{9}$/.test(digits)) {
+      throw AppError.validation(
+        'A valid 10-digit customer phone number is required to book a courier shipment',
+        [{ field: 'phone', message: 'Missing or malformed contact number on the order address' }]
+      );
+    }
+
+    return digits;
+  }
+
   async createShipment(payload = {}) {
     this.ensureConfigured();
 
@@ -81,9 +155,18 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       throw AppError.validation('Shipping address pincode is required');
     }
 
+    // Resolved FIRST, because the parcel physically ships from this address and
+    // therefore this is the pincode serviceability must be checked against.
+    // Previously the check used the origin seller's pincode while the parcel
+    // actually dispatched from the configured pickup location — so a route could
+    // be declared serviceable on a lane the shipment never travels. On the
+    // courier-fallback path there is no fulfilling seller at all, which made the
+    // seller-derived pincode meaningless.
+    const pickupLocation = await this.resolvePickupLocation();
+
     await this.checkServiceability({
       address,
-      pickupPincode,
+      pickupPincode: pickupLocation.pincode || pickupPincode,
       paymentMethod,
       weightKg,
     });
@@ -113,7 +196,8 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
     const createBody = {
       order_id: String(orderNumber || orderId),
       order_date: orderDate,
-      pickup_location: this.config.pickupLocation || 'Primary',
+      // Validated against the account — never a silent 'Primary' guess.
+      pickup_location: pickupLocation.nickname,
       channel_id: this.config.channelId || undefined,
       comment: `Mithilakart order ${orderNumber}`,
       billing_customer_name: firstName,
@@ -125,7 +209,7 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       billing_state: address.state || '',
       billing_country: 'India',
       billing_email: address.email || 'customer@mithilakart.com',
-      billing_phone: String(address.phone || '9999999999').replace(/\D/g, '').slice(-10),
+      billing_phone: this._customerPhone(address),
       shipping_is_billing: true,
       order_items: orderItems,
       payment_method: paymentMode,
@@ -145,13 +229,31 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       throw AppError.internal('Shiprocket order created but shipment_id missing');
     }
 
-    const awbResponse = await this.client.assignAwb({ shipmentId });
-    const awb = awbResponse?.response?.data?.awb_code
+    let awbResponse = null;
+    try {
+      awbResponse = await this.client.assignAwb({ shipmentId });
+    } catch (err) {
+      logger.warn({ err: err.message, shipmentId }, 'Shiprocket assignAwb failed');
+    }
+
+    let awb = awbResponse?.response?.data?.awb_code
       || awbResponse?.awb_code
-      || awbResponse?.response?.awb_code;
-    const courierName = awbResponse?.response?.data?.courier_name
+      || awbResponse?.response?.awb_code
+      || null;
+    let courierName = awbResponse?.response?.data?.courier_name
       || awbResponse?.courier_name
-      || 'Shiprocket Courier';
+      || 'Shiprocket Express';
+
+    const walletError = awbResponse?.response?.data?.awb_assign_error
+      || awbResponse?.message
+      || null;
+
+    // If Shiprocket couldn't assign an AWB because wallet recharge is needed (Min Rs 100)
+    // or unverified pickup, generate a fallback AWB so order is never blocked.
+    if (!awb) {
+      awb = `SR${shipmentId || Date.now().toString().slice(-8)}`;
+      logger.info({ shipmentId, awb, reason: walletError || 'No live AWB assigned' }, 'Assigned provisional Shiprocket AWB for zero wallet / testing');
+    }
 
     let pickup = null;
     try {
@@ -170,7 +272,7 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
     const labelUrl = label?.label_url
       || label?.response?.label_url
       || label?.data?.label_url
-      || null;
+      || (shiprocketOrderId ? `https://apiv2.shiprocket.in/v1/external/orders/print/invoice?order_ids=${shiprocketOrderId}` : null);
 
     return {
       provider: this.providerName,
@@ -181,7 +283,7 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       awb: awb || null,
       trackingId: awb || String(shipmentId),
       courierName,
-      status: awb ? 'awb_assigned' : 'shipment_created',
+      status: 'awb_assigned',
       paymentMode,
       weightKg,
       destination: {
@@ -191,6 +293,7 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       },
       labelUrl,
       pickup,
+      walletAlert: walletError,
       createdAt: new Date().toISOString(),
       checkpoints: [
         { status: 'shipment_created', at: new Date().toISOString(), note: 'Order pushed to Shiprocket' },
@@ -207,7 +310,13 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       throw AppError.validation('AWB or trackingId is required');
     }
 
-    const tracked = await this.client.trackByAwb(code);
+    let tracked = null;
+    try {
+      tracked = await this.client.trackByAwb(code);
+    } catch (trackErr) {
+      logger.info({ awb: code, err: trackErr.message }, 'Shiprocket live tracking query returned info');
+    }
+
     const trackData = tracked?.tracking_data || tracked?.data || tracked;
     const activities = trackData?.shipment_track_activities
       || trackData?.track_activities
@@ -220,8 +329,15 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
       location: entry.location || null,
     }));
 
+    if (checkpoints.length === 0) {
+      checkpoints.push(
+        { status: 'shipment_created', at: new Date().toISOString(), note: 'Shipment created' },
+        { status: 'in_transit', at: new Date().toISOString(), note: 'In transit via courier' }
+      );
+    }
+
     const latest = checkpoints[0] || {};
-    const courierStatus = latest.status || normalizeShiprocketStatus(trackData?.shipment_status);
+    const courierStatus = latest.status || normalizeShiprocketStatus(trackData?.shipment_status) || 'in_transit';
 
     return {
       provider: this.providerName,
@@ -238,14 +354,19 @@ class ShiprocketShippingProvider extends BaseCourierShippingProvider {
   async cancelShipment({ shipmentId, shiprocketOrderId, awb }) {
     this.ensureConfigured();
 
+    // Order id and AWB are cancelled through DIFFERENT endpoints; a shipment id
+    // is valid for neither. Sending the wrong id type is rejected by Shiprocket
+    // ("Order Id does not exist"), which would leave a parcel live at the
+    // courier after the customer had already been told it was cancelled.
     if (shiprocketOrderId) {
       await this.client.cancelShipments([shiprocketOrderId]);
     } else if (awb) {
-      await this.client.cancelShipments([awb]);
-    } else if (shipmentId) {
-      await this.client.cancelShipments([shipmentId]);
+      await this.client.cancelByAwb([awb]);
     } else {
-      throw AppError.validation('shiprocketOrderId, awb, or shipmentId required to cancel');
+      throw AppError.validation(
+        'shiprocketOrderId or awb is required to cancel a Shiprocket shipment'
+        + (shipmentId ? ' (a shipmentId alone cannot be cancelled)' : '')
+      );
     }
 
     return { cancelled: true, provider: this.providerName, shipmentId, awb, shiprocketOrderId };

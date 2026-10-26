@@ -6,39 +6,38 @@ import {
   ShieldCheck, HelpCircle, Flame, Award, Sparkles, Filter, ThumbsUp,
   Upload, Film, Loader2
 } from 'lucide-react';
-import { formatPrice } from '../../../shared/utils/priceFormatter';
-import { useLocation as useRouterLocation, useNavigate, Link } from 'react-router-dom';
+import { formatPrice, parsePrice } from '../../../shared/utils/priceFormatter';
+import { getImageUrl, handleImageError, DEFAULT_PRODUCT_IMAGE } from '../../../shared/utils/imageUtils';
+import { useLocation as useRouterLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import useAccountStore from '../../../store/useAccountStore';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
 import { useTranslation } from 'react-i18next';
-import { getProductById, getProductReviews, getProductQuestions, createProductReview, askProductQuestion } from '../services/catalogApi';
+import { getProductById, getProductReviews, getProductQuestions, createProductReview, askProductQuestion, getCategoryProducts } from '../services/catalogApi';
 import { uploadReviewMedia } from '../../../shared/services/uploadService';
 import { getOrders } from '../services/ordersApi';
 import { addToWishlist, removeFromWishlist as removeWishlistItem } from '../services/userApi';
-import { mapProductForDetail, extractList, mapReview, mapQuestion } from '../utils/mappers';
+import { mapProductForDetail, mapProductForCard, extractList, mapReview, mapQuestion } from '../utils/mappers';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import { customerApi } from '../../../shared/api/client';
 import { toast } from 'react-hot-toast';
 import { addProductToCart, fetchCartCount } from '../utils/cartUtils';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
+import SEO from '../../../shared/components/SEO';
+import JsonLd from '../../../shared/components/JsonLd';
+import { SITE_URL } from '../../../config/siteConfig';
 
 // Import Assets
 import PlumShampoo from '../../../assets/products/product05.jpg';
 import FashionHero from '../../../assets/products/product06.jpg';
 import LorealShampoo from '../../../assets/products/product07.jpg';
 import EarbudsDeal from '../../../assets/products/product03.jpg';
-import Tshirt from '../../../assets/products/product05.jpg';
-import FlipFlops from '../../../assets/products/product07.jpg';
-import Suitcase from '../../../assets/products/product09.jpg';
-import TopSection1 from '../../../assets/TopSection/TopSection1.jpg';
-import Balloons from '../../../assets/products/product10.jpg';
-import SplitAC from '../../../assets/products/product08.jpg';
-import TowerFan from '../../../assets/products/product09.jpg';
 
 const ProductDetail = () => {
   const { t } = useTranslation();
   const location = useRouterLocation();
   const navigate = useNavigate();
+  const { id: paramId } = useParams();
   const { location: liveLocation } = useLiveLocation();
   const { savedAddresses, selectedAddressId } = useAccountStore();
   useHydrateAddresses();
@@ -65,6 +64,15 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState('S');
   const { wishlist, addToWishlist: addToWishlistStore, removeFromWishlist } = useAccountStore();
   const [product, setProduct] = useState(null);
+  const isQuickProduct = Boolean(
+    product?.commerceFlows?.includes('quick_shop') ||
+    product?.commerceFlows?.includes('fresh_grocery') ||
+    product?.marketplaceTab === 'quick_shop' ||
+    product?.marketplaceTab === 'groceries_fresh' ||
+    isQuickShopFlow ||
+    isFreshGroceryFlow
+  );
+  const [similarProducts, setSimilarProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [reviewForm, setReviewForm] = useState({ rating: 5, body: '' });
@@ -98,7 +106,8 @@ const ProductDetail = () => {
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('');
-  const [pincodeStatus, setPincodeStatus] = useState(null); // 'loading' | 'available' | 'invalid' | null
+  const [pincodeStatus, setPincodeStatus] = useState(null); // 'loading' | 'available' | 'unavailable' | 'invalid' | null
+  const [availableCoupons, setAvailableCoupons] = useState([]);
   const [copiedCoupon, setCopiedCoupon] = useState(null);
   const [specSearchQuery, setSpecSearchQuery] = useState('');
   const [reviewSort, setReviewSort] = useState('recent');
@@ -106,7 +115,6 @@ const ProductDetail = () => {
   const [helpfulReviews, setHelpfulReviews] = useState({});
   const [likedQuestions, setLikedQuestions] = useState({});
   const [likedAnswers, setLikedAnswers] = useState({});
-  const [comboChecked, setComboChecked] = useState([true, true, false]); // [main, combo1, combo2]
 
   const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientY);
   const handleTouchMove = (e, setExpanded, isExpanded) => {
@@ -253,45 +261,45 @@ const ProductDetail = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const productId = location.state?.product?.id;
+    const incomingProduct = location.state?.product;
+    // `?id=` lets a direct link, a search-engine crawl, or a shared URL
+    // resolve to the right product without navigation state — the state-only
+    // path above still wins when present (no extra fetch on in-app navigation).
+    const queryId = new URLSearchParams(location.search).get('id');
+    const productId = paramId || location.state?.productId || incomingProduct?.id || incomingProduct?._id || incomingProduct?.productId || queryId;
+    const isValidId = typeof productId === 'string' && productId.length >= 3;
 
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-        if (productId) {
+        if (isValidId) {
           const [detail, reviewData, questionData] = await Promise.all([
-            getProductById(productId),
+            getProductById(productId).catch(() => null),
             getProductReviews(productId).catch(() => []),
             getProductQuestions(productId).catch(() => []),
           ]);
           if (!cancelled) {
-            setProduct(mapProductForDetail(detail, PlumShampoo));
+            if (detail) {
+              setProduct(mapProductForDetail(detail, incomingProduct?.img || incomingProduct?.image || PlumShampoo));
+            } else if (incomingProduct) {
+              setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
+            }
             setReviews(extractList(reviewData).map(mapReview));
             setQuestions(extractList(questionData?.items || questionData).map(mapQuestion));
           }
-        } else if (location.state?.product) {
+        } else if (incomingProduct) {
           if (!cancelled) {
-            setProduct(mapProductForDetail(location.state.product, PlumShampoo));
+            setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
           }
         } else if (!cancelled) {
-          setProduct(mapProductForDetail({
-            id: '1',
-            brand: 'Lounge Dreams',
-            name: 'Women Boxy Fit Checked Casual Shirt',
-            price: 1559,
-            mrp: 2999,
-            rating: 4.2,
-            reviewCount: 4,
-            image: PlumShampoo,
-            category: 'Fashion',
-          }, PlumShampoo));
+          setError('Product not found');
         }
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Failed to load product');
-          if (location.state?.product) {
-            setProduct(mapProductForDetail(location.state.product, PlumShampoo));
+          if (incomingProduct) {
+            setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
           }
         }
       } finally {
@@ -303,27 +311,88 @@ const ProductDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [location.state]);
+  }, [paramId, location.state, location.search]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!product?.categoryId) {
+      setSimilarProducts([]);
+      return undefined;
+    }
+
+    getCategoryProducts(product.categoryId, { limit: 10 })
+      .then((data) => {
+        if (cancelled) return;
+        const list = extractList(data)
+          .map((p) => mapProductForCard(p))
+          .filter((p) => p.id !== product.id);
+        setSimilarProducts(list);
+      })
+      .catch(() => {
+        if (!cancelled) setSimilarProducts([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.categoryId, product?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    customerApi.get('/coupons')
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+        setAvailableCoupons(list.map((c) => ({
+          code: c.code,
+          description: c.description || `${c.discountType === 'percent' ? c.discountValue + '%' : '₹' + c.discountValue} off on orders above ₹${c.minOrderAmount || 0}`,
+          minPurchase: c.minOrderAmount || 0,
+        })));
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableCoupons([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const availableSizes = useMemo(() => {
+    if (Array.isArray(product?.sizes) && product.sizes.length > 0) return product.sizes;
+    if (Array.isArray(product?.variants) && product.variants.some((v) => v.size)) {
+      return [...new Set(product.variants.map((v) => v.size).filter(Boolean))];
+    }
+    return [];
+  }, [product]);
 
   const detailsData = useMemo(() => {
     if (!product) return { highlights: [], specs: [] };
+
+    // Only real attributes the product actually carries — a product with no
+    // fabric/sleeve/etc. shows fewer rows rather than fabricated defaults
+    // (a bag being shown a fake "Sleeve: Full Sleeve" spec, for example).
+    const highlightFields = [
+      ['Pack of', product.pack],
+      ['Fabric', product.fabric],
+      ['Sleeve', product.sleeve],
+      ['Pattern', product.pattern],
+      ['Collar', product.collar],
+      ['Color', product.color],
+    ];
+    const specFields = [
+      ['Brand', product.brand],
+      ['Size', product.size],
+      ['Fit', product.fit],
+    ];
+
     return {
-      highlights: [
-        { label: 'Pack of', value: product.pack || '1' },
-        { label: 'Fabric', value: product.fabric || 'Wool Blend' },
-        { label: 'Sleeve', value: product.sleeve || 'Full Sleeve' },
-        { label: 'Pattern', value: product.pattern || 'Checkered' },
-        { label: 'Collar', value: product.collar || 'Spread' },
-        { label: 'Color', value: product.color || 'Pink' }
-      ],
-      specs: [
-        { label: 'Brand', value: product.brand || 'Mithilakart' },
-        { label: 'Size', value: product.size || 'M' },
-        { label: 'Fit', value: product.fit || 'Regular' },
-        { label: 'Fabric Care', value: 'Machine wash as per tag' },
-        { label: 'Suitable For', value: 'Western Wear' },
-        { label: 'Hem', value: 'Curved' }
-      ]
+      highlights: highlightFields
+        .filter(([, value]) => value)
+        .map(([label, value]) => ({ label, value })),
+      specs: specFields
+        .filter(([, value]) => value)
+        .map(([label, value]) => ({ label, value })),
     };
   }, [product]);
 
@@ -380,12 +449,12 @@ const ProductDetail = () => {
       return;
     }
     try {
-      await addProductToCart(product, quantity);
+      await addProductToCart(product, quantity, theme.activeFlow);
       setToastMessage(`Added ${quantity} item(s) to cart`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
-    } catch {
-      setToastMessage('Could not add to cart');
+    } catch (err) {
+      setToastMessage(err?.message || 'Could not add to cart');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     }
@@ -403,21 +472,40 @@ const ProductDetail = () => {
   const mediaList = useMemo(() => {
     if (!product) return [];
     const items = [];
-    if (product.images?.length) {
-      product.images.forEach((url) => items.push({ type: 'image', url }));
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      product.images.forEach((img) => {
+        const url = typeof img === 'string' ? img : img?.url;
+        if (url) items.push({ type: 'image', url: getImageUrl(url) });
+      });
     } else if (product.image) {
-      items.push({ type: 'image', url: product.image });
+      items.push({ type: 'image', url: getImageUrl(product.image) });
+    } else if (product.img) {
+      items.push({ type: 'image', url: getImageUrl(product.img) });
+    } else if (product.imageUrl) {
+      items.push({ type: 'image', url: getImageUrl(product.imageUrl) });
     }
-    if (product.videos?.length) {
-      product.videos.forEach((url) => items.push({ type: 'video', url }));
+    if (Array.isArray(product.videos) && product.videos.length > 0) {
+      product.videos.forEach((vid) => {
+        const url = typeof vid === 'string' ? vid : vid?.url;
+        if (url) items.push({ type: 'video', url });
+      });
     }
     if (!items.length) {
-      items.push({ type: 'image', url: product.image || '' });
+      items.push({ type: 'image', url: getImageUrl(product.image || product.img || product.imageUrl || PlumShampoo) });
     }
     return items;
   }, [product]);
 
-  const activeMedia = mediaList[currentSlide] || mediaList[0] || { type: 'image', url: product?.image || '' };
+  const activeMedia = mediaList[currentSlide] || mediaList[0] || { type: 'image', url: getImageUrl(product?.image || product?.img || PlumShampoo) };
+
+  // Safe pricing derivations - handles string numbers with commas ('50,000') safely without NaN
+  const unitPrice = useMemo(() => parsePrice(product?.price), [product?.price]);
+  const unitOldPrice = useMemo(() => parsePrice(product?.oldPrice || product?.mrp), [product?.oldPrice, product?.mrp]);
+  const effectiveOldPrice = useMemo(() => (unitOldPrice > unitPrice ? unitOldPrice : 0), [unitOldPrice, unitPrice]);
+  const totalPrice = useMemo(() => unitPrice * quantity, [unitPrice, quantity]);
+  const totalOldPrice = useMemo(() => effectiveOldPrice * quantity, [effectiveOldPrice, quantity]);
+  const unitSavings = useMemo(() => (effectiveOldPrice > unitPrice ? (effectiveOldPrice - unitPrice) : 0), [effectiveOldPrice, unitPrice]);
+  const totalSavings = useMemo(() => unitSavings * quantity, [unitSavings, quantity]);
 
   const handleShare = async () => {
     const shareData = {
@@ -455,13 +543,6 @@ const ProductDetail = () => {
     }
   };
 
-  // Coupons data & copy helper
-  const AVAILABLE_COUPONS = [
-    { code: 'MITHILA50', description: 'Get 50% discount on first order', minPurchase: 500 },
-    { code: 'FESTIVE25', description: 'Save 25% on festive special items', minPurchase: 800 },
-    { code: 'FREESHIP', description: 'Free shipping on all premium items', minPurchase: 0 }
-  ];
-
   const handleCopyCoupon = (code) => {
     navigator.clipboard.writeText(code);
     setCopiedCoupon(code);
@@ -469,13 +550,21 @@ const ProductDetail = () => {
     setTimeout(() => setCopiedCoupon(null), 2500);
   };
 
-  // Pincode availability simulated checker
-  const handlePincodeCheck = () => {
+  // Pincode availability checker using backend serviceability API
+  const handlePincodeCheck = async () => {
     if (pincode.length === 6 && /^\d+$/.test(pincode)) {
       setPincodeStatus('loading');
-      setTimeout(() => {
+      try {
+        const res = await customerApi.get(`/shipping/serviceability?pincode=${pincode}`);
+        const data = res?.data?.data || res?.data;
+        if (data?.serviceable !== false) {
+          setPincodeStatus('available');
+        } else {
+          setPincodeStatus('unavailable');
+        }
+      } catch {
         setPincodeStatus('available');
-      }, 700);
+      }
     } else {
       setPincodeStatus('invalid');
     }
@@ -503,16 +592,13 @@ const ProductDetail = () => {
 
   // Filtered & Sorted Reviews
   const processedReviews = useMemo(() => {
+    // Production readiness audit Pass 2 (2026-08-25): this previously
+    // fabricated three fake reviews (fake names, fake dates, fake "Verified"
+    // badges, fake photo claims) whenever a product had zero real reviews —
+    // real customers were shown fake social proof on a live product page.
+    // Removed; a real "no reviews yet" empty state is rendered below instead.
     let list = [...reviews];
-    if (list.length === 0) {
-      // Mock review data when no reviews are present to demonstrate premium features
-      list = [
-        { id: 'mock-1', rating: 5, userName: 'Aarti Mishra', date: '20 May 2026', comment: 'Absolutely beautiful craftsmanship! The quality is premium and details are flawless.', isVerified: true, hasImage: true },
-        { id: 'mock-2', rating: 4, userName: 'Rohan Sharma', date: '18 May 2026', comment: 'Decent fit and nice pattern. Loved the overall texture of the cloth.', isVerified: true, hasImage: false },
-        { id: 'mock-3', rating: 5, userName: 'Neha K.', date: '15 May 2026', comment: 'Wonderful product. Will definitely recommend it to friends.', isVerified: false, hasImage: true }
-      ];
-    }
-    
+
     // Filtering
     if (reviewFilter === 'verified') {
       list = list.filter(r => r.isVerified);
@@ -534,39 +620,53 @@ const ProductDetail = () => {
     return list;
   }, [reviews, reviewFilter, reviewSort]);
 
-  // Frequently bought together details
-  const parsedPrice = product ? (parseFloat(product.price) || 0) : 0;
-  const comboPrice = parsedPrice + 299 + 499;
-  const comboDiscountedPrice = parsedPrice + 249 + 399;
-  const comboSavings = comboPrice - comboDiscountedPrice;
-
-  const handleAddComboToCart = async () => {
-    try {
-      if (comboChecked[0]) {
-        await addProductToCart(product, 1);
-      }
-      if (comboChecked[1]) {
-        await addProductToCart({ id: 'combo-1', name: 'Premium Cotton Socks (Pack of 3)', price: 249, image: Tshirt }, 1);
-      }
-      if (comboChecked[2]) {
-        await addProductToCart({ id: 'combo-2', name: 'Leather Slim Wallet', price: 399, image: Suitcase }, 1);
-      }
-      toast.success('Combo items added to cart!');
-    } catch {
-      toast.error('Failed to add combo items to cart');
-    }
-  };
-
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-cream">
-        <p className="text-sm text-slate-655">{loading ? 'Loading product...' : error || 'Product not found'}</p>
-      </div>
+      <>
+        {!loading && <SEO title="Product Not Found" noindex />}
+        <div className="min-h-screen flex items-center justify-center bg-bg-cream">
+          <p className="text-sm text-slate-655">{loading ? 'Loading product...' : error || 'Product not found'}</p>
+        </div>
+      </>
     );
   }
 
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description || undefined,
+    image: product.images?.length ? product.images : [product.image].filter(Boolean),
+    brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+    ...(product.rating > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: product.rating,
+        reviewCount: product.reviewCount || 1,
+      },
+    }),
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'INR',
+      price: String(product.price).replace(/,/g, ''),
+      availability: product.stock > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      url: `${SITE_URL}/product-detail?id=${product.id}`,
+    },
+  };
+
   return (
-    <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative ${
+    <>
+      <SEO
+        title={product.name}
+        description={product.description || undefined}
+        path={`/product-detail?id=${product.id}`}
+        image={product.image}
+        type="product"
+      />
+      <JsonLd data={productJsonLd} />
+      <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative ${
       isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-bg-cream'
     }`}>
 
@@ -592,7 +692,7 @@ const ProductDetail = () => {
             <Search size={20} />
           </button>
           <div 
-            onClick={() => navigate('/vendor/cart')} 
+            onClick={() => navigate('/cart')} 
             className={`relative p-1.5 rounded-full transition-colors active:scale-95 cursor-pointer ${
               isFreshGroceryFlow ? 'text-white hover:bg-white/5' : 'text-slate-800 hover:bg-gray-50'
             }`}
@@ -630,8 +730,9 @@ const ProductDetail = () => {
                 />
               ) : (
                 <img 
-                  src={activeMedia.url} 
+                  src={getImageUrl(activeMedia.url)} 
                   alt={product.name} 
+                  onError={handleImageError}
                   style={zoomPos.isZooming ? {
                     transform: 'scale(2)',
                     transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
@@ -695,7 +796,7 @@ const ProductDetail = () => {
                       </div>
                     </div>
                   ) : (
-                    <img src={item.url} className="w-full h-full object-cover" alt={`preview-${idx}`} />
+                    <img src={getImageUrl(item.url)} onError={handleImageError} className="w-full h-full object-cover" alt={`preview-${idx}`} />
                   )}
                 </button>
               ))}
@@ -732,10 +833,14 @@ const ProductDetail = () => {
                     {/* Coupon style side cutouts */}
                     <div className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full border-r border-slate-100"></div>
                     <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-white rounded-full border-l border-slate-100"></div>
-                    {formatPrice(product.price)}
+                    {formatPrice(unitPrice)}
                   </div>
-                  <span className="text-sm text-slate-400 line-through">MRP {formatPrice(product.oldPrice)}</span>
-                  <span className="text-emerald-600 text-sm font-bold">({product.discount || '45% OFF'})</span>
+                  {effectiveOldPrice > unitPrice && (
+                    <span className="text-sm text-slate-400 line-through">MRP {formatPrice(effectiveOldPrice)}</span>
+                  )}
+                  {unitSavings > 0 && (
+                    <span className="text-emerald-600 text-sm font-bold">({product.discount || `${Math.round((unitSavings / effectiveOldPrice) * 100)}% OFF`})</span>
+                  )}
                 </div>
                 <div className="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100 font-extrabold">
                   Inclusive of GST
@@ -743,7 +848,11 @@ const ProductDetail = () => {
               </div>
               
               <div className="mt-2 text-xs text-slate-500 flex items-center justify-between">
-                <div>You save <span className="text-slate-800 font-bold">{formatPrice(parseFloat(product.oldPrice || 2999) - parseFloat(product.price || 1559))}</span> on this purchase</div>
+                {unitSavings > 0 ? (
+                  <div>You save <span className="text-slate-800 font-bold">{formatPrice(unitSavings)}</span> on this purchase</div>
+                ) : (
+                  <div className="text-emerald-700 font-semibold">Direct Artisan & Verified Seller Deal</div>
+                )}
                 <div className="text-red-500 font-semibold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span> Offer ends soon!
                 </div>
@@ -783,76 +892,81 @@ const ProductDetail = () => {
           </div>
 
           {/* Copyable Coupon Code blocks */}
-          <div className="px-4 py-3">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
-              Apply Coupons
-            </span>
-            <div className="grid grid-cols-1 gap-2.5">
-              {AVAILABLE_COUPONS.map((coupon) => (
-                <div key={coupon.code} className="bg-white border border-dashed border-gray-300 rounded-2xl p-3 flex items-center justify-between shadow-xs hover:border-slate-400 transition-colors">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-amber-100 text-amber-800 font-extrabold text-[11px] px-2 py-0.5 rounded-md border border-amber-200">
-                        {coupon.code}
-                      </span>
-                      {copiedCoupon === coupon.code && (
-                        <span className="text-emerald-600 text-[10px] font-black flex items-center gap-0.5">
-                          <Check size={10} /> Copied
+          {availableCoupons.length > 0 && (
+            <div className="px-4 py-3">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
+                Apply Coupons
+              </span>
+              <div className="grid grid-cols-1 gap-2.5">
+                {availableCoupons.map((coupon) => (
+                  <div key={coupon.code} className="bg-white border border-dashed border-gray-300 rounded-2xl p-3 flex items-center justify-between shadow-xs hover:border-slate-400 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-amber-100 text-amber-800 font-extrabold text-[11px] px-2 py-0.5 rounded-md border border-amber-200">
+                          {coupon.code}
                         </span>
-                      )}
+                        {copiedCoupon === coupon.code && (
+                          <span className="text-emerald-600 text-[10px] font-black flex items-center gap-0.5">
+                            <Check size={10} /> Copied
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-600 font-semibold mt-1">{coupon.description}</p>
                     </div>
-                    <p className="text-[11px] text-slate-600 font-semibold mt-1">{coupon.description}</p>
+                    <button 
+                      onClick={() => handleCopyCoupon(coupon.code)}
+                      className="p-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 rounded-xl transition-all active:scale-90"
+                    >
+                      <Copy size={14} className="text-slate-600" />
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => handleCopyCoupon(coupon.code)}
-                    className="p-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 rounded-xl transition-all active:scale-90"
-                  >
-                    <Copy size={14} className="text-slate-600" />
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Size Variant Selector */}
-          <div className="px-4 py-3 mt-1">
-            <div className="flex justify-between items-center mb-2.5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                {t('product.selectSize') || 'Select Size'}
-              </span>
-              <span className="text-[10px] text-slate-500 font-extrabold underline cursor-pointer hover:text-slate-800">
-                Size Chart Helper
-              </span>
+          {availableSizes.length > 0 && (
+            <div className="px-4 py-3 mt-1">
+              <div className="flex justify-between items-center mb-2.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  {t('product.selectSize') || 'Select Size'}
+                </span>
+                <span className="text-[10px] text-slate-500 font-extrabold underline cursor-pointer hover:text-slate-800">
+                  Size Chart Helper
+                </span>
+              </div>
+              <div className="flex gap-3">
+                {availableSizes.map((size) => {
+                  const variant = product?.variants?.find((v) => v.size === size);
+                  const isOutOfStock = variant ? (variant.stock <= 0) : false;
+                  const isLowStock = variant ? (variant.stock > 0 && variant.stock <= 3) : false;
+                  
+                  return (
+                    <button
+                      key={size}
+                      disabled={isOutOfStock}
+                      onClick={() => setSelectedSize(size)}
+                      className={`relative w-11 h-11 rounded-full text-[11px] font-black transition-all flex flex-col items-center justify-center border ${
+                        isOutOfStock
+                          ? 'bg-slate-50 text-slate-350 border-slate-200 cursor-not-allowed line-through opacity-50'
+                          : selectedSize === size
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-105'
+                          : 'bg-white text-slate-850 border-gray-250 hover:border-slate-300'
+                      }`}
+                    >
+                      <span>{size}</span>
+                      {isLowStock && !isOutOfStock && (
+                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[7px] px-1 rounded-full font-black scale-90 whitespace-nowrap">
+                          {variant?.stock} left
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex gap-3">
-              {['XS', 'S', 'M', 'L', 'XL'].map((size) => {
-                const isOutOfStock = size === 'XS'; // Mocked Out of stock
-                const isLowStock = size === 'M'; // Mocked low stock
-                
-                return (
-                  <button
-                    key={size}
-                    disabled={isOutOfStock}
-                    onClick={() => setSelectedSize(size)}
-                    className={`relative w-11 h-11 rounded-full text-[11px] font-black transition-all flex flex-col items-center justify-center border ${
-                      isOutOfStock
-                        ? 'bg-slate-50 text-slate-350 border-slate-200 cursor-not-allowed line-through opacity-50'
-                        : selectedSize === size
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-105'
-                        : 'bg-white text-slate-850 border-gray-250 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>{size}</span>
-                    {isLowStock && !isOutOfStock && (
-                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[7px] px-1 rounded-full font-black scale-90 whitespace-nowrap">
-                        1 left
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
           {/* Desktop Quantity & Action Buttons */}
           <div className="hidden md:block px-4 py-3 mt-2">
@@ -862,17 +976,27 @@ const ProductDetail = () => {
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-white border border-slate-200 rounded-full px-2.5 py-1">
                 <button 
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setQuantity(q => Math.max(1, q - 1));
+                  }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all cursor-pointer"
+                  aria-label="Decrease quantity"
                 >
-                  <Minus size={14} />
+                  <Minus size={14} className="stroke-[2.5]" />
                 </button>
-                <span className="w-10 text-center text-sm font-black text-slate-800">{quantity}</span>
+                <span className="w-10 text-center text-sm font-black text-slate-800 select-none">{quantity}</span>
                 <button 
-                  onClick={() => setQuantity(q => q + 1)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setQuantity(q => q + 1);
+                  }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all cursor-pointer"
+                  aria-label="Increase quantity"
                 >
-                  <Plus size={14} />
+                  <Plus size={14} className="stroke-[2.5]" />
                 </button>
               </div>
 
@@ -932,11 +1056,12 @@ const ProductDetail = () => {
 
               {pincodeStatus === 'loading' && <p className="text-[10px] text-slate-500 font-bold">Verifying availability...</p>}
               {pincodeStatus === 'invalid' && <p className="text-[10px] text-red-500 font-bold">Please enter a valid 6-digit Pincode.</p>}
+              {pincodeStatus === 'unavailable' && <p className="text-[10px] text-red-500 font-bold">Sorry, delivery is not available to this pincode.</p>}
               {pincodeStatus === 'available' && (
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2.5 text-xs text-emerald-800 space-y-1">
                   <p className="font-extrabold flex items-center gap-1"><Check size={12} /> Delivery Available to this location</p>
-                  <p className="text-[11px] font-medium text-emerald-700">Estimated Delivery: Tomorrow by 6:00 PM</p>
-                  <p className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded w-fit">Express Delivery Badge</p>
+                  <p className="text-[11px] font-medium text-emerald-700">Estimated Delivery: {product?.deliveryEtaText ? product.deliveryEtaText : (isQuickProduct ? '15-30 mins' : '2-4 business days')}</p>
+                  <p className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded w-fit">Serviceable</p>
                 </div>
               )}
 
@@ -944,9 +1069,17 @@ const ProductDetail = () => {
                 <Truck size={18} className="text-[#3E5A44]" />
                 <div>
                   <p className="text-[12px] font-black text-slate-800">
-                    {product?.attributes?.deliveryEstimate ? `Estimated Delivery: ${product.attributes.deliveryEstimate}` : 'Delivery by Sat, 16 May'}
+                    {product?.attributes?.deliveryEstimate
+                      ? `Estimated Delivery: ${product.attributes.deliveryEstimate}`
+                      : product?.deliveryEtaText
+                      ? `Delivery in ${product.deliveryEtaText}`
+                      : isQuickProduct
+                      ? '⚡ Quick Delivery (15-30 mins)'
+                      : 'Standard Delivery (2-4 business days)'}
                   </p>
-                  <p className="text-[10px] text-orange-600 font-bold mt-0.5">Order in 00h 00m 14s</p>
+                  {(product?.deliveryEtaText || isQuickProduct) && (
+                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5">⚡ Fast delivery available</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1008,16 +1141,17 @@ const ProductDetail = () => {
           </div>
 
           {/* Product Highlights Accordion */}
+          {detailsData.highlights.length > 0 && (
           <div className="px-4 py-1.5 mt-2">
             <div className="bg-white border border-slate-100 rounded-3xl p-4 shadow-xs">
-              <div 
+              <div
                 onClick={() => setIsHighlightsOpen(!isHighlightsOpen)}
                 className="flex justify-between items-center cursor-pointer"
               >
                 <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-wider">Product Highlights</h3>
-                <ChevronRight 
-                  size={16} 
-                  className={`text-gray-400 transition-transform duration-300 ${isHighlightsOpen ? 'rotate-90' : ''}`} 
+                <ChevronRight
+                  size={16}
+                  className={`text-gray-400 transition-transform duration-300 ${isHighlightsOpen ? 'rotate-90' : ''}`}
                 />
               </div>
               {isHighlightsOpen && (
@@ -1032,6 +1166,7 @@ const ProductDetail = () => {
               )}
             </div>
           </div>
+          )}
 
           {/* Specifications with Inline Search Filter */}
           <div className="px-4 py-1.5 mt-1">
@@ -1064,7 +1199,7 @@ const ProductDetail = () => {
                   </div>
 
                   <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1">
-                    {['Specifications', 'Description', 'Manufacturer Info'].map(tab => (
+                    {['Specifications', 'Description'].map(tab => (
                       <button
                         key={tab}
                         onClick={(e) => {
@@ -1099,13 +1234,7 @@ const ProductDetail = () => {
 
                   {activeDetailTab === 'Description' && (
                     <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
-                      Premium quality materials with a modern, elegant drape. Features a premium finish and detailed stitching. Ideal for casual, lounge, and semi-formal wear.
-                    </p>
-                  )}
-
-                  {activeDetailTab === 'Manufacturer Info' && (
-                    <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
-                      Manufactured by Lounge Dreams Clothing Pvt Ltd. Designed and tailored in India.
+                      {product.description || 'No description available for this product.'}
                     </p>
                   )}
                 </div>
@@ -1185,6 +1314,11 @@ const ProductDetail = () => {
           </div>
 
           <div className="space-y-4 mb-5">
+            {processedReviews.length === 0 && (
+              <p className="text-xs text-slate-400 font-semibold text-center py-6">
+                No reviews yet — be the first to share your experience.
+              </p>
+            )}
             {processedReviews.map((review) => (
               <div key={review.id} className="border-b border-slate-50 pb-4 last:border-0">
                 <div className="flex items-center justify-between mb-1.5">
@@ -1342,46 +1476,31 @@ const ProductDetail = () => {
           
           <div className="space-y-4.5 mb-5">
             {questions.length === 0 ? (
-              // Mock Q&As to show advanced UI
-              [
-                { id: 'q-1', question: 'Is this shirts fabric machine washable?', answer: 'Yes, it is machine washable. We recommend washing with light colors on a gentle cycle.', isSellerAnswered: true, likes: 12 },
-                { id: 'q-2', question: 'Does this shirt bleed color?', answer: 'No, color is stable. However, washing separately for the first time is recommended.', isSellerAnswered: true, likes: 6 }
-              ].map(q => (
-                <div key={q.id} className="border-b border-slate-50 pb-3 last:border-0">
-                  <div className="flex items-start justify-between">
-                    <p className="text-[12px] font-extrabold text-slate-800">Q: {q.question}</p>
-                    <button 
-                      onClick={() => handleLikeQuestion(q.id)}
-                      className={`flex items-center gap-1 text-[10px] font-extrabold ${likedQuestions[q.id] ? 'text-emerald-600' : 'text-slate-400'}`}
-                    >
-                      <ThumbsUp size={10} />
-                      <span>{q.likes + (likedQuestions[q.id] ? 1 : 0)}</span>
-                    </button>
-                  </div>
-                  {q.answer && (
-                    <div className="mt-1.5 pl-3 border-l-2 border-slate-200">
-                      <p className="text-[12px] text-slate-600 font-medium">A: {q.answer}</p>
-                      {q.isSellerAnswered && (
-                        <span className="text-[8px] bg-slate-900 text-white font-black uppercase px-2 py-0.5 rounded-full inline-block mt-1">
-                          Seller Answer
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
+              <div className="py-6 text-center text-slate-400">
+                <p className="text-xs font-medium">No questions asked yet for this item.</p>
+                <p className="text-[11px] text-slate-400/80 mt-1">Have a query? Ask the artisan/seller below!</p>
+              </div>
             ) : (
               questions.map((q) => (
                 <div key={q.id} className="border-b border-slate-50 pb-3 last:border-0">
                   <div className="flex items-start justify-between">
                     <p className="text-[12px] font-bold text-slate-800">Q: {q.question}</p>
+                    <button 
+                      onClick={() => handleLikeQuestion(q.id)}
+                      className={`flex items-center gap-1 text-[10px] font-extrabold ${likedQuestions[q.id] ? 'text-emerald-600' : 'text-slate-400'}`}
+                    >
+                      <ThumbsUp size={10} />
+                      <span>{(q.likes || 0) + (likedQuestions[q.id] ? 1 : 0)}</span>
+                    </button>
                   </div>
                   {q.answer && (
                     <div className="mt-1.5 pl-3 border-l-2 border-slate-200">
                       <p className="text-[12px] text-slate-600">A: {q.answer}</p>
-                      <span className="text-[8px] bg-slate-900 text-white font-black uppercase px-2 py-0.5 rounded-full inline-block mt-1">
-                        Seller Answer
-                      </span>
+                      {q.isSellerAnswered && (
+                        <span className="text-[8px] bg-slate-900 text-white font-black uppercase px-2 py-0.5 rounded-full inline-block mt-1">
+                          Seller Answer
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1407,79 +1526,47 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* Similar Products */}
-      <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
-        <div className="flex justify-between items-center px-4 mb-3 md:px-0">
-          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Similar Products</h3>
-          <span className="text-[10px] font-black text-[#3E5A44] tracking-widest uppercase cursor-pointer hover:underline">View All</span>
-        </div>
-        <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
-          {[
-            { img: TopSection1, name: 'Checked Cotton Shirt', brand: 'Fashion Hub', price: 899, oldPrice: 1999 },
-            { img: FlipFlops, name: 'Casual Flip Flops', brand: 'Drasert', price: 1299, oldPrice: 2499 },
-            { img: Suitcase, name: 'Premium Suitcase', brand: 'Lounge Dreams', price: 1599, oldPrice: 2999 }
-          ].map((item, idx) => (
-            <div 
-              key={idx} 
-              onClick={() => navigate('/vendor/product-detail', { state: { product: { ...item, image: item.img, rating: 4.1, discount: '55% OFF' } } })}
-              className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
-            >
-              <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
-                <img src={item.img} className="w-full h-full object-cover" alt="similar" />
-                <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-gray-100 shadow-2xs">
-                  <span className="text-[9px] font-black text-slate-800">4.1</span>
-                  <Star size={7} fill="#e2a750" className="text-[#e2a750]" />
+      {/* Similar Products — real products from the same category */}
+      {similarProducts.length > 0 && (
+        <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
+          <div className="flex justify-between items-center px-4 mb-3 md:px-0">
+            <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Similar Products</h3>
+          </div>
+          <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
+            {similarProducts.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => navigate('/product-detail', { state: { product: item } })}
+                className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
+              >
+                <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
+                  <img src={item.image} className="w-full h-full object-cover" alt={item.name} loading="lazy" />
+                  {item.rating > 0 && (
+                    <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-gray-100 shadow-2xs">
+                      <span className="text-[9px] font-black text-slate-800">{item.rating}</span>
+                      <Star size={7} fill="#e2a750" className="text-[#e2a750]" />
+                    </div>
+                  )}
+                </div>
+                <div className="px-2.5 pb-2.5 pt-0.5">
+                  <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
+                  {item.off && (
+                    <div className="text-[9px] font-black text-[#e47911] border border-[#e47911] px-1.5 py-0.5 rounded-full w-fit mt-1 uppercase">
+                      {item.off}
+                    </div>
+                  )}
+                  <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
+                    <span className="text-[13px] font-black text-slate-900">{formatPrice(item.price)}</span>
+                    {item.oldPrice && (
+                      <span className="text-[9.5px] text-gray-400 line-through">MRP {formatPrice(item.oldPrice)}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="px-2.5 pb-2.5 pt-0.5">
-                <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
-                <div className="text-[9px] font-black text-[#e47911] border border-[#e47911] px-1.5 py-0.5 rounded-full w-fit mt-1 uppercase">
-                  55% OFF
-                </div>
-                <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
-                  <span className="text-[13px] font-black text-slate-900">{formatPrice(item.price)}</span>
-                  <span className="text-[9.5px] text-gray-400 line-through">MRP {formatPrice(item.oldPrice)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Bought Together */}
-      <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
-        <div className="flex justify-between items-center px-4 mb-3 md:px-0">
-          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Bought Together</h3>
-          <span className="text-[10px] font-black text-[#3E5A44] tracking-widest uppercase cursor-pointer hover:underline">Explore</span>
-        </div>
-        <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
-          {[
-            { img: Balloons, name: 'Party Pack', price: 299, oldPrice: 599 },
-            { img: SplitAC, name: 'Samsung AC', price: 34999, oldPrice: 45999 },
-            { img: TowerFan, name: 'Tower Fan', price: 2499, oldPrice: 4999 }
-          ].map((item, i) => (
-            <div 
-              key={i} 
-              onClick={() => navigate('/product-detail', { state: { product: { ...item, image: item.img, rating: 4.3, discount: '60% off' } } })}
-              className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
-            >
-              <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
-                <img src={item.img} className="w-full h-full object-cover" alt="bought" />
-              </div>
-              <div className="px-2.5 pb-2.5 pt-0.5">
-                <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
-                <div className="text-[9px] font-black text-[#e47911] border border-[#e47911] px-1.5 py-0.5 rounded-full w-fit mt-1 uppercase">
-                  60% OFF
-                </div>
-                <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
-                  <span className="text-[13px] font-black text-slate-900">{formatPrice(item.price)}</span>
-                  <span className="text-[9.5px] text-gray-400 line-through">MRP {formatPrice(item.oldPrice)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Easy Returns Policy Bottom Sheet */}
       {showReturnPolicy && (
@@ -1791,44 +1878,67 @@ const ProductDetail = () => {
         {/* Unit and Price Details */}
         <div className="flex flex-col justify-center select-none">
           <span className="text-[10px] font-extrabold text-slate-500 leading-none mb-1">
-            {product.pack || '1 unit'}
+            {product.pack || `${quantity} unit${quantity > 1 ? 's' : ''}`}
           </span>
           <div className="flex items-center gap-1.5">
             <span className="text-slate-900 text-[18px] font-black">
-              {formatPrice(product.price * quantity)}
+              {formatPrice(totalPrice)}
             </span>
-            <span className="text-[11px] text-slate-400 line-through leading-none">
-              {formatPrice(product.oldPrice * quantity)}
-            </span>
+            {totalOldPrice > totalPrice && (
+              <span className="text-[11px] text-slate-400 line-through leading-none">
+                {formatPrice(totalOldPrice)}
+              </span>
+            )}
           </div>
-          <span className="text-[9px] text-emerald-600 font-bold mt-0.5 leading-none">
-            You save {formatPrice((parseFloat(product.oldPrice) - parseFloat(product.price)) * quantity)}
-          </span>
+          {totalSavings > 0 ? (
+            <span className="text-[9px] text-emerald-600 font-bold mt-0.5 leading-none">
+              You save {formatPrice(totalSavings)}
+            </span>
+          ) : (
+            <span className="text-[9px] text-slate-500 font-semibold mt-0.5 leading-none">
+              Inclusive of GST
+            </span>
+          )}
         </div>
 
         {/* Quantity selector & Add to Cart */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-1.5 py-0.5">
+          <div className="flex items-center bg-slate-100 border border-slate-200/80 rounded-xl p-1 gap-1">
             <button 
-              onClick={() => setQuantity(q => Math.max(1, q - 1))}
-              className="p-1 hover:bg-white rounded transition-colors"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setQuantity(q => Math.max(1, q - 1));
+              }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 active:scale-90 transition-all text-slate-700 shadow-xs cursor-pointer select-none"
+              aria-label="Decrease quantity"
             >
-              <Minus size={12} className="text-slate-600" />
+              <Minus size={14} className="text-slate-700 stroke-[2.5]" />
             </button>
-            <span className="w-6 text-center text-xs font-black text-slate-800">{quantity}</span>
+            <span className="min-w-[24px] text-center text-xs font-black text-slate-900 select-none">
+              {quantity}
+            </span>
             <button 
-              onClick={() => setQuantity(q => q + 1)}
-              className="p-1 hover:bg-white rounded transition-colors"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setQuantity(q => q + 1);
+              }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 active:scale-90 transition-all text-slate-700 shadow-xs cursor-pointer select-none"
+              aria-label="Increase quantity"
             >
-              <Plus size={12} className="text-slate-600" />
+              <Plus size={14} className="text-slate-700 stroke-[2.5]" />
             </button>
           </div>
 
           <button 
+            type="button"
             onClick={handleAddToCart}
             className={`${primaryBg} ${primaryBgHover} text-white font-extrabold px-5 py-2.5 rounded-[12px] active:scale-95 transition-all text-[12px] flex items-center justify-center cursor-pointer shadow-sm`}
           >
-            {t('cart.addToCart') || 'Add to cart'}
+            {t('cart.addToCart') || 'Add to Bag'}
           </button>
         </div>
       </div>
@@ -1901,13 +2011,20 @@ const ProductDetail = () => {
         </div>
       )}
 
-      {/* Toast Notification */}
+      {/* Toast Notification with View Cart Action */}
       {showToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[2000] bg-slate-900/95 backdrop-blur-md text-white px-6 py-3.5 rounded-full text-[13px] font-bold shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-          {toastMessage}
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[2000] bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-full text-[13px] font-bold shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 flex items-center gap-3 border border-white/10">
+          <span>{toastMessage}</span>
+          <button 
+            onClick={() => navigate('/cart')}
+            className="bg-[#E25822] text-white text-[11px] font-black px-3 py-1 rounded-full active:scale-95 transition-transform cursor-pointer shadow-xs hover:bg-[#d04a16]"
+          >
+            View Cart →
+          </button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

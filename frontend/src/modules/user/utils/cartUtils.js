@@ -20,18 +20,26 @@ export const fetchCartCount = async () => {
   return items.reduce((acc, item) => acc + (item.qty || 1), 0);
 };
 
+const normalizeCommerceFlow = (flow) => {
+  if (!flow) return 'standard';
+  if (flow === 'quickshop' || flow === 'quick_shop') return 'quick_shop';
+  if (flow === 'freshgrocery' || flow === 'fresh_grocery') return 'fresh_grocery';
+  if (flow === 'mithilak' || flow === 'mithilakart') return 'mithilak';
+  return flow;
+};
+
 export const addProductToCart = async (product, quantity = 1, commerceFlow) => {
   const listingId = product.listingId;
   const productId = product.productId || product.id || product._id;
-  const marketplaceTab = product.marketplaceTab || getMarketplaceTab();
-  const flow = commerceFlow || getCommerceFlow();
+  const flow = normalizeCommerceFlow(commerceFlow || product.commerceFlow || getCommerceFlow());
+  const marketplaceTab = product.marketplaceTab || (flow === 'quick_shop' ? 'quick_shop' : flow === 'fresh_grocery' ? 'groceries_fresh' : getMarketplaceTab());
 
   if (listingId) {
-    await addCartItem({ listingId, marketplaceTab, quantity });
+    await addCartItem({ listingId, marketplaceTab, quantity, commerceFlow: flow });
   } else if (productId) {
     await addCartItem({
       productId,
-      variantId: product.variantId,
+      variantId: product.variantId || null,
       quantity,
       commerceFlow: flow,
       marketplaceTab,

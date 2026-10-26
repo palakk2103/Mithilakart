@@ -39,13 +39,41 @@ const sellerSchema = new mongoose.Schema(
     mithilakEligible: { type: Boolean, default: false },
     quickCommerceEligible: { type: Boolean, default: false },
     groceryEligible: { type: Boolean, default: false },
+
+    // ── CR-002 — intelligent fulfillment ─────────────────────────────────────
+    /**
+     * A warehouse IS a seller. Modelling it this way lets fallback level 2
+     * reuse seller eligibility, inventory reservation, order items, settlement
+     * and the seller panel wholesale, instead of duplicating the seller module.
+     */
+    isWarehouse: { type: Boolean, default: false },
+    /** Soft pause, distinct from `status: 'suspended'`. Defaults true so every
+     *  pre-CR-002 seller remains eligible. */
+    isAcceptingOrders: { type: Boolean, default: true },
+    /** null -> inherit `defaultPreparationTimeMinutes` from platform settings. */
+    preparationTimeMinutes: { type: Number, default: null, min: 0 },
+    /** null -> inherit `sellerSearchRadiusKm` from platform settings. */
+    fulfillmentRadiusKm: { type: Number, default: null, min: 0 },
     addressLine: { type: String, trim: true, default: null },
+    geocodedAddress: { type: String, trim: true, default: null },
     city: { type: String, trim: true, default: null },
     state: { type: String, trim: true, default: null },
     pincode: { type: String, trim: true, default: null },
     latitude: { type: Number, default: null },
     longitude: { type: Number, default: null },
     placeId: { type: String, trim: true, default: null },
+    isOnline: { type: Boolean, default: true, index: true },
+    lastLocationUpdatedAt: { type: Date, default: null },
+    pickupPoints: [
+      {
+        name: { type: String, trim: true },
+        addressLine: { type: String, trim: true },
+        city: { type: String, trim: true },
+        latitude: { type: Number },
+        longitude: { type: Number },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
     location: {
       type: {
         type: String,
@@ -80,6 +108,8 @@ sellerSchema.pre('save', function preSaveSyncLocation(next) {
 });
 
 sellerSchema.index({ status: 1, kycStatus: 1 });
+// CR-002 — warehouse lookup for fallback level 2.
+sellerSchema.index({ isWarehouse: 1, status: 1 }, { partialFilterExpression: { isWarehouse: true } });
 sellerSchema.index({ phone: 1, countryCode: 1 });
 sellerSchema.index({ location: '2dsphere' });
 

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import CategoryCard from '../components/vendor/CategoryCard';
 import { getCategories } from '../services/catalogApi';
 import { mapCategorySections } from '../utils/mappers';
+import { DEFAULT_PRODUCT_IMAGE, handleImageError } from '../../../shared/utils/imageUtils';
 
 // Import Assets (aligned with categories)
 import SamsungS24 from '../../../assets/products/product01.jpg';
@@ -203,13 +204,17 @@ const Categories = () => {
     };
   }, [isMithilakFlow, isQuickShopFlow, isFreshGroceryFlow]);
 
-  const sectionsList = apiSections?.length
+  const rawSectionsList = apiSections?.length
     ? apiSections
     : isMithilakFlow
       ? MITHILA_CATEGORIES
       : isQuickShopFlow
         ? QUICK_SHOP_CATEGORIES
         : SECTIONS;
+
+  const sectionsList = (rawSectionsList || []).filter(
+    (section) => section && Array.isArray(section.items) && section.items.length > 0
+  );
   const pageBg = isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
   const headerBg = isMithilakFlow ? 'bg-[#6FAE4A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow) ? 'text-white' : 'text-[#3C2415]';
@@ -270,7 +275,12 @@ const Categories = () => {
                 {/* Category Thumbnail */}
                 {sectionImg && (
                   <div className="w-11 h-11 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200/50 p-0.5 shadow-sm">
-                    <img src={sectionImg} alt={section.title} className="w-full h-full object-cover rounded-full" />
+                    <img 
+                      src={sectionImg || DEFAULT_PRODUCT_IMAGE} 
+                      alt={section.title} 
+                      onError={handleImageError}
+                      className="w-full h-full object-cover rounded-full" 
+                    />
                   </div>
                 )}
                 
@@ -320,8 +330,9 @@ const Categories = () => {
                       >
                         <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 relative shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
                           <img 
-                            src={item.img} 
+                            src={item.img || DEFAULT_PRODUCT_IMAGE} 
                             alt={item.name} 
+                            onError={handleImageError}
                             className="w-full h-full object-cover rounded-xl"
                           />
                         </div>
@@ -408,8 +419,9 @@ const Categories = () => {
                       >
                         <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden bg-white border border-[#EADCC9]/55 flex items-center justify-center group-hover:bg-slate-50 transition-colors duration-300 shadow-sm">
                           <img
-                            src={item.img}
+                            src={item.img || DEFAULT_PRODUCT_IMAGE}
                             alt={item.name}
+                            onError={handleImageError}
                             className="w-[82%] h-[82%] object-contain z-10 group-hover:scale-[1.08] transition-transform duration-500"
                             loading="lazy"
                           />
@@ -434,8 +446,9 @@ const Categories = () => {
                       >
                         <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-slate-50 border border-slate-100/60 flex items-center justify-center p-5 group-hover:bg-slate-100/65 transition-colors duration-300">
                           <img
-                            src={item.img}
+                            src={item.img || DEFAULT_PRODUCT_IMAGE}
                             alt={item.name}
+                            onError={handleImageError}
                             className="h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"
                           />
@@ -463,8 +476,9 @@ const Categories = () => {
                         </span>
                         <div className="w-[82%] aspect-square rounded-[16px] overflow-hidden bg-[#FFFDFB] border border-slate-100 flex items-center justify-center p-1 mb-0.5 relative">
                           <img
-                            src={item.img}
+                            src={item.img || DEFAULT_PRODUCT_IMAGE}
                             alt={item.name}
+                            onError={handleImageError}
                             className="w-full h-full object-cover rounded-xl group-hover:scale-[1.04] transition-transform duration-500"
                             loading="lazy"
                           />

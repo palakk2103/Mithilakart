@@ -8,6 +8,7 @@ const config = require('./config');
 const { createApp } = require('./app');
 const { connectDatabase, disconnectDatabase } = require('./config/database');
 const { connectRedis, disconnectRedis } = require('./config/redis');
+// Trigger clean startup with updated env and redis fallback
 const { resetContainer, getContainer } = require('./bootstrap/container');
 const { logger } = require('./utils/logger');
 const { eventBus, EVENT_TYPES } = require('./events/EventBus');
@@ -23,7 +24,18 @@ async function startServer() {
 
   const app = createApp();
   server = http.createServer(app);
-  initSocketGateway(server, getContainer());
+
+  const container = getContainer();
+  initSocketGateway(server, container);
+
+  // CR-002 — deadline sweeper. Fulfillment timeouts are persisted timestamps
+  // rather than in-memory timers, so this is what actually enforces them.
+  // Failure to start must not prevent the API from serving traffic.
+  try {
+    await container.services.fulfillmentSweeper.start();
+  } catch (error) {
+    logger.error({ err: error }, 'CR-002 fulfillment sweeper failed to start');
+  }
 
   await new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -43,6 +55,10 @@ async function startServer() {
     },
     'Mithilakart API server started'
   );
+
+  if (process.send) {
+    process.send('ready');
+  }
 
   return server;
 }
@@ -65,6 +81,12 @@ async function shutdown(signal) {
   forceExitTimer.unref();
 
   try {
+    try {
+      getContainer().services.fulfillmentSweeper.stop();
+    } catch (error) {
+      logger.warn({ err: error }, 'CR-002 fulfillment sweeper stop skipped');
+    }
+
     await closeSocketGateway();
 
     if (server) {

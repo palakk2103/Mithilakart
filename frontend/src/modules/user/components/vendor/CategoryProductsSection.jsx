@@ -5,6 +5,7 @@ import { getCategories, getCategoryProducts } from '../../services/catalogApi';
 import { findCategoryByName, extractList, mapProductForCard } from '../../utils/mappers';
 import { addProductToCart } from '../../utils/cartUtils';
 import useTabTheme from '../../../../shared/hooks/useTabTheme';
+import { getCurrentMarketplaceTab } from '../../../../shared/utils/marketplaceHelpers';
 
 const CornerFlower = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px] opacity-85 select-none pointer-events-none">
@@ -49,12 +50,6 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { primaryText, primaryBorder } = useTabTheme();
 
-  // Use a stable pseudo-random number based on the product ID for the rating count
-  const ratingCount = useMemo(() => {
-    const idNum = typeof product.id === 'string' ? product.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : product.id;
-    return (idNum % 450) + 50;
-  }, [product.id]);
-
   return (
     <div
       className="flex flex-col cursor-pointer group w-full md:w-[240px] md:flex-shrink-0 relative bg-[#FFFDF9] border border-[#EADCC9]/70 rounded-[18px] md:rounded-[24px] p-1.5 md:p-2.5 shadow-[0_2px_8px_rgba(61,35,20,0.015)] hover:shadow-[0_6px_18px_rgba(61,35,20,0.04)] hover:border-[#3E5A44]/35 transition-all duration-300 transform select-none"
@@ -94,33 +89,41 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
           />
         </button>
 
-        {/* Rating Badge on Image */}
-        <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 md:gap-1 bg-white/95 backdrop-blur-xs px-1 py-0.2 md:px-1.5 md:py-0.5 rounded-[4px] md:rounded-[6px] shadow-xs border border-[#EADCC9]/30">
-          <span className="text-[8px] md:text-[9.5px] font-black text-slate-800">{product.rating || '4.8'}</span>
-          <Star size={7} fill="currentColor" className={`${primaryText} stroke-none`} />
-          <div className="w-[1px] h-2 bg-gray-300 mx-0.5" />
-          <span className="text-[7.5px] md:text-[8.5px] font-semibold text-gray-500">({ratingCount})</span>
-        </div>
+        {/* Rating Badge on Image — only shown when the product has a real rating */}
+        {product.rating > 0 && (
+          <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 md:gap-1 bg-white/95 backdrop-blur-xs px-1 py-0.2 md:px-1.5 md:py-0.5 rounded-[4px] md:rounded-[6px] shadow-xs border border-[#EADCC9]/30">
+            <span className="text-[8px] md:text-[9.5px] font-black text-slate-800">{product.rating}</span>
+            <Star size={7} fill="currentColor" className={`${primaryText} stroke-none`} />
+            {product.reviewCount > 0 && (
+              <>
+                <div className="w-[1px] h-2 bg-gray-300 mx-0.5" />
+                <span className="text-[7.5px] md:text-[8.5px] font-semibold text-gray-500">({product.reviewCount})</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Details Section */}
       <div className="pt-1.5 pb-0.5 px-0.5 md:pt-2.5 md:pb-1 md:px-1.5 relative z-10 flex flex-col justify-between flex-1">
         <div>
           <h3 className="text-[10px] md:text-[12px] font-black text-[#3F2A20] line-clamp-1 leading-tight tracking-tight">
-            <span className="font-extrabold text-[#3F2A20]">{product.brand || 'Drasert'}</span> {product.name}
+            {product.brand && <span className="font-extrabold text-[#3F2A20]">{product.brand} </span>}
+            {product.name}
           </h3>
 
           <div className="mt-1 flex flex-col gap-0.5">
             <div className="flex items-center gap-1 md:gap-1.5 flex-wrap">
               <span className="text-[11px] md:text-[13.5px] font-black text-slate-900">₹{product.price}</span>
-              <span className="text-[8.5px] md:text-[10px] text-gray-400 line-through font-semibold">MRP ₹{product.oldPrice || '1,999'}</span>
-              <span className={`border ${primaryBorder} ${primaryText} bg-white text-[7px] md:text-[8px] px-1 py-0.2 rounded-full font-black uppercase tracking-tight`}>
-                {Math.round(((parseInt((product.oldPrice || '1999').toString().replace(/,/g, '')) - parseInt(product.price?.toString().replace(/,/g, ''))) / parseInt((product.oldPrice || '1999').toString().replace(/,/g, ''))) * 100)}% OFF
-              </span>
+              {product.oldPrice && (
+                <span className="text-[8.5px] md:text-[10px] text-gray-400 line-through font-semibold">MRP ₹{product.oldPrice}</span>
+              )}
+              {product.off && (
+                <span className={`border ${primaryBorder} ${primaryText} bg-white text-[7px] md:text-[8px] px-1 py-0.2 rounded-full font-black uppercase tracking-tight`}>
+                  {product.off}
+                </span>
+              )}
             </div>
-            <p className={`text-[8.5px] md:text-[9.5px] font-extrabold ${primaryText} tracking-tight mt-0.5`}>
-              ₹{Math.round(product.price * 0.9)} with offer + more
-            </p>
           </div>
         </div>
 
@@ -148,13 +151,19 @@ const CategoryProductsSection = ({ selectedCategory }) => {
     const load = async () => {
       setLoading(true);
       try {
-        const categories = await getCategories();
+        // Scope both the category lookup and the product fetch to the
+        // customer's actual current marketplace tab. Without this, a
+        // Mithilak-themed section could surface Quick Shop / Groceries
+        // products that were never approved for this tab — confirmed live
+        // against production data (backend/docs/production-readiness).
+        const tab = getCurrentMarketplaceTab();
+        const categories = await getCategories({ marketplaceTab: tab });
         const match = findCategoryByName(categories, selectedCategory);
         if (!match) {
           if (!cancelled) setAllProducts([]);
           return;
         }
-        const data = await getCategoryProducts(match.id, { limit: 24 });
+        const data = await getCategoryProducts(match.id, { limit: 24, marketplaceTab: tab });
         if (!cancelled) {
           setAllProducts(extractList(data).map((p) => mapProductForCard(p)));
         }

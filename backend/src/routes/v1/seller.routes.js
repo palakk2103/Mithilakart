@@ -5,6 +5,7 @@ const { objectIdSchema } = require('../../validators/common.validator');
 const { requireSellerContext } = require('../../helpers/sellerScope');
 const { requireActiveSeller } = require('../../middleware/authMiddleware');
 const { ORDER_STATUS_VALUES } = require('../../constants/commerce');
+const { SELLER_REJECT_REASON_VALUES } = require('../../constants/fulfillment');
 const {
   sellerProductCreateSchema,
   sellerProductUpdateSchema,
@@ -47,6 +48,31 @@ function createSellerRoutes(controllers, middleware) {
     })),
     controllers.orders.updateOrderStatusAsSeller
   );
+
+  // ── CR-002 — fulfillment offers ─────────────────────────────────────────
+  // Additive only. The three routes above are unchanged.
+  if (controllers.fulfillment) {
+    router.get('/fulfillment/offers', ...sellerScope, controllers.fulfillment.listOffers);
+
+    router.post(
+      '/orders/:id/accept',
+      ...sellerScope,
+      validateParams(Joi.object({ id: objectIdSchema })),
+      validateBody(Joi.object({ attemptId: objectIdSchema.required() })),
+      controllers.fulfillment.acceptOffer
+    );
+
+    router.post(
+      '/orders/:id/reject',
+      ...sellerScope,
+      validateParams(Joi.object({ id: objectIdSchema })),
+      validateBody(Joi.object({
+        attemptId: objectIdSchema.required(),
+        reason: Joi.string().valid(...SELLER_REJECT_REASON_VALUES).optional().allow(null, ''),
+      })),
+      controllers.fulfillment.rejectOffer
+    );
+  }
 
   router.get('/returns', ...sellerScope, controllers.returns.list);
   router.patch('/returns/:id/approve', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({ note: Joi.string().optional() })), controllers.returns.approve);
@@ -91,6 +117,12 @@ function createSellerRoutes(controllers, middleware) {
   router.put('/settings/bank', ...sellerScope, validateBody(sellerSettingsBankSchema), controllers.settings.updateBank);
   router.put('/settings/password', ...sellerScope, validateBody(sellerSettingsPasswordSchema), controllers.settings.updatePassword);
   router.put('/settings/notifications', ...sellerScope, validateBody(sellerSettingsNotificationsSchema), controllers.settings.updateNotifications);
+
+  // Aliased SSE route for seller notifications/stream (supports /api/v1/seller/stream)
+  const { sellerOrderStreamService } = require('../../services/realtime/SellerOrderStreamService');
+  router.get('/stream', authSeller, (req, res) => {
+    sellerOrderStreamService.subscribe(req.user.sellerId, res);
+  });
 
   return router;
 }

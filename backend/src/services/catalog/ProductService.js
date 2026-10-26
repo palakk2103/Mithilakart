@@ -90,6 +90,15 @@ class ProductService extends BaseService {
       throw AppError.validation('Search query is required');
     }
 
+    // Same tab-scoping fix as listPublic() (production readiness audit,
+    // 2026-08-25): without this, search always hit the unscoped legacy
+    // Product query regardless of marketplaceTab — live-confirmed a
+    // quick_shop-only product ("Atta") was returned identically whether
+    // searched with marketplaceTab=mithilak or no tab at all.
+    if (this.marketplaceListingService && resolveTabFromQuery(query)) {
+      return this.marketplaceListingService.listPublicForTab(query);
+    }
+
     const pagination = parsePagination(query);
     const filter = applyCommerceFlowFilter(
       buildListFilters(query, { exactFields: ['commerceFlow'] }),
@@ -127,9 +136,9 @@ class ProductService extends BaseService {
       throw AppError.notFound('Product not found');
     }
 
-    const variants = await this.productVariantRepository.findByProductId(id);
+    const variants = await this.productVariantRepository.findByProductId(product._id);
     let payload = this._serializeDetail(product, variants);
-    payload = await this._withFlashSalePrice(payload, id);
+    payload = await this._withFlashSalePrice(payload, product._id);
 
     await this.cacheService.set(cacheKey, payload, CACHE_TTL.PRODUCT_DETAIL);
     return payload;
@@ -301,6 +310,9 @@ class ProductService extends BaseService {
       description: product.description,
       tags: product.tags,
       attributes: product.attributes,
+      pickupCoordinates: product.pickupCoordinates || null,
+      pickupAddress: product.pickupAddress || null,
+      city: product.city || null,
       variants: variants.map((variant) => ({
         id: variant._id,
         name: variant.name,

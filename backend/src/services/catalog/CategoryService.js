@@ -16,22 +16,36 @@ class CategoryService extends BaseService {
     const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
 
-    const filter = { isActive: true };
-    if (tab) {
-      const legacy = toLegacyCommerceFlow(tab);
-      filter.$or = [
-        { visibleTabs: tab },
-        ...(legacy ? [{ commerceFlows: legacy }] : []),
-      ];
-    } else if (commerceFlow) {
-      filter.commerceFlows = commerceFlow;
-    }
-
-    const categories = await this.categoryRepository.findActive(filter, {
+    const allCategories = await this.categoryRepository.findActive({ isActive: true }, {
       sort: { sortOrder: 1, name: 1 },
     });
 
-    const tree = this._buildTree(categories);
+    let filtered = allCategories;
+    if (tab) {
+      const legacy = toLegacyCommerceFlow(tab);
+      const catMap = new Map(allCategories.map((c) => [String(c._id), c]));
+
+      const isCategoryVisible = (cat) => {
+        if (!cat) return false;
+        const tabs = cat.visibleTabs?.length
+          ? cat.visibleTabs
+          : (cat.commerceFlows || []);
+        if (tabs.includes(tab) || (legacy && tabs.includes(legacy))) return true;
+        if (cat.parentId && (!tabs || tabs.length === 0)) {
+          const parent = catMap.get(String(cat.parentId));
+          return isCategoryVisible(parent);
+        }
+        return false;
+      };
+
+      filtered = allCategories.filter((cat) => {
+        if (isCategoryVisible(cat)) return true;
+        const hasVisibleChild = allCategories.some((other) => String(other.parentId) === String(cat._id) && isCategoryVisible(other));
+        return hasVisibleChild;
+      });
+    }
+
+    const tree = this._buildTree(filtered);
     await this.cacheService.set(cacheKey, tree, CACHE_TTL.CATEGORIES_TREE);
     return tree;
   }

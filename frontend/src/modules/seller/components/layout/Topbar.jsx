@@ -91,28 +91,28 @@ const Topbar = ({ onMenuClick }) => {
     : [];
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-[var(--seller-topbar-bg,#fff)] border-b border-[var(--seller-border-light,#F3F4F6)] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 h-14 bg-[var(--seller-topbar-bg,#fff)] border-b border-[var(--seller-border-light,#F3F4F6)] px-3 sm:px-5 lg:px-6 flex items-center justify-between gap-3 select-none">
       {/* Left: Menu + Title */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 min-w-0">
         {/* Mobile Menu Toggle */}
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
+          className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           aria-label="Open menu"
         >
-          <Menu size={20} className="text-gray-600" />
+          <Menu size={18} className="text-slate-600" />
         </button>
 
         {/* Page Title + Breadcrumb */}
-        <div className="hidden sm:block">
-          <h2 className="text-base font-semibold text-[var(--seller-text,#111827)]">{getPageTitle()}</h2>
+        <div className="min-w-0">
+          <h2 className="text-[13.5px] sm:text-[14.5px] font-bold text-[var(--seller-text,#111827)] truncate">{getPageTitle()}</h2>
           {getBreadcrumb() && (
-            <div className="flex items-center gap-1.5 text-[11px] text-[var(--seller-subtext,#6B7280)]">
-              <span className="hover:text-blue-600 cursor-pointer" onClick={() => navigate('/seller/dashboard')}>Home</span>
+            <div className="hidden sm:flex items-center gap-1 text-[10.5px] text-[var(--seller-subtext,#6B7280)]">
+              <span className="hover:text-blue-600 cursor-pointer transition-colors" onClick={() => navigate('/seller/dashboard')}>Home</span>
               {getBreadcrumb().map((part, i) => (
                 <React.Fragment key={i}>
-                  <ChevronRight size={10} />
-                  <span className={i === getBreadcrumb().length - 1 ? 'text-[var(--seller-text,#111827)] font-medium' : ''}>{part}</span>
+                  <ChevronRight size={9} className="text-slate-400" />
+                  <span className={i === getBreadcrumb().length - 1 ? 'text-[var(--seller-text,#111827)] font-medium truncate' : 'truncate'}>{part}</span>
                 </React.Fragment>
               ))}
             </div>
@@ -121,24 +121,24 @@ const Topbar = ({ onMenuClick }) => {
       </div>
 
       {/* Right: Search + Actions */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-2.5">
         {/* Search */}
         <div className="relative hidden md:block">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(e.target.value.length > 0); }}
             onFocus={() => searchQuery.length > 0 && setShowSearch(true)}
             onBlur={() => setTimeout(() => setShowSearch(false), 200)}
-            placeholder="Quick navigate..."
-            className="w-52 lg:w-72 pl-9 pr-8 py-2 text-sm bg-[var(--seller-sidebar-hover,#F3F4F6)] border border-transparent
-                       rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-200 focus:bg-white
-                       outline-none transition-all placeholder:text-gray-400"
+            placeholder="Quick search..."
+            className="w-40 lg:w-56 pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200/80
+                       rounded-lg focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 focus:bg-white
+                       outline-none transition-all placeholder:text-slate-400"
           />
           {searchQuery && (
-            <button onClick={() => { setSearchQuery(''); setShowSearch(false); }} className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <X size={14} className="text-gray-400" />
+            <button onClick={() => { setSearchQuery(''); setShowSearch(false); }} className="absolute right-2 top-1/2 -translate-y-1/2">
+              <X size={12} className="text-slate-400" />
             </button>
           )}
 
@@ -146,22 +146,22 @@ const Topbar = ({ onMenuClick }) => {
           <AnimatePresence>
             {showSearch && (
               <motion.div
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
+                exit={{ opacity: 0, y: 4 }}
+                className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden"
               >
                 {filteredLinks.length > 0 ? filteredLinks.map((link) => (
                   <button
                     key={link.path}
                     onClick={() => { navigate(link.path); setSearchQuery(''); setShowSearch(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
                   >
-                    <Search size={14} className="text-gray-400" />
-                    {link.name}
+                    <Search size={12} className="text-slate-400" />
+                    <span className="truncate">{link.name}</span>
                   </button>
                 )) : (
-                  <p className="px-4 py-6 text-sm text-gray-400 text-center">No results found</p>
+                  <p className="px-3 py-4 text-xs text-slate-400 text-center">No results found</p>
                 )}
               </motion.div>
             )}
@@ -171,57 +171,55 @@ const Topbar = ({ onMenuClick }) => {
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2.5 rounded-xl hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
         >
-          {theme === 'light' ? <Moon size={18} className="text-gray-500" /> : <Sun size={18} className="text-amber-400" />}
+          {theme === 'light' ? <Moon size={16} className="text-slate-500" /> : <Sun size={16} className="text-amber-400" />}
         </button>
 
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button
             onClick={() => { setShowNotifications(!showNotifications); setShowProfile(false); }}
-            className={`relative p-2.5 rounded-xl transition-colors ${
-              showNotifications ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100 text-gray-500'
+            className={`relative p-2 rounded-lg transition-colors cursor-pointer ${
+              showNotifications ? 'bg-slate-100 text-slate-900' : 'hover:bg-slate-100 text-slate-500'
             }`}
             aria-label="Notifications"
           >
-            <Bell size={18} />
+            <Bell size={16} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
+              <span className="absolute 1 top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             )}
           </button>
 
           <AnimatePresence>
             {showNotifications && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                initial={{ opacity: 0, scale: 0.95, y: 4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden"
+                exit={{ opacity: 0, scale: 0.95, y: 4 }}
+                className="absolute right-0 top-full mt-1.5 w-72 sm:w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden"
               >
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-                  <h4 className="text-sm font-semibold text-gray-900">Notifications</h4>
-                  <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-900">Notifications</h4>
+                  <span className="text-[9.5px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
                     {unreadCount} new
                   </span>
                 </div>
-                <div className="max-h-[360px] overflow-y-auto">
+                <div className="max-h-[300px] overflow-y-auto">
                   {notifications.slice(0, 5).map((n) => (
                     <div
                       key={n.id}
-                      className={`px-5 py-3.5 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        !n.read ? 'bg-blue-50/30' : ''
+                      className={`px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors cursor-pointer ${
+                        !n.read ? 'bg-slate-50/60' : ''
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${n.read ? 'bg-gray-200' : 'bg-blue-500'}`} />
-                        <div>
-                          <p className={`text-sm ${n.read ? 'text-gray-500' : 'text-gray-900 font-medium'}`}>{n.title}</p>
-                          <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{n.message}</p>
-                          <span className="text-[10px] text-gray-400 mt-1 block">{getRelativeTime(new Date(n.createdAt))}</span>
+                      <div className="flex items-start gap-2.5">
+                        <div className={`w-1.5 h-1.5 mt-1.5 rounded-full flex-shrink-0 ${n.read ? 'bg-slate-300' : 'bg-blue-500'}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-xs ${n.read ? 'text-slate-600' : 'text-slate-900 font-semibold'} truncate`}>{n.title}</p>
+                          <p className="text-[11px] text-slate-500 line-clamp-1">{n.message}</p>
+                          <span className="text-[9.5px] text-slate-400 mt-0.5 block">{getRelativeTime(new Date(n.createdAt))}</span>
                         </div>
                       </div>
                     </div>
@@ -229,7 +227,7 @@ const Topbar = ({ onMenuClick }) => {
                 </div>
                 <button
                   onClick={() => { navigate('/seller/notifications'); setShowNotifications(false); }}
-                  className="w-full py-3 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors border-t border-gray-100"
+                  className="w-full py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100 cursor-pointer"
                 >
                   View All Notifications
                 </button>
@@ -242,14 +240,14 @@ const Topbar = ({ onMenuClick }) => {
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); }}
-            className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
-              <span className="text-white text-xs font-bold">
+            <div className="w-7 h-7 bg-slate-900 text-white rounded-lg flex items-center justify-center shadow-2xs">
+              <span className="text-[11px] font-bold">
                 {seller?.name?.charAt(0) || 'S'}
               </span>
             </div>
-            <span className="hidden lg:block text-sm font-medium text-[var(--seller-text,#111827)]">
+            <span className="hidden lg:block text-xs font-semibold text-slate-800 max-w-[100px] truncate">
               {seller?.name?.split(' ')[0] || 'Seller'}
             </span>
           </button>
@@ -257,33 +255,33 @@ const Topbar = ({ onMenuClick }) => {
           <AnimatePresence>
             {showProfile && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                initial={{ opacity: 0, scale: 0.95, y: 4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 8 }}
-                className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden"
+                exit={{ opacity: 0, scale: 0.95, y: 4 }}
+                className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden"
               >
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm font-semibold text-gray-900">{seller?.name || 'Seller'}</p>
-                  <p className="text-xs text-gray-400">{seller?.email || 'seller@example.com'}</p>
+                <div className="px-3.5 py-2.5 border-b border-slate-100">
+                  <p className="text-xs font-bold text-slate-900 truncate">{seller?.name || 'Seller'}</p>
+                  <p className="text-[10.5px] text-slate-400 truncate">{seller?.email || 'seller@example.com'}</p>
                 </div>
-                <div className="p-1.5">
+                <div className="p-1">
                   <button
                     onClick={() => { navigate('/seller/settings'); setShowProfile(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                   >
-                    <User size={16} /> Profile
+                    <User size={14} className="text-slate-400" /> Profile
                   </button>
                   <button
                     onClick={() => { navigate('/seller/settings'); setShowProfile(false); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                   >
-                    <Settings size={16} /> Settings
+                    <Settings size={14} className="text-slate-400" /> Settings
                   </button>
                   <button
                     onClick={async () => { await logout(); navigate('/seller/login'); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                   >
-                    <LogOut size={16} /> Logout
+                    <LogOut size={14} /> Logout
                   </button>
                 </div>
               </motion.div>

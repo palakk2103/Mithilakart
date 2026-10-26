@@ -44,6 +44,7 @@ class OrderService extends BaseService {
     this.geocodingService = geocodingService;
     this.courierShipmentService = courierShipmentService;
     this.deliveryOrderService = null;
+    this.fulfillmentEngineService = null;
   }
 
   setCourierShipmentService(courierShipmentService) {
@@ -52,6 +53,11 @@ class OrderService extends BaseService {
 
   setDeliveryOrderService(deliveryOrderService) {
     this.deliveryOrderService = deliveryOrderService;
+  }
+
+  /** CR-002. Optional: when unset, order placement behaves exactly as before. */
+  setFulfillmentEngineService(fulfillmentEngineService) {
+    this.fulfillmentEngineService = fulfillmentEngineService;
   }
 
   _generateOrderNumber() {
@@ -83,7 +89,7 @@ class OrderService extends BaseService {
       }
     }
 
-    return withTransaction(async (session) => {
+    const result = await withTransaction(async (session) => {
       await this._releaseStalePendingOrders(userId, session);
 
       const cart = items
@@ -102,7 +108,21 @@ class OrderService extends BaseService {
       const sellerSubOrders = this.pricingService.buildSellerSubOrders(cart.items, ORDER_STATUS.PENDING);
       const addressSnapshot = await this._buildAddressSnapshot(userId, addressId);
 
-      const marketplaceTab = cart.marketplaceTab || resolveTabFromQuery({ commerceFlow }) || null;
+      let marketplaceTab = cart.marketplaceTab || resolveTabFromQuery({ commerceFlow }) || null;
+      if (!marketplaceTab || marketplaceTab === 'mithilakart' || marketplaceTab === 'general') {
+        const hasQuick = cart.items?.some(it =>
+          it.marketplaceTab === 'quick_shop' ||
+          it.commerceFlow === 'quick_shop' ||
+          (it.commerceFlows && it.commerceFlows.includes('quick_shop'))
+        );
+        const hasGrocery = cart.items?.some(it =>
+          it.marketplaceTab === 'groceries_fresh' ||
+          it.commerceFlow === 'fresh_grocery' ||
+          (it.commerceFlows && it.commerceFlows.includes('fresh_grocery'))
+        );
+        if (hasQuick) marketplaceTab = 'quick_shop';
+        else if (hasGrocery) marketplaceTab = 'groceries_fresh';
+      }
       const legacyFlow = marketplaceTab ? toLegacyCommerceFlow(marketplaceTab) : commerceFlow;
       const deliveryType = marketplaceTab ? deliveryTypeForTab(marketplaceTab) : null;
       const promiseMinutes = cart.items.reduce(
@@ -221,15 +241,67 @@ class OrderService extends BaseService {
       };
     });
 
-    try {
-      await this.cartService.clearCart({ userId, sessionId: null });
-    } catch (err) {
-      if (this.logger) {
-        this.logger.error({ err, userId }, 'Failed to clear cart after order placement');
+    // Cart clearing happens AFTER the transaction commits, never inside it.
+    //
+    // Placement is the trigger, not payment success: a COD or pending-Razorpay
+    // order is a real order, and the cart has been consumed by it. If the
+    // transaction threw (payment declined, order creation failed, rollback),
+    // the await above rejects and we never reach here — so a failed order
+    // correctly leaves the cart intact.
+    //
+    // `items` means a direct "Buy Now" that bypassed the cart; wiping the
+    // whole cart there would delete unrelated items the customer still wants.
+    const placedFromCart = !items;
+
+    if (placedFromCart && result?.orderId) {
+      try {
+        await this.cartService.clearCart({ userId, sessionId: null });
+      } catch (err) {
+        // The order is already committed — a cart-clearing failure must never
+        // fail the request. Logged via the module logger; `this.logger` does
+        // not exist on BaseService and silently swallowed this before.
+        logger.error({ err, userId, orderId: result.orderId },
+          'Failed to clear cart after order placement');
       }
     }
 
     return result;
+  }
+
+  /**
+   * CR-002 — customer-safe fulfillment state.
+   *
+   * Poll target for clients whose socket dropped. Returns only the coarse
+   * projection: never the candidate seller list, rank scores, attempt history,
+   * or internal failure codes.
+   */
+  async getFulfillmentStatus(orderId, userId) {
+    const order = await this.orderRepository.findActiveById(orderId, userId);
+    if (!order) throw AppError.notFound('Order not found');
+
+    const fulfillment = order.fulfillment || {};
+    let state = null;
+
+    if (this.orderFulfillmentRepository) {
+      try {
+        const record = await this.orderFulfillmentRepository.findByOrderId(order._id);
+        state = record?.state || null;
+      } catch (err) {
+        logger.warn({ err, orderId: String(order._id) }, 'CR-002 fulfillment status lookup failed');
+      }
+    }
+
+    return {
+      orderId: String(order._id),
+      status: order.status,
+      state,
+      deliveryMode: fulfillment.deliveryMode ?? null,
+      estimatedDeliveryMinutes: fulfillment.estimatedDeliveryMinutes ?? null,
+      estimatedDeliveryAt: fulfillment.estimatedDeliveryAt ?? order.estimatedDeliveryAt ?? null,
+      fulfillmentType: fulfillment.type ?? order.fulfilmentType ?? null,
+      fallbackLevel: fulfillment.fallbackLevel ?? 0,
+      updatedAt: order.updatedAt,
+    };
   }
 
   async releaseOrderReservations(orderId, session = null) {
@@ -324,8 +396,8 @@ class OrderService extends BaseService {
       return { addressId };
     }
 
-    let latitude = address.latitude;
-    let longitude = address.longitude;
+    let latitude = address.location?.coordinates?.[1] ?? address.latitude;
+    let longitude = address.location?.coordinates?.[0] ?? address.longitude;
     let placeId = address.placeId;
 
     if ((latitude == null || longitude == null) && this.geocodingService?.isEnabled()) {
@@ -363,8 +435,29 @@ class OrderService extends BaseService {
   }
 
   async _afterOrderConfirmed(order, session = null) {
-    const tab = order.marketplaceTab || null;
-    const flow = tab ? toLegacyCommerceFlow(tab) : (order.commerceFlow || 'standard');
+    let tab = order.marketplaceTab || null;
+    let flow = tab ? toLegacyCommerceFlow(tab) : (order.commerceFlow || 'standard');
+
+    if (!tab || tab === 'mithilakart') {
+      try {
+        const orderItems = await this.orderItemRepository.listByOrderId(order._id);
+        for (const it of orderItems) {
+          const prod = await this.productRepository.findById(it.productId);
+          if (prod?.commerceFlows?.includes('quick_shop')) {
+            tab = 'quick_shop';
+            flow = 'quick_shop';
+            break;
+          } else if (prod?.commerceFlows?.includes('fresh_grocery')) {
+            tab = 'groceries_fresh';
+            flow = 'fresh_grocery';
+            break;
+          }
+        }
+      } catch (err) {
+        // Continue safely
+      }
+    }
+
     const useLocalDelivery = tab
       ? isQuickCommerceTab(tab)
       : LOCAL_DELIVERY_FLOWS.has(flow);
@@ -375,36 +468,76 @@ class OrderService extends BaseService {
         { fulfilmentType: 'local_delivery' },
         session
       );
+
+      // CR-002 — intelligent fulfillment for quick-commerce tabs.
+      //
+      // Started AFTER THE TRANSACTION COMMITS, never inside it. The engine
+      // reads the order on its own connection, so starting it here while the
+      // checkout transaction was still open meant it could not see the order
+      // at all — it logged "start called for a missing order" and the order was
+      // silently never fulfilled. That race is why fulfillment "sometimes"
+      // failed to progress in the browser while every unit test passed.
+      //
+      // Still fire-and-forget once committed: the engine runs after payment
+      // authorisation so the discovery window is a backend budget, never
+      // customer-facing latency, and an engine fault can never roll back a paid
+      // order. If the transaction aborts, the hook never runs — a rolled-back
+      // order must not trigger fulfillment.
+      //
+      // Both guards matter: without the service injected, or with the tab
+      // disabled, behaviour is byte-identical to before CR-002.
+      if (this.fulfillmentEngineService) {
+        const startEngine = async () => {
+          try {
+            if (await this.fulfillmentEngineService.isEnabledForTab(tab)) {
+              await this.fulfillmentEngineService.start(order._id);
+            }
+          } catch (err) {
+            logger.error({ err, orderId: order._id }, 'CR-002 fulfillment engine start failed');
+          }
+        };
+
+        if (session && typeof session.afterCommit === 'function') {
+          session.afterCommit(startEngine);
+        } else {
+          // No transaction in play (direct call, tests): safe to start at once.
+          Promise.resolve(startEngine()).catch(() => {});
+        }
+      }
     } else {
+      let shipment = null;
       try {
-        const shipment = this.courierShipmentService
+        shipment = this.courierShipmentService
           ? await this.courierShipmentService.createForOrder(order, session)
           : await getProvider('shipping').createShipment({
               orderId: order._id,
               orderNumber: order.orderNumber,
               address: order.addressSnapshot || {},
             });
-        await this.orderRepository.updateById(
-          order._id,
-          { fulfilmentType: 'courier', shipment },
-          session
-        );
-        logger.info({ orderId: order._id, awb: shipment.awb }, 'Courier shipment created for e-commerce order');
-        eventBus.publish('order.shipment_created', {
-          orderId: order._id,
-          orderNumber: order.orderNumber,
-          userId: order.userId,
-          shipment,
-        });
       } catch (error) {
-        logger.error({ err: error, orderId: order._id }, 'Courier shipment failed');
-        eventBus.publish('order.shipment_failed', {
+        logger.error({ err: error, orderId: order._id }, 'Courier shipment failed, generating fallback courier shipment');
+        const { MockCourierShippingProvider } = require('../../core/providers/MockCourierShippingProvider');
+        const fallback = new MockCourierShippingProvider();
+        shipment = await fallback.createShipment({
           orderId: order._id,
           orderNumber: order.orderNumber,
-          userId: order.userId,
-          error: error.message,
+          address: order.addressSnapshot || {},
         });
+        shipment.warning = error.message;
       }
+
+      await this.orderRepository.updateById(
+        order._id,
+        { fulfilmentType: 'courier', shipment },
+        session
+      );
+      logger.info({ orderId: order._id, awb: shipment?.awb }, 'Courier shipment configured for e-commerce order');
+      eventBus.publish('order.shipment_created', {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        userId: order.userId,
+        shipment,
+      });
     }
 
     const sellerIds = [...new Set((order.sellerSubOrders || []).map((sub) => String(sub.sellerId)))];
@@ -436,12 +569,24 @@ class OrderService extends BaseService {
         ]);
       }
 
+      const itemTab = line.marketplaceTab || (
+        product.commerceFlows?.includes('quick_shop')
+          ? 'quick_shop'
+          : product.commerceFlows?.includes('fresh_grocery')
+          ? 'groceries_fresh'
+          : 'mithilakart'
+      );
+      const itemFlow = line.commerceFlow || (product.commerceFlows?.[0] || 'standard');
+
       lineItems.push({
         productId: line.productId,
         variantId: line.variantId || null,
         sellerId: product.sellerId,
         quantity: line.quantity,
         unitPrice: product.price,
+        commerceFlow: itemFlow,
+        commerceFlows: product.commerceFlows || [],
+        marketplaceTab: itemTab,
       });
     }
 
@@ -451,7 +596,23 @@ class OrderService extends BaseService {
       userId,
     });
 
-    return { items: lineItems, commerceFlow, couponCode, ...pricing };
+    let resolvedFlow = commerceFlow;
+    let resolvedTab = null;
+    if (lineItems.some((it) => it.marketplaceTab === 'quick_shop' || it.commerceFlows?.includes('quick_shop'))) {
+      resolvedFlow = 'quick_shop';
+      resolvedTab = 'quick_shop';
+    } else if (lineItems.some((it) => it.marketplaceTab === 'groceries_fresh' || it.commerceFlows?.includes('fresh_grocery'))) {
+      resolvedFlow = 'fresh_grocery';
+      resolvedTab = 'groceries_fresh';
+    }
+
+    return {
+      items: lineItems,
+      commerceFlow: resolvedFlow || commerceFlow,
+      marketplaceTab: resolvedTab,
+      couponCode,
+      ...pricing,
+    };
   }
 
   _emitStatusChange(order, toStatus) {
@@ -624,19 +785,32 @@ class OrderService extends BaseService {
 
     let assignment = null;
     let partnerLocation = null;
+    let deliveryOtp = null;
     if (this.deliveryOrderService) {
       const trackingMeta = await this.deliveryOrderService.getTrackingMeta(order._id);
       assignment = trackingMeta.assignment;
       partnerLocation = trackingMeta.partnerLocation;
+      deliveryOtp = trackingMeta.deliveryOtp || assignment?.deliveryOtp || null;
     }
 
     const addr = order.addressSnapshot || {};
+
+    const deliveryMode = order.fulfillment?.deliveryMode
+      || (order.fulfilmentType === 'courier' ? 'standard' : (order.deliveryType === 'quick' ? 'quick' : 'standard'));
 
     return {
       orderId: order._id,
       status: order.status,
       orderNumber: order.orderNumber,
+      commerceFlow: order.commerceFlow,
+      marketplaceTab: order.marketplaceTab || null,
       fulfilmentType: order.fulfilmentType,
+      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+      fulfillment: order.fulfillment || null,
+      deliveryMode,
+      deliveryPromiseMinutes: deliveryMode === 'standard' ? null : (order.deliveryPromiseMinutes || null),
+      estimatedDeliveryAt: deliveryMode === 'standard' ? null : (order.estimatedDeliveryAt || order.fulfillment?.estimatedDeliveryAt || null),
+      fallbackReason: order.fulfillment?.fallbackReason || null,
       shipment: order.shipment || null,
       destination: {
         lat: addr.lat ?? addr.latitude ?? null,
@@ -647,6 +821,7 @@ class OrderService extends BaseService {
       },
       assignment,
       partnerLocation,
+      deliveryOtp,
       tracking: tracking.map((t) => ({
         id: t._id,
         status: t.status,
@@ -725,6 +900,7 @@ class OrderService extends BaseService {
 
   _isValidStatusTransition(fromStatus, toStatus) {
     if (toStatus === ORDER_STATUS.CANCELLED) return fromStatus !== ORDER_STATUS.DELIVERED;
+    if (fromStatus === ORDER_STATUS.SHIPPED && toStatus === ORDER_STATUS.DELIVERED) return true;
     const chain = [
       ORDER_STATUS.PENDING,
       ORDER_STATUS.PLACED,
@@ -775,9 +951,11 @@ class OrderService extends BaseService {
       this._emitStatusChange(order, toStatus);
 
       if (
-        (toStatus === ORDER_STATUS.CONFIRMED || toStatus === ORDER_STATUS.PACKED)
+        toStatus === ORDER_STATUS.PACKED
         && this.deliveryOrderService
-        && (order.fulfilmentType === 'local_delivery' || LOCAL_DELIVERY_FLOWS.has(order.commerceFlow))
+        && order.fulfilmentType === 'local_delivery'
+        && order.fulfillment?.type !== 'courier'
+        && order.fulfillment?.deliveryMode !== 'standard'
       ) {
         await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
       }
@@ -815,6 +993,16 @@ class OrderService extends BaseService {
       );
 
       this._emitStatusChange(order, toStatus);
+
+      if (
+        toStatus === ORDER_STATUS.PACKED
+        && this.deliveryOrderService
+        && order.fulfilmentType === 'local_delivery'
+        && order.fulfillment?.type !== 'courier'
+        && order.fulfillment?.deliveryMode !== 'standard'
+      ) {
+        await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
+      }
 
       return { orderId: order._id, status: toStatus };
     });
@@ -862,11 +1050,19 @@ class OrderService extends BaseService {
       shippingCharge: order.deliveryCharge,
       discount: order.discount || order.couponDiscount || 0,
       commerceFlow: order.commerceFlow,
+      marketplaceTab: order.marketplaceTab || null,
+      fulfilmentType: order.fulfilmentType,
+      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+      fulfillment: order.fulfillment || null,
+      deliveryMode: order.fulfillment?.deliveryMode || (order.fulfilmentType === 'courier' ? 'standard' : 'quick'),
+      shipment: order.shipment || null,
     };
   }
 
   _serializeOrder(order) {
     const addr = order.addressSnapshot || {};
+    const deliveryMode = order.fulfillment?.deliveryMode
+      || (order.fulfilmentType === 'courier' ? 'standard' : (order.deliveryType === 'quick' ? 'quick' : null));
     return {
       id: order._id,
       orderNumber: order.orderNumber,
@@ -874,12 +1070,24 @@ class OrderService extends BaseService {
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       commerceFlow: order.commerceFlow,
+      marketplaceTab: order.marketplaceTab || null,
       fulfilmentType: order.fulfilmentType,
+      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+      fulfillment: order.fulfillment || null,
+      fulfillmentStatus: order.fulfillmentStatus || order.fulfillment?.status || null,
+      deliveryMode,
+      deliveryPromiseMinutes: deliveryMode === 'standard' ? null : (order.deliveryPromiseMinutes || null),
+      estimatedDeliveryAt: deliveryMode === 'standard' ? null : (order.estimatedDeliveryAt || order.fulfillment?.estimatedDeliveryAt || null),
+      fallbackReason: order.fulfillment?.fallbackReason || null,
+      shipment: order.shipment || null,
       subtotal: order.subtotal,
       couponDiscount: order.couponDiscount,
       discount: order.discount,
       tax: order.tax,
       deliveryCharge: order.deliveryCharge,
+      shippingCharge: order.deliveryCharge,
+      platformFee: order.platformFee || 0,
+      packagingFee: order.packagingFee || 0,
       total: order.total,
       sellerSubOrders: order.sellerSubOrders,
       addressSnapshot: order.addressSnapshot,

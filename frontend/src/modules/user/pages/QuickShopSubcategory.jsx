@@ -9,6 +9,7 @@ import { formatLocationLabel } from '../../../shared/services/locationService';
 import { findCategoryByName, extractList, mapProductForCard } from '../utils/mappers';
 import { addProductToCart } from '../utils/cartUtils';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
+import useAccountStore from '../../../store/useAccountStore';
 
 const FALLBACK_IMAGE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="%23fdfbf7" rx="12"/><text x="75" y="80" font-size="12" font-family="sans-serif" font-weight="bold" fill="%23d3a075" text-anchor="middle">Mithilakart</text></svg>`;
 
@@ -62,7 +63,12 @@ const QuickShopSubcategory = () => {
   const [notDeliverable, setNotDeliverable] = useState(false);
 
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
-  const deliverLabel = formatLocationLabel(liveLocation);
+  const { savedAddresses, selectedAddressId } = useAccountStore();
+  const selectedAddr = savedAddresses?.find((a) => a.id === selectedAddressId) || savedAddresses?.[0];
+  const effectiveLat = liveLocation?.latitude ?? selectedAddr?.latitude ?? 28.5385859;
+  const effectiveLng = liveLocation?.longitude ?? selectedAddr?.longitude ?? 77.1182734;
+
+  const deliverLabel = formatLocationLabel(liveLocation || { address: selectedAddr?.address || 'Rangpuri-Mahipalpur, New Delhi' });
 
   useEffect(() => {
     let cancelled = false;
@@ -73,60 +79,39 @@ const QuickShopSubcategory = () => {
       try {
         const commerceFlow = isFreshGroceryFlow ? 'fresh_grocery' : 'quick_shop';
 
-        if (liveLocation?.latitude == null || liveLocation?.longitude == null) {
-          if (!cancelled) {
-            setNotDeliverable(true);
-            setProductsList([]);
-            setLoading(false);
-          }
-          return;
-        }
+        try {
+          const nearby = await getNearbyProducts({
+            lat: effectiveLat,
+            lng: effectiveLng,
+            commerceFlow,
+            limit: 40,
+          });
+          const nearbyPayload = nearby?.data ?? nearby;
+          const nearbyItems = extractList(nearbyPayload).map((p) => {
+            const card = mapProductForCard(p);
+            return {
+              id: card.id,
+              name: card.name,
+              img: card.image,
+              brand: card.brand || 'Nearby Seller',
+              weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
+              price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
+              oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
+              eta: p.deliveryPromiseMinutes
+                ? `${p.deliveryPromiseMinutes} mins`
+                : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
+              tags: ['Nearby'],
+              category: 'all',
+            };
+          });
 
-        if (liveLocation?.latitude != null && liveLocation?.longitude != null) {
-          try {
-            const nearby = await getNearbyProducts({
-              lat: liveLocation.latitude,
-              lng: liveLocation.longitude,
-              commerceFlow,
-              limit: 40,
-            });
-            const nearbyPayload = nearby?.data ?? nearby;
-            const deliverable = nearbyPayload?.deliverable !== false;
-            const nearbyItems = extractList(nearbyPayload).map((p) => {
-              const card = mapProductForCard(p);
-              return {
-                id: card.id,
-                name: card.name,
-                img: card.image,
-                brand: card.brand || 'Nearby Seller',
-                weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
-                price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
-                oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
-                eta: p.deliveryPromiseMinutes
-                  ? `${p.deliveryPromiseMinutes} mins`
-                  : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
-                tags: ['Nearby'],
-                category: 'all',
-              };
-            });
-            if (!cancelled) {
-              if (!deliverable || !nearbyItems.length) {
-                setNotDeliverable(true);
-                setProductsList([]);
-              } else {
-                setProductsList(nearbyItems);
-              }
-              setLoading(false);
-              return;
-            }
-          } catch {
-            if (!cancelled) {
-              setNotDeliverable(true);
-              setProductsList([]);
-              setLoading(false);
-            }
+          if (!cancelled && nearbyItems.length > 0) {
+            setProductsList(nearbyItems);
+            setLoading(false);
             return;
           }
+        } catch {
+          // Continue to category catalog fallback so the screen is never left empty
         }
 
         const categories = await getCategories({ commerceFlow });

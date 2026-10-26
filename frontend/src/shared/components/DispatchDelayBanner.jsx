@@ -19,6 +19,13 @@ export const DispatchDelayBanner = ({ order, role = 'seller', className = '' }) 
   // USER / CUSTOMER APP BANNER (Reassuring, simple, non-technical)
   if (role === 'user' || role === 'customer') {
     if (dispatchState === 'delayed' || dispatchState === 'escalated') {
+      const isQuick = Boolean(
+        order?.fulfilmentType === 'local_delivery' ||
+        order?.commerceFlow === 'quick_shop' ||
+        order?.commerceFlow === 'fresh_grocery' ||
+        order?.deliveryMode === 'quick'
+      );
+
       return (
         <div className={`rounded-2xl bg-amber-50 border border-amber-200/80 p-4 text-amber-900 shadow-xs flex items-start gap-3.5 ${className}`}>
           <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 text-amber-600 mt-0.5">
@@ -26,14 +33,15 @@ export const DispatchDelayBanner = ({ order, role = 'seller', className = '' }) 
           </div>
           <div className="space-y-1">
             <h4 className="text-sm font-bold text-amber-950 flex items-center gap-2">
-              Shipment Delayed
+              {isQuick ? 'Delivery Running A Little Late' : 'Shipment Delayed'}
               <span className="text-[10px] bg-amber-200/70 text-amber-900 font-semibold px-2 py-0.5 rounded-full">
                 SLA Delay: {formattedTime}
               </span>
             </h4>
             <p className="text-xs text-amber-800/90 leading-relaxed font-medium">
-              The seller is taking longer than expected to dispatch your order.
-              We'll notify you as soon as your package is handed over to logistics.
+              {isQuick
+                ? "The seller is taking a few extra minutes to pack your quick order. Your delivery partner will pick it up as soon as it's ready."
+                : "The seller is taking longer than expected to dispatch your order. We'll notify you as soon as your package is handed over to logistics."}
             </p>
           </div>
         </div>

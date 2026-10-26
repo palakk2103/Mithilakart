@@ -10,6 +10,7 @@ class OrderController extends BaseController {
       'listOrders',
       'getOrderDetail',
       'getOrderTracking',
+      'getOrderFulfillment',
       'cancelOrder',
       'updateOrderStatusAsSeller',
       'updateOrderStatusAsAdmin',
@@ -51,6 +52,11 @@ class OrderController extends BaseController {
   getOrderTracking = asyncHandler(async (req, res) => {
     const userId = req.user.id;
     const result = await this.service.getTracking(req.params.id, userId);
+    return ApiResponse.success(res, result);
+  });
+
+  getOrderFulfillment = asyncHandler(async (req, res) => {
+    const result = await this.service.getFulfillmentStatus(req.params.id, req.user.id);
     return ApiResponse.success(res, result);
   });
 

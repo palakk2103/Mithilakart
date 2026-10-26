@@ -1,0 +1,136 @@
+# Mithilakart Nginx Production Configuration
+# Managed by Mithilakart VPS Deployment Suite
+
+# Rate limiting zones
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=30r/s;
+limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{SERVER_NAME}};
+
+    # Root directory for SPA build
+    root {{FRONTEND_DIST}};
+    index index.html;
+
+    # Maximum file upload size (images, product catalogs)
+    client_max_body_size 50M;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Gzip Compression
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_min_length 1024;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        text/xml
+        application/json
+        application/javascript
+        application/x-javascript
+        application/xml
+        application/xml+rss
+        image/svg+xml;
+
+    # 1. API Reverse Proxy
+    location /api/ {
+        limit_req zone=api_limit burst=20 nodelay;
+        limit_conn conn_limit 30;
+
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        proxy_buffering off;
+    }
+
+    # Root Health Check
+    location = /health {
+        proxy_pass http://127.0.0.1:5000/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 2. Real-Time WebSockets (Socket.IO)
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:5000/socket.io/;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+
+    # 3. Static Uploaded Files
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:5000/uploads/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    # 4. Vite Bundled Static Assets (fingerprinted/immutable)
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+        try_files $uri =404;
+    }
+
+    # 5. Robots & Sitemap
+    location = /robots.txt {
+        expires 1d;
+        add_header Cache-Control "public";
+        try_files $uri =404;
+    }
+
+    location = /sitemap.xml {
+        expires 1d;
+        add_header Cache-Control "public";
+        try_files $uri =404;
+    }
+
+    # 6. Service Worker & Manifest (do not aggressively cache)
+    location ~* ^/(sw\.js|registerSW\.js|manifest\.webmanifest)$ {
+        expires -1;
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        try_files $uri =404;
+    }
+
+    # 7. Frontend SPA Fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Custom Error Pages
+    error_page 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}
