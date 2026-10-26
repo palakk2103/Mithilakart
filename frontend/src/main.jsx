@@ -5,19 +5,26 @@ const originalRemoveItem = localStorage.removeItem;
 
 function getActiveTabId() {
   const path = window.location.pathname;
-  const isMithilakFlow = originalGetItem.call(localStorage, 'isMithilakFlow') === 'true';
-  const isFreshGroceryFlow = originalGetItem.call(localStorage, 'isFreshGroceryFlow') === 'true';
-  const isQuickShopFlow = originalGetItem.call(localStorage, 'isQuickShopFlow') === 'true';
-
-  if (path.includes('/fresh-grocery') || isFreshGroceryFlow) {
-    return 'freshgrocery';
-  }
-  if (path.includes('/mithilak') || isMithilakFlow) {
-    return 'mithilak';
-  }
-  if (path.includes('/quick-shop') || (isQuickShopFlow && !isMithilakFlow)) {
+  if (path.includes('/quick-shop')) {
     return 'quickshop';
   }
+  if (path.includes('/fresh-grocery')) {
+    return 'freshgrocery';
+  }
+  if (path.includes('/mithilak')) {
+    return 'mithilak';
+  }
+  if (path === '/home' || path === '/') {
+    return 'mithilakart';
+  }
+
+  const isQuickShopFlow = originalGetItem.call(localStorage, 'isQuickShopFlow') === 'true';
+  const isFreshGroceryFlow = originalGetItem.call(localStorage, 'isFreshGroceryFlow') === 'true';
+  const isMithilakFlow = originalGetItem.call(localStorage, 'isMithilakFlow') === 'true';
+
+  if (isQuickShopFlow) return 'quickshop';
+  if (isFreshGroceryFlow) return 'freshgrocery';
+  if (isMithilakFlow) return 'mithilak';
   return 'mithilakart';
 }
 

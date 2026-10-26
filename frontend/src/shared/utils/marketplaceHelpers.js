@@ -6,14 +6,28 @@
  * Detects the active marketplace tab based on the active route and local storage state.
  */
 export const getCurrentMarketplaceTab = () => {
+  if (typeof window !== 'undefined') {
+    if (window.location.pathname.includes('/quick-shop')) {
+      return 'quick_shop';
+    }
+    if (window.location.pathname.includes('/fresh-grocery')) {
+      return 'groceries_fresh';
+    }
+    if (window.location.pathname.includes('/mithilak')) {
+      return 'mithilak';
+    }
+    if (window.location.pathname === '/home' || window.location.pathname === '/') {
+      return 'mithilakart';
+    }
+  }
+  if (localStorage.getItem('isQuickShopFlow') === 'true') {
+    return 'quick_shop';
+  }
   if (localStorage.getItem('isFreshGroceryFlow') === 'true') {
     return 'groceries_fresh';
   }
   if (localStorage.getItem('isMithilakFlow') === 'true') {
     return 'mithilak';
-  }
-  if (window.location.pathname.includes('/quick-shop')) {
-    return 'quick_shop';
   }
   return 'mithilakart';
 };

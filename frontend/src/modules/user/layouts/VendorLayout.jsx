@@ -101,17 +101,16 @@ const VendorLayout = () => {
   }, [fetchStandardNav]);
 
   useEffect(() => {
-    window.dispatchEvent(new Event('cartUpdated'));
-    if (location.pathname.includes('/mithilak')) {
-      if (activeFlow !== 'mithilak') setActiveFlow('mithilak');
+    if (location.pathname.includes('/quick-shop')) {
+      if (activeFlow !== 'quickshop') setActiveFlow('quickshop');
     } else if (location.pathname.includes('/fresh-grocery')) {
       if (activeFlow !== 'freshgrocery') setActiveFlow('freshgrocery');
-    } else if (location.pathname.includes('/quick-shop')) {
-      if (activeFlow !== 'quickshop') setActiveFlow('quickshop');
+    } else if (location.pathname.includes('/mithilak')) {
+      if (activeFlow !== 'mithilak') setActiveFlow('mithilak');
     } else if (location.pathname === '/home' || location.pathname === '/') {
       if (activeFlow !== 'mithilakart') setActiveFlow('mithilakart');
     }
-  }, [location.pathname, activeFlow, setActiveFlow]);
+  }, [location.pathname, setActiveFlow]);
 
   /* ── Scroll shadow listener ── */
   useEffect(() => {

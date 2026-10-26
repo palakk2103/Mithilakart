@@ -18,17 +18,17 @@ const emptyStorefrontMeta = {
   homeCategories: [],
 };
 
-const getInitialFlow = () => {
+export const getInitialFlow = () => {
   if (typeof window === 'undefined') return 'mithilakart';
   const path = window.location.pathname;
-  if (path.includes('/mithilak')) return 'mithilak';
+  if (path.includes('/quick-shop')) return 'quickshop';
   if (path.includes('/fresh-grocery')) return 'freshgrocery';
-  if (path.includes('/quick-shop')) {
-    return localStorage.getItem('isMithilakFlow') === 'true' ? 'mithilak' : 'quickshop';
-  }
-  if (localStorage.getItem('isMithilakFlow') === 'true') return 'mithilak';
-  if (localStorage.getItem('isFreshGroceryFlow') === 'true') return 'freshgrocery';
+  if (path.includes('/mithilak')) return 'mithilak';
+  if (path === '/home' || path === '/') return 'mithilakart';
+
   if (localStorage.getItem('isQuickShopFlow') === 'true') return 'quickshop';
+  if (localStorage.getItem('isFreshGroceryFlow') === 'true') return 'freshgrocery';
+  if (localStorage.getItem('isMithilakFlow') === 'true') return 'mithilak';
   return 'mithilakart';
 };
 

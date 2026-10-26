@@ -13,6 +13,15 @@ const LocationPrompt = () => {
     label,
   } = useLocation();
 
+  const handleDismiss = () => {
+    try {
+      sessionStorage.setItem('locationPromptDismissed', 'true');
+    } catch {
+      // ignore
+    }
+    setPromptOpen(false);
+  };
+
   return (
     <AnimatePresence>
       {promptOpen && (
@@ -40,7 +49,7 @@ const LocationPrompt = () => {
               </div>
               <button
                 type="button"
-                onClick={() => setPromptOpen(false)}
+                onClick={handleDismiss}
                 className="p-2 rounded-full hover:bg-slate-100"
                 aria-label="Close"
               >
@@ -80,7 +89,7 @@ const LocationPrompt = () => {
 
               <button
                 type="button"
-                onClick={() => setPromptOpen(false)}
+                onClick={handleDismiss}
                 className="w-full py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm"
               >
                 Not now

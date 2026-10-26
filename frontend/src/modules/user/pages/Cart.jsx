@@ -123,6 +123,16 @@ const Cart = () => {
     const targetItem = itemToRemove;
     setItemToRemove(null);
 
+    // Optimistically update local cart state immediately
+    setCartItems((prev) =>
+      prev.filter(
+        (item) =>
+          item.cartId !== targetItem.cartId &&
+          (!targetItem.productId || item.productId !== targetItem.productId) &&
+          (!targetItem.id || item.id !== targetItem.id)
+      )
+    );
+
     try {
       if (moveToWishlist) {
         const prod = {
@@ -144,8 +154,12 @@ const Cart = () => {
         });
       }
 
-      await removeCartItemById(targetItem.cartId);
-      setCartItems((prev) => prev.filter((item) => item.cartId !== targetItem.cartId));
+      const idToRemove = targetItem.cartId || targetItem.productId || targetItem.id;
+      try {
+        await removeCartItemById(idToRemove);
+      } catch (err) {
+        console.error('Failed to remove cart item on server', err);
+      }
     } catch (e) {
       console.error('Failed to remove item', e);
     }

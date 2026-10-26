@@ -66,3 +66,36 @@ export async function uploadReviewMedia(file) {
   return confirmed.url;
 }
 
+/**
+ * Upload an avatar/profile image.
+ */
+export async function uploadAvatar(file) {
+  if (!file) throw new Error('No file selected');
+
+  const presign = await customerApi.post('/uploads/presign', {
+    context: 'avatars',
+    fileName: file.name,
+    mimeType: file.type,
+  });
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const uploadResponse = await fetch(presign.uploadUrl, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error('Avatar upload failed. Please try again.');
+  }
+
+  const confirmed = await customerApi.post('/uploads/confirm', {
+    context: 'avatars',
+    storageKey: presign.storageKey,
+    mimeType: file.type,
+  });
+
+  return confirmed.url;
+}
+

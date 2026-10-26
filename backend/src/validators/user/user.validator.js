@@ -6,6 +6,8 @@ const profileUpdateSchema = Joi.object({
   gender: Joi.string().valid('male', 'female', 'other').optional().allow(null),
   dob: Joi.date().iso().optional().allow(null),
   locale: Joi.string().valid('en', 'hi', 'bn', 'mai').optional(),
+  avatarUrl: Joi.string().trim().max(5000000).optional().allow(null, ''),
+  avatar: Joi.string().trim().max(5000000).optional().allow(null, ''),
 });
 
 const addressSchema = Joi.object({

@@ -128,10 +128,14 @@ const QuickShop = () => {
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   const [nearbyProducts, setNearbyProducts] = React.useState([]);
   const [nearbyLoading, setNearbyLoading] = React.useState(false);
-  const [notDeliverable, setNotDeliverable] = React.useState(false);
+  const [notDeliverable, setNotDeliverable] = React.useState(
+    () => liveLocation?.latitude == null || liveLocation?.longitude == null
+  );
 
   useEffect(() => {
     localStorage.setItem('isQuickShopFlow', 'true');
+    localStorage.setItem('isMithilakFlow', 'false');
+    localStorage.setItem('isFreshGroceryFlow', 'false');
     fetchHomeSections('quick_shop');
   }, [fetchHomeSections]);
 
@@ -209,36 +213,38 @@ const QuickShop = () => {
   const [timeLeft, setTimeLeft] = React.useState({ h: '02', m: '45', s: '12' });
   React.useEffect(() => {
     const timer = setInterval(() => {
-      const h = parseInt(timeLeft.h, 10);
-      const m = parseInt(timeLeft.m, 10);
-      const s = parseInt(timeLeft.s, 10);
-      
-      let nextS = s - 1;
-      let nextM = m;
-      let nextH = h;
-      
-      if (nextS < 0) {
-        nextS = 59;
-        nextM -= 1;
-      }
-      if (nextM < 0) {
-        nextM = 59;
-        nextH -= 1;
-      }
-      if (nextH < 0) {
-        nextH = 2;
-        nextM = 45;
-        nextS = 12;
-      }
+      setTimeLeft((prev) => {
+        const h = parseInt(prev.h, 10);
+        const m = parseInt(prev.m, 10);
+        const s = parseInt(prev.s, 10);
+        
+        let nextS = s - 1;
+        let nextM = m;
+        let nextH = h;
+        
+        if (nextS < 0) {
+          nextS = 59;
+          nextM -= 1;
+        }
+        if (nextM < 0) {
+          nextM = 59;
+          nextH -= 1;
+        }
+        if (nextH < 0) {
+          nextH = 2;
+          nextM = 45;
+          nextS = 12;
+        }
 
-      setTimeLeft({
-        h: String(nextH).padStart(2, '0'),
-        m: String(nextM).padStart(2, '0'),
-        s: String(nextS).padStart(2, '0')
+        return {
+          h: String(nextH).padStart(2, '0'),
+          m: String(nextM).padStart(2, '0'),
+          s: String(nextS).padStart(2, '0')
+        };
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, []);
 
   const isFreshGrocery = window.location.pathname.includes('/fresh-grocery');
 

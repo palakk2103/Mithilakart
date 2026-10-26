@@ -15,7 +15,7 @@ import LocationPrompt from './shared/components/LocationPrompt';
 
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
-    return !sessionStorage.getItem('splashShown');
+    return !localStorage.getItem('splashShown') && !sessionStorage.getItem('splashShown');
   });
 
   useEffect(() => {
@@ -48,7 +48,12 @@ function App() {
           {showSplash && (
             <SplashScreen
               onComplete={() => {
-                sessionStorage.setItem('splashShown', 'true');
+                try {
+                  localStorage.setItem('splashShown', 'true');
+                  sessionStorage.setItem('splashShown', 'true');
+                } catch {
+                  // ignore storage error
+                }
                 setShowSplash(false);
               }}
             />

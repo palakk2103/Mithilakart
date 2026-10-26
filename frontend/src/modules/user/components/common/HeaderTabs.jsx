@@ -110,7 +110,10 @@ const HeaderTabs = () => {
       }}
     >
       {enabledTabs.map((tab) => {
-        const isActive = activeFlow === tab.flow || location.pathname === tab.route;
+        const currentPath = location.pathname;
+        const hasRouteMatch = enabledTabs.some((t) => t.route === currentPath || (t.route === '/home' && currentPath === '/'));
+        const isRouteActive = tab.route === currentPath || (tab.route === '/home' && currentPath === '/');
+        const isActive = hasRouteMatch ? isRouteActive : activeFlow === tab.flow;
         const displayLabel = tab.i18nKey ? t(tab.i18nKey, { defaultValue: tab.label }) : tab.label;
 
         // Determine inactive tab background styling based on overall header theme

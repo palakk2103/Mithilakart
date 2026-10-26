@@ -274,8 +274,23 @@ class CartService extends BaseService {
     const raw = await this.redis.get(key);
     const state = this._deserialize(raw) || { commerceFlow, items: [] };
 
-    const itemKey = `${productId}:${variantId || ''}`;
-    state.items = state.items.filter((it) => it.itemKey !== itemKey);
+    const rawId = String(productId || '');
+    const cleanId = rawId.replace(/:+$/, '').replace(/^listing:/, '');
+    const itemKey = `${cleanId}:${variantId || ''}`;
+
+    state.items = (state.items || []).filter((it) => {
+      // Direct itemKey match (cartId / itemKey)
+      if (it.itemKey === rawId || it.itemKey === itemKey) return false;
+      // Match by productId
+      if (it.productId && (String(it.productId) === rawId || String(it.productId) === cleanId)) {
+        if (!variantId || it.variantId === variantId) return false;
+      }
+      // Match by listingId
+      if (it.listingId && (String(it.listingId) === rawId || String(it.listingId) === cleanId || `listing:${it.listingId}` === rawId)) {
+        return false;
+      }
+      return true;
+    });
     state.updatedAt = new Date().toISOString();
 
     await this.redis.set(key, this._serialize(state), 'EX', CART.CART_KEY_TTL_SECONDS);

@@ -40,12 +40,15 @@ class UserProfileService extends BaseService {
       }
     }
 
+    const avatarUrl = data.avatarUrl !== undefined ? data.avatarUrl : data.avatar;
+
     const updated = await this.userRepository.updateById(userId, {
       ...(data.name !== undefined ? { name: data.name } : {}),
       ...(data.email !== undefined ? { email: data.email.toLowerCase() } : {}),
       ...(data.gender !== undefined ? { gender: data.gender } : {}),
       ...(data.dob !== undefined ? { dob: data.dob } : {}),
       ...(data.locale !== undefined ? { locale: data.locale } : {}),
+      ...(avatarUrl !== undefined ? { avatarUrl } : {}),
     });
 
     return this._serialize(updated);

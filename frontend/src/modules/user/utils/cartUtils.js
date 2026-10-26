@@ -52,16 +52,25 @@ export const updateCartItemQuantity = async (item, delta) => {
 };
 
 export const removeCartItemById = async (cartId) => {
-  await removeCartItem(cartId);
+  const id = typeof cartId === 'object' && cartId !== null
+    ? (cartId.cartId || cartId.itemKey || cartId.productId || cartId.id)
+    : cartId;
+  await removeCartItem(id);
   dispatchCartUpdated();
 };
 
 export { clearCart };
 
 export const getCommerceFlow = () => {
-  if (localStorage.getItem('isMithilakFlow') === 'true') return 'mithilak';
-  if (localStorage.getItem('isFreshGroceryFlow') === 'true') return 'fresh_grocery';
+  const path = typeof window !== 'undefined' ? window.location.pathname : '';
+  if (path.includes('/quick-shop')) return 'quick_shop';
+  if (path.includes('/fresh-grocery')) return 'fresh_grocery';
+  if (path.includes('/mithilak')) return 'mithilak';
+  if (path === '/home' || path === '/') return 'standard';
+
   if (localStorage.getItem('isQuickShopFlow') === 'true') return 'quick_shop';
+  if (localStorage.getItem('isFreshGroceryFlow') === 'true') return 'fresh_grocery';
+  if (localStorage.getItem('isMithilakFlow') === 'true') return 'mithilak';
   return 'standard';
 };
 
