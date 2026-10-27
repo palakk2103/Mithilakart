@@ -124,6 +124,9 @@ const Home = () => {
   }, [selectedCategory]);
 
   const handleCategoryClick = useCallback((cat) => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
     const raw = cat.rawLabel || cat.label;
     if (cat.isYouBuy || raw === 'You Buy' || cat.label === 'सभी' || cat.label === 'सभ' || cat.id === 'for-you') {
       setSelectedCategory('You Buy');

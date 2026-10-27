@@ -328,6 +328,13 @@ const Categories = () => {
       : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#65B842]');
 
   const [activeSectionIndex, setActiveSectionIndex] = React.useState(0);
+  const rightContentRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (rightContentRef.current) {
+      rightContentRef.current.scrollTop = 0;
+    }
+  }, [activeSectionIndex]);
 
   const handleCategoryItemClick = (item) => {
     if (isMithilakFlow) {
@@ -428,7 +435,7 @@ const Categories = () => {
         </div>
 
         {/* Right Content Area */}
-        <div className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-4">
+        <div ref={rightContentRef} className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-4">
           {sectionsList[activeSectionIndex] && (
             <div className="space-y-6">
               <div>

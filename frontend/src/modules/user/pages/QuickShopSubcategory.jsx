@@ -50,14 +50,39 @@ const locateCategory = (tree, id, name) => {
     || { node: null, parent: null };
 };
 
+/**
+ * Resolves the list of subcategories to show in the sidebar for a given root category.
+ * If the category only has a single wrapper/pass-through child (e.g. Dairy & Breads -> Dairy Products),
+ * it unwraps that child so the actual user-created subcategories (Milk, Butter, Paneer, etc.) are visible.
+ * If all children are wrapper categories with their own children, it flattens them so all subcategories render properly.
+ */
+const resolveSidebarSubcategories = (root) => {
+  if (!root || !root.children || root.children.length === 0) return [];
+
+  let list = root.children;
+  // If there's a single intermediate container child with its own subcategories
+  // (e.g., Dairy & Breads -> Dairy Products -> [Milk, Butter, Paneer, Cheese...]),
+  // unwrap that single child so all actual subcategories are rendered in the sidebar.
+  while (list.length === 1 && (list[0].children || []).length > 0) {
+    list = list[0].children;
+  }
+
+  // If every child in the list has children (e.g. grouping folders), flatten to subcategories
+  if (list.length > 0 && list.every((c) => (c.children || []).length > 0)) {
+    list = list.flatMap((c) => (c.children && c.children.length > 0 ? c.children : [c]));
+  }
+
+  return list;
+};
+
 /** categoryId → id of the sidebar subcategory it belongs to (any depth). */
-const mapToSidebarIds = (root) => {
+const mapToSidebarIds = (root, sidebarSubcategories = []) => {
   const owner = new Map();
   const walk = (node, sidebarId) => {
     owner.set(String(node.id), sidebarId);
     (node.children || []).forEach((child) => walk(child, sidebarId));
   };
-  (root.children || []).forEach((child) => walk(child, String(child.id)));
+  (sidebarSubcategories || []).forEach((child) => walk(child, String(child.id)));
   return owner;
 };
 
@@ -116,6 +141,14 @@ const QuickShopSubcategory = () => {
   const marketplaceTab = isFreshGroceryFlow ? 'groceries_fresh' : isMithilakFlow ? 'mithilak' : 'quick_shop';
   const commerceFlow = isFreshGroceryFlow ? 'fresh_grocery' : isMithilakFlow ? 'mithilak' : 'quick_shop';
   const [activeSub, setActiveSub] = useState('all');
+  const rightGridRef = useRef(null);
+
+  useEffect(() => {
+    if (rightGridRef.current) {
+      rightGridRef.current.scrollTop = 0;
+    }
+  }, [activeSub, categoryName]);
+
   // The tab's category tree doesn't depend on location — fetch it once per tab.
   const treeCacheRef = useRef({ tab: null, tree: null });
   // Category whose products are on screen; when only the live location
@@ -173,18 +206,27 @@ const QuickShopSubcategory = () => {
 
         // A clicked subcategory opens its parent with that subcategory selected.
         const root = parent && !(node.children || []).length ? parent : node;
-        const sidebarIdOf = mapToSidebarIds(root);
+        const sidebarSubcategories = resolveSidebarSubcategories(root);
+        const sidebarIdOf = mapToSidebarIds(root, sidebarSubcategories);
+
+        let initialActive = 'all';
+        if (sidebarSubcategories.some((s) => String(s.id) === String(node.id))) {
+          initialActive = String(node.id);
+        } else if (sidebarIdOf.has(String(node.id))) {
+          initialActive = sidebarIdOf.get(String(node.id));
+        }
+
         if (!cancelled && !isRefresh) {
           setCategoryName(root.name);
           setSubCategories([
             { id: 'all', name: 'All', icon: getImageUrl(root.imageUrl || root.iconUrl || FALLBACK_IMAGE) },
-            ...(root.children || []).map((child) => ({
+            ...sidebarSubcategories.map((child) => ({
               id: String(child.id),
               name: child.name,
               icon: getImageUrl(child.imageUrl || child.iconUrl || FALLBACK_IMAGE),
             })),
           ]);
-          setActiveSub(root === node ? 'all' : String(node.id));
+          setActiveSub(initialActive);
         }
 
         // 2. Products of the whole category subtree: nearby sellers first for
@@ -214,9 +256,31 @@ const QuickShopSubcategory = () => {
         }
 
         if (!cancelled) {
-          setProductsList(items.map((p) => toCard(p, sidebarIdOf, fromNearby)));
+          const cards = items.map((p) => toCard(p, sidebarIdOf, fromNearby));
+          setProductsList(cards);
           setNotDeliverable(undeliverable && items.length === 0);
           loadedKeyRef.current = loadKey;
+
+          // Update any subcategory placeholder icons with matching product images
+          if (!isRefresh && sidebarSubcategories.length > 0) {
+            setSubCategories([
+              { id: 'all', name: 'All', icon: getImageUrl(root.imageUrl || root.iconUrl || FALLBACK_IMAGE) },
+              ...sidebarSubcategories.map((child) => {
+                let icon = child.imageUrl && !child.imageUrl.includes('placeholder')
+                  ? getImageUrl(child.imageUrl)
+                  : (child.iconUrl ? getImageUrl(child.iconUrl) : null);
+                if (!icon) {
+                  const match = cards.find((c) => c.category === String(child.id));
+                  icon = match?.img || FALLBACK_IMAGE;
+                }
+                return {
+                  id: String(child.id),
+                  name: child.name,
+                  icon,
+                };
+              }),
+            ]);
+          }
         }
       } catch {
         // A failed background refresh keeps what is already on screen.
@@ -531,7 +595,7 @@ const QuickShopSubcategory = () => {
         </div>
 
         {/* Right Product Grid Area - Scrolls Separately */}
-        <div className={`flex-1 min-w-0 ${rightGridBg} overflow-y-auto overscroll-contain h-full p-3 pb-24`}>
+        <div ref={rightGridRef} className={`flex-1 min-w-0 ${rightGridBg} overflow-y-auto overscroll-contain h-full p-3 pb-24`}>
           
           {/* Promo banner */}
           <div className={`${promoBg} rounded-xl p-3 flex justify-between items-center mb-4 relative overflow-hidden`}>

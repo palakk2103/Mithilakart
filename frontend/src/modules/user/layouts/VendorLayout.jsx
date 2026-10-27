@@ -172,8 +172,10 @@ const VendorLayout = () => {
     location.pathname.includes('/category') ||
     location.pathname.includes('wishlist');
 
-  const isDualScrollCategoriesPage = 
-    location.pathname === '/categories' || location.pathname === '/vendor/categories';
+  const isDualScrollPage = 
+    location.pathname === '/categories' || 
+    location.pathname === '/vendor/categories' ||
+    location.pathname.includes('/category');
 
   const isProfileMainPage = location.pathname === '/profile' || location.pathname === '/vendor/profile';
   const hideHeader = isImmersivePage;
@@ -222,7 +224,7 @@ const VendorLayout = () => {
   const isMithilakartFlow = effectiveFlow === 'mithilakart';
 
   return (
-    <div className={`${isDualScrollCategoriesPage ? 'h-screen h-[100dvh] max-h-[100dvh] overflow-hidden md:h-auto md:max-h-none md:overflow-visible md:min-h-screen' : 'min-h-screen'} flex flex-col transition-colors duration-300 text-primary-dark relative ${
+    <div className={`${isDualScrollPage ? 'h-screen h-[100dvh] max-h-[100dvh] overflow-hidden' : 'min-h-screen'} flex flex-col transition-colors duration-300 text-primary-dark relative ${
       effectiveFlow === 'mithilak'
         ? 'bg-[#F5F9FA]'
         : effectiveFlow === 'freshgrocery'
@@ -330,10 +332,10 @@ const VendorLayout = () => {
       {/* SaleBanner is now rendered inside Home.jsx or specifically based on visibility store */}
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col bg-transparent relative z-10 ${isDualScrollCategoriesPage ? 'overflow-hidden h-full md:overflow-visible md:h-auto' : ''}`}>
-        <div className={`flex-1 flex ${isDualScrollCategoriesPage ? 'overflow-hidden h-full md:overflow-visible md:h-auto' : ''}`}>
-          <div className={`w-full max-w-[1600px] mx-auto px-0 md:px-8 xl:px-12 flex h-full ${isDualScrollCategoriesPage ? 'overflow-hidden md:overflow-visible' : ''}`}>
-            <main className={`flex-1 min-w-0 pb-0 ${isDualScrollCategoriesPage ? 'overflow-hidden h-full md:overflow-visible md:h-auto' : ''}`}>
+      <div className={`flex-1 flex flex-col bg-transparent relative z-10 ${isDualScrollPage ? 'overflow-hidden h-full min-h-0' : ''}`}>
+        <div className={`flex-1 flex min-h-0 ${isDualScrollPage ? 'overflow-hidden h-full' : ''}`}>
+          <div className={`w-full max-w-[1600px] mx-auto px-0 md:px-8 xl:px-12 flex h-full min-h-0 ${isDualScrollPage ? 'overflow-hidden' : ''}`}>
+            <main className={`flex-1 min-w-0 min-h-0 flex flex-col pb-0 ${isDualScrollPage ? 'overflow-hidden h-full' : ''}`}>
               <Outlet />
             </main>
           </div>

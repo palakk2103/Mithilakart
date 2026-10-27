@@ -7,18 +7,28 @@ import React from 'react';
 export default function LegalContentRenderer({ content, loading, fallbackContent }) {
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse py-4">
-        <div className="h-4 bg-slate-200 rounded w-1/4"></div>
-        <div className="space-y-2">
+      <div className="space-y-6 animate-pulse py-4 min-h-[70vh]">
+        <div className="space-y-3">
           <div className="h-5 bg-slate-200 rounded w-1/3"></div>
-          <div className="h-3 bg-slate-100 rounded w-full"></div>
-          <div className="h-3 bg-slate-100 rounded w-5/6"></div>
-          <div className="h-3 bg-slate-100 rounded w-4/6"></div>
+          <div className="h-3.5 bg-slate-100 rounded w-full"></div>
+          <div className="h-3.5 bg-slate-100 rounded w-11/12"></div>
+          <div className="h-3.5 bg-slate-100 rounded w-4/5"></div>
         </div>
-        <div className="space-y-2">
-          <div className="h-5 bg-slate-200 rounded w-1/3"></div>
-          <div className="h-3 bg-slate-100 rounded w-full"></div>
-          <div className="h-3 bg-slate-100 rounded w-5/6"></div>
+        <div className="grid grid-cols-3 gap-3 my-4">
+          <div className="h-20 bg-slate-100 rounded-xl"></div>
+          <div className="h-20 bg-slate-100 rounded-xl"></div>
+          <div className="h-20 bg-slate-100 rounded-xl"></div>
+        </div>
+        <div className="space-y-3">
+          <div className="h-5 bg-slate-200 rounded w-2/5"></div>
+          <div className="h-3.5 bg-slate-100 rounded w-full"></div>
+          <div className="h-3.5 bg-slate-100 rounded w-10/12"></div>
+          <div className="h-3.5 bg-slate-100 rounded w-3/4"></div>
+        </div>
+        <div className="space-y-3">
+          <div className="h-5 bg-slate-200 rounded w-1/4"></div>
+          <div className="h-3.5 bg-slate-100 rounded w-full"></div>
+          <div className="h-3.5 bg-slate-100 rounded w-5/6"></div>
         </div>
       </div>
     );

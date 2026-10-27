@@ -13,6 +13,7 @@ import { isAuthenticated } from './shared/api/tokenStorage';
 import { LocationProvider } from './shared/context/LocationContext';
 import { LanguageProvider } from './shared/context/LanguageContext';
 import LocationPrompt from './shared/components/LocationPrompt';
+import ScrollToTop from './shared/components/ScrollToTop';
 
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
@@ -47,6 +48,7 @@ function App() {
       <LanguageProvider>
         <LocationProvider>
           <BrowserRouter>
+          <ScrollToTop />
           {showSplash && (
             <SplashScreen
               onComplete={() => {

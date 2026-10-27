@@ -78,11 +78,10 @@ const CategoryManager = () => {
     loadCategories();
   }, [loadCategories]);
 
-  // The customer app renders two levels (category → subcategory), so only
-  // top-level categories can be chosen as a parent.
+  // Categories available as parents for subcategories
   const parentOptions = useMemo(
-    () => categories.filter((c) => !c.parentId),
-    [categories]
+    () => orderedCategories.filter((c) => (c.depth || 0) < 3),
+    [orderedCategories]
   );
 
   // Show each subcategory directly under its parent instead of a flat list.
@@ -429,7 +428,7 @@ const CategoryManager = () => {
 
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {!category.parentId && (
+                          {(category.depth || 0) < 3 && (
                             <button
                               onClick={() => openCreate(category.id)}
                               className="p-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1"
@@ -498,7 +497,9 @@ const CategoryManager = () => {
               >
                 <option value="">None (top-level)</option>
                 {parentOptions.filter((p) => p.id !== editingCategory?.id).map((parent) => (
-                  <option key={parent.id} value={parent.id}>{parent.name}</option>
+                  <option key={parent.id} value={parent.id}>
+                    {parent.depth ? `${'— '.repeat(parent.depth)}${parent.name}` : parent.name}
+                  </option>
                 ))}
               </select>
               <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

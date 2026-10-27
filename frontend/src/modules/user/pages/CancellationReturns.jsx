@@ -15,24 +15,25 @@ const CancellationReturns = () => {
     : 'May 8, 2026';
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="sticky top-0 z-50 bg-[#3E5A44] px-4 py-4 flex items-center gap-3 shadow-md">
-        <button 
-          onClick={() => navigate(-1)}
-          className="text-white active:scale-90 transition-transform"
-        >
-          <ArrowLeft size={24} strokeWidth={2.5} />
-        </button>
-        <h1 className="text-[18px] font-bold text-white">{pageTitle}</h1>
-      </div>
-
-      {/* Content */}
-      <div className="px-6 py-6 space-y-6">
-        {/* Last Updated */}
-        <div className="text-[11px] text-gray-400">
-          Last Updated: {updatedDate}
+    <div className="min-h-screen bg-white flex flex-col justify-between">
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="sticky top-0 z-50 bg-[#3E5A44] px-4 py-4 flex items-center gap-3 shadow-md">
+          <button 
+            onClick={() => navigate(-1)}
+            className="text-white active:scale-90 transition-transform"
+          >
+            <ArrowLeft size={24} strokeWidth={2.5} />
+          </button>
+          <h1 className="text-[18px] font-bold text-white">{pageTitle}</h1>
         </div>
+
+        {/* Content */}
+        <main className="flex-1 px-6 py-6 space-y-6 max-w-4xl mx-auto w-full">
+          {/* Last Updated */}
+          <div className="text-[11px] text-gray-400">
+            Last Updated: {updatedDate}
+          </div>
 
         <LegalContentRenderer
           content={page?.content}
@@ -264,10 +265,11 @@ const CancellationReturns = () => {
       </div>
     )}
   />
-  <Footer />
+</main>
 </div>
-</div>
-);
+{!loading && <Footer />}
+    </div>
+  );
 };
 
 export default CancellationReturns;
