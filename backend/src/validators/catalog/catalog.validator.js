@@ -47,7 +47,9 @@ const listProductsQuerySchema = Joi.object({
   // Was missing here: Joi's stripUnknown:true silently dropped it from every
   // /products and /categories/:id/products request, so the frontend tab-scope
   // fix (docs/production-readiness) could never actually take effect.
-  marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).optional(),
+  marketplaceTab: Joi.string().allow('').optional(),
+  tab: Joi.string().allow('').optional(),
+  flow: Joi.string().allow('').optional(),
   status: Joi.string().valid(...PRODUCT_STATUS_VALUES).optional(),
   minPrice: Joi.number().min(0).optional(),
   maxPrice: Joi.number().min(0).optional(),

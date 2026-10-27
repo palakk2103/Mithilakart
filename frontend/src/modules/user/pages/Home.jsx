@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Sparkles, Gift, Monitor, Gem, Shirt, Gamepad2, BookOpen, Zap, ChevronRight } from 'lucide-react';
 import SEO from '../../../shared/components/SEO';
 
@@ -25,15 +25,28 @@ import useVendorStore from '../../../store/useVendorStore';
 import toast from 'react-hot-toast';
 import { addProductToCart } from '../utils/cartUtils';
 import { mapHomeBanners, mapNavChips } from '../utils/mappers';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../../../shared/context/LanguageContext';
 
 const Home = () => {
+  const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState('You Buy');
   const navigate = useNavigate();
-  const { selectedCategory, homeSections, homeBanners, homeChips, fetchHomeSections } = useVendorStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category');
+  const { selectedCategory, setSelectedCategory, homeSections, homeBanners, homeChips, fetchHomeSections } = useVendorStore();
 
   useEffect(() => {
     fetchHomeSections('standard');
-  }, [fetchHomeSections]);
+  }, [fetchHomeSections, currentLanguage]);
+
+  useEffect(() => {
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+      setActiveTab(categoryParam);
+    }
+  }, [categoryParam, setSelectedCategory]);
 
   const categoryBanners = useMemo(() => {
     const fallbackBanners = [
@@ -62,36 +75,74 @@ const Home = () => {
       'You Buy': <ShoppingBag size={18} className="text-[#3E5A44]" />,
       Fashion: <Shirt size={18} className="text-[#3E5A44]" />,
       Beauty: <Sparkles size={18} className="text-[#3E5A44]" />,
+      'Beauty & Care': <Sparkles size={18} className="text-[#3E5A44]" />,
       Electronics: <Monitor size={18} className="text-[#3E5A44]" />,
       Jewellery: <Gem size={18} className="text-[#3E5A44]" />,
       Toys: <Gamepad2 size={18} className="text-[#3E5A44]" />,
+      'Kids & Toys': <Gamepad2 size={18} className="text-[#3E5A44]" />,
       Stationery: <BookOpen size={18} className="text-[#3E5A44]" />,
       Gifting: <Gift size={18} className="text-[#3E5A44]" />,
       Electrical: <Zap size={18} className="text-[#3E5A44]" />,
     };
 
-    return mapNavChips(homeChips).map((chip) => ({
-      label: chip.label,
-      icon: iconMap[chip.label] || <ShoppingBag size={18} className="text-[#3E5A44]" />,
-      path:
-        chip.label === 'You Buy'
-          ? '/home'
-          : chip.label === 'Toys'
-            ? '/toys'
-            : `/category-products?category=${encodeURIComponent(chip.label)}`,
-    }));
-  }, [homeChips]);
+    const chipsSource = (homeChips && homeChips.length > 0) ? homeChips : [
+      { id: 'for-you', label: 'You Buy' },
+      { id: 'fashion', label: 'Fashion' },
+      { id: 'beauty', label: 'Beauty' },
+      { id: 'electronics', label: 'Electronics' },
+      { id: 'jewellery', label: 'Jewellery' },
+      { id: 'toys', label: 'Toys' },
+      { id: 'stationery', label: 'Stationery' },
+      { id: 'gifting', label: 'Gifting' },
+      { id: 'electrical', label: 'Electrical' },
+    ];
 
+    return mapNavChips(chipsSource).map((chip) => {
+      const raw = chip.rawLabel || chip.label;
+      const isYouBuy = raw === 'You Buy' || chip.label === 'You Buy' || chip.id === 'for-you';
+      const label = isYouBuy 
+        ? t('categories.for-you', { defaultValue: chip.label || 'You Buy' })
+        : (chip.label || t(`categories.${chip.id}`, { defaultValue: raw }));
 
-  const handleTabClick = useCallback((label) => {
-    if (label === 'Toys') {
-      navigate('/vendor/toys');
-    } else {
-      setActiveTab(label);
+      return {
+        id: chip.id,
+        rawLabel: raw,
+        label,
+        isYouBuy,
+        icon: iconMap[raw] || iconMap[chip.id] || <ShoppingBag size={18} className="text-[#3E5A44]" />,
+      };
+    });
+  }, [homeChips, t]);
+
+  const isCategoryActive = useCallback((cat) => {
+    const raw = cat.rawLabel || cat.label;
+    const isDefault = selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory;
+    if (cat.isYouBuy || raw === 'You Buy' || cat.label === 'सभी' || cat.label === 'सभ' || cat.id === 'for-you') {
+      return isDefault;
     }
-  }, [navigate]);
+    return selectedCategory === raw || selectedCategory === cat.label || selectedCategory === cat.id;
+  }, [selectedCategory]);
 
-  // Main horizontal category tabs (from admin category chips)
+  const handleCategoryClick = useCallback((cat) => {
+    const raw = cat.rawLabel || cat.label;
+    if (cat.isYouBuy || raw === 'You Buy' || cat.label === 'सभी' || cat.label === 'सभ' || cat.id === 'for-you') {
+      setSelectedCategory('You Buy');
+      setActiveTab('You Buy');
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('category');
+        return next;
+      }, { replace: true });
+    } else {
+      setSelectedCategory(raw);
+      setActiveTab(raw);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('category', raw);
+        return next;
+      }, { replace: true });
+    }
+  }, [setSelectedCategory, setSearchParams]);
 
   return (
     <>
@@ -100,94 +151,89 @@ const Home = () => {
         description="Shop Mithilakart for groceries, fashion, electronics, beauty and authentic Mithila crafts — fast quick-commerce delivery and standard shipping, all in one place."
         path="/home"
       />
-      <div
-      className="pb-2 overflow-x-hidden bg-transparent text-primary-dark"
-      style={{
-        WebkitBackfaceVisibility: 'hidden',
-        backfaceVisibility: 'hidden',
-        transform: 'translate3d(0,0,0)',
-        WebkitTransform: 'translate3d(0,0,0)',
-        contain: 'layout style'
-      }}
-    >
-      {/* 1. TOP HORIZONTAL CATEGORY ROW (Super Compact & Scrollable circles) - Always Visible */}
-      <div className="flex items-center gap-3 overflow-x-auto no-scrollbar px-3 pt-3 pb-3 mb-3">
-        {mainCategoriesList.map((cat, idx) => {
-          if (cat.label === 'You Buy') {
+    <div className="pb-2 bg-transparent text-primary-dark">
+      {/* 1. TOP HORIZONTAL CATEGORY ROW (Sticky Header Categories on Scroll) */}
+      <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F6F8F3]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(63,42,32,0.04)] border-b border-[#EADCC9]/40 py-2 mb-3 transition-all duration-200">
+        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar px-3">
+          {mainCategoriesList.map((cat, idx) => {
+            const active = isCategoryActive(cat);
+
+            if (active) {
+              return (
+                <div
+                  key={idx}
+                  onClick={() => handleCategoryClick(cat)}
+                  className="relative flex flex-col items-center justify-center flex-shrink-0 w-[64px] h-[72px] rounded-[16px] transition-all duration-300 border border-[#EADCC9] bg-[#FFF8EE] shadow-sm cursor-pointer active:scale-95 overflow-hidden"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 2h1v1H2zm4 4h1v1H6z' fill='%23EADCC9' fill-opacity='0.15'/%3E%3C/svg%3E")`,
+                    backgroundSize: '10px 10px',
+                  }}
+                >
+                  {/* Dashed Circle with Icon + Flowers */}
+                  <div className="relative w-[36px] h-[36px] rounded-full border border-dashed border-[#3E5A44]/75 bg-[#FFFBF7] flex items-center justify-center mt-1 shadow-3xs text-[#3E5A44]">
+                    {cat.isYouBuy ? (
+                      /* Shopping Bag with White Heart Cutout */
+                      <svg viewBox="0 0 24 24" className="w-[16px] h-[16px]" fill="#3E5A44">
+                        <path d="M12 2C9.5 2 7.5 4 7.5 6.5H9c0-1.7 1.3-3 3-3s3 1.3 3 3h1.5C16.5 4 14.5 2 12 2z" />
+                        <path d="M5 6.5h14c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2v-11c0-1.1.9-2 2-2z" />
+                        <path d="M12 16.8s-2.2-1.8-2.7-2.3c-.7-.7-1-1.3-1-1.8 0-1.2 1-2.2 2.2-2.2.7 0 1.3.4 1.5 1 .2-.6.8-1 1.5-1 1.2 0 2.2 1 2.2 2.2 0 .5-.3 1.1-1 1.8-.5.5-2.7 2.3-2.7 2.3z" fill="white" />
+                      </svg>
+                    ) : (
+                      cat.icon
+                    )}
+
+                    {/* Top-Right Orange Flower Decoration */}
+                    <div className="absolute -top-[5px] -right-[5px] w-[9px] h-[9px] flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" className="w-full h-full overflow-visible">
+                        <circle cx="12" cy="12" r="5.5" fill="#E26D22" />
+                        <circle cx="12" cy="5" r="5.5" fill="#E26D22" />
+                        <circle cx="12" cy="19" r="5.5" fill="#E26D22" />
+                        <circle cx="5" cy="12" r="5.5" fill="#E26D22" />
+                        <circle cx="19" cy="12" r="5.5" fill="#E26D22" />
+                        <circle cx="12" cy="12" r="2.2" fill="#3E5A44" />
+                      </svg>
+                    </div>
+
+                    {/* Bottom-Left small flower stem decoration */}
+                    <div className="absolute -left-[5px] bottom-[3px] flex items-center gap-0.5">
+                      <span className="w-1.2 h-1.2 rounded-full bg-[#E26D22] shadow-3xs" />
+                      <span className="w-1.2 h-[1.2px] bg-[#3E5A44] rotate-12" />
+                    </div>
+
+                    {/* Bottom-Right small flower stem decoration */}
+                    <div className="absolute -right-[5px] bottom-[3px] flex items-center gap-0.5">
+                      <span className="w-1.2 h-[1.2px] bg-[#3E5A44] -rotate-12" />
+                      <span className="w-1.2 h-1.2 rounded-full bg-[#E26D22] shadow-3xs" />
+                    </div>
+                  </div>
+
+                  {/* Category Label at bottom */}
+                  <span className="text-[9.5px] font-black text-center text-[#3E5A44] mt-1.5 leading-none">
+                    {cat.label}
+                  </span>
+
+                  {/* Thick bottom line indicator */}
+                  <div className="w-6 h-[2px] bg-[#3E5A44] rounded-full mt-1.5" />
+                </div>
+              );
+            }
+
             return (
               <div
                 key={idx}
-                onClick={() => navigate(cat.path)}
-                className="relative flex flex-col items-center justify-center flex-shrink-0 w-[64px] h-[72px] rounded-[16px] transition-all duration-300 border border-[#EADCC9] bg-[#FFF8EE] shadow-sm cursor-pointer active:scale-95 overflow-hidden"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 2h1v1H2zm4 4h1v1H6z' fill='%23EADCC9' fill-opacity='0.15'/%3E%3C/svg%3E")`,
-                  backgroundSize: '10px 10px',
-                }}
+                onClick={() => handleCategoryClick(cat)}
+                className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
               >
-                {/* Dashed Circle with Shopping Bag + Flowers */}
-                <div className="relative w-[36px] h-[36px] rounded-full border border-dashed border-[#3E5A44]/75 bg-[#FFFBF7] flex items-center justify-center mt-1 shadow-3xs">
-                  
-                  {/* Shopping Bag with White Heart Cutout */}
-                  <svg viewBox="0 0 24 24" className="w-[16px] h-[16px]" fill="#3E5A44">
-                    {/* Handle */}
-                    <path d="M12 2C9.5 2 7.5 4 7.5 6.5H9c0-1.7 1.3-3 3-3s3 1.3 3 3h1.5C16.5 4 14.5 2 12 2z" />
-                    {/* Bag body */}
-                    <path d="M5 6.5h14c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2v-11c0-1.1.9-2 2-2z" />
-                    {/* White heart cutout */}
-                    <path d="M12 16.8s-2.2-1.8-2.7-2.3c-.7-.7-1-1.3-1-1.8 0-1.2 1-2.2 2.2-2.2.7 0 1.3.4 1.5 1 .2-.6.8-1 1.5-1 1.2 0 2.2 1 2.2 2.2 0 .5-.3 1.1-1 1.8-.5.5-2.7 2.3-2.7 2.3z" fill="white" />
-                  </svg>
-
-                  {/* Top-Right Orange Flower Decoration */}
-                  <div className="absolute -top-[5px] -right-[5px] w-[9px] h-[9px] flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="w-full h-full overflow-visible">
-                      <circle cx="12" cy="12" r="5.5" fill="#E26D22" />
-                      <circle cx="12" cy="5" r="5.5" fill="#E26D22" />
-                      <circle cx="12" cy="19" r="5.5" fill="#E26D22" />
-                      <circle cx="5" cy="12" r="5.5" fill="#E26D22" />
-                      <circle cx="19" cy="12" r="5.5" fill="#E26D22" />
-                      <circle cx="12" cy="12" r="2.2" fill="#3E5A44" />
-                    </svg>
-                  </div>
-
-                  {/* Bottom-Left small flower stem decoration */}
-                  <div className="absolute -left-[5px] bottom-[3px] flex items-center gap-0.5">
-                    <span className="w-1.2 h-1.2 rounded-full bg-[#E26D22] shadow-3xs" />
-                    <span className="w-1.2 h-[1.2px] bg-[#3E5A44] rotate-12" />
-                  </div>
-
-                  {/* Bottom-Right small flower stem decoration */}
-                  <div className="absolute -right-[5px] bottom-[3px] flex items-center gap-0.5">
-                    <span className="w-1.2 h-[1.2px] bg-[#3E5A44] -rotate-12" />
-                    <span className="w-1.2 h-1.2 rounded-full bg-[#E26D22] shadow-3xs" />
-                  </div>
+                <div className="w-[50px] h-[50px] rounded-full bg-[#EADCC9]/20 border border-[#EADCC9]/55 flex items-center justify-center shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] text-[#3E5A44]">
+                  {cat.icon}
                 </div>
-
-                {/* Category Label at bottom */}
-                <span className="text-[9.5px] font-black text-center text-[#3E5A44] mt-1.5 leading-none">
+                <span className="text-[10px] font-bold text-[#3F2A20] mt-1.5 leading-none">
                   {cat.label}
                 </span>
-
-                {/* Thick bottom line indicator */}
-                <div className="w-6 h-[2px] bg-[#3E5A44] rounded-full mt-1.5" />
               </div>
             );
-          }
-
-          return (
-            <div
-              key={idx}
-              onClick={() => navigate(cat.path)}
-              className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
-            >
-              <div className="w-[50px] h-[50px] rounded-full bg-[#EADCC9]/20 border border-[#EADCC9]/55 flex items-center justify-center shadow-[0_1.5px_4px_rgba(0,0,0,0.015)] text-[#3E5A44]">
-                {cat.icon}
-              </div>
-              <span className="text-[10px] font-bold text-[#3F2A20] mt-1.5 leading-none">
-                {cat.label}
-              </span>
-            </div>
-          );
-        })}
+          })}
+        </div>
       </div>
 
       {/* 2. HERO BANNER CAROUSEL (Auto-scrolling Banner Section) */}
@@ -315,13 +361,18 @@ const Home = () => {
       )}
 
       {selectedCategory !== 'You Buy' && selectedCategory !== 'Home' && (
-        <div className="py-4 mb-6 md:mb-10">
-          <div className="flex justify-between items-center px-4 mb-4">
-            <h2 className="text-xl font-black text-[var(--card-text)]">{selectedCategory} Specials</h2>
-            <div className="h-1 flex-1 bg-gray-100 mx-4 rounded-full" />
-          </div>
-          <CategoryProductsSection selectedCategory={selectedCategory} />
-        </div>
+        <CategoryProductsSection 
+          selectedCategory={selectedCategory}
+          onResetToAll={() => {
+            setSelectedCategory('You Buy');
+            setActiveTab('You Buy');
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              next.delete('category');
+              return next;
+            }, { replace: true });
+          }}
+        />
       )}
       </div>
     </>

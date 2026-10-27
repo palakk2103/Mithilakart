@@ -36,11 +36,16 @@ export const getImageUrl = (src) => {
     return DEFAULT_PRODUCT_IMAGE;
   }
   const clean = src.trim();
+  if (clean.startsWith('data:') || clean.startsWith('blob:')) {
+    return clean;
+  }
   if (clean.startsWith('/uploads')) {
-    const backendOrigin = import.meta.env.VITE_API_BASE_URL
-      ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/v1\/?$/, '')
-      : 'http://localhost:5000';
-    return `${backendOrigin}${clean}`;
+    const rawApiBase = import.meta.env.VITE_API_BASE_URL || '';
+    if (rawApiBase.startsWith('http://') || rawApiBase.startsWith('https://')) {
+      const backendOrigin = rawApiBase.replace(/\/api\/v1\/?$/, '');
+      return `${backendOrigin}${clean}`;
+    }
+    return clean;
   }
   return clean;
 };

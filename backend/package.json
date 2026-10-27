@@ -1,7 +1,7 @@
 {
   "name": "mithilakart-backend",
   "version": "0.1.0",
-  "description": "Mithilakart API \u2014 Phase 10 production hardening",
+  "description": "Mithilakart API — Phase 10 production hardening",
   "main": "src/server.js",
   "scripts": {
     "start": "node api.js && node src/server.js",
@@ -43,6 +43,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "firebase-admin": "^14.2.0",
+    "google-translate-api-x": "^10.7.3",
     "helmet": "^8.0.0",
     "ioredis": "^5.4.2",
     "joi": "^17.13.3",

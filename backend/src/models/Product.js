@@ -71,6 +71,11 @@ const productSchema = new mongoose.Schema(
     city: { type: String, trim: true, default: null },
     pickupPointId: { type: mongoose.Schema.Types.ObjectId, default: null },
 
+    translations: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+
     deletedAt: { type: Date, default: null },
   },
   {

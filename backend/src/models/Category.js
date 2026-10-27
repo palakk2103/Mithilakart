@@ -20,6 +20,10 @@ const categorySchema = new mongoose.Schema(
       type: [{ type: String, enum: MARKETPLACE_TAB_VALUES }],
       default: ['mithilakart'],
     },
+    translations: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     deletedAt: { type: Date, default: null },
   },
   {

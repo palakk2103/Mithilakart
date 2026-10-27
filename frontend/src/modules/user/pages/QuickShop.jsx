@@ -125,7 +125,7 @@ const HouseholdIcon = () => (
 
 const QuickShop = () => {
   const navigate = useNavigate();
-  const { fetchHomeSections } = useVendorStore();
+  const fetchHomeSections = useVendorStore((state) => state.fetchHomeSections);
   const [categorySections, setCategorySections] = React.useState([]);
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   const { savedAddresses, selectedAddressId } = useAccountStore();
@@ -137,15 +137,27 @@ const QuickShop = () => {
   const [nearbyLoading, setNearbyLoading] = React.useState(false);
   const [notDeliverable, setNotDeliverable] = React.useState(false);
 
+  const isFreshGrocery = window.location.pathname.includes('/fresh-grocery');
+
   useEffect(() => {
-    localStorage.setItem('isQuickShopFlow', 'true');
-    fetchHomeSections('quick_shop');
-  }, [fetchHomeSections]);
+    if (isFreshGrocery) {
+      localStorage.setItem('isFreshGroceryFlow', 'true');
+      localStorage.setItem('isQuickShopFlow', 'false');
+      localStorage.setItem('isMithilakFlow', 'false');
+      fetchHomeSections('groceries_fresh');
+    } else {
+      localStorage.setItem('isQuickShopFlow', 'true');
+      localStorage.setItem('isMithilakFlow', 'false');
+      localStorage.setItem('isFreshGroceryFlow', 'false');
+      fetchHomeSections('quick_shop');
+    }
+  }, [fetchHomeSections, isFreshGrocery]);
 
   useEffect(() => {
     let cancelled = false;
+    const targetFlow = isFreshGrocery ? 'fresh_grocery' : 'quick_shop';
 
-    getCategories({ commerceFlow: 'quick_shop' })
+    getCategories({ commerceFlow: targetFlow })
       .then((data) => {
         if (!cancelled) {
           setCategorySections(mapCategorySections(data, []));
@@ -158,7 +170,7 @@ const QuickShop = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isFreshGrocery]);
 
   useEffect(() => {
     let cancelled = false;
@@ -279,8 +291,6 @@ const QuickShop = () => {
     const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
   }, [activeFlashSale?.endsAt]);
-
-  const isFreshGrocery = window.location.pathname.includes('/fresh-grocery');
 
   if (isFreshGrocery) {
     return (

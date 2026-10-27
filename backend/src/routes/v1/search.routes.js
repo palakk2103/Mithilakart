@@ -6,10 +6,14 @@ function createSearchRoutes(searchController) {
   const router = express.Router();
 
   router.get('/search', validateQuery(Joi.object({
-    q: Joi.string().optional(),
-    search: Joi.string().optional(),
+    q: Joi.string().allow('').optional(),
+    search: Joi.string().allow('').optional(),
     page: Joi.number().optional(),
     limit: Joi.number().optional(),
+    tab: Joi.string().allow('').optional(),
+    marketplaceTab: Joi.string().allow('').optional(),
+    commerceFlow: Joi.string().allow('').optional(),
+    flow: Joi.string().allow('').optional(),
   })), searchController.search);
 
   return router;

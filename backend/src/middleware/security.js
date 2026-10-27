@@ -9,11 +9,12 @@ function createHelmetMiddleware() {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
+        imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
         connectSrc: ["'self'"],
       },
     } : false,
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     hsts: config.isProduction ? { maxAge: 31536000, includeSubDomains: true } : false,
   };
 

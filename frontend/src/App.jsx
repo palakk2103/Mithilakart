@@ -11,6 +11,7 @@ import ErrorBoundary from './shared/components/ErrorBoundary';
 import { initPushNotifications } from './shared/services/pushNotifications';
 import { isAuthenticated } from './shared/api/tokenStorage';
 import { LocationProvider } from './shared/context/LocationContext';
+import { LanguageProvider } from './shared/context/LanguageContext';
 import LocationPrompt from './shared/components/LocationPrompt';
 
 function App() {
@@ -43,8 +44,9 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <LocationProvider>
-        <BrowserRouter>
+      <LanguageProvider>
+        <LocationProvider>
+          <BrowserRouter>
           {showSplash && (
             <SplashScreen
               onComplete={() => {
@@ -86,7 +88,8 @@ function App() {
           </Routes>
         </BrowserRouter>
       </LocationProvider>
-    </ErrorBoundary>
+    </LanguageProvider>
+  </ErrorBoundary>
   );
 }
 

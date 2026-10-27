@@ -1,7 +1,11 @@
 const express = require('express');
 const { getContainer } = require('../../bootstrap/container');
 
+const { languageMiddleware } = require('../../middleware/language');
+
 const router = express.Router();
+
+router.use(languageMiddleware);
 
 router.get('/', (req, res) => {
   res.status(200).json({
@@ -16,6 +20,10 @@ router.get('/', (req, res) => {
 });
 
 const container = getContainer();
+
+if (container.routes.translation) {
+  router.use('/', container.routes.translation);
+}
 
 router.use('/auth', container.routes.customerAuth);
 router.use('/seller/auth', container.routes.sellerAuth);

@@ -60,7 +60,23 @@ class ProductRepository extends BaseRepository {
     if (options.skip !== undefined) query.skip(options.skip);
     if (options.limit !== undefined) query.limit(options.limit);
 
-    return query.exec();
+    const items = await query.exec();
+    if (items.length > 0 || !searchTerm) return items;
+
+    // Fallback: regex search on title, brand, tags when text index returns 0 results
+    const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regexQuery = this.model.find({
+      ...this._publicFilter(filter),
+      $or: [
+        { title: { $regex: escaped, $options: 'i' } },
+        { brand: { $regex: escaped, $options: 'i' } },
+        { tags: { $regex: escaped, $options: 'i' } },
+      ],
+    });
+    if (options.sort && !options.sort.score) regexQuery.sort(options.sort);
+    if (options.skip !== undefined) regexQuery.skip(options.skip);
+    if (options.limit !== undefined) regexQuery.limit(options.limit);
+    return regexQuery.exec();
   }
 
   async updateStatus(id, status, moderationNote = null, session = null) {

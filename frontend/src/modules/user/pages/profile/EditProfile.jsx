@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProfile, updateProfile as updateProfileApi } from '../../services/userApi';
 import { getUser, setUser } from '../../../../shared/api/tokenStorage';
+import { uploadAvatar } from '../../../../shared/services/uploadService';
+import { getImageUrl } from '../../../../shared/utils/imageUtils';
+import useAccountStore from '../../../../store/useAccountStore';
 import toast from 'react-hot-toast';
 
 const mapProfileToForm = (profile) => ({
@@ -20,6 +23,9 @@ const mapProfileToForm = (profile) => ({
 const EditProfile = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const updateAccountProfile = useAccountStore((state) => state.updateProfile);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState(() => {
     const stored = getUser('customer');
@@ -54,14 +60,16 @@ const EditProfile = () => {
 
   const validate = () => {
     let newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.name?.trim()) newErrors.name = 'Name is required';
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!emailRegex.test(formData.email)) newErrors.email = 'Invalid email format';
+    if (formData.email?.trim() && !emailRegex.test(formData.email.trim())) {
+      newErrors.email = 'Invalid email format';
+    }
 
-    if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
-    else if (formData.phone.length < 10) newErrors.phone = 'Invalid phone number';
+    if (formData.phone?.trim() && formData.phone.trim().length < 10) {
+      newErrors.phone = 'Invalid phone number';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -73,41 +81,83 @@ const EditProfile = () => {
       return;
     }
 
+    setSaving(true);
     try {
-      const updated = await updateProfileApi({
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        gender: formData.gender.toLowerCase(),
-        dob: formData.dob || null,
-      });
+      let finalAvatarUrl = formData.avatar;
 
+      if (selectedFile) {
+        try {
+          const uploadedUrl = await uploadAvatar(selectedFile);
+          if (uploadedUrl) {
+            finalAvatarUrl = uploadedUrl;
+          }
+        } catch (uploadErr) {
+          console.warn('Avatar upload to storage failed, falling back to data URL', uploadErr);
+        }
+      }
+
+      let updated = null;
+      try {
+        updated = await updateProfileApi({
+          name: formData.name.trim(),
+          ...(formData.email?.trim() ? { email: formData.email.trim() } : {}),
+          gender: formData.gender ? formData.gender.toLowerCase() : 'male',
+          dob: formData.dob || null,
+          avatarUrl: finalAvatarUrl || null,
+        });
+      } catch (apiErr) {
+        console.warn('Backend profile update failed, persisting locally', apiErr);
+      }
+
+      const resolvedAvatar = updated?.avatarUrl || finalAvatarUrl || formData.avatar;
       const stored = getUser('customer') || {};
-      setUser('customer', {
+      const newUserData = {
         ...stored,
-        ...updated,
-        phone: formData.phone,
-        avatar: formData.avatar || updated.avatarUrl || stored.avatar,
-      });
+        ...(updated || {}),
+        name: updated?.name || formData.name.trim(),
+        email: updated?.email !== undefined ? updated.email : (formData.email?.trim() || stored.email || ''),
+        phone: formData.phone || stored.phone || '',
+        avatar: resolvedAvatar,
+        avatarUrl: resolvedAvatar,
+      };
+
+      setUser('customer', newUserData);
+
+      if (typeof updateAccountProfile === 'function') {
+        updateAccountProfile({
+          name: newUserData.name,
+          email: newUserData.email,
+          gender: updated?.gender || (formData.gender ? formData.gender.toLowerCase() : 'male'),
+          dob: updated?.dob || formData.dob || null,
+          avatar: resolvedAvatar,
+          avatarUrl: resolvedAvatar,
+        });
+      }
+
+      window.dispatchEvent(new Event('customer-auth-changed'));
 
       toast.success('Profile Updated Successfully');
-      setTimeout(() => navigate(-1), 1500);
+      setTimeout(() => navigate(-1), 1200);
     } catch (err) {
       toast.error(err?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error('Image size should be less than 2MB');
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
         return;
       }
 
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, avatar: reader.result }));
-        toast.success('Photo updated locally');
+        toast.success('Photo selected');
       };
       reader.readAsDataURL(file);
     }
@@ -196,8 +246,12 @@ const EditProfile = () => {
           </button>
           <h1 className={`text-[17px] font-black uppercase tracking-widest ${headerTextColor}`}>Edit Profile</h1>
         </div>
-        <button onClick={handleSave} className={`${primaryBg} text-white font-black text-xs uppercase tracking-widest px-5 py-2 rounded-xl shadow-sm active:scale-95 transition-all`}>
-          Save
+        <button 
+          onClick={handleSave} 
+          disabled={saving}
+          className={`${primaryBg} text-white font-black text-xs uppercase tracking-widest px-5 py-2 rounded-xl shadow-sm active:scale-95 transition-all ${saving ? 'opacity-70 cursor-not-allowed' : ''}`}
+        >
+          {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
 
@@ -206,17 +260,28 @@ const EditProfile = () => {
         <div className="flex flex-col items-center">
           <div className="relative group">
             <div 
-              onClick={() => fileInputRef.current.click()}
+              onClick={() => fileInputRef.current?.click()}
               className={`w-20 h-20 md:w-32 md:h-32 ${avatarBg} rounded-full flex items-center justify-center font-black text-3xl md:text-5xl shadow-md border-2 md:border-4 border-white overflow-hidden cursor-pointer active:scale-95 transition-transform`}
             >
               {formData.avatar ? (
-                <img src={formData.avatar} alt="Profile" className="w-full h-full object-cover" />
+                <img 
+                  src={getImageUrl(formData.avatar)} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                  onLoad={(e) => {
+                    e.currentTarget.style.display = 'block';
+                  }}
+                />
               ) : (
                 formData.name ? formData.name.charAt(0).toUpperCase() : 'H'
               )}
             </div>
             <button 
-              onClick={() => fileInputRef.current.click()}
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
               className={`absolute bottom-0 right-0 ${primaryBg} border-2 border-white p-1.5 md:p-2.5 rounded-full text-white shadow-md transition-all active:scale-90`}
             >
               <Camera size={14} className="md:w-[18px] md:h-[18px]" />

@@ -3,10 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Truck, MapPin, Clock, Package, CheckCircle, AlertCircle, IndianRupee } from 'lucide-react';
 import Footer from '../../../shared/components/Footer';
 import useLegalPage from '../hooks/useLegalPage';
+import LegalContentRenderer from '../components/LegalContentRenderer';
 
 const ShippingPolicy = () => {
   const navigate = useNavigate();
-  const { page, loading, error } = useLegalPage('shipping');
+  const { page, loading } = useLegalPage('shipping');
+
+  const pageTitle = page?.title || 'Shipping Policy';
+  const updatedDate = page?.updatedAt
+    ? new Date(page.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'May 8, 2026';
 
   return (
     <div className="min-h-screen bg-white">
@@ -18,25 +24,20 @@ const ShippingPolicy = () => {
         >
           <ArrowLeft size={24} strokeWidth={2.5} />
         </button>
-        <h1 className="text-[18px] font-bold text-white">Shipping Policy</h1>
+        <h1 className="text-[18px] font-bold text-white">{pageTitle}</h1>
       </div>
 
       {/* Content */}
       <div className="px-6 py-6 space-y-6">
-        {loading && <p className="text-sm text-gray-500">Loading...</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {page?.content ? (
-          <>
-            <div className="text-[11px] text-gray-400">
-              Last Updated: {page.updatedAt ? new Date(page.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-            </div>
-            <div className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap">{page.content}</div>
-          </>
-        ) : (
-          <>
         <div className="text-[11px] text-gray-400">
-          Last Updated: May 8, 2026
+          Last Updated: {updatedDate}
         </div>
+
+        <LegalContentRenderer
+          content={page?.content}
+          loading={loading}
+          fallbackContent={(
+            <div className="space-y-6">
 
         {/* Introduction */}
         <section>
@@ -332,11 +333,13 @@ const ShippingPolicy = () => {
             </div>
           </div>
         </section>
-          </>
-        )}
       </div>
-    </div>
-  );
+    )}
+  />
+  <Footer />
+</div>
+</div>
+);
 };
 
 export default ShippingPolicy;

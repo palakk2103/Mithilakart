@@ -155,7 +155,9 @@ export const LocationProvider = ({ children }) => {
         // permissions API not available
       }
 
-      const isDismissed = sessionStorage.getItem('locationPromptDismissed') === 'true';
+      const isDismissed =
+        localStorage.getItem('locationPromptDismissed') === 'true' ||
+        sessionStorage.getItem('locationPromptDismissed') === 'true';
       if (!cancelled && !isDismissed && !isValidGpsLocation(readStoredLocation())) {
         setPromptOpen(true);
       }

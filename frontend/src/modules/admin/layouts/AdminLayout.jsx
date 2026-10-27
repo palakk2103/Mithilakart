@@ -50,6 +50,7 @@ const AdminLayout = () => {
   const quickLinks = [
     { name: 'Header Tabs Manager', path: '/admin/storefront/tabs' },
     { name: 'Banner Manager', path: '/admin/storefront/banners' },
+    { name: 'Policies & Information', path: '/admin/content/legal' },
     { name: 'Customer Database', path: '/admin/users' },
     { name: 'Inventory Stock', path: '/admin/inventory/all' },
     { name: 'System Settings', path: '/admin/settings' },
@@ -93,6 +94,7 @@ const AdminLayout = () => {
           ]
         },
         { name: 'Category Manager', path: '/admin/categories', icon: <Layers size={18} /> },
+        { name: 'Policies & Information', path: '/admin/content/legal', icon: <FileText size={18} /> },
       ]
     },
     {

@@ -10,7 +10,8 @@ class CategoryController extends BaseController {
 
   list = asyncHandler(async (req, res) => {
     const tab = req.query.marketplaceTab || req.query.commerceFlow;
-    const data = await this.service.listPublicTree(tab, req.query.marketplaceTab);
+    const lang = req.language || req.query.lang || 'en';
+    const data = await this.service.listPublicTree(tab, req.query.marketplaceTab, lang);
     return ApiResponse.success(res, data);
   });
 

@@ -287,6 +287,7 @@ class CartService extends BaseService {
     state.items = (state.items || []).filter((it) => {
       // Direct itemKey match (cartId / itemKey)
       if (it.itemKey === rawId || it.itemKey === itemKey) return false;
+      if (it.itemKey && it.itemKey.replace(/:+$/, '').replace(/^listing:/, '') === cleanId) return false;
       // Match by productId
       if (it.productId && (String(it.productId) === rawId || String(it.productId) === cleanId)) {
         if (!variantId || it.variantId === variantId) return false;

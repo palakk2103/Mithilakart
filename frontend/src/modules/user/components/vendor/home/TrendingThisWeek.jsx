@@ -2,6 +2,8 @@ import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useVendorStore from '../../../../../store/useVendorStore';
 import { handleImageError, getProductImage } from '../../../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../../../../../shared/context/LanguageContext';
 
 const HeaderFlower = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block align-middle mx-1">
@@ -53,6 +55,8 @@ const ViewStoreDivider = () => (
 );
 
 const TrendingThisWeek = () => {
+  const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
   const { homeSections } = useVendorStore();
 
@@ -64,7 +68,13 @@ const TrendingThisWeek = () => {
 
   const trendingItems = rawList.map((item, index) => {
     const prod = item.product || {};
-    const name = item.name || item.title || item.label || prod.title || prod.name || 'Trending Product';
+    const name = (currentLanguage !== 'en' && (prod.translations?.[currentLanguage]?.title || item.translations?.[currentLanguage]?.title)) 
+      || item.title 
+      || item.name 
+      || item.label 
+      || prod.title 
+      || prod.name 
+      || 'Trending Product';
     const image = getProductImage(item.img || item.image || prod.image || (Array.isArray(prod.images) ? prod.images[0]?.url : null));
     const price = item.price ?? prod.price;
 
@@ -103,7 +113,7 @@ const TrendingThisWeek = () => {
           <div className="flex items-center">
             <HeaderFlower />
             <h3 className="text-[11px] md:text-sm font-black text-[#3C2415] uppercase tracking-wide font-montserrat">
-              Trending This Week
+              {t('home.trendingThisWeek', { defaultValue: 'Trending This Week' })}
             </h3>
             <HeaderFlower />
           </div>
@@ -111,7 +121,7 @@ const TrendingThisWeek = () => {
             onClick={() => navigate('/all-offers')}
             className="text-[9px] md:text-xs font-bold text-[#4B6C36] hover:text-[#385227] flex items-center transition-colors duration-200"
           >
-            View All
+            {t('common.viewAll', { defaultValue: 'View All' })}
             <ViewAllIcon />
           </button>
         </div>
@@ -147,7 +157,7 @@ const TrendingThisWeek = () => {
               <CardFlowerGarland />
 
               <span className="text-[9px] md:text-[11px] font-black text-[#4B6C36] tracking-wider uppercase mt-0.5 group-hover:text-[#D35400] transition-colors duration-200">
-                {item.price ? `₹${item.price}` : 'VIEW PRODUCT'}
+                {item.price ? `₹${item.price}` : t('product.viewProduct', { defaultValue: 'VIEW PRODUCT' })}
               </span>
               <ViewStoreDivider />
             </div>

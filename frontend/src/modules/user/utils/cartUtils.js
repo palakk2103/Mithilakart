@@ -63,7 +63,17 @@ export const removeCartItemById = async (cartId) => {
   const id = typeof cartId === 'object' && cartId !== null
     ? (cartId.cartId || cartId.itemKey || cartId.productId || cartId.id)
     : cartId;
-  await removeCartItem(id);
+  try {
+    await removeCartItem(id);
+  } catch (err) {
+    const rawId = String(id || '');
+    const cleanId = rawId.replace(/:+$/, '').replace(/^listing:/, '');
+    if (cleanId && cleanId !== rawId) {
+      await removeCartItem(cleanId);
+    } else {
+      throw err;
+    }
+  }
   dispatchCartUpdated();
 };
 

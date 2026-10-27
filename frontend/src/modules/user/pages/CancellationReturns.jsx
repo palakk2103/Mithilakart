@@ -3,10 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, RotateCcw, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Footer from '../../../shared/components/Footer';
 import useLegalPage from '../hooks/useLegalPage';
+import LegalContentRenderer from '../components/LegalContentRenderer';
 
 const CancellationReturns = () => {
   const navigate = useNavigate();
-  const { page, loading, error } = useLegalPage('cancellation');
+  const { page, loading } = useLegalPage('cancellation');
+
+  const pageTitle = page?.title || 'Cancellation & Returns';
+  const updatedDate = page?.updatedAt
+    ? new Date(page.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'May 8, 2026';
 
   return (
     <div className="min-h-screen bg-white">
@@ -18,26 +24,21 @@ const CancellationReturns = () => {
         >
           <ArrowLeft size={24} strokeWidth={2.5} />
         </button>
-        <h1 className="text-[18px] font-bold text-white">Cancellation & Returns</h1>
+        <h1 className="text-[18px] font-bold text-white">{pageTitle}</h1>
       </div>
 
       {/* Content */}
       <div className="px-6 py-6 space-y-6">
-        {loading && <p className="text-sm text-gray-500">Loading...</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {page?.content ? (
-          <>
-            <div className="text-[11px] text-gray-400">
-              Last Updated: {page.updatedAt ? new Date(page.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-            </div>
-            <div className="text-[13px] text-gray-600 leading-relaxed whitespace-pre-wrap">{page.content}</div>
-          </>
-        ) : (
-          <>
         {/* Last Updated */}
         <div className="text-[11px] text-gray-400">
-          Last Updated: May 8, 2026
+          Last Updated: {updatedDate}
         </div>
+
+        <LegalContentRenderer
+          content={page?.content}
+          loading={loading}
+          fallbackContent={(
+            <div className="space-y-6">
 
         {/* Introduction */}
         <section>
@@ -260,11 +261,13 @@ const CancellationReturns = () => {
             </div>
           </div>
         </section>
-          </>
-        )}
       </div>
-    </div>
-  );
+    )}
+  />
+  <Footer />
+</div>
+</div>
+);
 };
 
 export default CancellationReturns;

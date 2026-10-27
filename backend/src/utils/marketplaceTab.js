@@ -16,7 +16,7 @@ function normalizeMarketplaceTab(value) {
 }
 
 function resolveTabFromQuery(query = {}) {
-  return normalizeMarketplaceTab(query.marketplaceTab || query.commerceFlow);
+  return normalizeMarketplaceTab(query.marketplaceTab || query.tab || query.commerceFlow || query.flow);
 }
 
 function toLegacyCommerceFlow(tab) {

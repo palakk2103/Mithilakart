@@ -10,6 +10,10 @@ const productVariantSchema = new mongoose.Schema(
     stock: { type: Number, default: 0, min: 0 },
     attributes: { type: mongoose.Schema.Types.Mixed, default: {} },
     isActive: { type: Boolean, default: true },
+    translations: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     deletedAt: { type: Date, default: null },
   },
   {

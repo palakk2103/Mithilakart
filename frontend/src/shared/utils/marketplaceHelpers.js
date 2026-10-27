@@ -14,16 +14,26 @@
  */
 export const getCurrentMarketplaceTab = () => {
   if (typeof window === 'undefined') return 'mithilakart';
-  if (localStorage.getItem('isFreshGroceryFlow') === 'true') {
-    return 'groceries_fresh';
-  }
-  if (localStorage.getItem('isMithilakFlow') === 'true') {
-    return 'mithilak';
-  }
-  if (localStorage.getItem('isQuickShopFlow') === 'true'
-    || window.location.pathname.includes('/quick-shop')) {
-    return 'quick_shop';
-  }
+  try {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabParam = searchParams.get('tab') || searchParams.get('marketplaceTab') || searchParams.get('flow');
+    if (tabParam) {
+      if (tabParam === 'quickshop' || tabParam === 'quick_shop') return 'quick_shop';
+      if (tabParam === 'freshgrocery' || tabParam === 'fresh_grocery' || tabParam === 'groceries_fresh') return 'groceries_fresh';
+      if (tabParam === 'mithilak') return 'mithilak';
+      if (tabParam === 'mithilakart') return 'mithilakart';
+    }
+  } catch {}
+
+  const path = window.location.pathname;
+  if (path.includes('/quick-shop')) return 'quick_shop';
+  if (path.includes('/fresh-grocery')) return 'groceries_fresh';
+  if (path.includes('/mithilak')) return 'mithilak';
+  if (path === '/home' || path === '/') return 'mithilakart';
+
+  if (localStorage.getItem('isQuickShopFlow') === 'true') return 'quick_shop';
+  if (localStorage.getItem('isFreshGroceryFlow') === 'true') return 'groceries_fresh';
+  if (localStorage.getItem('isMithilakFlow') === 'true') return 'mithilak';
   return 'mithilakart';
 };
 
@@ -32,11 +42,27 @@ export const getCurrentMarketplaceTab = () => {
  * Supports the listings structure as well as category fallback classification rules.
  */
 export const productBelongsToTab = (product, tab) => {
+  if (!product) return false;
+  if (product.marketplaceTab) {
+    return product.marketplaceTab === tab;
+  }
   if (product.listings && product.listings.length > 0) {
-    return product.listings.some(l => l.tab === tab);
+    return product.listings.some(l => l.tab === tab || l.marketplaceTab === tab);
   }
   if (product.tab) {
     return product.tab === tab;
+  }
+  if (Array.isArray(product.commerceFlows) && product.commerceFlows.length > 0) {
+    if (tab === 'mithilak') return product.commerceFlows.includes('mithilak');
+    if (tab === 'quick_shop') return product.commerceFlows.includes('quick_shop') || product.commerceFlows.includes('quickshop');
+    if (tab === 'groceries_fresh') return product.commerceFlows.includes('fresh_grocery') || product.commerceFlows.includes('freshgrocery') || product.commerceFlows.includes('groceries_fresh');
+    if (tab === 'mithilakart') return product.commerceFlows.includes('standard') || product.commerceFlows.includes('mithilakart');
+  }
+  if (product.commerceFlow) {
+    if (tab === 'mithilak') return product.commerceFlow === 'mithilak';
+    if (tab === 'quick_shop') return product.commerceFlow === 'quick_shop' || product.commerceFlow === 'quickshop';
+    if (tab === 'groceries_fresh') return product.commerceFlow === 'fresh_grocery' || product.commerceFlow === 'freshgrocery' || product.commerceFlow === 'groceries_fresh';
+    if (tab === 'mithilakart') return product.commerceFlow === 'standard' || product.commerceFlow === 'mithilakart';
   }
   
   const idStr = product.id !== undefined && product.id !== null ? String(product.id) : '';

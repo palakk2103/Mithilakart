@@ -104,6 +104,14 @@ const useVendorStore = create((set, get) => ({
   },
 
   fetchStandardNav: async () => get().fetchHomeSections('standard'),
+
+  refreshForLanguage: async (_lang) => {
+    const flow = get().activeFlow;
+    if (!flow || flow === 'mithilakart' || flow === 'standard') {
+      return get().fetchHomeSections('standard');
+    }
+    return get().fetchFlowHome(flow);
+  },
 }));
 
 export default useVendorStore;

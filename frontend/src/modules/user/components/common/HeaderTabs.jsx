@@ -21,16 +21,28 @@ const HeaderTabs = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { activeFlow, setActiveFlow } = useVendorStore();
+  const activeFlow = useVendorStore((state) => state.activeFlow);
+  const setActiveFlow = useVendorStore((state) => state.setActiveFlow);
   const [enabledTabs, setEnabledTabs] = React.useState(() => getEnabledHeaderTabs());
 
   React.useEffect(() => {
-    fetchHeaderTabsFromBackend().then(() => {
-      setEnabledTabs(getEnabledHeaderTabs());
+    fetchHeaderTabsFromBackend().then((tabs) => {
+      if (tabs && tabs.length > 0) {
+        const nextEnabled = tabs.filter((t) => t.enabled !== false);
+        setEnabledTabs((prev) => {
+          if (JSON.stringify(prev) === JSON.stringify(nextEnabled)) return prev;
+          return nextEnabled;
+        });
+      }
     });
 
-    const handleTabsUpdate = () => {
-      setEnabledTabs(getEnabledHeaderTabs());
+    const handleTabsUpdate = (e) => {
+      if (e && e.key && e.key !== 'user_app_tabs_config') return;
+      const updated = getEnabledHeaderTabs();
+      setEnabledTabs((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(updated)) return prev;
+        return updated;
+      });
     };
     window.addEventListener('user_app_tabs_updated', handleTabsUpdate);
     window.addEventListener('storage', handleTabsUpdate);
@@ -40,14 +52,28 @@ const HeaderTabs = () => {
     };
   }, []);
 
-  const isQuickShopActive = activeFlow === 'quickshop';
-  const isMithilakActive = activeFlow === 'mithilak';
-  const isFreshGroceryActive = activeFlow === 'freshgrocery';
-  const isMithilakartActive = activeFlow === 'mithilakart';
+  const currentPath = location.pathname;
+  const effectiveFlow = React.useMemo(() => {
+    if (currentPath.includes('/quick-shop')) return 'quickshop';
+    if (currentPath.includes('/fresh-grocery')) return 'freshgrocery';
+    if (currentPath.includes('/mithilak')) return 'mithilak';
+    if (currentPath === '/home' || currentPath === '/') return 'mithilakart';
+    return activeFlow || 'mithilakart';
+  }, [currentPath, activeFlow]);
+
+  const isQuickShopActive = effectiveFlow === 'quickshop';
+  const isMithilakActive = effectiveFlow === 'mithilak';
+  const isFreshGroceryActive = effectiveFlow === 'freshgrocery';
+  const isMithilakartActive = effectiveFlow === 'mithilakart';
 
   const handleTabClick = (tab) => {
-    if (tab.flow) {
-      setActiveFlow(tab.flow);
+    const targetFlow = tab.flow || (
+      tab.route?.includes('/quick-shop') ? 'quickshop' :
+      tab.route?.includes('/fresh-grocery') ? 'freshgrocery' :
+      tab.route?.includes('/mithilak') ? 'mithilak' : 'mithilakart'
+    );
+    if (targetFlow) {
+      setActiveFlow(targetFlow);
     }
     navigate(tab.route || '/home');
   };
@@ -117,7 +143,7 @@ const HeaderTabs = () => {
         const currentPath = location.pathname;
         const hasRouteMatch = enabledTabs.some((t) => t.route === currentPath || (t.route === '/home' && currentPath === '/'));
         const isRouteActive = tab.route === currentPath || (tab.route === '/home' && currentPath === '/');
-        const isActive = hasRouteMatch ? isRouteActive : activeFlow === tab.flow;
+        const isActive = hasRouteMatch ? isRouteActive : (effectiveFlow === tab.flow || (tab.route && currentPath.startsWith(tab.route)));
         const displayLabel = tab.i18nKey ? t(tab.i18nKey, { defaultValue: tab.label }) : tab.label;
 
         // Determine inactive tab background styling based on overall header theme

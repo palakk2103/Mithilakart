@@ -123,10 +123,12 @@ const AdminRoutes = () => {
         {/* Comms */}
         <Route path="comms/notifications" element={<Notifications />} />
 
-        {/* Content */}
+        {/* Content & Legal Policies */}
         <Route path="content/reviews" element={<ReviewModeration />} />
         <Route path="content/qna" element={<QnAModeration />} />
         <Route path="content/legal" element={<LegalPolicies />} />
+        <Route path="policies" element={<LegalPolicies />} />
+        <Route path="storefront/policies" element={<LegalPolicies />} />
         
         {/* Partners */}
         <Route path="vendors/all" element={<VendorList />} />

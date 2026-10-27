@@ -17,13 +17,14 @@ const { eventBus } = require('../../events/EventBus');
 const LOCAL_COMMERCE_FLOWS = new Set([COMMERCE_FLOWS.QUICK_SHOP, COMMERCE_FLOWS.FRESH_GROCERY]);
 
 class SellerProductService extends BaseService {
-  constructor({ productRepository, productVariantRepository, categoryRepository, cacheService, sellerRepository = null }) {
+  constructor({ productRepository, productVariantRepository, categoryRepository, cacheService, sellerRepository = null, translationService = null }) {
     super();
     this.productRepository = productRepository;
     this.productVariantRepository = productVariantRepository;
     this.categoryRepository = categoryRepository;
     this.cacheService = cacheService;
     this.sellerRepository = sellerRepository;
+    this.translationService = translationService;
   }
 
   async list(sellerId, query = {}) {
@@ -97,6 +98,18 @@ class SellerProductService extends BaseService {
     while (await this.productRepository.findOne({ sellerId, sku: finalSku, deletedAt: null })) {
       finalSku = `${baseSku}-${counter}`;
       counter++;
+    }
+
+    if (this.translationService && (!data.translations || !data.translations.hi || !data.translations.mai)) {
+      try {
+        const trans = await this.translationService.translateFields({
+          title: data.title,
+          description: data.description || '',
+        });
+        data.translations = { ...(data.translations || {}), ...trans };
+      } catch (_err) {
+        // Safe fallback
+      }
     }
 
     const product = await this.productRepository.create({
@@ -178,7 +191,25 @@ class SellerProductService extends BaseService {
       data.sku = finalSku;
     }
 
+    if (this.translationService && (data.title !== undefined || data.description !== undefined)) {
+      try {
+        const titleToTrans = data.title !== undefined ? data.title : product.title;
+        const descToTrans = data.description !== undefined ? data.description : (product.description || '');
+        const trans = await this.translationService.translateFields({
+          title: titleToTrans,
+          description: descToTrans,
+        });
+        data.translations = { ...(product.translations || {}), ...(data.translations || {}), ...trans };
+      } catch (_err) {
+        // Safe fallback
+      }
+    }
+
     const updated = await this.productRepository.updateById(productId, data);
+    if (this.cacheService) {
+      const langs = ['en', 'hi', 'mai'];
+      langs.forEach((l) => this.cacheService.del(`cache:products:detail:${productId}:${l}`).catch(() => {}));
+    }
     await this._syncListings(updated);
     return updated;
   }

@@ -62,6 +62,10 @@ const MarketRoutes = () => {
       <Route path="/privacy" element={<LegalPrivacy />} />
       <Route path="/cancellation-returns" element={<CancellationReturns />} />
       <Route path="/shipping" element={<ShippingPolicy />} />
+      <Route path="/vendor/terms" element={<TermsOfUse />} />
+      <Route path="/vendor/privacy" element={<LegalPrivacy />} />
+      <Route path="/vendor/cancellation-returns" element={<CancellationReturns />} />
+      <Route path="/vendor/shipping" element={<ShippingPolicy />} />
 
       {/* Pages with layout */}
       <Route element={<VendorLayout />}>

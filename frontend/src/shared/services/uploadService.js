@@ -72,16 +72,24 @@ export async function uploadReviewMedia(file) {
 export async function uploadAvatar(file) {
   if (!file) throw new Error('No file selected');
 
+  const mimeType = file.type || 'image/jpeg';
+  const fileName = file.name || 'avatar.jpg';
+
   const presign = await customerApi.post('/uploads/presign', {
     context: 'avatars',
-    fileName: file.name,
-    mimeType: file.type,
+    fileName,
+    mimeType,
   });
+
+  const uploadTarget = presign?.uploadUrl || presign?.url;
+  if (!uploadTarget) {
+    throw new Error('Presigned upload URL was not generated.');
+  }
 
   const formData = new FormData();
   formData.append('file', file);
 
-  const uploadResponse = await fetch(presign.uploadUrl, {
+  const uploadResponse = await fetch(uploadTarget, {
     method: 'POST',
     body: formData,
   });
@@ -93,9 +101,9 @@ export async function uploadAvatar(file) {
   const confirmed = await customerApi.post('/uploads/confirm', {
     context: 'avatars',
     storageKey: presign.storageKey,
-    mimeType: file.type,
+    mimeType,
   });
 
-  return confirmed.url;
+  return confirmed?.url || confirmed?.storageKey;
 }
 

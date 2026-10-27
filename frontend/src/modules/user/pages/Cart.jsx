@@ -65,9 +65,9 @@ const Cart = () => {
     try {
       const data = await getWishlist();
       const items = extractList(data).map((p) => mapWishlistItem(p));
-      setLocalWishlist(items.length > 0 ? items : wishlist);
+      setLocalWishlist(items.length > 0 ? items : (Array.isArray(wishlist) ? wishlist : []));
     } catch {
-      setLocalWishlist(wishlist);
+      setLocalWishlist(Array.isArray(wishlist) ? wishlist : []);
     }
   };
 
@@ -134,44 +134,56 @@ const Cart = () => {
     setItemToRemove(null);
 
     // Optimistically update local cart state immediately
-    setCartItems((prev) =>
-      prev.filter(
-        (item) =>
-          item.cartId !== targetItem.cartId &&
-          (!targetItem.productId || item.productId !== targetItem.productId) &&
-          (!targetItem.id || item.id !== targetItem.id)
-      )
-    );
+    const matchesTarget = (item) => {
+      if (targetItem.cartId && item.cartId === targetItem.cartId) return true;
+      if (targetItem.itemKey && (item.itemKey === targetItem.itemKey || item.cartId === targetItem.itemKey)) return true;
+      const cleanTarget = String(targetItem.cartId || targetItem.id || targetItem.productId || '').replace(/:+$/, '').replace(/^listing:/, '');
+      const cleanItem = String(item.cartId || item.id || item.productId || '').replace(/:+$/, '').replace(/^listing:/, '');
+      if (cleanTarget && cleanItem && cleanTarget === cleanItem && (!targetItem.variantId || item.variantId === targetItem.variantId)) return true;
+      return false;
+    };
 
-    try {
-      if (moveToWishlist) {
+    setCartItems((prev) => (Array.isArray(prev) ? prev.filter((item) => !matchesTarget(item)) : []));
+
+    // Handle Wishlist addition safely in its own try/catch block
+    if (moveToWishlist) {
+      try {
+        const prodId = targetItem.productId || targetItem.id || String(targetItem.cartId || '').replace(/:+$/, '').replace(/^listing:/, '');
         const prod = {
-          id: targetItem.productId || targetItem.id,
+          id: prodId,
           name: targetItem.name,
           price: targetItem.price,
           image: targetItem.image,
           brand: targetItem.brand,
         };
-        try {
-          await addToWishlistApi(prod.id);
-        } catch {
-          // ignore offline/demo error
+        if (prodId) {
+          try {
+            await addToWishlistApi(prodId);
+          } catch {
+            // ignore offline / demo API errors
+          }
         }
-        addToWishlistStore(prod);
+        if (typeof addToWishlistStore === 'function') {
+          addToWishlistStore(prod);
+        }
         setLocalWishlist((prev) => {
-          if (prev.some((w) => w.id === prod.id)) return prev;
-          return [prod, ...prev];
+          const list = Array.isArray(prev) ? prev : [];
+          if (prod.id && list.some((w) => w.id === prod.id)) return list;
+          return [prod, ...list];
         });
-      }
-
-      const idToRemove = targetItem.cartId || targetItem.productId || targetItem.id;
-      try {
-        await removeCartItemById(idToRemove);
       } catch (err) {
-        console.error('Failed to remove cart item on server', err);
+        console.warn('Could not add to wishlist:', err);
       }
-    } catch (e) {
-      console.error('Failed to remove item', e);
+    }
+
+    // Always ensure the cart item is removed from backend & cart state
+    try {
+      const idToRemove = targetItem.cartId || targetItem.itemKey || targetItem.productId || targetItem.id;
+      if (idToRemove) {
+        await removeCartItemById(idToRemove);
+      }
+    } catch (err) {
+      console.error('Failed to remove cart item on server:', err);
     }
   };
 
@@ -184,7 +196,7 @@ const Cart = () => {
         // ignore API error in offline/demo mode
       }
       removeFromWishlistStore(product.id);
-      setLocalWishlist((prev) => prev.filter((item) => item.id !== product.id));
+      setLocalWishlist((prev) => (Array.isArray(prev) ? prev.filter((item) => item.id !== product.id) : []));
       await loadCart();
     } catch (e) {
       console.error('Failed to add wishlist item to cart', e);

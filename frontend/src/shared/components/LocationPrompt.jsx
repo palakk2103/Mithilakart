@@ -15,6 +15,7 @@ const LocationPrompt = () => {
 
   const handleDismiss = () => {
     try {
+      localStorage.setItem('locationPromptDismissed', 'true');
       sessionStorage.setItem('locationPromptDismissed', 'true');
     } catch {
       // ignore

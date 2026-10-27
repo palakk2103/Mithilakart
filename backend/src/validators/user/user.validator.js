@@ -2,7 +2,7 @@ const Joi = require('joi');
 
 const profileUpdateSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100).optional(),
-  email: Joi.string().trim().email().optional(),
+  email: Joi.string().trim().email().optional().allow(null, ''),
   gender: Joi.string().valid('male', 'female', 'other').optional().allow(null),
   dob: Joi.date().iso().optional().allow(null),
   locale: Joi.string().valid('en', 'hi', 'bn', 'mai').optional(),

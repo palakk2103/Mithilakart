@@ -4,9 +4,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import useTabTheme from '../../../../shared/hooks/useTabTheme';
+import { useLanguage } from '../../../../shared/context/LanguageContext';
 
 const ProductCard = ({ product, onClick }) => {
   const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const { primaryBg, primaryText, primaryBorder } = useTabTheme();
@@ -24,7 +26,10 @@ const ProductCard = ({ product, onClick }) => {
   };
 
   const imageSrc = product.image || product.img || product.imageUrl || product.images?.[0]?.url || product.images?.[0] || "https://via.placeholder.com/300x300";
-  const title = product.title || product.name || '';
+  const title = (currentLanguage && currentLanguage !== 'en' && product.translations?.[currentLanguage]?.title)
+    || product.title
+    || product.name
+    || '';
   const rating = product.rating || product.ratingAvg || 0;
   const reviewCount = product.reviewCount || product.ratingCount || 0;
   const oldPrice = product.oldPrice || product.mrp;

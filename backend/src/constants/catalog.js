@@ -44,10 +44,10 @@ const CACHE_TTL = {
 };
 
 const CACHE_KEYS = {
-  categoriesTree: (commerceFlow = 'all') => `cache:categories:tree:${commerceFlow}`,
-  productDetail: (productId) => `cache:products:detail:${productId}`,
-  homeSections: (commerceFlow = 'standard') => `cache:storefront:home:${commerceFlow}`,
-  searchResults: (hash) => `cache:search:${hash}`,
+  categoriesTree: (commerceFlow = 'all', lang = 'en') => `cache:categories:tree:${commerceFlow}:${lang}`,
+  productDetail: (productId, lang = 'en') => `cache:products:detail:${productId}:${lang}`,
+  homeSections: (commerceFlow = 'standard', lang = 'en') => `cache:storefront:home:${commerceFlow}:${lang}`,
+  searchResults: (hash, lang = 'en') => `cache:search:${hash}:${lang}`,
 };
 
 const UPLOAD_CONTEXTS = {

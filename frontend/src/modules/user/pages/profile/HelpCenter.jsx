@@ -270,10 +270,10 @@ const HelpCenter = () => {
           <h2 className="text-[16px] font-bold text-slate-900 mb-4">Policies & Information</h2>
           <div className="space-y-2">
             {[
-              { title: 'Privacy Policy', path: '/vendor/privacy' },
-              { title: 'Terms of Service', path: '/vendor/terms' },
-              { title: 'Cancellation & Returns', path: '/vendor/cancellation-returns' },
-              { title: 'Shipping Policy', path: '/vendor/shipping' }
+              { title: 'Privacy Policy', path: '/privacy' },
+              { title: 'Terms of Service', path: '/terms' },
+              { title: 'Cancellation & Returns', path: '/cancellation-returns' },
+              { title: 'Shipping Policy', path: '/shipping' }
             ].map((item, idx) => (
               <motion.div
                 key={idx}

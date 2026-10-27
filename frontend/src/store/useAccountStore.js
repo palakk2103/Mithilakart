@@ -64,12 +64,12 @@ const useAccountStore = create((set) => ({
 
   addToWishlist: (product) =>
     set((state) => ({
-      wishlist: [...state.wishlist, product],
+      wishlist: [...(Array.isArray(state.wishlist) ? state.wishlist : []), product],
     })),
 
   removeFromWishlist: (id) =>
     set((state) => ({
-      wishlist: state.wishlist.filter((item) => item.id !== id),
+      wishlist: (Array.isArray(state.wishlist) ? state.wishlist : []).filter((item) => item.id !== id),
     })),
 
   addOrder: (order) =>

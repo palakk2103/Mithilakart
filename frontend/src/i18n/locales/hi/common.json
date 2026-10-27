@@ -1,12 +1,12 @@
 {
   "nav": {
-    "home": "होम",
+    "home": "घर",
     "categories": "श्रेणियाँ",
     "cart": "कार्ट",
-    "you": "आप",
-    "deliverTo": "डिलीवर करें:",
-    "viewCart": "कार्ट देखें",
-    "searchPlaceholder": "उत्पाद, श्रेणियाँ खोजें...",
+    "you": "खाता",
+    "deliverTo": "करने के लिए वितरित",
+    "viewCart": "टोकरी देखें",
+    "searchPlaceholder": "खोजें “आटा, चावल, तेल, मैगी...”",
     "searchInGrocery": "किराना में खोजें",
     "quickShop": "क्विक शॉप",
     "mithilak": "मिथिलाक",
@@ -16,13 +16,13 @@
   },
   "sidebar": {
     "title": "मिथिलाकार्ट मेनू",
-    "home": "होम",
+    "home": "घर",
     "shopByCategory": "श्रेणी के अनुसार खरीदें",
     "myCart": "मेरी कार्ट",
     "myWishlist": "मेरी इच्छा सूची",
     "myProfile": "मेरी प्रोफाइल",
-    "myWallet": "मेरा वॉलेट",
-    "myOrders": "मेरे ऑर्डर्स",
+    "myWallet": "मेरा बटुआ",
+    "myOrders": "मेरे आदेश",
     "logout": "लॉगआउट",
     "login": "लॉगिन / साइनअप",
     "hello": "नमस्ते, {{name}}",
@@ -50,7 +50,7 @@
     "helpAndSettings": "सहायता और सेटिंग्स",
     "yourAccount": "आपका खाता",
     "customerService": "ग्राहक सेवा",
-    "signOut": "Sign Out"
+    "signOut": "साइन आउट"
   },
   "home": {
     "title": "मिथिलाकार्ट",
@@ -64,7 +64,9 @@
     "topSelection": "शीर्ष चयन",
     "brandsSpotlight": "ब्रांड्स स्पॉटलाइट",
     "stillLooking": "क्या आप अभी भी इन्हें ढूंढ रहे हैं?",
-    "ratingsTitle": "रेटिंग और समीक्षाएं"
+    "ratingsTitle": "रेटिंग और समीक्षाएं",
+    "trendingThisWeek": "ट्रेंडिंग उत्पाद",
+    "shopByCategories": "श्रेणियों के अनुसार खरीदारी करें"
   },
   "auth": {
     "loginTitle": "अपनी कार्ट देखने के लिए लॉग इन करें",
@@ -123,9 +125,9 @@
     "priceDetails": "कीमत का विवरण",
     "subtotal": "उप-योग",
     "shippingAndTax": "शिपिंग और कर",
-    "items": "आइटम",
-    "item": "आइटम",
-    "deliveryCharges": "डिनीवरी शुल्क",
+    "items": "सामान",
+    "item": "सामान",
+    "deliveryCharges": "डिलीवरी शुल्क",
     "free": "मुफ़्त",
     "couponDiscount": "कूपन छूट",
     "applyCoupon": "कूपन लागू करें",
@@ -193,7 +195,7 @@
     "electricals": "इलेक्ट्रिकल्स",
     "bestDeals": "सर्वश्रेष्ठ सौदे",
     "lipCare": "होंठों की देखभाल",
-    "for-you": "आपके लिए",
+    "for-you": "सभी",
     "beauty": "सौंदर्य",
     "gifting": "उपहार",
     "electronics": "इलेक्ट्रॉनिक्स",
@@ -212,12 +214,17 @@
     "save": "सहेजें",
     "confirm": "क्या आप निश्चित हैं?",
     "ad": "विज्ञापन",
-    "sponsored": "प्रायोजित"
+    "sponsored": "प्रायोजित",
+    "viewAll": "सभी देखें",
+    "seeAll": "सभी देखें",
+    "listening": "सुन रहा है...",
+    "analyzingImage": "छवि का विश्लेषण किया जा रहा है..."
   },
   "product": {
     "mrp": "एमआरपी",
     "off": "छूट",
     "deliveryTomorrow": "कल तक प्राप्त करें",
-    "selectSize": "आकार चुनें"
+    "selectSize": "आकार चुनें",
+    "viewProduct": "उत्पाद देखें"
   }
 }

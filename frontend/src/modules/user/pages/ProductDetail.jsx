@@ -32,9 +32,11 @@ import PlumShampoo from '../../../assets/products/product05.jpg';
 import FashionHero from '../../../assets/products/product06.jpg';
 import LorealShampoo from '../../../assets/products/product07.jpg';
 import EarbudsDeal from '../../../assets/products/product03.jpg';
+import { useLanguage } from '../../../shared/context/LanguageContext';
 
 const ProductDetail = () => {
   const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
   const location = useRouterLocation();
   const navigate = useNavigate();
   const { id: paramId } = useParams();
@@ -311,7 +313,7 @@ const ProductDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [paramId, location.state, location.search]);
+  }, [paramId, location.state, location.search, currentLanguage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -684,7 +686,10 @@ const ProductDetail = () => {
         </span>
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => navigate('/vendor/search')} 
+            onClick={() => {
+              const currentTab = isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'groceries_fresh' : theme.activeFlow === 'mithilak' ? 'mithilak' : 'mithilakart';
+              navigate(`/search?tab=${currentTab}`);
+            }} 
             className={`p-1.5 rounded-full transition-colors active:scale-90 ${
               isFreshGroceryFlow ? 'text-white hover:bg-white/5' : 'text-slate-800 hover:bg-gray-50'
             }`}

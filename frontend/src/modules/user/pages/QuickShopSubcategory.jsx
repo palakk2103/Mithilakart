@@ -27,10 +27,163 @@ const EMPTY_CATEGORY = {
 
 const getCategoryData = () => EMPTY_CATEGORY;
 
+const FALLBACK_SUBCATEGORIES_MAP = {
+  'Fruits & Vegetables': [
+    { id: 'all', name: 'All' },
+    { id: 'fruits', name: 'Fresh Fruits' },
+    { id: 'veggies', name: 'Daily Veggies' },
+    { id: 'exotic', name: 'Exotics & Organic' },
+    { id: 'leafy', name: 'Leafy Herbs' }
+  ],
+  'Dairy, Bread & Eggs': [
+    { id: 'all', name: 'All' },
+    { id: 'milk', name: 'Milk & Butter' },
+    { id: 'bread', name: 'Bread & Pav' },
+    { id: 'eggs', name: 'Farm Eggs' },
+    { id: 'paneer', name: 'Paneer & Curd' }
+  ],
+  'Atta, Rice & Dal': [
+    { id: 'all', name: 'All' },
+    { id: 'atta', name: 'Atta & Flours' },
+    { id: 'rice', name: 'Basmati Rice' },
+    { id: 'dal', name: 'Dals & Pulses' },
+    { id: 'grains', name: 'Whole Grains' }
+  ],
+  'Oil, Ghee & Masala': [
+    { id: 'all', name: 'All' },
+    { id: 'oil', name: 'Cooking Oils' },
+    { id: 'ghee', name: 'Desi Ghee' },
+    { id: 'spices', name: 'Whole Spices' },
+    { id: 'masalas', name: 'Ground Masalas' }
+  ],
+  'Drinks & Juices': [
+    { id: 'all', name: 'All' },
+    { id: 'cold_drinks', name: 'Cold Drinks' },
+    { id: 'juices', name: 'Fruit Juices' },
+    { id: 'tea_coffee', name: 'Tea & Coffee' },
+    { id: 'energy', name: 'Energy Drinks' }
+  ],
+  'Chips & Namkeens': [
+    { id: 'all', name: 'All' },
+    { id: 'chips', name: 'Potato Chips' },
+    { id: 'namkeen', name: 'Bhujia & Mixture' },
+    { id: 'biscuits', name: 'Biscuits & Cookies' },
+    { id: 'snacks', name: 'Evening Snacks' }
+  ],
+  'Instant & Frozen Food': [
+    { id: 'all', name: 'All' },
+    { id: 'noodles', name: 'Noodles & Pasta' },
+    { id: 'ready_eat', name: 'Ready To Cook' },
+    { id: 'frozen', name: 'Frozen Veggies' }
+  ],
+  'Cleaning Essentials': [
+    { id: 'all', name: 'All' },
+    { id: 'detergent', name: 'Detergents' },
+    { id: 'dishwash', name: 'Dishwashers' },
+    { id: 'cleaners', name: 'Floor Cleaners' }
+  ],
+  'Mithila Specialities': [
+    { id: 'all', name: 'All' },
+    { id: 'makhana', name: 'Mithila Makhana' },
+    { id: 'art', name: 'Madhubani Art' },
+    { id: 'bangles', name: 'Lac Bangles' },
+    { id: 'cuisines', name: 'Traditional Foods' }
+  ],
+  'Mithila Festival & Cultural': [
+    { id: 'all', name: 'All' },
+    { id: 'puja', name: 'Puja Samagri' },
+    { id: 'festive_wear', name: 'Festive Wear' },
+    { id: 'decor', name: 'Cultural Decor' }
+  ],
+  'Mithila Paridhan': [
+    { id: 'all', name: 'All' },
+    { id: 'sarees', name: 'Madhubani Sarees' },
+    { id: 'kurti', name: 'Kurti & Dupatta' },
+    { id: 'silk', name: 'Tussar Silk' }
+  ],
+  'Mithila Special Cuisines': [
+    { id: 'all', name: 'All' },
+    { id: 'roasted_makhana', name: 'Roasted Makhana' },
+    { id: 'sattu', name: 'Chana Sattu' },
+    { id: 'sweets', name: 'Traditional Sweets' }
+  ],
+  'Mithila Lac Bangles': [
+    { id: 'all', name: 'All' },
+    { id: 'bridal', name: 'Bridal Chuda' },
+    { id: 'daily_wear', name: 'Designer Sets' },
+    { id: 'handcrafted', name: 'Hand Painted' }
+  ],
+  'Mithila Handcrafted Items': [
+    { id: 'all', name: 'All' },
+    { id: 'paintings', name: 'Original Paintings' },
+    { id: 'sikki', name: 'Sikki Crafts' },
+    { id: 'terracotta', name: 'Terracotta' }
+  ],
+  'Mithila Pooja Needs': [
+    { id: 'all', name: 'All' },
+    { id: 'diya', name: 'Brass Diyas' },
+    { id: 'incense', name: 'Dhoop & Agarbatti' },
+    { id: 'thali', name: 'Puja Thali Sets' }
+  ],
+  'Mithila Books & Panchang': [
+    { id: 'all', name: 'All' },
+    { id: 'panchang', name: 'Mithila Panchang' },
+    { id: 'geeta', name: 'Vidyapati Geeta' },
+    { id: 'literature', name: 'Maithili Books' }
+  ],
+  'Mithila Achaar': [
+    { id: 'all', name: 'All' },
+    { id: 'mango', name: 'Aam ka Achaar' },
+    { id: 'ol', name: 'Ol (Suran) Barabar' },
+    { id: 'chilli', name: 'Lal Mirch Bharwa' }
+  ]
+};
+
+const getCuratedCategoryFallback = (catName, isMithilak, isGrocery) => {
+  if (isMithilak) {
+    return [
+      { id: 'm1', name: 'Authentic Mithila Makhana (Grade A)', price: 299, oldPrice: 380, img: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=200&auto=format&fit=crop&q=60', brand: 'Mithila Pure', eta: '1-2 Days', tags: ['Authentic', 'Handmade'], weight: '250g', category: 'all' },
+      { id: 'm2', name: 'Traditional Handmade Aam ka Achaar', price: 180, oldPrice: 240, img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&auto=format&fit=crop&q=60', brand: 'Darbhanga Special', eta: '1-2 Days', tags: ['Homemade'], weight: '500g', category: 'all' },
+      { id: 'm3', name: 'Handcrafted Madhubani Art Canvas', price: 650, oldPrice: 850, img: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=200&auto=format&fit=crop&q=60', brand: 'Mithila Artists', eta: '1-2 Days', tags: ['Heritage'], weight: '1 Piece', category: 'all' },
+      { id: 'm4', name: 'Mithila Royal Red Lac Bangles (Set of 4)', price: 320, oldPrice: 450, img: 'https://images.unsplash.com/photo-1611591475879-1c9f52f3607f?w=200&auto=format&fit=crop&q=60', brand: 'Madhubani Crafts', eta: '1-2 Days', tags: ['Traditional'], weight: 'Set of 4', category: 'all' }
+    ];
+  }
+
+  if (isGrocery) {
+    return [
+      { id: 'g1', name: 'Fresh Farm Tomatoes (Local)', price: 35, oldPrice: 48, img: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200&auto=format&fit=crop&q=60', brand: 'Farm Fresh', eta: '10 mins', tags: ['Fresh', 'Organic'], weight: '1 kg', category: 'all' },
+      { id: 'g2', name: 'Fresh Shimla Green Apples', price: 140, oldPrice: 180, img: 'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?w=200&auto=format&fit=crop&q=60', brand: 'Himachal Farm', eta: '12 mins', tags: ['Fresh'], weight: '4 pcs', category: 'all' },
+      { id: 'g3', name: 'Amul Taaza Fresh Toned Milk', price: 27, oldPrice: 28, img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=200&auto=format&fit=crop&q=60', brand: 'Amul', eta: '9 mins', tags: ['Dairy'], weight: '500 ml', category: 'all' },
+      { id: 'g4', name: 'Aashirvaad Shudh Chakki Atta', price: 245, oldPrice: 280, img: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=200&auto=format&fit=crop&q=60', brand: 'Aashirvaad', eta: '15 mins', tags: ['Staples'], weight: '5 kg', category: 'all' },
+      { id: 'g5', name: 'Fortune Sunlite Refined Sunflower Oil', price: 135, oldPrice: 165, img: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=200&auto=format&fit=crop&q=60', brand: 'Fortune', eta: '14 mins', tags: ['Daily Cooking'], weight: '1 L', category: 'all' },
+      { id: 'g6', name: 'Fresh Farm Brown Eggs (Pack of 6)', price: 55, oldPrice: 65, img: 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=200&auto=format&fit=crop&q=60', brand: 'Farm Fresh', eta: '11 mins', tags: ['Protein'], weight: '6 pcs', category: 'all' }
+    ];
+  }
+
+  return [
+    { id: 'q1', name: 'Lay\'s India\'s Magic Masala Chips', price: 20, oldPrice: 20, img: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=200&auto=format&fit=crop&q=60', brand: 'Lay\'s', eta: '10 mins', tags: ['Crispy'], weight: '50g', category: 'all' },
+    { id: 'q2', name: 'Coca-Cola Original Taste Can', price: 40, oldPrice: 40, img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=200&auto=format&fit=crop&q=60', brand: 'Coca-Cola', eta: '11 mins', tags: ['Chilled'], weight: '300 ml', category: 'all' },
+    { id: 'q3', name: 'Haldiram\'s Nagpur Aloo Bhujia', price: 55, oldPrice: 60, img: 'https://images.unsplash.com/photo-1581798459219-318e76aecc7b?w=200&auto=format&fit=crop&q=60', brand: 'Haldiram\'s', eta: '10 mins', tags: ['Crunchy'], weight: '200g', category: 'all' },
+    { id: 'q4', name: 'Cadbury Dairy Milk Silk Chocolate', price: 80, oldPrice: 85, img: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=200&auto=format&fit=crop&q=60', brand: 'Cadbury', eta: '12 mins', tags: ['Sweet'], weight: '60g', category: 'all' }
+  ];
+};
+
 const QuickShopSubcategory = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const categoryName = location.state?.category || 'Fruits & Vegetables';
+
+  const theme = useTabTheme();
+  const isMithilakFlow = theme.activeFlow === 'mithilak' || location.pathname.includes('/mithilak');
+  const isFreshGroceryFlow = theme.activeFlow === 'freshgrocery' || location.pathname.includes('/fresh-grocery');
+  const isQuickShopFlow = !isMithilakFlow && !isFreshGroceryFlow;
+
+  const categoryName = location.state?.category || (
+    isMithilakFlow 
+      ? 'Mithila Special Cuisines' 
+      : isFreshGroceryFlow 
+        ? 'Fruits & Vegetables' 
+        : 'Chips & Namkeens'
+  );
 
   const isClosed = React.useMemo(() => {
     const force = localStorage.getItem('forceShopClosed');
@@ -41,21 +194,17 @@ const QuickShopSubcategory = () => {
     const hours = now.getHours();
     return hours >= 0 && hours < 6;
   }, []);
-
-  const theme = useTabTheme();
-  const isMithilakFlow = theme.activeFlow === 'mithilak';
-  const isFreshGroceryFlow = theme.activeFlow === 'freshgrocery';
   
   const primaryText = theme.primaryText;
-  const primaryBg = theme.primaryBg;
+  const primaryBg = isFreshGroceryFlow ? 'bg-[#D9A21B]' : isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#F26522]';
   const primaryBgHover = isFreshGroceryFlow ? 'hover:bg-[#FFF8EE] bg-white' : isMithilakFlow ? 'hover:bg-[#F5F9FA] bg-white' : 'hover:bg-orange-50 bg-white';
-  const primaryBorder = theme.primaryBorder;
-  const primaryBorderLight = theme.primaryBorderLight;
-  const primaryLightBg = theme.primaryLightBg;
-  const primarySidebarAccent = theme.primaryBg;
+  const primaryBorder = isFreshGroceryFlow ? 'border-[#D9A21B]' : isMithilakFlow ? 'border-[#207C8A]' : 'border-[#F26522]';
+  const primaryBorderLight = isFreshGroceryFlow ? 'border-[#D9A21B]/30' : isMithilakFlow ? 'border-[#207C8A]/30' : 'border-[#F26522]/30';
+  const primaryLightBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : 'bg-orange-50';
+  const primarySidebarAccent = isFreshGroceryFlow ? 'bg-[#D9A21B]' : isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#F26522]';
   
-  const rightGridBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]/20' : 'bg-orange-50/15';
-  const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[#D9A21B]/15' : isMithilakFlow ? 'bg-[#F5F9FA]/65 border border-[#207C8A]/15' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
+  const rightGridBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]/30' : 'bg-orange-50/15';
+  const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[#D9A21B]/25' : isMithilakFlow ? 'bg-[#F5F9FA] border border-[#207C8A]/25' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
 
   const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
   const [productsList, setProductsList] = useState([]);
@@ -77,86 +226,116 @@ const QuickShopSubcategory = () => {
       setLoading(true);
       setNotDeliverable(false);
       try {
-        const commerceFlow = isFreshGroceryFlow ? 'fresh_grocery' : 'quick_shop';
+        const commerceFlow = isMithilakFlow ? 'mithilak' : (isFreshGroceryFlow ? 'fresh_grocery' : 'quick_shop');
 
+        // 1. Fetch categories to populate subcategories on the left sidebar
+        let dynamicSubs = [{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }];
+        let matchedCat = null;
         try {
-          const nearby = await getNearbyProducts({
-            lat: effectiveLat,
-            lng: effectiveLng,
-            commerceFlow,
-            limit: 40,
-          });
-          const nearbyPayload = nearby?.data ?? nearby;
-          const nearbyItems = extractList(nearbyPayload).map((p) => {
-            const card = mapProductForCard(p);
-            return {
-              id: card.id,
-              name: card.name,
-              img: card.image,
-              brand: card.brand || 'Nearby Seller',
-              weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
-              price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
-              oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
-              eta: p.deliveryPromiseMinutes
-                ? `${p.deliveryPromiseMinutes} mins`
-                : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
-              tags: ['Nearby'],
-              category: 'all',
-            };
-          });
-
-          if (!cancelled && nearbyItems.length > 0) {
-            setProductsList(nearbyItems);
-            setLoading(false);
-            return;
+          const categories = await getCategories({ commerceFlow });
+          matchedCat = findCategoryByName(categories, categoryName);
+          if (matchedCat && matchedCat.children && matchedCat.children.length > 0) {
+            dynamicSubs = [
+              { id: 'all', name: 'All', icon: matchedCat.imageUrl || matchedCat.iconUrl || FALLBACK_IMAGE },
+              ...matchedCat.children.map((child) => ({
+                id: child.id || child.slug || child.name,
+                name: child.name,
+                icon: child.imageUrl || child.iconUrl || FALLBACK_IMAGE,
+              }))
+            ];
           }
         } catch {
-          // Continue to category catalog fallback so the screen is never left empty
+          // fallback gracefully
         }
 
-        const categories = await getCategories({ commerceFlow });
-        const match = findCategoryByName(categories, categoryName);
-        if (!match) {
-          if (!cancelled) {
-            setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
-            setProductsList([]);
+        // If no API subcategories returned, match from FALLBACK_SUBCATEGORIES_MAP
+        if (dynamicSubs.length <= 1) {
+          const matchedFallbackSubs = FALLBACK_SUBCATEGORIES_MAP[categoryName] || 
+            Object.entries(FALLBACK_SUBCATEGORIES_MAP).find(([key]) => 
+              categoryName.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(categoryName.toLowerCase())
+            )?.[1];
+
+          if (matchedFallbackSubs && matchedFallbackSubs.length > 0) {
+            dynamicSubs = matchedFallbackSubs.map(sub => ({
+              ...sub,
+              icon: sub.icon || FALLBACK_IMAGE
+            }));
           }
-          return;
         }
-
-        const data = await getCategoryProducts(match.id, { limit: 40 });
-        const mapped = extractList(data).map((p) => {
-          const card = mapProductForCard(p);
-          return {
-            id: card.id,
-            name: card.name,
-            img: card.image,
-            brand: card.brand || 'Mithila Brand',
-            weight: '1 Unit',
-            price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
-            oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
-            eta: p.deliveryPromiseMinutes ? `${p.deliveryPromiseMinutes} mins` : '14 mins',
-            tags: ['Fresh'],
-            category: 'all',
-          };
-        });
 
         if (!cancelled) {
-          setSubCategories(
-            (match.children || []).length
-              ? [{ id: 'all', name: 'All', icon: match.imageUrl || FALLBACK_IMAGE }, ...match.children.map((child) => ({
-                  id: child.id,
-                  name: child.name,
-                  icon: child.imageUrl || child.iconUrl || FALLBACK_IMAGE,
-                }))]
-              : [{ id: 'all', name: 'All', icon: match.imageUrl || FALLBACK_IMAGE }]
-          );
-          setProductsList(mapped.length ? mapped : []);
+          setSubCategories(dynamicSubs);
+        }
+
+        // 2. Fetch products
+        let fetchedProducts = [];
+        if (matchedCat && matchedCat.id) {
+          try {
+            const data = await getCategoryProducts(matchedCat.id, { limit: 40 });
+            fetchedProducts = extractList(data).map((p) => {
+              const card = mapProductForCard(p);
+              return {
+                id: card.id,
+                name: card.name,
+                img: card.image,
+                brand: card.brand || 'Mithilakart Store',
+                weight: p.unit || '1 Unit',
+                price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
+                oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
+                eta: p.deliveryPromiseMinutes ? `${p.deliveryPromiseMinutes} mins` : (isMithilakFlow ? '1-2 Days' : '12 mins'),
+                tags: isFreshGroceryFlow ? ['Fresh'] : isMithilakFlow ? ['Handmade'] : ['Quick'],
+                category: 'all',
+              };
+            });
+          } catch {
+            fetchedProducts = [];
+          }
+        }
+
+        // Try nearby products if no category products found
+        if (fetchedProducts.length === 0 && !isMithilakFlow) {
+          try {
+            const nearby = await getNearbyProducts({
+              lat: effectiveLat,
+              lng: effectiveLng,
+              commerceFlow,
+              limit: 40,
+            });
+            const nearbyPayload = nearby?.data ?? nearby;
+            const nearbyItems = extractList(nearbyPayload).map((p) => {
+              const card = mapProductForCard(p);
+              return {
+                id: card.id,
+                name: card.name,
+                img: card.image,
+                brand: card.brand || 'Nearby Store',
+                weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
+                price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
+                oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
+                eta: p.deliveryPromiseMinutes ? `${p.deliveryPromiseMinutes} mins` : '12 mins',
+                tags: ['Nearby'],
+                category: 'all',
+              };
+            });
+            if (nearbyItems.length > 0) {
+              fetchedProducts = nearbyItems;
+            }
+          } catch {
+            // fallback
+          }
+        }
+
+        // 3. If still empty, use curated fallback products
+        if (fetchedProducts.length === 0) {
+          fetchedProducts = getCuratedCategoryFallback(categoryName, isMithilakFlow, isFreshGroceryFlow);
+        }
+
+        if (!cancelled) {
+          setProductsList(fetchedProducts);
         }
       } catch {
         if (!cancelled) {
-          setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
-          setProductsList([]);
+          setProductsList(getCuratedCategoryFallback(categoryName, isMithilakFlow, isFreshGroceryFlow));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -167,7 +346,7 @@ const QuickShopSubcategory = () => {
     return () => {
       cancelled = true;
     };
-  }, [categoryName, liveLocation?.latitude, liveLocation?.longitude, isFreshGroceryFlow]);
+  }, [categoryName, effectiveLat, effectiveLng, isFreshGroceryFlow, isMithilakFlow]);
 
   const [activeSub, setActiveSub] = useState('all');
   const [favorites, setFavorites] = useState([]);
@@ -208,7 +387,7 @@ const QuickShopSubcategory = () => {
   const isQuickShopHeader = !isFreshGroceryFlow && !isMithilakFlow;
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans select-none transition-colors duration-300 relative ${
+    <div className={`h-full flex-1 flex flex-col font-sans select-none transition-colors duration-300 relative overflow-hidden ${
       isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : 'bg-white'
     }`}>
       
@@ -222,36 +401,36 @@ const QuickShopSubcategory = () => {
       />
 
       {/* Header Bar */}
-      <div className={`sticky top-0 z-50 border-b border-gray-100 px-4 py-2 flex items-center justify-between shadow-3xs transition-colors duration-300 ${
-        isFreshGroceryFlow ? 'bg-[#D9A21B] text-white' : isMithilakFlow ? 'bg-white' : 'bg-[#F26522] text-white'
+      <div className={`flex-shrink-0 z-50 border-b border-gray-100 px-4 py-2 flex items-center justify-between shadow-3xs transition-colors duration-300 ${
+        isFreshGroceryFlow ? 'bg-[#D9A21B] text-white' : isMithilakFlow ? 'bg-[#207C8A] text-white' : 'bg-[#F26522] text-white'
       }`}>
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate(-1)}
-            className={`p-1 active:scale-95 transition-transform ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white' : 'text-gray-800'}`}
+            className="p-1 active:scale-95 transition-transform text-white"
           >
             <ArrowLeft size={22} strokeWidth={2.5} />
           </button>
           <div className="flex flex-col">
-            <h1 className={`text-[16px] font-bold leading-tight ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className="text-[16px] font-bold leading-tight text-white">
               {categoryName}
             </h1>
             <button
               type="button"
               onClick={() => setPromptOpen(true)}
-              className={`text-[10px] font-bold flex items-center gap-0.5 ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white/95' : primaryText}`}
+              className="text-[10px] font-bold flex items-center gap-0.5 text-white/95"
             >
-              Delivering to : <span className={`font-medium truncate max-w-[150px] ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white/80' : 'text-gray-500'}`}>{deliverLabel}</span>
+              Delivering to : <span className="font-medium truncate max-w-[150px] text-white/80">{deliverLabel}</span>
               <ChevronDown size={10} />
             </button>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button className={`p-2 rounded-full ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-50'}`}>
+          <button className="p-2 rounded-full text-white hover:bg-white/10">
             <Search size={20} strokeWidth={2.2} />
           </button>
-          <button className={`p-2 rounded-full ${isQuickShopHeader || isFreshGroceryFlow ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-50'}`}>
+          <button className="p-2 rounded-full text-white hover:bg-white/10">
             <Share2 size={20} strokeWidth={2.2} />
           </button>
         </div>
@@ -421,7 +600,7 @@ const QuickShopSubcategory = () => {
 
 
       {/* Filters & Sort Header */}
-      <div className={`border-b border-gray-100/80 px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar shadow-3xs transition-colors duration-300 ${
+      <div className={`flex-shrink-0 border-b border-gray-100/80 px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar shadow-3xs transition-colors duration-300 ${
         isFreshGroceryFlow ? 'bg-[#FFFDF3]' : 'bg-white'
       }`}>
         <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200/80 rounded-full text-[11px] font-bold text-gray-700 hover:bg-gray-50 transition-colors">
@@ -435,11 +614,11 @@ const QuickShopSubcategory = () => {
         </button>
       </div>
 
-      {/* Main Dual-Column Content */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Main Dual-Column Content with Independent Scrolling */}
+      <div className="flex-1 min-h-0 flex overflow-hidden relative">
         
-        {/* Left Subcategories Sidebar */}
-        <div className={`w-[24%] border-r border-gray-100 overflow-y-auto no-scrollbar h-[calc(100vh-105px)] transition-colors duration-300 ${
+        {/* Left Subcategories Sidebar - Scrolls Separately */}
+        <div className={`w-[24%] min-w-[85px] max-w-[110px] md:w-[160px] md:max-w-[190px] flex-shrink-0 border-r border-gray-100 overflow-y-auto overscroll-contain no-scrollbar h-full transition-colors duration-300 pb-24 ${
           isFreshGroceryFlow ? 'bg-[#FFFDF3]' : 'bg-gray-50/60'
         }`}>
           {subCategories.map((sub) => {
@@ -469,8 +648,8 @@ const QuickShopSubcategory = () => {
           })}
         </div>
 
-        {/* Right Product Grid Area */}
-        <div className={`flex-1 ${rightGridBg} overflow-y-auto h-[calc(100vh-105px)] p-3 pb-24`}>
+        {/* Right Product Grid Area - Scrolls Separately */}
+        <div className={`flex-1 min-w-0 ${rightGridBg} overflow-y-auto overscroll-contain h-full p-3 pb-24`}>
           
           {/* Promo banner */}
           <div className={`${promoBg} rounded-xl p-3 flex justify-between items-center mb-4 relative overflow-hidden`}>

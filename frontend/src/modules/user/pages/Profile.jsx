@@ -8,7 +8,8 @@ import {
   ChevronRight, 
   Store, 
   Bell,
-  User
+  User,
+  FileText
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -17,6 +18,7 @@ import { getUser, isAuthenticated, clearTokens, setUser } from '../../../shared/
 import { getProfile } from '../services/userApi';
 import { logoutCustomer } from '../services/authApi';
 import { useTranslation } from 'react-i18next';
+import { getImageUrl } from '../../../shared/utils/imageUtils';
 
 const mapStoredUser = (stored) => ({
   name: stored?.name || '',
@@ -70,7 +72,14 @@ const VendorProfile = () => {
         if (cancelled) return;
         const mapped = mapStoredUser(profile);
         updateProfile(mapped);
-        setUser('customer', profile);
+        const currentStored = getUser('customer') || {};
+        const resolvedAvatar = profile?.avatarUrl || currentStored?.avatar || mapped.avatar;
+        setUser('customer', { 
+          ...currentStored, 
+          ...profile,
+          avatar: resolvedAvatar,
+          avatarUrl: resolvedAvatar,
+        });
       } catch {
         // keep stored profile if API fails
       } finally {
@@ -112,7 +121,7 @@ const VendorProfile = () => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   return (
-    <div className={`min-h-screen pb-1 font-sans text-slate-800 relative transition-colors duration-300 ${
+    <div className={`min-h-screen pb-28 md:pb-16 font-sans text-slate-800 relative transition-colors duration-300 ${
       isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : isMithilakFlow ? 'bg-[#F5F9FA]' : 'bg-bg-cream'
     }`}>
 
@@ -151,8 +160,26 @@ const VendorProfile = () => {
         }`}>
           <div className="absolute right-[-20px] bottom-[-20px] w-36 h-36 rounded-full bg-white/5 blur-2xl pointer-events-none" />
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-              <User size={28} className="text-white" />
+            <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 overflow-hidden shrink-0">
+              {userProfile.avatar ? (
+                <img 
+                  src={getImageUrl(userProfile.avatar)} 
+                  alt={userProfile.name || 'User'} 
+                  className="w-full h-full object-cover"
+                  onLoad={(e) => {
+                    e.currentTarget.style.display = 'block';
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextElementSibling) {
+                      e.currentTarget.nextElementSibling.style.display = 'flex';
+                    }
+                  }}
+                />
+              ) : null}
+              <div className={`${userProfile.avatar ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
+                <User size={28} className="text-white" />
+              </div>
             </div>
             <div>
               <h1 className="text-[18px] font-black tracking-tight">
@@ -222,6 +249,32 @@ const VendorProfile = () => {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Policies & Information */}
+      <div className="px-4 pt-6 relative z-10">
+        <h2 className="text-[16px] font-bold text-slate-900 mb-3 px-1">Policies & Information</h2>
+        <div className="space-y-2">
+          {[
+            { title: 'Privacy Policy', path: '/privacy' },
+            { title: 'Terms of Service', path: '/terms' },
+            { title: 'Cancellation & Returns', path: '/cancellation-returns' },
+            { title: 'Shipping Policy', path: '/shipping' }
+          ].map((item, idx) => (
+            <motion.div
+              key={idx}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => item.path !== '#' && navigate(item.path)}
+              className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-2xl active:bg-gray-50 transition-all cursor-pointer shadow-sm hover:border-gray-300"
+            >
+              <div className="flex items-center gap-3">
+                <FileText size={18} className="text-gray-400" />
+                <span className="text-[13px] font-bold text-slate-900">{item.title}</span>
+              </div>
+              <ChevronRight size={18} className="text-gray-300" />
+            </motion.div>
+          ))}
         </div>
       </div>
 

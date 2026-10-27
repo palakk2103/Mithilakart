@@ -1,28 +1,23 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
-
-const languages = [
-  { code: 'en', name: 'English', flagUrl: 'https://flagcdn.com/w40/gb.png' },
-  { code: 'hi', name: 'हिन्दी', flagUrl: 'https://flagcdn.com/w40/in.png' },
-  { code: 'mai', name: 'मैथिली', flagUrl: 'https://flagcdn.com/w40/in.png' }
-];
+import { useLanguage, LANGUAGES } from '../../../../shared/context/LanguageContext';
 
 const LanguageSelector = ({ isDarkHeader = false, variant = '', compact = false }) => {
+  const { currentLanguage: contextLang, changeLanguage, languages = LANGUAGES } = useLanguage();
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   // Normalize language code to match base code (e.g., 'en-US' -> 'en', 'hi-IN' -> 'hi')
-  const baseLanguageCode = (i18n.language || 'en').split('-')[0].toLowerCase();
+  const baseLanguageCode = (contextLang || i18n.language || 'en').split('-')[0].toLowerCase();
   const currentLanguage = languages.find(lang => lang.code === baseLanguageCode) || languages[0];
 
   const buttonStyle = compact 
-    ? 'bg-white text-gray-900 border-none rounded-md text-[11px] font-bold px-2.5 h-[30px] flex items-center justify-center leading-none shadow-xs hover:bg-gray-100'
-    : 'bg-white text-gray-900 border-none rounded-md text-[13px] font-bold px-4 h-[38px] flex items-center justify-center leading-none shadow-sm hover:bg-gray-100';
+    ? 'bg-white text-gray-900 border-none rounded-md text-[11px] font-bold px-2.5 h-[30px] flex items-center justify-center leading-none shadow-xs hover:bg-gray-100 cursor-pointer'
+    : 'bg-white text-gray-900 border-none rounded-md text-[13px] font-bold px-4 h-[38px] flex items-center justify-center leading-none shadow-sm hover:bg-gray-100 cursor-pointer';
 
   const handleLanguageChange = (code) => {
-    i18n.changeLanguage(code);
-    localStorage.setItem('user_language', code);
+    changeLanguage(code);
     setIsOpen(false);
   };
 

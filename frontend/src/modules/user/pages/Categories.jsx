@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import CategoryCard from '../components/vendor/CategoryCard';
+import useVendorStore from '../../../store/useVendorStore';
 import { getCategories } from '../services/catalogApi';
 import { mapCategorySections } from '../utils/mappers';
 import { DEFAULT_PRODUCT_IMAGE, handleImageError } from '../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../../../shared/context/LanguageContext';
 
 // Import Assets (aligned with categories)
 import SamsungS24 from '../../../assets/products/product01.jpg';
@@ -166,13 +169,84 @@ const MITHILA_CATEGORIES = [
 ];
 
 
+const FRESH_GROCERY_CATEGORIES = [
+  {
+    title: 'Fresh Produce',
+    items: [
+      { name: 'Fruits & Vegetables', img: 'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Fresh Fruits', img: 'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Fresh Vegetables', img: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Exotics & Organic', img: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=150&auto=format&fit=crop&q=60' },
+    ]
+  },
+  {
+    title: 'Dairy & Breakfast',
+    items: [
+      { name: 'Dairy, Bread & Eggs', img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Milk & Butter', img: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Bread & Pav', img: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Paneer & Curd', img: 'https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=150&auto=format&fit=crop&q=60' },
+    ]
+  },
+  {
+    title: 'Staples & Cooking Essentials',
+    items: [
+      { name: 'Atta, Rice & Dal', img: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Oil, Ghee & Masala', img: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Cereals & Dry Fruits', img: 'https://images.unsplash.com/photo-1596484552834-6a58f850e0a1?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Spices & Seasonings', img: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=150&auto=format&fit=crop&q=60' },
+    ]
+  },
+  {
+    title: 'Snacks & Packaged Food',
+    items: [
+      { name: 'Drinks & Juices', img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Chips & Namkeens', img: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Instant & Frozen Food', img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&auto=format&fit=crop&q=60' },
+      { name: 'Cleaning Essentials', img: 'https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?w=150&auto=format&fit=crop&q=60' },
+    ]
+  }
+];
+
 const Categories = () => {
+  const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const flowParam = searchParams.get('flow') || searchParams.get('tab') || location.state?.flow;
+  const storeFlow = useVendorStore((state) => state.activeFlow);
+  const setActiveFlow = useVendorStore((state) => state.setActiveFlow);
+
   const [apiSections, setApiSections] = useState(null);
   const [loading, setLoading] = useState(true);
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
+
+  // Compute canonical active flow based on URL param, store flow, or localStorage
+  const currentFlow = useMemo(() => {
+    if (flowParam === 'mithilak') return 'mithilak';
+    if (flowParam === 'freshgrocery' || flowParam === 'fresh_grocery' || flowParam === 'groceries_fresh') return 'freshgrocery';
+    if (flowParam === 'quickshop' || flowParam === 'quick_shop') return 'quickshop';
+    if (flowParam === 'mithilakart' || flowParam === 'standard') return 'mithilakart';
+
+    if (storeFlow) return storeFlow;
+
+    if (localStorage.getItem('isMithilakFlow') === 'true') return 'mithilak';
+    if (localStorage.getItem('isFreshGroceryFlow') === 'true') return 'freshgrocery';
+    if (localStorage.getItem('isQuickShopFlow') === 'true') return 'quickshop';
+    return 'mithilakart';
+  }, [flowParam, storeFlow]);
+
+  const isMithilakFlow = currentFlow === 'mithilak';
+  const isFreshGroceryFlow = currentFlow === 'freshgrocery';
+  const isQuickShopFlow = currentFlow === 'quickshop';
+  const isMithilakartFlow = !isMithilakFlow && !isFreshGroceryFlow && !isQuickShopFlow;
+
+  // Keep store and localStorage strictly in sync
+  useEffect(() => {
+    if (currentFlow) {
+      setActiveFlow(currentFlow);
+    }
+  }, [currentFlow, setActiveFlow]);
 
   useEffect(() => {
     let cancelled = false;
@@ -187,9 +261,18 @@ const Categories = () => {
             : isQuickShopFlow
               ? 'quick_shop'
               : 'standard';
+
+        const fallback = isMithilakFlow
+          ? MITHILA_CATEGORIES
+          : isFreshGroceryFlow
+            ? FRESH_GROCERY_CATEGORIES
+            : isQuickShopFlow
+              ? QUICK_SHOP_CATEGORIES
+              : SECTIONS;
+
         const data = await getCategories({ commerceFlow });
         if (!cancelled) {
-          setApiSections(mapCategorySections(data, SECTIONS));
+          setApiSections(mapCategorySections(data, fallback, currentLanguage));
         }
       } catch {
         if (!cancelled) setApiSections(null);
@@ -202,25 +285,61 @@ const Categories = () => {
     return () => {
       cancelled = true;
     };
-  }, [isMithilakFlow, isQuickShopFlow, isFreshGroceryFlow]);
+  }, [isMithilakFlow, isQuickShopFlow, isFreshGroceryFlow, currentLanguage]);
 
   const rawSectionsList = apiSections?.length
     ? apiSections
     : isMithilakFlow
       ? MITHILA_CATEGORIES
-      : isQuickShopFlow
-        ? QUICK_SHOP_CATEGORIES
-        : SECTIONS;
+      : isFreshGroceryFlow
+        ? FRESH_GROCERY_CATEGORIES
+        : isQuickShopFlow
+          ? QUICK_SHOP_CATEGORIES
+          : SECTIONS;
 
   const sectionsList = (rawSectionsList || []).filter(
     (section) => section && Array.isArray(section.items) && section.items.length > 0
   );
-  const pageBg = isMithilakFlow ? 'bg-[#F5F9FA]' : isFreshGroceryFlow ? 'bg-[#FFF8EE]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
-  const headerBg = isMithilakFlow ? 'bg-[#6FAE4A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
-  const headerTextColor = (isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow) ? 'text-white' : 'text-[#3C2415]';
-  const textPrimary = isMithilakFlow ? 'text-[#6FAE4A]' : isFreshGroceryFlow ? 'text-[#3F2A20]' : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]');
+
+  const pageBg = isMithilakFlow 
+    ? 'bg-[#F5F9FA]' 
+    : isFreshGroceryFlow 
+      ? 'bg-[#FFF8EE]' 
+      : (isQuickShopFlow ? 'bg-[#FFF9F5]' : 'bg-[#F6F8F3]');
+
+  const headerBg = isMithilakFlow 
+    ? 'bg-[#207C8A]' 
+    : isFreshGroceryFlow 
+      ? 'bg-[#D9A21B]' 
+      : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#3E5A44]');
+
+  const headerTextColor = 'text-white';
+
+  const textPrimary = isMithilakFlow 
+    ? 'text-[#207C8A]' 
+    : isFreshGroceryFlow 
+      ? 'text-[#D9A21B]' 
+      : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#3E5A44]');
+
+  const activeIndicatorColor = isMithilakFlow 
+    ? 'bg-[#207C8A]' 
+    : isFreshGroceryFlow 
+      ? 'bg-[#D9A21B]' 
+      : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#65B842]');
 
   const [activeSectionIndex, setActiveSectionIndex] = React.useState(0);
+
+  const handleCategoryItemClick = (item) => {
+    if (isMithilakFlow) {
+      navigate('/mithilak/category', { state: { category: item.name } });
+    } else if (isFreshGroceryFlow) {
+      navigate('/fresh-grocery/category', { state: { category: item.name } });
+    } else if (isQuickShopFlow) {
+      navigate('/quick-shop/category', { state: { category: item.name } });
+    } else {
+      navigate(item.path || `/category-products?category=${encodeURIComponent(item.name)}`);
+    }
+  };
 
   return (
     <div className={`${pageBg} min-h-screen flex flex-col font-sans text-slate-800 relative`}>
@@ -241,9 +360,17 @@ const Categories = () => {
           <button onClick={() => navigate(-1)} className={`p-0.5 active:scale-95 transition-transform ${headerTextColor}`}>
             <ArrowLeft size={22} />
           </button>
-          <h1 className={`text-[19px] font-black tracking-tight ${headerTextColor}`}>Categories</h1>
+          <h1 className={`text-[19px] font-black tracking-tight ${headerTextColor}`}>
+            {isMithilakFlow ? 'Mithila Specialities' : isFreshGroceryFlow ? 'Fresh & Groceries' : isQuickShopFlow ? 'Quick Categories' : 'Categories'}
+          </h1>
         </div>
-        <button onClick={() => navigate('/search')} className={`p-1 active:scale-95 transition-transform ${headerTextColor}`}>
+        <button 
+          onClick={() => {
+            const currentTab = isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'groceries_fresh' : isMithilakFlow ? 'mithilak' : 'mithilakart';
+            navigate(`/search?tab=${currentTab}`);
+          }} 
+          className={`p-1 active:scale-95 transition-transform ${headerTextColor}`}
+        >
           <Search size={22} />
         </button>
       </div>
@@ -251,7 +378,7 @@ const Categories = () => {
       {/* Split-pane Layout (Mobile View) */}
       <div className="flex md:hidden relative z-10 flex-1 h-[calc(100vh-60px)] overflow-hidden">
         {/* Left Sidebar */}
-        <div className="w-[95px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto no-scrollbar pb-24">
+        <div className="w-[95px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto overscroll-contain no-scrollbar pb-24">
           {sectionsList.map((section, sIdx) => {
             const isActive = activeSectionIndex === sIdx;
             const sectionImg = section.items[0]?.img;
@@ -267,9 +394,7 @@ const Categories = () => {
               >
                 {/* Active Indicator Bar on the left */}
                 {isActive && (
-                  <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-r ${
-                    isMithilakFlow ? 'bg-[#6FAE4A]' : isFreshGroceryFlow ? 'bg-[#D9A21B]' : isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#6FAE4A]'
-                  }`} />
+                  <div className={`absolute left-0 top-0 bottom-0 w-[4px] rounded-r ${activeIndicatorColor}`} />
                 )}
                 
                 {/* Category Thumbnail */}
@@ -286,7 +411,7 @@ const Categories = () => {
                 
                 <span className={`text-[9.5px] text-center leading-tight tracking-tight break-words w-full ${
                   isActive 
-                    ? (isMithilakFlow ? 'text-[#6FAE4A] font-extrabold' : isFreshGroceryFlow ? 'text-[#3F2A20] font-extrabold' : isQuickShopFlow ? 'text-[#F26522] font-extrabold' : 'text-[#6FAE4A] font-extrabold') 
+                    ? `${textPrimary} font-black` 
                     : 'text-slate-600 font-medium'
                 }`}>
                   {section.title}
@@ -297,7 +422,7 @@ const Categories = () => {
         </div>
 
         {/* Right Content Area */}
-        <div className="flex-1 bg-white overflow-y-auto pb-24 p-4">
+        <div className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-4">
           {sectionsList[activeSectionIndex] && (
             <div className="space-y-6">
               <div>
@@ -307,45 +432,29 @@ const Categories = () => {
                 
                 {/* 3-Column Grid of Subcategories */}
                 <div className="grid grid-cols-3 gap-x-2 gap-y-4">
-                  {sectionsList[activeSectionIndex].items.map((item, idx) => {
-                    const onClickHandler = () => {
-                      if (isMithilakFlow) {
-                        localStorage.setItem('isMithilakFlow', 'true');
-                        localStorage.setItem('isQuickShopFlow', 'false');
-                        navigate('/mithilak/category', { state: { category: item.name } });
-                      } else if (isQuickShopFlow) {
-                        localStorage.setItem('isQuickShopFlow', 'true');
-                        localStorage.setItem('isMithilakFlow', 'false');
-                        navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name } });
-                      } else {
-                        navigate(item.path);
-                      }
-                    };
-
-                    return (
-                      <div 
-                        key={idx}
-                        onClick={onClickHandler}
-                        className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
-                      >
-                        <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 relative shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
-                          <img 
-                            src={item.img || DEFAULT_PRODUCT_IMAGE} 
-                            alt={item.name} 
-                            onError={handleImageError}
-                            className="w-full h-full object-cover rounded-xl"
-                          />
-                        </div>
-                        <span className="text-[9.5px] font-bold text-slate-700 text-center leading-tight tracking-tight line-clamp-2">
-                          {item.name.replace('Mithila ', '')}
-                        </span>
+                  {sectionsList[activeSectionIndex].items.map((item, idx) => (
+                    <div 
+                      key={idx}
+                      onClick={() => handleCategoryItemClick(item)}
+                      className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+                    >
+                      <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 relative shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
+                        <img 
+                          src={item.img || DEFAULT_PRODUCT_IMAGE} 
+                          alt={item.name} 
+                          onError={handleImageError}
+                          className="w-full h-full object-cover rounded-xl" 
+                        />
                       </div>
-                    );
-                  })}
+                      <span className="text-[9.5px] font-bold text-slate-700 text-center leading-tight tracking-tight line-clamp-2">
+                        {item.name.replace('Mithila ', '')}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Extra banner or explore section for premium look */}
+              {/* Extra banner or explore section */}
               <div className="mt-8 pt-4 border-t border-slate-100">
                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-3">Explore More</h3>
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-3 border border-amber-100/50 flex items-center justify-between">
@@ -356,15 +465,7 @@ const Categories = () => {
                   <button 
                     onClick={() => {
                       const firstItem = sectionsList[activeSectionIndex].items[0];
-                      if (firstItem) {
-                        if (isMithilakFlow) {
-                          navigate('/mithilak/category', { state: { category: firstItem.name } });
-                        } else if (isQuickShopFlow) {
-                          navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: firstItem.name } });
-                        } else {
-                          navigate(firstItem.path);
-                        }
-                      }
+                      if (firstItem) handleCategoryItemClick(firstItem);
                     }}
                     className="px-2.5 py-1 text-[9px] font-black bg-amber-600 text-white rounded-lg shadow-sm active:scale-95 transition-transform"
                   >
@@ -377,7 +478,7 @@ const Categories = () => {
         </div>
       </div>
 
-      {/* Desktop view (Copying the banner + white panel structure) */}
+      {/* Desktop view */}
       <div className="hidden md:block md:max-w-6xl md:mx-auto md:px-4 md:py-8 space-y-10 relative z-10">
         {sectionsList.map((section, sIdx) => (
           <div key={sIdx} className="flex flex-col">
@@ -385,7 +486,7 @@ const Categories = () => {
             <div className={`px-6 py-4 rounded-t-3xl flex items-center justify-between shadow-sm border-x border-t transition-colors ${
               (isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow)
                 ? `text-white ${headerBg} border-transparent`
-                : 'bg-[#FCF7EE] text-[#3C2415] border-[#F3E3CD]/60 font-montserrat'
+                : 'bg-[#3E5A44] text-white border-transparent'
             }`}>
               <h2 className="text-[14px] md:text-[16px] font-black uppercase tracking-wider">
                 {section.title}
@@ -396,25 +497,11 @@ const Categories = () => {
             <div className="bg-white border-x border-b border-slate-100 rounded-b-3xl p-6 shadow-md">
               <div className="grid grid-cols-4 gap-6">
                 {section.items.map((item, idx) => {
-                  const onClickHandler = () => {
-                    if (isMithilakFlow) {
-                      localStorage.setItem('isMithilakFlow', 'true');
-                      localStorage.setItem('isQuickShopFlow', 'false');
-                      navigate('/mithilak/category', { state: { category: item.name } });
-                    } else if (isQuickShopFlow) {
-                      localStorage.setItem('isQuickShopFlow', 'true');
-                      localStorage.setItem('isMithilakFlow', 'false');
-                      navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name } });
-                    } else {
-                      navigate(item.path);
-                    }
-                  };
-
                   if (isMithilakFlow) {
                     return (
                       <div
                         key={idx}
-                        onClick={onClickHandler}
+                        onClick={() => handleCategoryItemClick(item)}
                         className="flex flex-col items-center gap-3 cursor-pointer group active:scale-95 transition-transform w-[180px] mx-auto"
                       >
                         <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden bg-white border border-[#EADCC9]/55 flex items-center justify-center group-hover:bg-slate-50 transition-colors duration-300 shadow-sm">
@@ -431,7 +518,33 @@ const Categories = () => {
                           <h3 className={`text-[13px] font-black text-[#3F2A20] leading-tight group-hover:${textPrimary} transition-colors line-clamp-2`}>
                             {item.name.replace('Mithila ', '')}
                           </h3>
-                          <p className="text-[11px] font-black text-[#6FAE4A] mt-1 uppercase tracking-wider">View Collection</p>
+                          <p className="text-[11px] font-black text-[#207C8A] mt-1 uppercase tracking-wider">View Collection</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (isFreshGroceryFlow) {
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => handleCategoryItemClick(item)}
+                        className="flex flex-col items-center gap-3 cursor-pointer group active:scale-95 transition-transform w-[180px] mx-auto"
+                      >
+                        <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-[#FFFDF8] border border-[#EADCC9]/60 flex items-center justify-center p-4 group-hover:border-[#D9A21B] transition-colors duration-300">
+                          <img
+                            src={item.img || DEFAULT_PRODUCT_IMAGE}
+                            alt={item.name}
+                            onError={handleImageError}
+                            className="h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div className="px-1 text-center">
+                          <h3 className={`text-[13px] font-black text-[#3F2A20] leading-tight group-hover:text-[#D9A21B] transition-colors line-clamp-2`}>
+                            {item.name}
+                          </h3>
+                          <p className="text-[11px] font-black text-[#D9A21B] mt-1 uppercase tracking-wider">Fresh Deals</p>
                         </div>
                       </div>
                     );
@@ -441,7 +554,7 @@ const Categories = () => {
                     return (
                       <div
                         key={idx}
-                        onClick={onClickHandler}
+                        onClick={() => handleCategoryItemClick(item)}
                         className="flex flex-col items-center gap-3 cursor-pointer group active:scale-95 transition-transform w-[180px] mx-auto"
                       >
                         <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-slate-50 border border-slate-100/60 flex items-center justify-center p-5 group-hover:bg-slate-100/65 transition-colors duration-300">
@@ -457,17 +570,17 @@ const Categories = () => {
                           <h3 className={`text-[13px] font-black text-slate-800 leading-tight group-hover:${textPrimary} transition-colors line-clamp-2`}>
                             {item.name}
                           </h3>
-                          <p className="text-[11px] font-black text-slate-400 mt-1 uppercase tracking-wider">View Collection</p>
+                          <p className="text-[11px] font-black text-[#F26522] mt-1 uppercase tracking-wider">Fast Delivery</p>
                         </div>
                       </div>
                     );
                   }
 
-                  // Standard user flow: Arched cards matching home page style
+                  // Standard Mithilakart user flow
                   return (
                     <div
                       key={idx}
-                      onClick={onClickHandler}
+                      onClick={() => handleCategoryItemClick(item)}
                       className="flex flex-col items-center cursor-pointer group active:scale-95 transition-transform w-[160px] mx-auto"
                     >
                       <div className="w-full aspect-[1/1.18] bg-white border border-[#EADCC9]/70 rounded-t-[64px] rounded-b-[24px] overflow-hidden flex flex-col items-center justify-between p-3 pt-2 shadow-[0_4px_10px_rgba(61,35,20,0.02)] group-hover:shadow-[0_8px_20px_rgba(61,35,20,0.08)] group-hover:border-[#6FAE4A]/40 transition-all duration-300">

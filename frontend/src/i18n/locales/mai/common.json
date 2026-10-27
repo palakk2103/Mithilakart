@@ -1,12 +1,12 @@
 {
   "nav": {
-    "home": "घर (होम)",
+    "home": "घर",
     "categories": "श्रेणी सभ",
     "cart": "कार्ट",
-    "you": "अहाँ",
-    "deliverTo": "पहुंचाबी:",
-    "viewCart": "कार्ट देखी",
-    "searchPlaceholder": "उत्पाद, श्रेणी सभ खोजी...",
+    "you": "खाता",
+    "deliverTo": "पहुंचाबी",
+    "viewCart": "टोकरी देखी",
+    "searchPlaceholder": "खोजू “आटा, चाउर, तेल, मैगी...”",
     "searchInGrocery": "राशन में खोजी",
     "quickShop": "त्वरित दुकान",
     "mithilak": "मिथिलाक",
@@ -64,7 +64,9 @@
     "topSelection": "मुख्य चयन",
     "brandsSpotlight": "ब्रांड्स स्पॉटलाइट",
     "stillLooking": "अहाँ एखनो एहि सभ केँ खोजि रहल छी?",
-    "ratingsTitle": "रेटिंग आ समीक्षा"
+    "ratingsTitle": "रेटिंग आ समीक्षा",
+    "trendingThisWeek": "ट्रेंडिंग उत्पाद",
+    "shopByCategories": "श्रेणी अनुसार खरीदारी करू"
   },
   "auth": {
     "loginTitle": "अपना कार्ट देखबाक लेल लॉगिन करू",
@@ -193,7 +195,7 @@
     "electricals": "इलेक्ट्रिकल्स",
     "bestDeals": "सर्वश्रेष्ठ सौदे",
     "lipCare": "ओठक देखभाल",
-    "for-you": "अहाँक लेल",
+    "for-you": "सभ",
     "beauty": "सौंदर्य",
     "gifting": "उपहार",
     "electronics": "इलेक्ट्रॉनिक्स",
@@ -212,12 +214,17 @@
     "save": "सुरक्षित करू",
     "confirm": "की अहाँ निश्चित छी?",
     "ad": "विज्ञापन",
-    "sponsored": "प्रायोजित"
+    "sponsored": "प्रायोजित",
+    "viewAll": "सभ देखी",
+    "seeAll": "सभ देखी",
+    "listening": "सुनि रहल छी...",
+    "analyzingImage": "छविक विश्लेषण भ रहल अछि..."
   },
   "product": {
     "mrp": "एमआरपी",
     "off": "छूट",
     "deliveryTomorrow": "काल्ह धरि भेटत",
-    "selectSize": "साइज चुनी"
+    "selectSize": "साइज चुनी",
+    "viewProduct": "उत्पाद देखी"
   }
 }

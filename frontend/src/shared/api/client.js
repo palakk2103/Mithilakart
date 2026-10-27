@@ -95,6 +95,10 @@ export function createApiClient({ portal, baseURL = API_BASE, onUnauthorized } =
         config.headers.Authorization = `Bearer ${accessToken}`;
       }
     }
+    if (typeof window !== 'undefined') {
+      const currentLang = localStorage.getItem('user_language') || 'en';
+      config.headers['Accept-Language'] = currentLang;
+    }
     return config;
   });
 

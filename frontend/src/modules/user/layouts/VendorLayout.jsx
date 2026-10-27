@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, Outlet, useLocation as useRouterLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -60,17 +60,29 @@ const VendorLayout = () => {
   const [scrolled, setScrolled] = useState(false);
   const [isFloatingCartDismissed, setIsFloatingCartDismissed] = useState(false);
   const { savedAddresses, selectedAddressId, isDarkMode } = useAccountStore();
-  const { activeFlow, setActiveFlow, selectedCategory, setSelectedCategory, fetchStandardNav } = useVendorStore();
+  const activeFlow = useVendorStore((state) => state.activeFlow);
+  const setActiveFlow = useVendorStore((state) => state.setActiveFlow);
+  const selectedCategory = useVendorStore((state) => state.selectedCategory);
+  const setSelectedCategory = useVendorStore((state) => state.setSelectedCategory);
+  const fetchStandardNav = useVendorStore((state) => state.fetchStandardNav);
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   useHydrateAddresses();
   const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
   const selectedAddress = savedAddresses.find(a => a.id === selectedAddressId) || savedAddresses[0];
 
-  const cartBadgeBg = activeFlow === 'mithilak' 
+  const effectiveFlow = useMemo(() => {
+    if (location.pathname.includes('/quick-shop')) return 'quickshop';
+    if (location.pathname.includes('/fresh-grocery')) return 'freshgrocery';
+    if (location.pathname.includes('/mithilak')) return 'mithilak';
+    if (location.pathname === '/home' || location.pathname === '/') return 'mithilakart';
+    return activeFlow || 'mithilakart';
+  }, [location.pathname, activeFlow]);
+
+  const cartBadgeBg = effectiveFlow === 'mithilak' 
     ? 'bg-[#207C8A]' 
-    : activeFlow === 'freshgrocery' 
+    : effectiveFlow === 'freshgrocery' 
       ? 'bg-[#D9A21B]' 
-      : activeFlow === 'quickshop' 
+      : effectiveFlow === 'quickshop' 
         ? 'bg-[#F26522]' 
         : 'bg-[#65B842]';
 
@@ -101,16 +113,44 @@ const VendorLayout = () => {
   }, [fetchStandardNav]);
 
   useEffect(() => {
-    if (location.pathname.includes('/quick-shop')) {
-      if (activeFlow !== 'quickshop') setActiveFlow('quickshop');
-    } else if (location.pathname.includes('/fresh-grocery')) {
-      if (activeFlow !== 'freshgrocery') setActiveFlow('freshgrocery');
-    } else if (location.pathname.includes('/mithilak')) {
-      if (activeFlow !== 'mithilak') setActiveFlow('mithilak');
-    } else if (location.pathname === '/home' || location.pathname === '/') {
-      if (activeFlow !== 'mithilakart') setActiveFlow('mithilakart');
+    if (effectiveFlow !== activeFlow) {
+      setActiveFlow(effectiveFlow);
     }
-  }, [location.pathname, setActiveFlow]);
+  }, [effectiveFlow, activeFlow, setActiveFlow]);
+
+  const mobileHeaderRef = useRef(null);
+  const desktopHeaderRef = useRef(null);
+
+  /* ── Dynamic Header Height Observer ── */
+  useEffect(() => {
+    const updateHeaderHeights = () => {
+      if (mobileHeaderRef.current) {
+        const h = mobileHeaderRef.current.offsetHeight;
+        document.documentElement.style.setProperty('--mobile-header-height', `${h}px`);
+      }
+      if (desktopHeaderRef.current) {
+        const h = desktopHeaderRef.current.offsetHeight;
+        document.documentElement.style.setProperty('--desktop-header-height', `${h}px`);
+      }
+    };
+
+    updateHeaderHeights();
+    const timer = setTimeout(updateHeaderHeights, 60);
+
+    let ro;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(updateHeaderHeights);
+      if (mobileHeaderRef.current) ro.observe(mobileHeaderRef.current);
+      if (desktopHeaderRef.current) ro.observe(desktopHeaderRef.current);
+    }
+
+    window.addEventListener('resize', updateHeaderHeights);
+    return () => {
+      clearTimeout(timer);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', updateHeaderHeights);
+    };
+  }, [location.pathname, effectiveFlow, selectedCategory, deliverTo]);
 
   /* ── Scroll shadow listener ── */
   useEffect(() => {
@@ -132,8 +172,12 @@ const VendorLayout = () => {
     location.pathname.includes('/category') ||
     location.pathname.includes('wishlist');
 
+  const isDualScrollCategoriesPage = 
+    location.pathname === '/categories' || location.pathname === '/vendor/categories';
+
+  const isProfileMainPage = location.pathname === '/profile' || location.pathname === '/vendor/profile';
   const hideHeader = isImmersivePage;
-  const hideFooter  = isImmersivePage && !location.pathname.includes('all-offers') && !location.pathname.includes('categories');
+  const hideFooter = isImmersivePage && !location.pathname.includes('all-offers') && !isProfileMainPage;
 
   const isCartOrCheckoutPage = 
     location.pathname.includes('/cart') || 
@@ -146,9 +190,9 @@ const VendorLayout = () => {
     location.pathname.includes('/help-center');
 
   const activeTabMarketplaceTab = 
-    activeFlow === 'mithilak' ? 'mithilak' :
-    activeFlow === 'freshgrocery' ? 'groceries_fresh' :
-    activeFlow === 'quickshop' ? 'quick_shop' : 'mithilakart';
+    effectiveFlow === 'mithilak' ? 'mithilak' :
+    effectiveFlow === 'freshgrocery' ? 'groceries_fresh' :
+    effectiveFlow === 'quickshop' ? 'quick_shop' : 'mithilakart';
 
   const currentTabCartItems = cartItems.filter(item => {
     const itemTab = item.marketplaceTab || (
@@ -170,20 +214,20 @@ const VendorLayout = () => {
     return acc + parsePrice(item.price) * parsePrice(item.qty || 1);
   }, 0);
   const isDarkHeader = (
-    activeFlow === 'mithilak' || 
-    activeFlow === 'quickshop' || 
-    (activeFlow === 'mithilakart' && (selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory))
+    effectiveFlow === 'mithilak' || 
+    effectiveFlow === 'quickshop' || 
+    (effectiveFlow === 'mithilakart' && (selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory))
   );
 
-  const isMithilakartFlow = activeFlow === 'mithilakart';
+  const isMithilakartFlow = effectiveFlow === 'mithilakart';
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-300 text-primary-dark relative ${
-      activeFlow === 'mithilak'
+    <div className={`${isDualScrollCategoriesPage ? 'h-screen h-[100dvh] max-h-[100dvh] overflow-hidden md:h-auto md:max-h-none md:overflow-visible md:min-h-screen' : 'min-h-screen'} flex flex-col transition-colors duration-300 text-primary-dark relative ${
+      effectiveFlow === 'mithilak'
         ? 'bg-[#F5F9FA]'
-        : activeFlow === 'freshgrocery'
+        : effectiveFlow === 'freshgrocery'
           ? 'bg-[#FFF8EE]'
-          : activeFlow === 'quickshop'
+          : effectiveFlow === 'quickshop'
             ? 'bg-white'
             : 'bg-[#F6F8F3]'
     }`}>
@@ -203,12 +247,12 @@ const VendorLayout = () => {
 
       {/* Desktop Header */}
       {!hideHeader && (
-        <div className={`hidden md:flex items-center justify-between px-8 py-2.5 border-b border-gray-200/80 sticky top-0 z-50 shadow-sm transition-colors duration-300 ${
-          activeFlow === 'mithilak'
+        <div ref={desktopHeaderRef} className={`hidden md:flex items-center justify-between px-8 py-2.5 border-b border-gray-200/80 sticky top-0 z-50 shadow-sm transition-colors duration-300 ${
+          effectiveFlow === 'mithilak'
             ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58] text-white'
-            : activeFlow === 'freshgrocery'
+            : effectiveFlow === 'freshgrocery'
               ? 'bg-[#D9A21B] text-[#3F2A20]'
-              : activeFlow === 'quickshop'
+              : effectiveFlow === 'quickshop'
                 ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00] text-white'
                 : `${getMithilakartHeaderBg(selectedCategory)} ${
                     selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory
@@ -228,7 +272,7 @@ const VendorLayout = () => {
 
             <nav className="flex items-center gap-3 ml-4">
               <Link to="/home" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>{t('nav.home')}</Link>
-              <Link to="/categories" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>{t('nav.categories')}</Link>
+              <Link to={`/categories?flow=${effectiveFlow}`} className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>{t('nav.categories')}</Link>
               <Link to="/cart" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-2 hover:bg-black/5 text-[#3F2A20]`}>
                 <span>{t('nav.cart')}</span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${cartBadgeBg} text-white`}>{cartTotalItems}</span>
@@ -256,18 +300,19 @@ const VendorLayout = () => {
       {/* Sticky Header */}
       {!hideHeader && (
         <motion.header
+          ref={mobileHeaderRef}
           animate={{
             boxShadow: scrolled
               ? '0 2px 12px rgba(0,0,0,0.08)'
               : '0 1px 0px rgba(0,0,0,0.02)',
           }}
           transition={{ duration: 0.22 }}
-          className={`md:hidden sticky top-0 z-50 pb-3 mb-4 rounded-b-[24px] transition-colors duration-300 ${
-            activeFlow === 'mithilak'
+          className={`md:hidden sticky top-0 z-50 pb-3 ${(location.pathname === '/home' || location.pathname === '/') ? 'mb-1.5' : 'mb-4'} rounded-b-[24px] transition-colors duration-300 ${
+            effectiveFlow === 'mithilak'
               ? 'bg-[#207C8A]'
-              : activeFlow === 'freshgrocery'
+              : effectiveFlow === 'freshgrocery'
                 ? 'bg-[#D9A21B]'
-                : activeFlow === 'quickshop'
+                : effectiveFlow === 'quickshop'
                   ? 'bg-[#F26522]'
                   : 'bg-[#65B842]'
           }`}
@@ -285,53 +330,55 @@ const VendorLayout = () => {
       {/* SaleBanner is now rendered inside Home.jsx or specifically based on visibility store */}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col bg-transparent relative z-10">
-        <div className="flex-1 flex">
-          <div className="w-full max-w-[1600px] mx-auto px-0 md:px-8 xl:px-12 flex h-full">
-            <main className="flex-1 min-w-0 pb-0">
+      <div className={`flex-1 flex flex-col bg-transparent relative z-10 ${isDualScrollCategoriesPage ? 'overflow-hidden h-full md:overflow-visible md:h-auto' : ''}`}>
+        <div className={`flex-1 flex ${isDualScrollCategoriesPage ? 'overflow-hidden h-full md:overflow-visible md:h-auto' : ''}`}>
+          <div className={`w-full max-w-[1600px] mx-auto px-0 md:px-8 xl:px-12 flex h-full ${isDualScrollCategoriesPage ? 'overflow-hidden md:overflow-visible' : ''}`}>
+            <main className={`flex-1 min-w-0 pb-0 ${isDualScrollCategoriesPage ? 'overflow-hidden h-full md:overflow-visible md:h-auto' : ''}`}>
               <Outlet />
             </main>
           </div>
         </div>
-        <Footer />
+        {!hideFooter && location.pathname !== '/profile' && <Footer />}
       </div>
 
       {/* Mobile-First Bottom Navbar (Fixed) */}
       {!hideFooter && (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t px-6 py-2 flex justify-between items-center z-50 bg-[#FFF8EE] border-[#EADCC9]/55 text-[#3F2A20] shadow-[0_-2px_10px_rgba(63,42,32,0.05)]">
         <Link 
-          to={activeFlow === 'mithilak' ? "/mithilak" : activeFlow === 'freshgrocery' ? "/fresh-grocery" : activeFlow === 'quickshop' ? "/quick-shop" : "/home"} 
+          to={effectiveFlow === 'mithilak' ? "/mithilak" : effectiveFlow === 'freshgrocery' ? "/fresh-grocery" : effectiveFlow === 'quickshop' ? "/quick-shop" : "/home"} 
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/home' || location.pathname === '/quick-shop' || location.pathname === '/mithilak' || location.pathname === '/fresh-grocery'
-              ? (activeFlow === 'mithilak' 
+              ? (effectiveFlow === 'mithilak' 
                   ? 'text-[#207C8A]' 
-                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : (activeFlow === 'quickshop' ? 'text-[#FF5C00]' : 'text-[#65B842]')))
+                  : (effectiveFlow === 'freshgrocery' ? 'text-[#D9A21B]' : (effectiveFlow === 'quickshop' ? 'text-[#FF5C00]' : 'text-[#65B842]')))
               : 'text-[#3F2A20]/80'
           }`}
         >
           <HomeIcon size={22} strokeWidth={2.2} />
-          <span className={`text-[10px] ${location.pathname === '/home' || location.pathname === '/quick-shop' || location.pathname === '/mithilak' || location.pathname === '/fresh-grocery' ? 'font-black' : 'font-semibold'}`}>Home</span>
+          <span className={`text-[10px] ${location.pathname === '/home' || location.pathname === '/quick-shop' || location.pathname === '/mithilak' || location.pathname === '/fresh-grocery' ? 'font-black' : 'font-semibold'}`}>{t('nav.home', { defaultValue: 'Home' })}</span>
         </Link>
         <Link 
-          to="/categories"
+          to={`/categories?flow=${effectiveFlow}`}
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/categories' 
-              ? (activeFlow === 'mithilak' 
+              ? (effectiveFlow === 'mithilak' 
                   ? 'text-[#207C8A]' 
-                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : 'text-[#65B842]')) 
+                  : (effectiveFlow === 'freshgrocery' 
+                      ? 'text-[#D9A21B]' 
+                      : (effectiveFlow === 'quickshop' ? 'text-[#F26522]' : 'text-[#65B842]'))) 
               : 'text-[#3F2A20]/80'
           }`}
         >
           <LayoutGrid size={22} strokeWidth={2.2} />
-          <span className={`text-[10px] ${location.pathname === '/categories' ? 'font-black' : 'font-semibold'}`}>Categories</span>
+          <span className={`text-[10px] ${location.pathname === '/categories' ? 'font-black' : 'font-semibold'}`}>{t('nav.categories', { defaultValue: 'Categories' })}</span>
         </Link>
         <Link 
           to="/cart" 
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/cart' 
-              ? (activeFlow === 'mithilak' 
+              ? (effectiveFlow === 'mithilak' 
                   ? 'text-[#207C8A]' 
-                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : 'text-[#65B842]')) 
+                  : (effectiveFlow === 'freshgrocery' ? 'text-[#D9A21B]' : 'text-[#65B842]')) 
               : 'text-[#3F2A20]/80'
           }`}
         >
@@ -341,7 +388,7 @@ const VendorLayout = () => {
               {cartTotalItems}
             </span>
           </div>
-          <span className={`text-[10px] ${location.pathname === '/cart' ? 'font-black' : 'font-semibold'}`}>Cart</span>
+          <span className={`text-[10px] ${location.pathname === '/cart' ? 'font-black' : 'font-semibold'}`}>{t('nav.cart', { defaultValue: 'Cart' })}</span>
         </Link>
         <Link 
           to="/profile" 
@@ -354,7 +401,7 @@ const VendorLayout = () => {
           }`}
         >
           <User size={22} strokeWidth={2.2} />
-          <span className={`text-[10px] ${location.pathname === '/profile' ? 'font-black' : 'font-semibold'}`}>Account</span>
+          <span className={`text-[10px] ${location.pathname === '/profile' ? 'font-black' : 'font-semibold'}`}>{t('nav.you', { defaultValue: 'Account' })}</span>
         </Link>
       </nav>
       )}

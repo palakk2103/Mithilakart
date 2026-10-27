@@ -267,7 +267,7 @@ const CategoryProducts = () => {
           </div>
           
           <div className="flex items-center gap-0.5">
-            <Link to="/search" className="p-1.5">
+            <Link to={`/search?tab=${marketplaceTab}`} className="p-1.5">
               <Search size={18} strokeWidth={2} />
             </Link>
             <Link to="/cart" className="relative p-1.5 active:scale-90 transition-transform">

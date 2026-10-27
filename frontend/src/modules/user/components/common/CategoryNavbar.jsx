@@ -222,7 +222,7 @@ const CategoryNavbar = ({ selectedCategory, setSelectedCategory }) => {
                 isActive ? `font-black ${getMithilakartActiveTextColor(selectedCategory)}` : 'font-extrabold text-primary-dark/80'
               }`}
             >
-              {t(`categories.${cat.id}`)}
+              {t(`categories.${cat.id}`, { defaultValue: cat.label })}
             </span>
           </motion.button>
         );

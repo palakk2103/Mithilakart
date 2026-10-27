@@ -64,7 +64,9 @@
     "topSelection": "Top Selection",
     "brandsSpotlight": "Brands Spotlight",
     "stillLooking": "Still Looking for these?",
-    "ratingsTitle": "Ratings & Reviews"
+    "ratingsTitle": "Ratings & Reviews",
+    "trendingThisWeek": "Trending Products",
+    "shopByCategories": "Shop by Categories"
   },
   "auth": {
     "loginTitle": "Log in to check your Cart",
@@ -212,12 +214,17 @@
     "save": "Save",
     "confirm": "Are you sure?",
     "ad": "AD",
-    "sponsored": "Sponsored"
+    "sponsored": "Sponsored",
+    "viewAll": "View All",
+    "seeAll": "See all",
+    "listening": "Listening...",
+    "analyzingImage": "Analyzing image..."
   },
   "product": {
     "mrp": "MRP",
     "off": "off",
     "deliveryTomorrow": "Get it by Tomorrow",
-    "selectSize": "Select Size"
+    "selectSize": "Select Size",
+    "viewProduct": "VIEW PRODUCT"
   }
 }

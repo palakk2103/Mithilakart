@@ -9,12 +9,14 @@ class StorefrontController extends BaseController {
   }
 
   getHome = asyncHandler(async (req, res) => {
-    const data = await this.service.getHome(req.query.commerceFlow || 'standard');
+    const lang = req.language || req.query.lang || 'en';
+    const data = await this.service.getHome(req.query.commerceFlow || 'standard', lang);
     return ApiResponse.success(res, data);
   });
 
   getFlowHome = asyncHandler(async (req, res) => {
-    const data = await this.service.getHome(req.params.flow);
+    const lang = req.language || req.query.lang || 'en';
+    const data = await this.service.getHome(req.params.flow, lang);
     return ApiResponse.success(res, data);
   });
 

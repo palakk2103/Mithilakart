@@ -38,12 +38,17 @@ export const calcDiscountLabel = (price, mrp) => {
   return `${Math.round(((m - p) / m) * 100)}% off`;
 };
 
-export const mapProductForCard = (product, fallbackImage = '') => {
+export const mapProductForCard = (product, fallbackImage = '', lang = '') => {
   const rawId = getEntityId(product);
   const listingId = product.listingId || undefined;
   const productId = product.productId || rawId;
   const price = product.price ?? product.salePrice ?? 0;
   const mrp = product.mrp ?? product.oldPrice ?? product.mrp;
+  const currentLang = lang || localStorage.getItem('user_language') || 'en';
+  const localizedTitle = (currentLang !== 'en' && (product.translations?.[currentLang]?.title || product.translations?.[currentLang]?.name))
+    || product.title
+    || product.name
+    || 'Product';
 
   return {
     id: productId || rawId,
@@ -56,8 +61,10 @@ export const mapProductForCard = (product, fallbackImage = '') => {
     deliveryEtaText: product.deliveryEtaText || (product.deliveryPromiseMinutes ? `${product.deliveryPromiseMinutes} mins` : undefined),
     pickupCoordinates: product.pickupCoordinates || null,
     city: product.city || null,
-    title: product.title || product.name || 'Product',
-    name: product.title || product.name || 'Product',
+    title: localizedTitle,
+    name: localizedTitle,
+    originalTitle: product.title || product.name,
+    translations: product.translations || {},
     brand: product.brand || '',
     price: formatDisplayPrice(price),
     oldPrice: mrp ? formatDisplayPrice(mrp) : undefined,
@@ -105,22 +112,32 @@ export const mapProductForDetail = (product, fallbackImage = '') => {
   };
 };
 
-export const mapCartItem = (item) => ({
-  cartId: item.itemKey || item.id || getEntityId(item),
-  id: item.productId || getEntityId(item),
-  productId: item.productId || getEntityId(item),
-  variantId: item.variantId,
-  name: item.name || item.title || 'Product',
-  title: item.title || item.name || 'Product',
-  price: item.unitPrice ?? item.price ?? 0,
-  oldPrice: item.mrp ?? item.oldPrice,
-  qty: item.quantity ?? item.qty ?? 1,
-  quantity: item.quantity ?? item.qty ?? 1,
-  image: getProductImage(item),
-  img: getProductImage(item),
-  marketplaceTab: item.marketplaceTab || item.tab || null,
-  commerceFlow: item.commerceFlow || null,
-});
+export const mapCartItem = (item, lang = '') => {
+  const currentLang = lang || localStorage.getItem('user_language') || 'en';
+  const localizedName = (currentLang !== 'en' && (item.translations?.[currentLang]?.title || item.translations?.[currentLang]?.name))
+    || item.name
+    || item.title
+    || 'Product';
+
+  return {
+    cartId: item.itemKey || item.id || getEntityId(item),
+    id: item.productId || getEntityId(item),
+    productId: item.productId || getEntityId(item),
+    variantId: item.variantId,
+    name: localizedName,
+    title: localizedName,
+    originalTitle: item.name || item.title,
+    translations: item.translations || {},
+    price: item.unitPrice ?? item.price ?? 0,
+    oldPrice: item.mrp ?? item.oldPrice,
+    qty: item.quantity ?? item.qty ?? 1,
+    quantity: item.quantity ?? item.qty ?? 1,
+    image: getProductImage(item),
+    img: getProductImage(item),
+    marketplaceTab: item.marketplaceTab || item.tab || null,
+    commerceFlow: item.commerceFlow || null,
+  };
+};
 
 export const mapOrderForList = (order) => ({
   id: order.orderNumber || getEntityId(order),
@@ -220,22 +237,28 @@ export const mapOrderDetail = (data) => {
   };
 };
 
-export const mapCategorySections = (categories, fallbackSections = []) => {
+export const mapCategorySections = (categories, fallbackSections = [], lang = 'en') => {
   const list = extractList(categories);
   if (!list.length) return fallbackSections;
 
   return list.map((cat) => {
     const rawChildren = Array.isArray(cat.children) ? cat.children : [];
+    const localizedTitle = (lang && lang !== 'en' && cat.translations?.[lang]?.name) || cat.name;
     const items = rawChildren.length > 0
-      ? rawChildren.map((child) => ({
-          name: child.name,
-          img: getImageUrl(child.imageUrl || child.iconUrl || cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
-          path: `/vendor/category-products?category=${encodeURIComponent(child.name)}`,
-          id: getEntityId(child),
-        }))
+      ? rawChildren.map((child) => {
+          const localizedChildName = (lang && lang !== 'en' && child.translations?.[lang]?.name) || child.name;
+          return {
+            name: localizedChildName,
+            rawName: child.name,
+            img: getImageUrl(child.imageUrl || child.iconUrl || cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
+            path: `/vendor/category-products?category=${encodeURIComponent(child.name)}`,
+            id: getEntityId(child),
+          };
+        })
       : [
           {
-            name: cat.name,
+            name: localizedTitle,
+            rawName: cat.name,
             img: getImageUrl(cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
             path: `/vendor/category-products?category=${encodeURIComponent(cat.name)}`,
             id: getEntityId(cat),
@@ -243,7 +266,8 @@ export const mapCategorySections = (categories, fallbackSections = []) => {
         ];
 
     return {
-      title: cat.name,
+      title: localizedTitle,
+      rawTitle: cat.name,
       items,
     };
   });
@@ -381,17 +405,25 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
     const key = sectionMap[section.key];
     if (!key || !section.products?.length) return;
 
+    const currentLang = localStorage.getItem('user_language') || 'en';
+
     const mappedProducts = section.products.map((product, index) => {
       const img = getProductImage(product);
       const id = getEntityId(product);
       const link = `/vendor/product-detail`;
+      const localizedTitle = (currentLang !== 'en' && (product.translations?.[currentLang]?.title || product.translations?.[currentLang]?.name))
+        || product.title
+        || product.name
+        || section.title;
 
       if (key === 'stillLooking' || key === 'keepShopping' || key === 'trendingThisWeek' || key === 'todaysSpecialDeals') {
         return {
           id,
-          label: product.title || product.name || section.title,
-          name: product.title || product.name || section.title,
-          title: product.title || product.name || section.title,
+          label: localizedTitle,
+          name: localizedTitle,
+          title: localizedTitle,
+          originalTitle: product.title || product.name,
+          translations: product.translations || {},
           img,
           price: product.price,
           mrp: product.mrp,
@@ -408,7 +440,10 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
         return {
           id,
           title: discountLabel,
-          sub: product.title || product.name || product.brand || 'Featured',
+          sub: localizedTitle,
+          name: localizedTitle,
+          originalTitle: product.title || product.name,
+          translations: product.translations || {},
           brand: product.brand || 'Spotlight',
           img,
           price: product.price,
@@ -420,8 +455,10 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
 
       return {
         id,
-        name: product.title || product.name,
-        title: product.title || product.name,
+        name: localizedTitle,
+        title: localizedTitle,
+        originalTitle: product.title || product.name,
+        translations: product.translations || {},
         tag: section.title || ['Grab Or Gone', 'Best Picks', 'Popular', 'Widest Range'][index % 4],
         img,
         price: product.price,
@@ -499,7 +536,7 @@ const slugifyLabel = (label) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 
-export const mapShopCategoryCards = (categories) => {
+export const mapShopCategoryCards = (categories, lang = 'en') => {
   const list = extractList(categories);
   if (!list.length) return [];
 
@@ -509,9 +546,12 @@ export const mapShopCategoryCards = (categories) => {
     .map((cat, index) => {
       const rawImg = cat.imageUrl || cat.iconUrl || cat.image;
       const img = rawImg ? getImageUrl(rawImg) : '';
+      const localizedName = (lang && lang !== 'en' && cat.translations?.[lang]?.name) 
+        || (lang && lang !== 'en' ? cat.name : (SHOP_DISPLAY_NAMES[cat.name] || cat.name));
       return {
         id: getEntityId(cat),
-        name: SHOP_DISPLAY_NAMES[cat.name] || cat.name,
+        name: localizedName,
+        rawName: cat.name,
         img,
         path:
           cat.name === 'Toys'

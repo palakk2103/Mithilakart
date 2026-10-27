@@ -6,6 +6,7 @@ import LanguageSelector from './LanguageSelector';
 import { useTranslation } from 'react-i18next';
 import SearchInput from '../../../../shared/components/SearchInput';
 import toast from 'react-hot-toast';
+import { getCurrentMarketplaceTab } from '../../../../shared/utils/marketplaceHelpers';
 
 /**
  * SearchBar — Address selector (top) + Search input (bottom)
@@ -33,9 +34,17 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
   const isDarkHeader = isMithilakActive || isQuickShopActive;
   const isMithilakartFlow = !isMithilakActive && !isFreshGroceryActive && !isQuickShopActive;
 
+  const currentTab = isQuickShopActive 
+    ? 'quick_shop' 
+    : isFreshGroceryActive 
+      ? 'groceries_fresh' 
+      : isMithilakActive 
+        ? 'mithilak' 
+        : (getCurrentMarketplaceTab() || 'mithilakart');
+
   const handleSubmit = (e) => {
     e?.preventDefault();
-    if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+    if (query.trim()) navigate(`/search?q=${encodeURIComponent(query.trim())}&tab=${currentTab}`);
   };
 
   const handleVoiceSearch = () => {
@@ -57,7 +66,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
     recognition.onresult = (event) => {
       const speechToText = event.results[0][0].transcript;
       setQuery(speechToText);
-      navigate(`/search?q=${encodeURIComponent(speechToText)}`);
+      navigate(`/search?q=${encodeURIComponent(speechToText)}&tab=${currentTab}`);
     };
 
     recognition.onerror = (e) => {
@@ -158,36 +167,45 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1 min-w-0 text-white hover:text-white/95 text-left h-[30px] px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
+            className="flex items-center gap-1.5 min-w-0 text-white hover:text-white/95 text-left py-0.5 px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
           >
-            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] flex-shrink-0 text-white" />
-            <span className="text-[11px] font-bold truncate max-w-[190px] sm:max-w-[250px] md:max-w-[320px]">
-              {displayAddress}
-            </span>
+            <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0 text-white" />
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
+              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px]">
+                {displayAddress}
+              </span>
+            </div>
             <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
           </button>
         ) : isMithilakActive ? (
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1 min-w-0 text-white/95 hover:text-white text-left h-[30px] px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
+            className="flex items-center gap-1.5 min-w-0 text-white/95 hover:text-white text-left py-0.5 px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
           >
-            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] flex-shrink-0" />
-            <span className="text-[11px] font-bold truncate max-w-[190px] sm:max-w-[250px] md:max-w-[320px]">
-              {displayAddress}
-            </span>
+            <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0" />
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
+              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px]">
+                {displayAddress}
+              </span>
+            </div>
             <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0" />
           </button>
         ) : (
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1 min-w-0 text-white bg-white/20 hover:bg-white/30 border border-white/25 px-2.5 h-[30px] rounded-full shadow-xs transition-all text-left"
+            className="flex items-center gap-1.5 min-w-0 text-white bg-white/20 hover:bg-white/30 border border-white/25 px-2.5 py-0.5 rounded-full shadow-xs transition-all text-left"
           >
-            <MapPin size={13} strokeWidth={2.5} className="w-[13px] h-[13px] flex-shrink-0 text-white" />
-            <span className="text-[11px] font-bold truncate max-w-[190px] sm:max-w-[250px] md:max-w-[320px] text-white">
-              {displayAddress}
-            </span>
+            <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0 text-white" />
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
+              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px] text-white">
+                {displayAddress}
+              </span>
+            </div>
             <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
           </button>
         )}
@@ -230,11 +248,11 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
             onFocus={() => {
               setSearchFocused(true);
               if (!location.pathname.includes('/search')) {
-                navigate('/search');
+                navigate(`/search?tab=${currentTab}`);
               }
             }}
             onBlur={() => setSearchFocused(false)}
-            placeholder={isAnalyzingImage ? "Analyzing image..." : (isListening ? "Listening..." : (isFreshGroceryActive ? t('nav.searchInGrocery') : "Search for products, categories..."))}
+            placeholder={isAnalyzingImage ? t('common.analyzingImage', { defaultValue: 'Analyzing image...' }) : (isListening ? t('common.listening', { defaultValue: 'Listening...' }) : (isFreshGroceryActive ? t('nav.searchInGrocery', { defaultValue: 'Search in Grocery' }) : t('nav.searchPlaceholder', { defaultValue: 'Search for products, categories...' })))}
             disabled={isAnalyzingImage}
             className="rounded-full shadow-xs"
             rightElement={

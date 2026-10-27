@@ -41,7 +41,10 @@ const LEGACY_FLOW_TO_TAB = {
   standard: MARKETPLACE_TABS.MITHILAKART,
   mithilak: MARKETPLACE_TABS.MITHILAK,
   quick_shop: MARKETPLACE_TABS.QUICK_SHOP,
+  quickshop: MARKETPLACE_TABS.QUICK_SHOP,
   fresh_grocery: MARKETPLACE_TABS.GROCERIES_FRESH,
+  freshgrocery: MARKETPLACE_TABS.GROCERIES_FRESH,
+  groceries_fresh: MARKETPLACE_TABS.GROCERIES_FRESH,
 };
 
 /** Canonical tab → legacy commerceFlow (for backward compat) */

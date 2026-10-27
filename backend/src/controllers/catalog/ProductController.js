@@ -21,22 +21,26 @@ class ProductController extends BaseController {
   }
 
   list = asyncHandler(async (req, res) => {
-    const result = await this.service.listPublic(req.query);
+    const query = { ...req.query, lang: req.language || req.query.lang || 'en' };
+    const result = await this.service.listPublic(query);
     return ApiResponse.paginated(res, result.items, result.meta);
   });
 
   listByCategory = asyncHandler(async (req, res) => {
-    const result = await this.service.listByCategory(req.params.id, req.query);
+    const query = { ...req.query, lang: req.language || req.query.lang || 'en' };
+    const result = await this.service.listByCategory(req.params.id, query);
     return ApiResponse.paginated(res, result.items, result.meta);
   });
 
   search = asyncHandler(async (req, res) => {
-    const result = await this.service.searchPublic(req.query);
+    const query = { ...req.query, lang: req.language || req.query.lang || 'en' };
+    const result = await this.service.searchPublic(query);
     return ApiResponse.paginated(res, result.items, result.meta);
   });
 
   getById = asyncHandler(async (req, res) => {
-    const data = await this.service.getPublicById(req.params.id, req.query);
+    const query = { ...req.query, lang: req.language || req.query.lang || 'en' };
+    const data = await this.service.getPublicById(req.params.id, query);
     return ApiResponse.success(res, data);
   });
 

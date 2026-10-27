@@ -58,6 +58,25 @@ export const DEFAULT_USER_APP_TABS = [
   },
 ];
 
+export const mergeWithDefaultTabs = (backendTabs) => {
+  if (!Array.isArray(backendTabs) || backendTabs.length === 0) {
+    return DEFAULT_USER_APP_TABS;
+  }
+  return DEFAULT_USER_APP_TABS.map((defaultTab) => {
+    const backendMatch = backendTabs.find(
+      (b) => b.id === defaultTab.id || b.tabId === defaultTab.id
+    );
+    if (!backendMatch) return defaultTab;
+    return {
+      ...defaultTab,
+      label: backendMatch.label || backendMatch.name || defaultTab.label,
+      enabled: backendMatch.enabled !== false,
+      route: backendMatch.route || defaultTab.route,
+      flow: defaultTab.flow || backendMatch.commerceFlow || backendMatch.flow,
+    };
+  });
+};
+
 export const getStoredHeaderTabs = () => {
   if (typeof window === 'undefined') return DEFAULT_USER_APP_TABS;
   try {
@@ -65,7 +84,7 @@ export const getStoredHeaderTabs = () => {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return mergeWithDefaultTabs(parsed);
       }
     }
   } catch (e) {
@@ -79,11 +98,16 @@ export const fetchHeaderTabsFromBackend = async () => {
     const res = await customerApi.get('/storefront/header-tabs');
     const data = res?.data !== undefined ? res.data : res;
     if (Array.isArray(data) && data.length > 0) {
+      const merged = mergeWithDefaultTabs(data);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('user_app_tabs_config', JSON.stringify(data));
-        window.dispatchEvent(new Event('user_app_tabs_updated'));
+        const currentJson = localStorage.getItem('user_app_tabs_config');
+        const nextJson = JSON.stringify(merged);
+        if (currentJson !== nextJson) {
+          localStorage.setItem('user_app_tabs_config', nextJson);
+          window.dispatchEvent(new Event('user_app_tabs_updated'));
+        }
       }
-      return data;
+      return merged;
     }
   } catch (err) {
     console.warn('Failed to fetch header tabs from backend, using cache/defaults:', err?.message || err);

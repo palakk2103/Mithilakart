@@ -9,13 +9,14 @@ const { buildSortQuery } = require('../../utils/sort');
 const { eventBus } = require('../../events/EventBus');
 
 class ProductService extends BaseService {
-  constructor(productRepository, productVariantRepository, categoryRepository, cacheService, marketplaceListingService = null) {
+  constructor(productRepository, productVariantRepository, categoryRepository, cacheService, marketplaceListingService = null, translationService = null) {
     super(productRepository);
     this.productRepository = productRepository;
     this.productVariantRepository = productVariantRepository;
     this.categoryRepository = categoryRepository;
     this.cacheService = cacheService;
     this.marketplaceListingService = marketplaceListingService;
+    this.translationService = translationService;
   }
 
   async listPublic(query = {}) {
@@ -51,8 +52,9 @@ class ProductService extends BaseService {
       this.productRepository.countPublic(combinedFilter),
     ]);
 
+    const lang = query.lang || 'en';
     const serializedItems = await Promise.all(
-      items.map(async (item) => this._withFlashSalePrice(this._serializeListItem(item), item._id))
+      items.map(async (item) => this._withFlashSalePrice(this._serializeListItem(item, lang), item._id))
     );
 
     return {
@@ -116,18 +118,20 @@ class ProductService extends BaseService {
       $text: { $search: searchTerm },
     });
 
+    const lang = query.lang || 'en';
     return {
-      items: items.map((item) => this._serializeListItem(item)),
+      items: items.map((item) => this._serializeListItem(item, lang)),
       meta: buildPaginationMeta(pagination.page, pagination.limit, total),
     };
   }
 
   async getPublicById(id, query = {}) {
+    const lang = query.lang || 'en';
     if (this.marketplaceListingService && resolveTabFromQuery(query)) {
       return this.marketplaceListingService.getProductWithListing(id, query);
     }
 
-    const cacheKey = CACHE_KEYS.productDetail(id);
+    const cacheKey = CACHE_KEYS.productDetail(id, lang);
     const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
 
@@ -137,7 +141,7 @@ class ProductService extends BaseService {
     }
 
     const variants = await this.productVariantRepository.findByProductId(product._id);
-    let payload = this._serializeDetail(product, variants);
+    let payload = this._serializeDetail(product, variants, lang);
     payload = await this._withFlashSalePrice(payload, product._id);
 
     await this.cacheService.set(cacheKey, payload, CACHE_TTL.PRODUCT_DETAIL);
@@ -230,11 +234,26 @@ class ProductService extends BaseService {
   }
 
   async update(id, data) {
-    await this.getAdminById(id);
+    const existing = await this.getAdminById(id);
     if (data.categoryId) {
       const category = await this.categoryRepository.findById(data.categoryId);
       if (!category || category.deletedAt) throw AppError.notFound('Category not found');
     }
+
+    if (this.translationService && (data.title !== undefined || data.description !== undefined)) {
+      try {
+        const titleToTrans = data.title !== undefined ? data.title : existing.title;
+        const descToTrans = data.description !== undefined ? data.description : (existing.description || '');
+        const trans = await this.translationService.translateFields({
+          title: titleToTrans,
+          description: descToTrans,
+        });
+        data.translations = { ...(existing.translations || {}), ...(data.translations || {}), ...trans };
+      } catch (_err) {
+        // Safe fallback
+      }
+    }
+
     const updated = await this.productRepository.updateById(id, data);
     await this._invalidateProductCache(id);
     return updated;
@@ -273,13 +292,21 @@ class ProductService extends BaseService {
   }
 
   async _invalidateProductCache(productId) {
-    await this.cacheService.del(CACHE_KEYS.productDetail(productId));
+    const langs = ['en', 'hi', 'mai'];
+    await Promise.all(
+      langs.map((l) => this.cacheService.del(CACHE_KEYS.productDetail(productId, l)))
+    );
   }
 
-  _serializeListItem(product) {
+  _serializeListItem(product, lang = 'en') {
+    const isLocalized = lang && lang !== 'en';
+    const localizedTitle = (isLocalized && product.translations?.[lang]?.title) || product.title;
+
     return {
       id: product._id,
-      title: product.title,
+      title: localizedTitle,
+      originalTitle: product.title,
+      translations: product.translations || {},
       price: product.price,
       mrp: product.mrp,
       stock: product.stock,
@@ -295,7 +322,7 @@ class ProductService extends BaseService {
 
   _serializeAdminItem(product) {
     return {
-      ...this._serializeListItem(product),
+      ...this._serializeListItem(product, 'en'),
       sellerId: product.sellerId,
       sku: product.sku,
       status: product.status,
@@ -304,24 +331,37 @@ class ProductService extends BaseService {
     };
   }
 
-  _serializeDetail(product, variants = []) {
+  _serializeDetail(product, variants = [], lang = 'en') {
+    const isLocalized = lang && lang !== 'en';
+    const localizedTitle = (isLocalized && product.translations?.[lang]?.title) || product.title;
+    const localizedDesc = (isLocalized && product.translations?.[lang]?.description) || product.description;
+
     return {
       ...this._serializeAdminItem(product),
-      description: product.description,
+      title: localizedTitle,
+      originalTitle: product.title,
+      description: localizedDesc,
+      originalDescription: product.description,
+      translations: product.translations || {},
       tags: product.tags,
       attributes: product.attributes,
       pickupCoordinates: product.pickupCoordinates || null,
       pickupAddress: product.pickupAddress || null,
       city: product.city || null,
-      variants: variants.map((variant) => ({
-        id: variant._id,
-        name: variant.name,
-        sku: variant.sku,
-        price: variant.price,
-        mrp: variant.mrp,
-        stock: variant.stock,
-        attributes: variant.attributes,
-      })),
+      variants: variants.map((variant) => {
+        const localizedVariantName = (isLocalized && variant.translations?.[lang]?.name) || variant.name;
+        return {
+          id: variant._id,
+          name: localizedVariantName,
+          originalName: variant.name,
+          translations: variant.translations || {},
+          sku: variant.sku,
+          price: variant.price,
+          mrp: variant.mrp,
+          stock: variant.stock,
+          attributes: variant.attributes,
+        };
+      }),
     };
   }
 }

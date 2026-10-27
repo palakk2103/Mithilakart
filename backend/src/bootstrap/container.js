@@ -227,9 +227,12 @@ const { createDealsRoutes } = require('../routes/v1/deals.routes');
 const { createEngagementRoutes } = require('../routes/v1/engagement.routes');
 const { createAdminPlatformRoutes } = require('../routes/v1/admin.platform.routes');
 const { createAdminPromotionRoutes } = require('../routes/v1/admin.promotions.routes');
-const { createNotificationsRoutes, createSupportRoutes } = require('../routes/v1/notifications.routes');
 const { createSearchRoutes } = require('../routes/v1/search.routes');
+const { createNotificationsRoutes, createSupportRoutes } = require('../routes/v1/notifications.routes');
 const { createRealtimeRoutes } = require('../routes/v1/realtime.routes');
+const { TranslationService } = require('../services/translation/TranslationService');
+const { TranslationController } = require('../controllers/translation/TranslationController');
+const { createTranslationRoutes } = require('../routes/v1/translation.routes');
 
 let container = null;
 
@@ -377,13 +380,16 @@ function buildContainer() {
     geocodingService,
   });
 
-  const categoryService = new CategoryService(categoryRepository, cacheService);
+  const translationService = new TranslationService(cacheService);
+
+  const categoryService = new CategoryService(categoryRepository, cacheService, translationService);
   const productService = new ProductService(
     productRepository,
     productVariantRepository,
     categoryRepository,
     cacheService,
-    marketplaceListingService
+    marketplaceListingService,
+    translationService
   );
 
   const storefrontService = new StorefrontService({
@@ -394,6 +400,7 @@ function buildContainer() {
     categoryService,
     cacheService,
     platformConfigService,
+    translationService,
   });
 
   const cmsService = new CmsService({
@@ -416,6 +423,7 @@ function buildContainer() {
   const storefrontController = new StorefrontController(storefrontService);
   const cmsController = new CmsController(cmsService);
   const uploadController = new UploadController(uploadService);
+  const translationController = new TranslationController(translationService);
 
   const paymentService = new PaymentService({
     paymentTransactionRepository,
@@ -537,6 +545,7 @@ function buildContainer() {
     categoryRepository,
     cacheService,
     sellerRepository,
+    translationService,
   });
 
   const sellerDashboardService = new SellerDashboardService({
@@ -896,6 +905,7 @@ function buildContainer() {
       adminReportService,
       notificationService,
       searchService,
+      translationService,
     },
     controllers: {
       customerAuthController: new CustomerAuthController(customerAuthService),
@@ -925,6 +935,7 @@ function buildContainer() {
       adminRefundController: new AdminRefundController(refundService),
       deliveryControllers,
       sellerControllers,
+      translationController,
     },
     middleware,
     routes: {
@@ -945,6 +956,7 @@ function buildContainer() {
         middleware
       ),
       catalog: createCatalogRoutes(categoryController, productController),
+      translation: createTranslationRoutes(translationController),
       storefront: createStorefrontRoutes(storefrontController),
       cms: createCmsRoutes(cmsController),
       adminCatalog: createAdminCatalogRoutes(

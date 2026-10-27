@@ -110,7 +110,9 @@ const rawCategoryProducts = {
     { id: 'f5', name: 'Men\'s Chino Pants', category: 'Fashion', price: 999, oldPrice: 1999, discount: '50% OFF', rating: 4.5, image: ClothesImg, shortDescription: 'Slim fit stretch fabric' },
     { id: 'f6', name: 'Polarized Sunglasses', category: 'Fashion', price: 599, oldPrice: 1499, discount: '60% OFF', rating: 4.6, image: FashionHero, shortDescription: 'UV400 protection aviators' },
     { id: 'f7', name: 'Women\'s Formal Blazer', category: 'Fashion', price: 1899, oldPrice: 3499, discount: '45% OFF', rating: 4.7, image: ClothesImg, shortDescription: 'Tailored office wear' },
-    { id: 'f8', name: 'Analog Wrist Watch', category: 'Fashion', price: 1499, oldPrice: 3999, discount: '62% OFF', rating: 4.8, image: FashionHero, shortDescription: 'Minimalist leather strap' }
+    { id: 'f8', name: 'Analog Wrist Watch', category: 'Fashion', price: 1499, oldPrice: 3999, discount: '62% OFF', rating: 4.8, image: FashionHero, shortDescription: 'Minimalist leather strap' },
+    { id: 'f9', name: 'Woolen Knit Winter Sweater', category: 'Fashion', price: 1199, oldPrice: 2499, discount: '52% OFF', rating: 4.7, image: FashionHero, shortDescription: 'Warm ribbed crewneck sweater' },
+    { id: 'f10', name: 'Men\'s Classic Leather Boots', category: 'Fashion', price: 2199, oldPrice: 4499, discount: '51% OFF', rating: 4.8, image: FlipFlops, shortDescription: 'Ankle length rugged boots' }
   ],
   Electrical: [
     { id: 'el1', name: 'Smart Split AC', category: 'Electrical', price: 35999, oldPrice: 51199, discount: '30% OFF', rating: 4.7, image: SplitAC, shortDescription: '1.5 Ton 5 Star Inverter' },
