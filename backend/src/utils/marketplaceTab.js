@@ -24,6 +24,16 @@ function toLegacyCommerceFlow(tab) {
   return normalized ? TAB_TO_LEGACY_FLOW[normalized] || null : null;
 }
 
+/** Canonical tabs a category is enabled for (falls back to legacy commerceFlows). */
+function categoryTabs(category) {
+  const raw = category?.visibleTabs?.length ? category.visibleTabs : (category?.commerceFlows || []);
+  return [...new Set(raw.map((t) => normalizeMarketplaceTab(t)).filter(Boolean))];
+}
+
+function legacyFlowsForTabs(tabs = []) {
+  return [...new Set(tabs.map((tab) => toLegacyCommerceFlow(tab)).filter(Boolean))];
+}
+
 function deliveryTypeForTab(tab) {
   const normalized = normalizeMarketplaceTab(tab);
   if (!normalized) return DELIVERY_TYPE.STANDARD;
@@ -54,6 +64,8 @@ module.exports = {
   normalizeMarketplaceTab,
   resolveTabFromQuery,
   toLegacyCommerceFlow,
+  categoryTabs,
+  legacyFlowsForTabs,
   deliveryTypeForTab,
   isQuickCommerceTab,
   isStandardTab,

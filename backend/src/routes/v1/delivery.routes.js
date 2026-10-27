@@ -36,8 +36,14 @@ function createDeliveryRoutes(controllers, middleware) {
   router.post('/devices', ...deliveryScope, validateBody(Joi.object({
     deviceId: Joi.string().required(),
     fcmToken: Joi.string().required(),
-    platform: Joi.string().valid('web', 'android', 'ios').optional(),
+    platform: Joi.string().trim().max(50).optional().default('web'),
   })), controllers.orders.registerDevice);
+
+  router.post('/devices/test-push', ...deliveryScope, validateBody(Joi.object({
+    title: Joi.string().optional(),
+    body: Joi.string().optional(),
+    data: Joi.object().optional(),
+  })), controllers.orders.testPush);
 
   return router;
 }

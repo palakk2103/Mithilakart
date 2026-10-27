@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, PlusCircle, Warehouse, ShoppingCart,
   RotateCcw, Users, Star, Ticket, Bell, BarChart3, Wallet,
-  Settings, LogOut, ChevronLeft, ChevronRight, Store,
+  Settings, LogOut, ChevronLeft, ChevronRight, Store, Upload,
 } from 'lucide-react';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { SIDEBAR_MENU } from '../../constants';
@@ -16,7 +16,7 @@ import { SIDEBAR_MENU } from '../../constants';
 const iconComponents = {
   LayoutDashboard, Package, PlusCircle, Warehouse, ShoppingCart,
   RotateCcw, Users, Star, Ticket, Bell, BarChart3, Wallet,
-  Settings, LogOut, Store,
+  Settings, LogOut, Store, Upload,
 };
 
 const Sidebar = ({ collapsed, onToggle }) => {

@@ -50,8 +50,8 @@ export const markDeliveryFailed = (id, reason) => api.post(`/orders/${id}/failed
 
 export const updateLocation = (latitude, longitude) => api.patch('/location', { latitude, longitude });
 
-export const registerDeliveryDevice = (deviceId, fcmToken) =>
-  api.post('/devices', { deviceId, fcmToken, platform: 'web' });
+export const registerDeliveryDevice = (deviceId, fcmToken, platform = 'web') =>
+  api.post('/devices', { deviceId, fcmToken, platform });
 
 export const getEarnings = (params) => api.get('/earnings', { params });
 

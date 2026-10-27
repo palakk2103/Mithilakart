@@ -9,7 +9,10 @@ const RATE_LIMITS = {
   authenticated: { limit: 200, windowSeconds: RATE_LIMIT_WINDOWS.MINUTE, name: 'authenticated' },
   admin: { limit: 300, windowSeconds: RATE_LIMIT_WINDOWS.MINUTE, name: 'admin' },
   authLogin: { limit: 10, windowSeconds: RATE_LIMIT_WINDOWS.FIFTEEN_MINUTES, name: 'auth_login' },
-  upload: { limit: 20, windowSeconds: RATE_LIMIT_WINDOWS.HOUR, name: 'upload' },
+  // Counts presigns only (one per file). The file POST and confirm each need a
+  // fresh single-use presign, so they can't create extra uploads. The old
+  // 20 POSTs/hour (3 per file) let a seller bulk upload only ~6 images an hour.
+  upload: { limit: 300, windowSeconds: RATE_LIMIT_WINDOWS.HOUR, name: 'upload' },
   reportExport: { limit: 5, windowSeconds: RATE_LIMIT_WINDOWS.HOUR, name: 'report_export' },
 };
 
@@ -35,7 +38,7 @@ function resolveRateLimitRule(req) {
     return RATE_LIMITS.reportExport;
   }
 
-  if (req.method === 'POST' && /\/uploads/.test(path)) {
+  if (req.method === 'POST' && /\/uploads\/presign$/.test(path)) {
     return RATE_LIMITS.upload;
   }
 

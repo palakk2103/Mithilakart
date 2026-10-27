@@ -110,6 +110,7 @@ export const categoriesApi = {
   update: (id, data) => asyncHandler(() => api.put(`/categories/${id}`, data)),
   delete: (id) => asyncHandler(() => api.delete(`/categories/${id}`)),
   reorder: (items) => asyncHandler(() => api.patch('/categories/reorder', { items })),
+  bulkImport: (payload) => asyncHandler(() => api.post('/categories/bulk-import', payload, { timeout: 180000 })),
 };
 
 // Banners / CMS

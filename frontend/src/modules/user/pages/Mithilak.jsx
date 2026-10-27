@@ -98,7 +98,7 @@ const Mithilak = () => {
             onClick={() => {
               localStorage.setItem('isMithilakFlow', 'true');
               localStorage.setItem('isQuickShopFlow', 'false');
-              navigate('/mithilak/category', { state: { category: item.name } });
+              navigate('/mithilak/category', { state: { category: item.name, categoryId: item.id } });
             }}
             className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform"
           >
@@ -132,7 +132,7 @@ const Mithilak = () => {
                 onClick={() => {
                   localStorage.setItem('isMithilakFlow', 'true');
                   localStorage.setItem('isQuickShopFlow', 'false');
-                  navigate('/mithilak/category', { state: { category: item.name } });
+                  navigate('/mithilak/category', { state: { category: item.name, categoryId: item.id } });
                 }}
                 className="flex flex-col items-center gap-2 cursor-pointer group active:scale-95 transition-transform w-full max-w-[120px] mx-auto"
               >
@@ -163,7 +163,7 @@ const Mithilak = () => {
             onClick={() => {
               localStorage.setItem('isMithilakFlow', 'true');
               localStorage.setItem('isQuickShopFlow', 'false');
-              navigate('/mithilak/category', { state: { category: 'Mithila Handcrafted Items' } });
+              navigate('/mithilak/category', { state: { category: mithilaCategories[0]?.name || 'Mithila Handcrafted Items', categoryId: mithilaCategories[0]?.id } });
             }}
             className="text-[12px] text-[#207C8A] font-bold cursor-pointer hover:underline"
           >

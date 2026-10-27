@@ -5,7 +5,7 @@ const { asyncHandler } = require('../../utils/asyncHandler');
 class DeliveryOrderController extends BaseController {
   constructor(deliveryOrderService) {
     super(deliveryOrderService);
-    this.bindMethods(['listOrders', 'getOrderDetail', 'acceptOrder', 'confirmPickup', 'confirmDelivery', 'rejectOrder', 'markDeliveryFailed', 'getProfile', 'updateProfile', 'updateLocation', 'registerDevice']);
+    this.bindMethods(['listOrders', 'getOrderDetail', 'acceptOrder', 'confirmPickup', 'confirmDelivery', 'rejectOrder', 'markDeliveryFailed', 'getProfile', 'updateProfile', 'updateLocation', 'registerDevice', 'testPush']);
   }
 
   listOrders = asyncHandler(async (req, res) => {
@@ -65,6 +65,11 @@ class DeliveryOrderController extends BaseController {
       req.body.fcmToken,
       req.body.platform || 'web'
     );
+    return ApiResponse.success(res, data);
+  });
+
+  testPush = asyncHandler(async (req, res) => {
+    const data = await this.service.testPush(req.partnerId, req.body || {});
     return ApiResponse.success(res, data);
   });
 }

@@ -76,6 +76,7 @@ const { PaymentService } = require('../services/payments/PaymentService');
 const { PricingService } = require('../services/pricing/PricingService');
 const { CouponService } = require('../services/coupons/CouponService');
 const { SellerProductService } = require('../services/seller/SellerProductService');
+const { SellerProductBulkImportService } = require('../services/seller/SellerProductBulkImportService');
 const { SellerDashboardService } = require('../services/seller/SellerDashboardService');
 const { SellerAnalyticsService } = require('../services/seller/SellerAnalyticsService');
 const { SellerCustomerService } = require('../services/seller/SellerCustomerService');
@@ -151,6 +152,7 @@ const { SellerAuthService } = require('../services/auth/SellerAuthService');
 const { AdminAuthService } = require('../services/auth/AdminAuthService');
 const { DeliveryAuthService } = require('../services/auth/DeliveryAuthService');
 const { CategoryService } = require('../services/catalog/CategoryService');
+const { CategoryBulkImportService } = require('../services/catalog/CategoryBulkImportService');
 const { ProductService } = require('../services/catalog/ProductService');
 const { StorefrontService } = require('../services/cms/StorefrontService');
 const { CmsService } = require('../services/cms/CmsService');
@@ -411,7 +413,8 @@ function buildContainer() {
     deliveryPartnerRepository,
   });
 
-  const categoryController = new CategoryController(categoryService);
+  const categoryBulkImportService = new CategoryBulkImportService({ categoryRepository, categoryService });
+  const categoryController = new CategoryController(categoryService, categoryBulkImportService);
   const productController = new ProductController(productService);
   const storefrontController = new StorefrontController(storefrontService);
   const cmsController = new CmsController(cmsService);
@@ -431,6 +434,7 @@ function buildContainer() {
     productRepository,
     marketplaceListingRepository,
     geocodingService: geocodingServiceRef,
+    categoryRepository,
   });
   const mapsController = new MapsController(nearbyService);
 
@@ -578,6 +582,7 @@ function buildContainer() {
   });
   const sellerNotificationService = new SellerNotificationService({
     sellerNotificationRepository,
+    userDeviceRepository,
   });
 
   const deliveryOtpService = new DeliveryOtpService({ redisClient });
@@ -753,7 +758,13 @@ function buildContainer() {
 
   const sellerControllers = {
     dashboard: new SellerDashboardController(sellerDashboardService),
-    products: new SellerProductController(sellerProductService),
+    products: new SellerProductController(sellerProductService, new SellerProductBulkImportService({
+      sellerProductService,
+      productRepository,
+      categoryRepository,
+      categoryService,
+      sellerRepository,
+    })),
     orders: orderController,
     returns: new SellerReturnController(sellerReturnService),
     customers: new SellerCustomerController(sellerCustomerService),

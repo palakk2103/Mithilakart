@@ -15,6 +15,7 @@ const SellerLogin = lazy(() => import('../pages/auth/SellerLogin'));
 const Dashboard = lazy(() => import('../pages/dashboard/Dashboard'));
 const ProductList = lazy(() => import('../pages/products/ProductList'));
 const AddProduct = lazy(() => import('../pages/products/AddProduct'));
+const BulkUpload = lazy(() => import('../pages/products/BulkUpload'));
 const OrderList = lazy(() => import('../pages/orders/OrderList'));
 const OrderDetail = lazy(() => import('../pages/orders/OrderDetail'));
 const ReturnList = lazy(() => import('../pages/returns/ReturnList'));
@@ -54,6 +55,7 @@ const SellerRoutes = () => {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="products" element={<ProductList />} />
               <Route path="products/add" element={<AddProduct />} />
+              <Route path="products/bulk-upload" element={<BulkUpload />} />
               <Route path="products/edit/:id" element={<AddProduct />} />
               <Route path="orders" element={<OrderList />} />
               <Route path="orders/:id" element={<OrderDetail />} />

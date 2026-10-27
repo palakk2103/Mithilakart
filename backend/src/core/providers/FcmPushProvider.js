@@ -80,11 +80,18 @@ class FcmPushProvider extends PushNotificationProvider {
       return { success: true, messageId };
     } catch (error) {
       logger.warn({ err: error, token: `${token.slice(0, 8)}...` }, 'FCM send failed');
+      const errorCode = error.code || '';
+      const errorMessage = error.message || '';
+      const isInvalidToken = errorCode === 'messaging/registration-token-not-registered'
+        || errorCode === 'messaging/invalid-registration-token'
+        || errorCode === 'messaging/invalid-argument'
+        || errorMessage.includes('registration token is not a valid')
+        || errorMessage.includes('Requested entity was not found');
+
       return {
         success: false,
-        error: error.code || error.message,
-        invalidToken: error.code === 'messaging/registration-token-not-registered'
-          || error.code === 'messaging/invalid-registration-token',
+        error: errorCode || errorMessage,
+        invalidToken: isInvalidToken,
       };
     }
   }

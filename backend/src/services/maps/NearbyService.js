@@ -4,9 +4,10 @@ const { parsePagination, buildPaginationMeta } = require('../../utils/pagination
 const { resolveTabFromQuery } = require('../../utils/marketplaceTab');
 
 class NearbyService extends BaseService {
-  constructor({ sellerRepository, productRepository, marketplaceListingRepository, geocodingService }) {
+  constructor({ sellerRepository, productRepository, marketplaceListingRepository, geocodingService, categoryRepository = null }) {
     super();
     this.sellerRepository = sellerRepository;
+    this.categoryRepository = categoryRepository;
     this.productRepository = productRepository;
     this.marketplaceListingRepository = marketplaceListingRepository;
     this.geocodingService = geocodingService;
@@ -128,9 +129,10 @@ class NearbyService extends BaseService {
       });
     }
 
+    const categoryIds = await this._categorySubtreeIds(query.categoryId);
     const filter = {
       sellerId: { $in: sellerIds },
-      ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+      ...(categoryIds ? { categoryId: { $in: categoryIds } } : {}),
     };
 
     if (query.commerceFlow) {
@@ -172,6 +174,7 @@ class NearbyService extends BaseService {
           imageUrl: item.imageUrl || item.images?.[0]?.url,
           image: item.imageUrl || item.images?.[0]?.url,
           images: item.images,
+          categoryId: item.categoryId ? String(item.categoryId) : null,
           brand: item.brand,
           rating: item.ratingAvg || 0,
           ratingAvg: item.ratingAvg || 0,
@@ -195,11 +198,29 @@ class NearbyService extends BaseService {
     };
   }
 
+  async _categorySubtreeIds(categoryId) {
+    if (!categoryId) return null;
+    if (!this.categoryRepository) return [categoryId];
+    return this.categoryRepository.findSubtreeIds(categoryId);
+  }
+
   async _nearbyListings({ query, coords, pagination, sellerIds, sellerMap, distanceBySeller, tab }) {
     const listingFilter = {
       marketplaceTab: tab,
       sellerId: { $in: sellerIds },
     };
+
+    // Scope by category BEFORE paginating — filtering the page afterwards
+    // returned empty category screens whenever the first N listings of the
+    // tab belonged to other categories.
+    const categoryIds = await this._categorySubtreeIds(query.categoryId);
+    if (categoryIds) {
+      const categoryProducts = await this.productRepository.findPublic(
+        { categoryId: { $in: categoryIds }, sellerId: { $in: sellerIds } },
+        { limit: 1000 }
+      );
+      listingFilter.productId = { $in: categoryProducts.map((p) => p._id) };
+    }
 
     const [listings, total] = await Promise.all([
       this.marketplaceListingRepository.findPublic(listingFilter, {
@@ -211,12 +232,9 @@ class NearbyService extends BaseService {
     ]);
 
     const productIds = [...new Set(listings.map((l) => l.productId))];
-    let products = productIds.length
+    const products = productIds.length
       ? await this.productRepository.findPublic({ _id: { $in: productIds } })
       : [];
-    if (query.categoryId) {
-      products = products.filter((p) => String(p.categoryId) === String(query.categoryId));
-    }
     const productMap = new Map(products.map((p) => [String(p._id), p]));
 
     const filteredItems = listings
@@ -244,6 +262,7 @@ class NearbyService extends BaseService {
           imageUrl: product.images?.[0]?.url || product.imageUrl,
           image: product.images?.[0]?.url || product.imageUrl,
           images: product.images,
+          categoryId: product.categoryId ? String(product.categoryId) : null,
           brand: product.brand,
           rating: product.ratingAvg || 0,
           ratingAvg: product.ratingAvg || 0,

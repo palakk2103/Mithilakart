@@ -1,7 +1,13 @@
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { CACHE_KEYS, CACHE_TTL } = require('../../constants/catalog');
-const { resolveTabFromQuery, toLegacyCommerceFlow } = require('../../utils/marketplaceTab');
+const { MARKETPLACE_TAB_VALUES } = require('../../constants/marketplace');
+const {
+  resolveTabFromQuery,
+  normalizeMarketplaceTab,
+  categoryTabs: tabsOf,
+  legacyFlowsForTabs: flowsForTabs,
+} = require('../../utils/marketplaceTab');
 
 class CategoryService extends BaseService {
   constructor(categoryRepository, cacheService) {
@@ -20,38 +26,73 @@ class CategoryService extends BaseService {
       sort: { sortOrder: 1, name: 1 },
     });
 
-    let filtered = allCategories;
-    if (tab) {
-      const legacy = toLegacyCommerceFlow(tab);
-      const catMap = new Map(allCategories.map((c) => [String(c._id), c]));
-
-      const isCategoryVisible = (cat) => {
-        if (!cat) return false;
-        const tabs = cat.visibleTabs?.length
-          ? cat.visibleTabs
-          : (cat.commerceFlows || []);
-        if (tabs.includes(tab) || (legacy && tabs.includes(legacy))) return true;
-        if (cat.parentId && (!tabs || tabs.length === 0)) {
-          const parent = catMap.get(String(cat.parentId));
-          return isCategoryVisible(parent);
-        }
-        return false;
-      };
-
-      filtered = allCategories.filter((cat) => {
-        if (isCategoryVisible(cat)) return true;
-        const hasVisibleChild = allCategories.some((other) => String(other.parentId) === String(cat._id) && isCategoryVisible(other));
-        return hasVisibleChild;
-      });
-    }
-
-    const tree = this._buildTree(filtered);
+    const normalizedTab = tab ? normalizeMarketplaceTab(tab) : null;
+    const filtered = this._filterVisible(allCategories, normalizedTab);
+    const tree = this._buildTree(filtered, this.effectiveTabsMap(allCategories));
     await this.cacheService.set(cacheKey, tree, CACHE_TTL.CATEGORIES_TREE);
     return tree;
   }
 
+  /**
+   * A category is shown only when it AND every ancestor are active and enabled
+   * for the tab. A subcategory's effective tabs are its own tabs intersected
+   * with its parent's; when they don't overlap at all (no tabs, or the old
+   * schema default ['mithilakart'] under e.g. a Groceries-only parent) it
+   * inherits the parent's tabs.
+   *
+   * The previous rule also pulled a parent INTO a tab whenever any child was
+   * enabled there, so a subcategory created with the admin form's default
+   * "all tabs" leaked its parent into every tab — and children of a deleted or
+   * inactive parent were rendered as top-level categories.
+   */
+  _filterVisible(categories, tab) {
+    const effective = this.effectiveTabsMap(categories);
+    return categories.filter((cat) => {
+      const tabs = effective.get(String(cat._id));
+      if (!tabs) return false; // orphan: parent deleted or inactive
+      return tab ? tabs.includes(tab) : true;
+    });
+  }
+
+  /** Map of categoryId -> effective tabs; orphans (missing ancestor) map to null. */
+  effectiveTabsMap(categories) {
+    const byId = new Map(categories.map((c) => [String(c._id), c]));
+    const memo = new Map();
+
+    const resolve = (cat, depth = 0) => {
+      const key = String(cat._id);
+      if (memo.has(key)) return memo.get(key);
+      if (depth > 10) return null;
+
+      const own = tabsOf(cat);
+      let result = own;
+      if (cat.parentId) {
+        const parent = byId.get(String(cat.parentId));
+        const parentTabs = parent ? resolve(parent, depth + 1) : null;
+        if (!parentTabs) {
+          result = null;
+        } else {
+          const overlap = own.filter((t) => parentTabs.includes(t));
+          result = overlap.length ? overlap : parentTabs;
+        }
+      }
+      memo.set(key, result);
+      return result;
+    };
+
+    categories.forEach((cat) => resolve(cat));
+    return memo;
+  }
+
   async listAdmin(filters = {}) {
-    return this.categoryRepository.findActive(filters, { sort: { sortOrder: 1, name: 1 } });
+    const categories = await this.categoryRepository.findActive(filters, { sort: { sortOrder: 1, name: 1 } });
+    const byId = new Map(categories.map((c) => [String(c._id), c]));
+    return categories.map((c) => {
+      const obj = c.toObject ? c.toObject() : { ...c };
+      const parent = obj.parentId ? byId.get(String(obj.parentId)) : null;
+      obj.parentName = parent ? parent.name : null;
+      return obj;
+    });
   }
 
   async getById(id) {
@@ -68,10 +109,18 @@ class CategoryService extends BaseService {
     }
 
     const payload = { ...data, slug: data.slug.toLowerCase() };
-    if (payload.visibleTabs?.length && !payload.commerceFlows?.length) {
-      payload.commerceFlows = payload.visibleTabs
-        .map((tab) => toLegacyCommerceFlow(tab))
-        .filter(Boolean);
+
+    if (payload.parentId) {
+      const parent = await this.getById(payload.parentId);
+      // A subcategory without explicit tabs used to fall back to the schema
+      // default ['mithilakart'] and silently vanish from the parent's tab.
+      if (!payload.visibleTabs?.length) {
+        payload.visibleTabs = tabsOf(parent);
+      }
+    }
+
+    if (payload.visibleTabs?.length) {
+      payload.commerceFlows = flowsForTabs(payload.visibleTabs);
     }
 
     const category = await this.categoryRepository.create(payload);
@@ -81,19 +130,72 @@ class CategoryService extends BaseService {
   }
 
   async update(id, data) {
-    await this.getById(id);
+    const existing = await this.getById(id);
 
     if (data.slug && await this.categoryRepository.slugExists(data.slug, id)) {
       throw AppError.conflict('Category slug already exists');
     }
 
-    const category = await this.categoryRepository.updateById(id, {
+    if (data.parentId) {
+      if (String(data.parentId) === String(id)) {
+        throw AppError.validation('A category cannot be its own parent');
+      }
+      await this.getById(data.parentId);
+      const subtree = await this.categoryRepository.findSubtreeIds(id);
+      if (subtree.some((sid) => String(sid) === String(data.parentId))) {
+        throw AppError.validation('A category cannot be moved under its own subcategory');
+      }
+    }
+
+    const payload = {
       ...data,
       ...(data.slug ? { slug: data.slug.toLowerCase() } : {}),
-    });
+    };
+    if (payload.visibleTabs?.length) {
+      payload.commerceFlows = flowsForTabs(payload.visibleTabs);
+    }
+
+    const category = await this.categoryRepository.updateById(id, payload);
+
+    if (payload.visibleTabs?.length) {
+      await this._cascadeTabs(id, tabsOf(existing), tabsOf(category));
+    }
 
     await this._invalidateCache();
     return category;
+  }
+
+  /**
+   * Propagate tabs added to / removed from a category onto its descendants,
+   * so enabling a parent for a tab also enables its subcategories there.
+   * Per-child exclusions for tabs that did not change are preserved.
+   */
+  async _cascadeTabs(id, previousTabs, nextTabs) {
+    const added = nextTabs.filter((t) => !previousTabs.includes(t));
+    const removed = previousTabs.filter((t) => !nextTabs.includes(t));
+    if (!added.length && !removed.length) return;
+
+    const subtree = await this.categoryRepository.findSubtreeIds(id);
+    const descendantIds = subtree.filter((sid) => String(sid) !== String(id));
+    if (!descendantIds.length) return;
+
+    const filter = { _id: { $in: descendantIds }, deletedAt: null };
+    if (added.length) {
+      await this.categoryRepository.updateMany(filter, {
+        $addToSet: {
+          visibleTabs: { $each: added },
+          commerceFlows: { $each: flowsForTabs(added) },
+        },
+      });
+    }
+    if (removed.length) {
+      await this.categoryRepository.updateMany(filter, {
+        $pull: {
+          visibleTabs: { $in: removed },
+          commerceFlows: { $in: flowsForTabs(removed) },
+        },
+      });
+    }
   }
 
   async delete(id) {
@@ -117,7 +219,7 @@ class CategoryService extends BaseService {
     return this.listAdmin();
   }
 
-  _buildTree(categories) {
+  _buildTree(categories, effectiveTabs = null) {
     const map = new Map();
     const roots = [];
 
@@ -132,6 +234,7 @@ class CategoryService extends BaseService {
         iconUrl: category.iconUrl,
         sortOrder: category.sortOrder,
         commerceFlows: category.commerceFlows,
+        visibleTabs: effectiveTabs?.get(String(category._id)) || tabsOf(category),
         children: [],
       });
     });
@@ -154,11 +257,10 @@ class CategoryService extends BaseService {
       'mithilak',
       'quick_shop',
       'fresh_grocery',
-      'groceries_fresh',
-      'mithilakart',
+      ...MARKETPLACE_TAB_VALUES,
     ];
     await Promise.all(
-      keys.map((k) => this.cacheService.del(CACHE_KEYS.categoriesTree(k)))
+      [...new Set(keys)].map((k) => this.cacheService.del(CACHE_KEYS.categoriesTree(k)))
     );
   }
 }

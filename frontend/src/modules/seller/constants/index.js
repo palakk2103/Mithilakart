@@ -85,6 +85,7 @@ export const SIDEBAR_MENU = [
     items: [
       { name: 'Products', path: '/seller/products', icon: 'Package' },
       { name: 'Add Product', path: '/seller/products/add', icon: 'PlusCircle' },
+      { name: 'Bulk Upload', path: '/seller/products/bulk-upload', icon: 'Upload' },
       { name: 'Inventory', path: '/seller/inventory', icon: 'Warehouse' },
     ],
   },

@@ -3,6 +3,7 @@ const { queueManager } = require('../../queues/QueueManager');
 const { getProvider } = require('../../core/providers.registry');
 const { MockEmailProvider } = require('../../core/providers/MockNotificationProviders');
 const { eventBus } = require('../../events/EventBus');
+const { logger } = require('../../utils/logger');
 
 class NotificationService extends BaseService {
   constructor({
@@ -116,11 +117,15 @@ class NotificationService extends BaseService {
     }
 
     if (prefs.smsEnabled !== false && user.phone) {
-      await this.smsProvider.send({ phone: user.phone, message: body });
+      await this.smsProvider.send({ phone: user.phone, message: body }).catch((err) => {
+        logger.warn({ err }, 'SMS send failed in dispatch');
+      });
     }
 
     if (prefs.emailEnabled !== false && user.email) {
-      await this.emailProvider.send({ email: user.email, subject: title, body });
+      await this.emailProvider.send({ email: user.email, subject: title, body }).catch((err) => {
+        logger.warn({ err }, 'Email send failed in dispatch');
+      });
     }
 
     return { delivered: true };
@@ -190,7 +195,9 @@ class NotificationService extends BaseService {
     }
 
     if (prefs.smsEnabled !== false && targetPhone) {
-      await this.smsProvider.send({ phone: targetPhone, message: body });
+      await this.smsProvider.send({ phone: targetPhone, message: body }).catch((err) => {
+        logger.warn({ err }, 'SMS send failed in notifyCustomerDeliveryOtp');
+      });
     }
 
     return { delivered: true };
@@ -259,6 +266,118 @@ class NotificationService extends BaseService {
       fcmToken,
       platform,
     });
+  }
+
+  async sendTestPushToUser(userId, portal = 'customer', { title = 'Mithilakart Test Notification', body = 'Your push notifications are working properly!', data = {} } = {}) {
+    const devices = await this.userDeviceRepository.find({ userId, portal });
+    if (!devices || devices.length === 0) {
+      return {
+        success: false,
+        message: 'No registered devices found for this user and portal',
+        devicesFound: 0,
+        results: [],
+      };
+    }
+
+    const results = [];
+    const staleTokens = [];
+
+    for (const device of devices) {
+      if (!device.fcmToken) {
+        results.push({
+          deviceId: device.deviceId,
+          platform: device.platform,
+          success: false,
+          error: 'missing_fcm_token',
+        });
+        continue;
+      }
+
+      const res = await this.pushProvider.sendToDevice({
+        token: device.fcmToken,
+        title,
+        body,
+        data: {
+          ...data,
+          portal,
+          test: 'true',
+          sentAt: new Date().toISOString(),
+        },
+      });
+
+      results.push({
+        deviceId: device.deviceId,
+        platform: device.platform,
+        ...res,
+      });
+
+      if (res?.invalidToken) {
+        staleTokens.push(device._id);
+      }
+    }
+
+    if (staleTokens.length) {
+      await Promise.all(
+        staleTokens.map((id) => this.userDeviceRepository.updateById(id, { fcmToken: null }))
+      );
+    }
+
+    const anySuccess = results.some((r) => r.success);
+    return {
+      success: anySuccess,
+      provider: this.pushProvider?.providerName || 'unknown',
+      devicesFound: devices.length,
+      results,
+    };
+  }
+
+  async sendDirectPush({
+    fcmToken,
+    title = 'Mithilakart Push Notification',
+    body = 'This is a test notification from Mithilakart backend',
+    data = {},
+    platform = 'app',
+    deviceId = null,
+    saveToDb = false,
+    portal = 'customer',
+    userId = null,
+  }) {
+    let savedDevice = null;
+    if (saveToDb && deviceId) {
+      const mongoose = require('mongoose');
+      const targetUserId = userId && mongoose.Types.ObjectId.isValid(userId)
+        ? new mongoose.Types.ObjectId(userId)
+        : new mongoose.Types.ObjectId();
+
+      savedDevice = await this.userDeviceRepository.upsertDevice({
+        userId: targetUserId,
+        portal: ['customer', 'seller', 'delivery', 'admin'].includes(portal) ? portal : 'customer',
+        deviceId,
+        fcmToken,
+        platform: platform || 'app',
+      });
+    }
+
+    const pushResult = await this.pushProvider.sendToDevice({
+      token: fcmToken,
+      title,
+      body,
+      data: {
+        ...data,
+        portal,
+        platform: platform || 'app',
+        source: 'postman_direct_test',
+        sentAt: new Date().toISOString(),
+      },
+    });
+
+    return {
+      success: !!pushResult?.success,
+      provider: this.pushProvider?.providerName || 'unknown',
+      pushResult,
+      deviceSaved: !!savedDevice,
+      savedDevice,
+    };
   }
 
   async broadcast({ title, body, userIds = null }) {

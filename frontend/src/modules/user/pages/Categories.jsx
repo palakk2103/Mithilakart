@@ -312,11 +312,11 @@ const Categories = () => {
                       if (isMithilakFlow) {
                         localStorage.setItem('isMithilakFlow', 'true');
                         localStorage.setItem('isQuickShopFlow', 'false');
-                        navigate('/mithilak/category', { state: { category: item.name } });
-                      } else if (isQuickShopFlow) {
+                        navigate('/mithilak/category', { state: { category: item.name, categoryId: item.id } });
+                      } else if (isQuickShopFlow || isFreshGroceryFlow) {
                         localStorage.setItem('isQuickShopFlow', 'true');
                         localStorage.setItem('isMithilakFlow', 'false');
-                        navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name } });
+                        navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name, categoryId: item.id } });
                       } else {
                         navigate(item.path);
                       }
@@ -358,9 +358,9 @@ const Categories = () => {
                       const firstItem = sectionsList[activeSectionIndex].items[0];
                       if (firstItem) {
                         if (isMithilakFlow) {
-                          navigate('/mithilak/category', { state: { category: firstItem.name } });
-                        } else if (isQuickShopFlow) {
-                          navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: firstItem.name } });
+                          navigate('/mithilak/category', { state: { category: firstItem.name, categoryId: firstItem.id } });
+                        } else if (isQuickShopFlow || isFreshGroceryFlow) {
+                          navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: firstItem.name, categoryId: firstItem.id } });
                         } else {
                           navigate(firstItem.path);
                         }
@@ -400,11 +400,11 @@ const Categories = () => {
                     if (isMithilakFlow) {
                       localStorage.setItem('isMithilakFlow', 'true');
                       localStorage.setItem('isQuickShopFlow', 'false');
-                      navigate('/mithilak/category', { state: { category: item.name } });
-                    } else if (isQuickShopFlow) {
+                      navigate('/mithilak/category', { state: { category: item.name, categoryId: item.id } });
+                    } else if (isQuickShopFlow || isFreshGroceryFlow) {
                       localStorage.setItem('isQuickShopFlow', 'true');
                       localStorage.setItem('isMithilakFlow', 'false');
-                      navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name } });
+                      navigate(isFreshGroceryFlow ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name, categoryId: item.id } });
                     } else {
                       navigate(item.path);
                     }

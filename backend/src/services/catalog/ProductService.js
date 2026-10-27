@@ -64,16 +64,7 @@ class ProductService extends BaseService {
   async _getCategorySubtreeIds(categoryId) {
     if (!categoryId || !this.categoryRepository) return [categoryId];
     try {
-      let target = await this.categoryRepository.findById(categoryId);
-      if (!target) {
-        target = await this.categoryRepository.findOne({
-          $or: [{ slug: categoryId }, { name: new RegExp(`^${categoryId}$`, 'i') }],
-          deletedAt: null,
-        });
-      }
-      const catId = target ? target._id : categoryId;
-      const children = await this.categoryRepository.find({ parentId: catId, deletedAt: null });
-      return [catId, ...children.map((c) => c._id)];
+      return await this.categoryRepository.findSubtreeIds(categoryId);
     } catch {
       return [categoryId];
     }

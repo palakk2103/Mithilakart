@@ -9,6 +9,7 @@ const { SELLER_REJECT_REASON_VALUES } = require('../../constants/fulfillment');
 const {
   sellerProductCreateSchema,
   sellerProductUpdateSchema,
+  sellerProductBulkImportSchema,
   sellerProductStatusSchema,
   sellerCouponSchema,
   sellerSettingsProfileSchema,
@@ -31,6 +32,7 @@ function createSellerRoutes(controllers, middleware) {
   router.get('/products', ...sellerScope, validateQuery(listProductsQuerySchema), controllers.products.list);
   router.get('/products/:id', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), controllers.products.getById);
   router.post('/products', ...sellerScope, validateBody(sellerProductCreateSchema), controllers.products.create);
+  router.post('/products/bulk-import', ...sellerScope, validateBody(sellerProductBulkImportSchema), controllers.products.bulkImport);
   router.put('/products/:id', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), validateBody(sellerProductUpdateSchema), controllers.products.update);
   router.delete('/products/:id', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), controllers.products.remove);
   router.post('/products/:id/duplicate', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), controllers.products.duplicate);
@@ -104,6 +106,36 @@ function createSellerRoutes(controllers, middleware) {
   router.get('/notifications', ...sellerScope, controllers.notifications.list);
   router.patch('/notifications/:id/read', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), controllers.notifications.markRead);
   router.patch('/notifications/read-all', ...sellerScope, controllers.notifications.markAllRead);
+  router.post(
+    '/devices',
+    ...sellerScope,
+    validateBody(Joi.object({
+      deviceId: Joi.string().required(),
+      fcmToken: Joi.string().required(),
+      platform: Joi.string().trim().max(50).optional().default('web'),
+    })),
+    controllers.notifications.registerDevice
+  );
+  router.post(
+    '/notifications/devices',
+    ...sellerScope,
+    validateBody(Joi.object({
+      deviceId: Joi.string().required(),
+      fcmToken: Joi.string().required(),
+      platform: Joi.string().trim().max(50).optional().default('web'),
+    })),
+    controllers.notifications.registerDevice
+  );
+  router.post(
+    '/notifications/test-push',
+    ...sellerScope,
+    validateBody(Joi.object({
+      title: Joi.string().optional(),
+      body: Joi.string().optional(),
+      data: Joi.object().optional(),
+    })),
+    controllers.notifications.testPush
+  );
 
   router.get('/reviews', ...sellerScope, controllers.reviews.list);
   router.post('/reviews/:id/reply', ...sellerScope, validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({ reply: Joi.string().required() })), controllers.reviews.reply);

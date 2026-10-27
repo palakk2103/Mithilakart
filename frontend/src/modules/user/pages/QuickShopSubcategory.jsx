@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Share2, ChevronDown, Heart } from 'lucide-react';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
@@ -6,7 +6,8 @@ import closedShutter from '../../../assets/closed_shutter.png';
 import { getCategories, getCategoryProducts, getNearbyProducts } from '../services/catalogApi';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { formatLocationLabel } from '../../../shared/services/locationService';
-import { findCategoryByName, extractList, mapProductForCard } from '../utils/mappers';
+import { extractList, mapProductForCard } from '../utils/mappers';
+import { getImageUrl } from '../../../shared/utils/imageUtils';
 import { addProductToCart } from '../utils/cartUtils';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
 import useAccountStore from '../../../store/useAccountStore';
@@ -27,10 +28,45 @@ const EMPTY_CATEGORY = {
 
 const getCategoryData = () => EMPTY_CATEGORY;
 
+/**
+ * Find the clicked category in the tab's tree: by id first, then by exact
+ * (case-insensitive) name, then by a loose name match for old links.
+ */
+const locateCategory = (tree, id, name) => {
+  const all = [];
+  const walk = (nodes, parent) => nodes.forEach((node) => {
+    all.push({ node, parent });
+    walk(node.children || [], node);
+  });
+  walk(tree, null);
+
+  const wanted = (name || '').toLowerCase().trim();
+  return (id && all.find(({ node }) => String(node.id) === String(id)))
+    || (wanted && all.find(({ node }) => node.name.toLowerCase().trim() === wanted))
+    || (wanted && all.find(({ node }) => {
+      const n = node.name.toLowerCase();
+      return n.includes(wanted) || wanted.includes(n);
+    }))
+    || { node: null, parent: null };
+};
+
+/** categoryId → id of the sidebar subcategory it belongs to (any depth). */
+const mapToSidebarIds = (root) => {
+  const owner = new Map();
+  const walk = (node, sidebarId) => {
+    owner.set(String(node.id), sidebarId);
+    (node.children || []).forEach((child) => walk(child, sidebarId));
+  };
+  (root.children || []).forEach((child) => walk(child, String(child.id)));
+  return owner;
+};
+
 const QuickShopSubcategory = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const categoryName = location.state?.category || 'Fruits & Vegetables';
+  const requestedName = location.state?.category || '';
+  const requestedId = location.state?.categoryId || null;
+  const [categoryName, setCategoryName] = useState(requestedName);
 
   const isClosed = React.useMemo(() => {
     const force = localStorage.getItem('forceShopClosed');
@@ -70,53 +106,57 @@ const QuickShopSubcategory = () => {
 
   const deliverLabel = formatLocationLabel(liveLocation || { address: selectedAddr?.address || 'Rangpuri-Mahipalpur, New Delhi' });
 
+  const marketplaceTab = isFreshGroceryFlow ? 'groceries_fresh' : isMithilakFlow ? 'mithilak' : 'quick_shop';
+  const commerceFlow = isFreshGroceryFlow ? 'fresh_grocery' : isMithilakFlow ? 'mithilak' : 'quick_shop';
+  const [activeSub, setActiveSub] = useState('all');
+  // The tab's category tree doesn't depend on location — fetch it once per tab.
+  const treeCacheRef = useRef({ tab: null, tree: null });
+  // Category whose products are on screen; when only the live location
+  // changes we refresh products in place instead of blanking the page.
+  const loadedKeyRef = useRef(null);
+
   useEffect(() => {
     let cancelled = false;
+    const loadKey = `${marketplaceTab}|${requestedId || requestedName}`;
+    const isRefresh = loadedKeyRef.current === loadKey;
+
+    const toCard = (p, sidebarIdOf, fromNearby) => {
+      const card = mapProductForCard(p);
+      const categoryId = String(p.categoryId ?? p.product?.categoryId ?? '');
+      return {
+        id: card.id,
+        name: card.name,
+        img: card.image,
+        brand: card.brand || (fromNearby ? 'Nearby Seller' : 'Mithila Brand'),
+        weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
+        price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
+        oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
+        eta: p.deliveryPromiseMinutes
+          ? `${p.deliveryPromiseMinutes} mins`
+          : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
+        tags: [fromNearby ? 'Nearby' : 'Fresh'],
+        // Sidebar id this product falls under; 'all' when it sits on the parent itself.
+        category: sidebarIdOf.get(categoryId) || 'all',
+      };
+    };
 
     const load = async () => {
-      setLoading(true);
-      setNotDeliverable(false);
+      if (!isRefresh) {
+        setLoading(true);
+        setNotDeliverable(false);
+      }
       try {
-        const commerceFlow = isFreshGroceryFlow ? 'fresh_grocery' : 'quick_shop';
-
-        try {
-          const nearby = await getNearbyProducts({
-            lat: effectiveLat,
-            lng: effectiveLng,
-            commerceFlow,
-            limit: 40,
-          });
-          const nearbyPayload = nearby?.data ?? nearby;
-          const nearbyItems = extractList(nearbyPayload).map((p) => {
-            const card = mapProductForCard(p);
-            return {
-              id: card.id,
-              name: card.name,
-              img: card.image,
-              brand: card.brand || 'Nearby Seller',
-              weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
-              price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
-              oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
-              eta: p.deliveryPromiseMinutes
-                ? `${p.deliveryPromiseMinutes} mins`
-                : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
-              tags: ['Nearby'],
-              category: 'all',
-            };
-          });
-
-          if (!cancelled && nearbyItems.length > 0) {
-            setProductsList(nearbyItems);
-            setLoading(false);
-            return;
-          }
-        } catch {
-          // Continue to category catalog fallback so the screen is never left empty
+        // 1. Resolve the category and its subcategories FIRST. The old code
+        //    returned as soon as nearby products existed, so the subcategory
+        //    sidebar was never filled and every category showed the same
+        //    (unfiltered) nearby products.
+        let tree = treeCacheRef.current.tab === marketplaceTab ? treeCacheRef.current.tree : null;
+        if (!tree) {
+          tree = extractList(await getCategories({ marketplaceTab }));
+          treeCacheRef.current = { tab: marketplaceTab, tree };
         }
-
-        const categories = await getCategories({ commerceFlow });
-        const match = findCategoryByName(categories, categoryName);
-        if (!match) {
+        const { node, parent } = locateCategory(tree, requestedId, requestedName);
+        if (!node) {
           if (!cancelled) {
             setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
             setProductsList([]);
@@ -124,37 +164,56 @@ const QuickShopSubcategory = () => {
           return;
         }
 
-        const data = await getCategoryProducts(match.id, { limit: 40 });
-        const mapped = extractList(data).map((p) => {
-          const card = mapProductForCard(p);
-          return {
-            id: card.id,
-            name: card.name,
-            img: card.image,
-            brand: card.brand || 'Mithila Brand',
-            weight: '1 Unit',
-            price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
-            oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
-            eta: p.deliveryPromiseMinutes ? `${p.deliveryPromiseMinutes} mins` : '14 mins',
-            tags: ['Fresh'],
-            category: 'all',
-          };
-        });
+        // A clicked subcategory opens its parent with that subcategory selected.
+        const root = parent && !(node.children || []).length ? parent : node;
+        const sidebarIdOf = mapToSidebarIds(root);
+        if (!cancelled && !isRefresh) {
+          setCategoryName(root.name);
+          setSubCategories([
+            { id: 'all', name: 'All', icon: getImageUrl(root.imageUrl || root.iconUrl || FALLBACK_IMAGE) },
+            ...(root.children || []).map((child) => ({
+              id: String(child.id),
+              name: child.name,
+              icon: getImageUrl(child.imageUrl || child.iconUrl || FALLBACK_IMAGE),
+            })),
+          ]);
+          setActiveSub(root === node ? 'all' : String(node.id));
+        }
+
+        // 2. Products of the whole category subtree: nearby sellers first for
+        //    quick commerce, then the tab's catalog so the screen is never empty.
+        let items = [];
+        let fromNearby = false;
+        let undeliverable = false;
+        if (!isMithilakFlow) {
+          try {
+            const nearby = await getNearbyProducts({
+              lat: effectiveLat,
+              lng: effectiveLng,
+              commerceFlow,
+              categoryId: String(root.id),
+              limit: 100,
+            });
+            const payload = nearby?.data ?? nearby;
+            items = extractList(payload);
+            fromNearby = items.length > 0;
+            undeliverable = payload?.deliverable === false && items.length === 0;
+          } catch {
+            items = [];
+          }
+        }
+        if (!items.length) {
+          items = extractList(await getCategoryProducts(String(root.id), { marketplaceTab, limit: 100 }));
+        }
 
         if (!cancelled) {
-          setSubCategories(
-            (match.children || []).length
-              ? [{ id: 'all', name: 'All', icon: match.imageUrl || FALLBACK_IMAGE }, ...match.children.map((child) => ({
-                  id: child.id,
-                  name: child.name,
-                  icon: child.imageUrl || child.iconUrl || FALLBACK_IMAGE,
-                }))]
-              : [{ id: 'all', name: 'All', icon: match.imageUrl || FALLBACK_IMAGE }]
-          );
-          setProductsList(mapped.length ? mapped : []);
+          setProductsList(items.map((p) => toCard(p, sidebarIdOf, fromNearby)));
+          setNotDeliverable(undeliverable && items.length === 0);
+          loadedKeyRef.current = loadKey;
         }
       } catch {
-        if (!cancelled) {
+        // A failed background refresh keeps what is already on screen.
+        if (!cancelled && !isRefresh) {
           setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
           setProductsList([]);
         }
@@ -167,15 +226,10 @@ const QuickShopSubcategory = () => {
     return () => {
       cancelled = true;
     };
-  }, [categoryName, liveLocation?.latitude, liveLocation?.longitude, isFreshGroceryFlow]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedId, requestedName, marketplaceTab, liveLocation?.latitude, liveLocation?.longitude]);
 
-  const [activeSub, setActiveSub] = useState('all');
   const [favorites, setFavorites] = useState([]);
-
-  // Reset active subcategory when categoryName changes
-  useEffect(() => {
-    setActiveSub('all');
-  }, [categoryName]);
 
   const toggleFavorite = (id) => {
     if (favorites.includes(id)) {
@@ -628,6 +682,18 @@ const QuickShopSubcategory = () => {
               );
             })}
           </div>
+          )}
+
+          {!notDeliverable && loading && (
+            <p className="text-center text-[12px] font-bold text-gray-400 py-10">Loading products…</p>
+          )}
+          {!notDeliverable && !loading && filteredProducts.length === 0 && (
+            <div className="text-center py-10 px-4">
+              <p className="text-[13px] font-bold text-gray-700">No products here yet</p>
+              <p className="text-[11px] text-gray-500 mt-1">
+                {activeSub === 'all' ? 'New products for this category are on the way.' : 'Try "All" or another subcategory.'}
+              </p>
+            </div>
           )}
 
         </div>

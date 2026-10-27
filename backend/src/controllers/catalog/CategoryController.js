@@ -3,9 +3,10 @@ const { asyncHandler } = require('../../utils/asyncHandler');
 const { ApiResponse } = require('../../utils/ApiResponse');
 
 class CategoryController extends BaseController {
-  constructor(categoryService) {
+  constructor(categoryService, categoryBulkImportService = null) {
     super(categoryService);
-    this.bindMethods(['list', 'listAdmin', 'getById', 'create', 'update', 'delete', 'reorder']);
+    this.categoryBulkImportService = categoryBulkImportService;
+    this.bindMethods(['list', 'listAdmin', 'getById', 'create', 'update', 'delete', 'reorder', 'bulkImport']);
   }
 
   list = asyncHandler(async (req, res) => {
@@ -41,6 +42,11 @@ class CategoryController extends BaseController {
 
   reorder = asyncHandler(async (req, res) => {
     const data = await this.service.reorder(req.body.items);
+    return ApiResponse.success(res, data);
+  });
+
+  bulkImport = asyncHandler(async (req, res) => {
+    const data = await this.categoryBulkImportService.import(req.body);
     return ApiResponse.success(res, data);
   });
 }

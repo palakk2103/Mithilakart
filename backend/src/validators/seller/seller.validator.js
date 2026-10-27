@@ -43,6 +43,36 @@ const sellerProductUpdateSchema = sellerProductCreateSchema.fork(
   (field) => field.optional()
 );
 
+// Cells are validated row-by-row by SellerProductBulkImportService so the
+// seller gets a per-row report instead of one 422 for the whole sheet.
+const sheetCell = Joi.alternatives().try(Joi.string().allow(''), Joi.number(), Joi.boolean()).allow(null);
+const sheetList = Joi.alternatives().try(Joi.array().items(Joi.string().allow('')).max(20), sheetCell);
+
+const sellerProductBulkImportSchema = Joi.object({
+  dryRun: Joi.boolean().default(true),
+  rows: Joi.array().items(Joi.object({
+    title: sheetCell,
+    description: sheetCell,
+    sku: sheetCell,
+    price: sheetCell,
+    mrp: sheetCell,
+    stock: sheetCell,
+    category: sheetCell,
+    subcategory: sheetCell,
+    tabs: sheetCell,
+    brand: sheetCell,
+    tags: sheetCell,
+    imageUrls: sheetList,
+    videoUrls: sheetList,
+    deliveryPromiseMinutes: sheetCell,
+    serviceableRadiusKm: sheetCell,
+    weightKg: sheetCell,
+    dimensionsCm: sheetCell,
+    deliveryEstimate: sheetCell,
+    specifications: sheetCell,
+  })).min(1).max(500).required(),
+});
+
 const sellerProductStatusSchema = Joi.object({
   status: Joi.string().valid(...PRODUCT_STATUS_VALUES).required(),
 });
@@ -106,6 +136,7 @@ const sellerStockUpdateSchema = Joi.object({
 module.exports = {
   sellerProductCreateSchema,
   sellerProductUpdateSchema,
+  sellerProductBulkImportSchema,
   sellerProductStatusSchema,
   sellerCouponSchema,
   sellerSettingsProfileSchema,

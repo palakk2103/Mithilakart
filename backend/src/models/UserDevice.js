@@ -9,7 +9,7 @@ const userDeviceSchema = new mongoose.Schema(
       required: true,
     },
     deviceId: { type: String, required: true },
-    platform: { type: String, default: 'web' },
+    platform: { type: String, default: 'web', index: true },
     fcmToken: { type: String, default: null, index: true, sparse: true },
     userAgent: { type: String, default: null },
     lastActiveAt: { type: Date, default: Date.now },
