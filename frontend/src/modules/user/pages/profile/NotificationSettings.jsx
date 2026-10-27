@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Bell, Smartphone, Mail, Zap, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Bell, Smartphone, Mail, Zap, ChevronRight, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { updateNotificationPreferences } from '../../services/userApi';
+import { registerPushToken, sendTestPush, detectPlatform } from '../../../../shared/services/pushNotifications';
 
 const NotificationSettings = () => {
   const navigate = useNavigate();
@@ -14,6 +16,9 @@ const NotificationSettings = () => {
     newsletter: false
   });
   const [saving, setSaving] = useState(false);
+  const [testingPush, setTestingPush] = useState(false);
+  const [registeringDevice, setRegisteringDevice] = useState(false);
+  const [testResult, setTestResult] = useState(null);
 
   const toggleSetting = async (key) => {
     const next = { ...settings, [key]: !settings[key] };
@@ -25,6 +30,39 @@ const NotificationSettings = () => {
       setSettings(settings);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRegisterDevice = async (overridePlatform = null) => {
+    setRegisteringDevice(true);
+    try {
+      const platformToUse = overridePlatform || detectPlatform();
+      const res = await registerPushToken('customer', platformToUse);
+      toast.success(`Device token registered with platform: ${platformToUse}`);
+      setTestResult({ success: true, message: `Device registered on platform "${platformToUse}"` });
+    } catch (err) {
+      toast.error('Failed to register device: ' + (err.message || 'Unknown error'));
+      setTestResult({ success: false, message: err.message });
+    } finally {
+      setRegisteringDevice(false);
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    setTestingPush(true);
+    try {
+      const res = await sendTestPush('customer', {
+        title: 'Mithilakart Push Test',
+        body: 'Push notification is active and working properly!',
+      });
+      const data = res.data?.data || res.data || {};
+      toast.success('Test push dispatched via ' + (data.provider || 'FCM') + '!');
+      setTestResult({ success: true, ...data });
+    } catch (err) {
+      toast.error('Test push error: ' + (err.response?.data?.error?.message || err.message));
+      setTestResult({ success: false, message: err.message });
+    } finally {
+      setTestingPush(false);
     }
   };
 
@@ -119,6 +157,52 @@ const NotificationSettings = () => {
               >
                 <div className={`absolute top-1 w-4.5 h-4.5 bg-white rounded-full transition-all shadow-sm ${settings.newsletter ? 'right-1' : 'left-1'}`}></div>
               </button>
+           </div>
+        </div>
+
+        {/* Live Push Notification & FCM Diagnostics Card */}
+        <div className="space-y-4">
+           <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>FCM Push Notification Test</h2>
+           <div className="bg-white border border-slate-100 shadow-sm rounded-3xl p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                 <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Device & Push Status</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Test FCM token generation and register platform app/web to database.</p>
+                 </div>
+                 <span className="text-[10px] font-bold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 uppercase tracking-wider">
+                    FCM Live
+                 </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                 <button
+                    onClick={() => handleRegisterDevice('app')}
+                    disabled={registeringDevice}
+                    className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold transition-all disabled:opacity-50"
+                 >
+                    <Smartphone size={16} />
+                    {registeringDevice ? 'Registering...' : 'Register as Platform "app"'}
+                 </button>
+
+                 <button
+                    onClick={handleSendTestPush}
+                    disabled={testingPush}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl ${primaryBg} text-white hover:opacity-90 text-xs font-bold transition-all disabled:opacity-50 shadow-sm`}
+                 >
+                    <Send size={16} />
+                    {testingPush ? 'Sending Test Push...' : 'Send Live Test Notification'}
+                 </button>
+              </div>
+
+              {testResult && (
+                 <div className={`mt-3 p-3.5 rounded-2xl text-xs font-medium flex items-start gap-2.5 ${testResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-100' : 'bg-red-50 text-red-800 border border-red-100'}`}>
+                    {testResult.success ? <CheckCircle2 size={16} className="text-emerald-600 mt-0.5 shrink-0" /> : <AlertCircle size={16} className="text-red-600 mt-0.5 shrink-0" />}
+                    <div>
+                       <p className="font-bold">{testResult.success ? 'Push Notification System Active' : 'Push Notification Notice'}</p>
+                       <p className="text-[11px] mt-0.5 opacity-90">{testResult.message || `Provider: ${testResult.provider || 'FCM'} | Devices Found: ${testResult.devicesFound ?? 1}`}</p>
+                    </div>
+                 </div>
+              )}
            </div>
         </div>
       </div>

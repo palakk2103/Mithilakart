@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Grid3X3, List, Edit3, Trash2, Copy, Eye, Package, MoreVertical, Star } from 'lucide-react';
+import { Plus, Grid3X3, List, Edit3, Trash2, Copy, Eye, Package, MoreVertical, Star, Upload } from 'lucide-react';
 import { PageHeader, StatusBadge, SearchFilter, ConfirmModal, DataTable } from '../../components/common';
 import { Button, EmptyState } from '../../components/ui';
 import { getProducts, deleteProduct, duplicateProduct, updateProduct } from '../../services/sellerApi';
@@ -228,6 +228,13 @@ const ProductList = () => {
               <Grid3X3 size={15} />
             </button>
           </div>
+          <button
+            onClick={() => navigate('/seller/products/bulk-upload')}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-lg
+                       shadow-2xs hover:bg-slate-50 transition-all active:scale-95 cursor-pointer"
+          >
+            <Upload size={15} /> Bulk Upload
+          </button>
           <button
             onClick={() => navigate('/seller/products/add')}
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg

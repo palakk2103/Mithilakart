@@ -51,7 +51,7 @@ class SellerProductService extends BaseService {
     return { ...product.toObject(), variants };
   }
 
-  async create(sellerId, data) {
+  async create(sellerId, data, listingOptions = {}) {
     const category = await this.categoryRepository.findById(data.categoryId);
     if (!category || category.deletedAt) throw AppError.notFound('Category not found');
 
@@ -125,11 +125,16 @@ class SellerProductService extends BaseService {
     });
 
     eventBus.publish('product.created', { productId: product._id, sellerId });
-    await this._syncListings(product);
+    await this._syncListings(product, listingOptions);
     return product;
   }
 
-  async _syncListings(product) {
+  /**
+   * @param {object} [options]
+   * @param {number} [options.deliveryPromiseMinutes] quick-tab promise; when
+   *   omitted an existing listing keeps its value (new ones default to 30).
+   */
+  async _syncListings(product, options = {}) {
     if (!product) return;
     try {
       const flows = Array.isArray(product.commerceFlows) && product.commerceFlows.length
@@ -143,26 +148,33 @@ class SellerProductService extends BaseService {
         const isQuick = tab === MARKETPLACE_TABS.QUICK_SHOP || tab === MARKETPLACE_TABS.GROCERIES_FRESH;
         const isApproved = product.status === PRODUCT_STATUS.APPROVED || product.status === 'active';
 
+        const setOnInsert = {
+          productId: product._id,
+          sellerId: product.sellerId,
+          marketplaceTab: tab,
+        };
+        const set = {
+          price: product.price,
+          mrp: product.mrp || product.price,
+          listingStatus: isApproved ? LISTING_STATUS.APPROVED : LISTING_STATUS.PENDING,
+          isVisible: isApproved,
+          deliveryType: isQuick ? DELIVERY_TYPE.FIXED_PROMISE : DELIVERY_TYPE.STANDARD,
+          publishedAt: product.createdAt || new Date(),
+          approvedAt: isApproved ? new Date() : null,
+          deletedAt: null,
+        };
+        // Previously forced to 30 on every save, discarding the seller's choice.
+        if (!isQuick) {
+          set.deliveryPromiseMinutes = null;
+        } else if (options.deliveryPromiseMinutes) {
+          set.deliveryPromiseMinutes = options.deliveryPromiseMinutes;
+        } else {
+          setOnInsert.deliveryPromiseMinutes = 30;
+        }
+
         await MarketplaceListing.findOneAndUpdate(
           { productId: product._id, marketplaceTab: tab },
-          {
-            $setOnInsert: {
-              productId: product._id,
-              sellerId: product.sellerId,
-              marketplaceTab: tab,
-            },
-            $set: {
-              price: product.price,
-              mrp: product.mrp || product.price,
-              listingStatus: isApproved ? LISTING_STATUS.APPROVED : LISTING_STATUS.PENDING,
-              isVisible: isApproved,
-              deliveryType: isQuick ? DELIVERY_TYPE.FIXED_PROMISE : DELIVERY_TYPE.STANDARD,
-              deliveryPromiseMinutes: isQuick ? 30 : null,
-              publishedAt: product.createdAt || new Date(),
-              approvedAt: isApproved ? new Date() : null,
-              deletedAt: null,
-            },
-          },
+          { $setOnInsert: setOnInsert, $set: set },
           { upsert: true, new: true }
         );
       }
@@ -171,7 +183,7 @@ class SellerProductService extends BaseService {
     }
   }
 
-  async update(sellerId, productId, data) {
+  async update(sellerId, productId, data, listingOptions = {}) {
     const product = await this.productRepository.findOne({ _id: productId, sellerId, deletedAt: null });
     if (!product) throw AppError.notFound('Product not found');
 
@@ -210,7 +222,7 @@ class SellerProductService extends BaseService {
       const langs = ['en', 'hi', 'mai'];
       langs.forEach((l) => this.cacheService.del(`cache:products:detail:${productId}:${l}`).catch(() => {}));
     }
-    await this._syncListings(updated);
+    await this._syncListings(updated, listingOptions);
     return updated;
   }
 

@@ -3,10 +3,16 @@ const { ApiResponse } = require('../../utils/ApiResponse');
 const { asyncHandler } = require('../../utils/asyncHandler');
 
 class SellerProductController extends BaseController {
-  constructor(productService) {
+  constructor(productService, bulkImportService = null) {
     super(productService);
-    this.bindMethods(['list', 'getById', 'create', 'update', 'remove', 'duplicate', 'updateStatus']);
+    this.bulkImportService = bulkImportService;
+    this.bindMethods(['list', 'getById', 'create', 'update', 'remove', 'duplicate', 'updateStatus', 'bulkImport']);
   }
+
+  bulkImport = asyncHandler(async (req, res) => {
+    const data = await this.bulkImportService.import(req.sellerId, req.body);
+    return ApiResponse.success(res, data);
+  });
 
   list = asyncHandler(async (req, res) => {
     const result = await this.service.list(req.sellerId, req.query);

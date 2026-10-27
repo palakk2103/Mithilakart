@@ -9,6 +9,7 @@ import VendorApproval from '../vendors/VendorApproval';
 import SellerDashboard from '../../vendor/dashboard/Dashboard';
 import InventoryList from '../../vendor/inventory/InventoryList';
 import CategoryManager from '../catalog/CategoryManager';
+import CategoryBulkImport from '../catalog/CategoryBulkImport';
 import BannerManager from '../catalog/BannerManager';
 import CategoryChipsManager from '../catalog/CategoryChipsManager';
 import HomeSectionsManager from '../catalog/HomeSectionsManager';
@@ -93,6 +94,7 @@ const AdminRoutes = () => {
         {/* Storefront & Catalog */}
         <Route path="products/moderation" element={<ProductModeration />} />
         <Route path="categories" element={<CategoryManager />} />
+        <Route path="categories/bulk-import" element={<CategoryBulkImport />} />
         <Route path="storefront/banners" element={<BannerManager />} />
         <Route path="storefront/chips" element={<CategoryChipsManager />} />
         <Route path="storefront/tabs" element={<HeaderTabsManager />} />

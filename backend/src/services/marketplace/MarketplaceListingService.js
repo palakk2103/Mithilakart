@@ -10,6 +10,7 @@ const {
   resolveTabFromQuery,
   deliveryLabelForListing,
   toLegacyCommerceFlow,
+  categoryTabs: tabsOf,
 } = require('../../utils/marketplaceTab');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
 const { eventBus } = require('../../events/EventBus');
@@ -60,6 +61,7 @@ class MarketplaceListingService extends BaseService {
       title: p.title,
       brand: p.brand,
       images: p.images || [],
+      categoryId: p.categoryId ? String(p.categoryId) : null,
       rating: p.rating,
       reviewCount: p.reviewCount,
       stock: p.stock,
@@ -79,16 +81,24 @@ class MarketplaceListingService extends BaseService {
     const category = await this.categoryRepository.findById(categoryId);
     if (!category || category.deletedAt) throw AppError.notFound('Category not found');
 
-    let tabs = category.visibleTabs?.length
-      ? category.visibleTabs
-      : (category.commerceFlows || []).map((f) => normalizeMarketplaceTab(f)).filter(Boolean);
-
-    if ((!tabs || tabs.length === 0) && category.parentId) {
-      const parent = await this.categoryRepository.findById(category.parentId);
-      if (parent && !parent.deletedAt) {
-        tabs = parent.visibleTabs?.length
-          ? parent.visibleTabs
-          : (parent.commerceFlows || []).map((f) => normalizeMarketplaceTab(f)).filter(Boolean);
+    // Same rule as CategoryService.effectiveTabsMap: own tabs ∩ parent's,
+    // inheriting the parent's tabs when they don't overlap.
+    const chain = [category];
+    let cursor = category;
+    while (cursor.parentId && chain.length < 10) {
+      const parent = await this.categoryRepository.findById(cursor.parentId);
+      if (!parent || parent.deletedAt) break;
+      chain.unshift(parent);
+      cursor = parent;
+    }
+    let tabs = null;
+    for (const node of chain) {
+      const own = tabsOf(node);
+      if (tabs === null) {
+        tabs = own;
+      } else {
+        const overlap = own.filter((t) => tabs.includes(t));
+        tabs = overlap.length ? overlap : tabs;
       }
     }
 
@@ -266,16 +276,7 @@ class MarketplaceListingService extends BaseService {
   async _getCategorySubtreeIds(categoryId) {
     if (!categoryId || !this.categoryRepository) return [categoryId];
     try {
-      let target = await this.categoryRepository.findById(categoryId);
-      if (!target) {
-        target = await this.categoryRepository.findOne({
-          $or: [{ slug: categoryId }, { name: new RegExp(`^${categoryId}$`, 'i') }],
-          deletedAt: null,
-        });
-      }
-      const catId = target ? target._id : categoryId;
-      const children = await this.categoryRepository.find({ parentId: catId, deletedAt: null });
-      return [catId, ...children.map((c) => c._id)];
+      return await this.categoryRepository.findSubtreeIds(categoryId);
     } catch {
       return [categoryId];
     }
@@ -348,6 +349,7 @@ class MarketplaceListingService extends BaseService {
           brand: product.brand,
           image: product.images?.[0]?.url || null,
           imageUrl: product.images?.[0]?.url || null,
+          categoryId: product.categoryId ? String(product.categoryId) : null,
           availableStock,
           commerceFlow: toLegacyCommerceFlow(tab),
           marketplaceTab: tab,

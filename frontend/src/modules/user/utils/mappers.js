@@ -564,13 +564,16 @@ export const mapShopCategoryCards = (categories, lang = 'en') => {
 
 export const mapMithilaCategoryCards = (categories) => {
   const list = extractList(categories);
-  const parent = list.find((cat) => cat.slug === 'mithila-specialities') || list[0];
-  const children = parent?.children || [];
+  // The original seed nests everything under one "Mithila Specialities"
+  // wrapper — unwrap it, but also show every other top-level category admin
+  // adds to the Mithilak tab (previously only the wrapper's children showed).
+  const isWrapper = (cat) => cat.slug === 'mithila-specialities' || (list.length === 1 && cat.children?.length > 0);
+  const cards = list.flatMap((cat) => (isWrapper(cat) ? cat.children || [] : [cat]));
 
-  return children.map((cat) => ({
+  return cards.map((cat) => ({
     id: getEntityId(cat),
     name: cat.name,
-    img: cat.imageUrl || cat.iconUrl || '',
+    img: getImageUrl(cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
     path: `/vendor/mithilak/category?category=${encodeURIComponent(cat.name)}`,
   }));
 };

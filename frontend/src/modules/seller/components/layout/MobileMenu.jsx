@@ -7,14 +7,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Store, LayoutDashboard, Package, PlusCircle, Warehouse,
   ShoppingCart, RotateCcw, Users, Star, Ticket, Bell,
-  BarChart3, Wallet, Settings, LogOut } from 'lucide-react';
+  BarChart3, Wallet, Settings, LogOut, Upload } from 'lucide-react';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { SIDEBAR_MENU } from '../../constants';
 
 const iconComponents = {
   LayoutDashboard, Package, PlusCircle, Warehouse, ShoppingCart,
   RotateCcw, Users, Star, Ticket, Bell, BarChart3, Wallet,
-  Settings, LogOut, Store,
+  Settings, LogOut, Store, Upload,
 };
 
 const MobileMenu = ({ isOpen, onClose }) => {

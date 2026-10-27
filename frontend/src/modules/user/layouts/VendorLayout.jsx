@@ -18,8 +18,7 @@ import CategoryNavbar from '../components/common/CategoryNavbar';
 import LanguageSelector from '../components/common/LanguageSelector';
 import useAccountStore from '../../../store/useAccountStore';
 import useVendorStore from '../../../store/useVendorStore';
-import { getCart } from '../services/cartApi';
-import { fetchCartCount } from '../utils/cartUtils';
+import { fetchCartItems } from '../utils/cartUtils';
 import { useTranslation } from 'react-i18next';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import Footer from '../../../shared/components/Footer';
@@ -90,9 +89,10 @@ const VendorLayout = () => {
   useEffect(() => {
     const updateCart = async () => {
       try {
-        const count = await fetchCartCount();
-        setCartCount(count);
-        const cart = await getCart();
+        // One request for both the badge count and the items (was two per refresh,
+        // and this runs on every navigation — enough to hit the API rate limit).
+        const { cart, items } = await fetchCartItems();
+        setCartCount(items.reduce((acc, item) => acc + (item.qty || 1), 0));
         setCartItems((cart?.items || []).map((item) => ({
           ...item,
           cartId: item.itemKey || item.id,

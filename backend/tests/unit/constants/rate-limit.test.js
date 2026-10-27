@@ -41,4 +41,13 @@ describe('rate limit rules', () => {
     });
     expect(rule).toEqual(RATE_LIMITS.public);
   });
+
+  it('counts one upload per file (presign only) so bulk image uploads are not blocked', () => {
+    const req = (url) => ({ originalUrl: url, method: 'POST', headers: {} });
+    expect(resolveRateLimitRule(req('/api/v1/uploads/presign'))).toEqual(RATE_LIMITS.upload);
+    expect(RATE_LIMITS.upload.limit).toBeGreaterThanOrEqual(300);
+    // File POST and confirm are bound to a single-use presign token.
+    expect(resolveRateLimitRule(req('/api/v1/uploads/confirm'))).toEqual(RATE_LIMITS.public);
+    expect(resolveRateLimitRule(req('/api/v1/uploads/local/products%2Fa.jpg'))).toEqual(RATE_LIMITS.public);
+  });
 });

@@ -6,7 +6,7 @@ class CustomerNotificationController extends BaseController {
   constructor(notificationService, supportService) {
     super(notificationService);
     this.supportService = supportService;
-    this.bindMethods(['list', 'markRead', 'markAllRead', 'updatePreferences', 'registerDevice', 'createTicket', 'listTickets']);
+    this.bindMethods(['list', 'markRead', 'markAllRead', 'updatePreferences', 'registerDevice', 'testPush', 'directFcmTest', 'createTicket', 'listTickets']);
   }
 
   list = asyncHandler(async (req, res) => {
@@ -37,6 +37,23 @@ class CustomerNotificationController extends BaseController {
       req.body.fcmToken,
       req.body.platform || 'web'
     );
+    return ApiResponse.success(res, data);
+  });
+
+  testPush = asyncHandler(async (req, res) => {
+    const data = await this.service.sendTestPushToUser(
+      req.user.id,
+      'customer',
+      req.body || {}
+    );
+    return ApiResponse.success(res, data);
+  });
+
+  directFcmTest = asyncHandler(async (req, res) => {
+    const data = await this.service.sendDirectPush({
+      ...req.body,
+      userId: req.user?.id || req.body.userId,
+    });
     return ApiResponse.success(res, data);
   });
 

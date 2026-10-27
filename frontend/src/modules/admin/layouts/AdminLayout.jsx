@@ -6,7 +6,7 @@ import {
   Truck, Store, Key, Settings, ChevronDown, ChevronRight,
   UserPlus, DollarSign, BarChart3, HelpCircle, FileText, Image, LayoutGrid, Layout,
   Tag, Zap, MessageSquare, RotateCcw, Inbox,
-  Banknote, Percent, AlertCircle, CheckCircle2, Lock, SlidersHorizontal
+  Banknote, Percent, AlertCircle, CheckCircle2, Lock, SlidersHorizontal, Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchInput from '../../../shared/components/SearchInput';
@@ -94,6 +94,7 @@ const AdminLayout = () => {
           ]
         },
         { name: 'Category Manager', path: '/admin/categories', icon: <Layers size={18} /> },
+        { name: 'Bulk Category Import', path: '/admin/categories/bulk-import', icon: <Upload size={18} /> },
         { name: 'Policies & Information', path: '/admin/content/legal', icon: <FileText size={18} /> },
       ]
     },
@@ -193,6 +194,7 @@ const AdminLayout = () => {
       items: [
         { name: 'Moderation', path: '/admin/products/moderation', icon: <Layers size={18} /> },
         { name: 'Categories', path: '/admin/categories', icon: <Briefcase size={18} /> },
+        { name: 'Bulk Category Import', path: '/admin/categories/bulk-import', icon: <Upload size={18} /> },
       ]
     },
     {

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight } from 'lucide-react';
 import CategoryCard from '../components/vendor/CategoryCard';
 import useVendorStore from '../../../store/useVendorStore';
@@ -123,10 +123,40 @@ const HouseholdIcon = () => (
   </svg>
 );
 
+/** Fallback artwork for a grocery category that has no image uploaded yet. */
+const GROCERY_ICON_RULES = [
+  [/fruit|veg|vegetable|green/i, FruitsVeggiesIcon],
+  [/dairy|egg|milk|bread|bakery|paneer/i, DairyEggsIcon],
+  [/staple|atta|rice|dal|flour|pulse/i, StaplesIcon],
+  [/beverage|drink|juice|tea|coffee/i, BeveragesIcon],
+  [/snack|chip|namkeen|biscuit/i, SnacksIcon],
+  [/masala|oil|ghee|spice/i, MasalaOilIcon],
+  [/frozen|ice|instant/i, FrozenIcon],
+  [/household|clean|home|detergent/i, HouseholdIcon],
+];
+
+const GroceryCategoryIcon = ({ category }) => {
+  const [failed, setFailed] = React.useState(false);
+  const src = category.iconUrl || category.imageUrl;
+  if (src && !failed) {
+    return <img src={getImageUrl(src)} alt="" className="w-10 h-10 object-contain" onError={() => setFailed(true)} />;
+  }
+  const Icon = GROCERY_ICON_RULES.find(([pattern]) => pattern.test(category.name))?.[1];
+  if (Icon) return <Icon />;
+  return <span className="text-[18px] font-black text-[#D9A21B]">{category.name.charAt(0).toUpperCase()}</span>;
+};
+
 const QuickShop = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // Same component serves /quick-shop and /fresh-grocery; React Router keeps the
+  // instance when switching between them, so everything below keys off this.
+  const isFreshGrocery = pathname.includes('/fresh-grocery');
+  const marketplaceTab = isFreshGrocery ? 'groceries_fresh' : 'quick_shop';
   const fetchHomeSections = useVendorStore((state) => state.fetchHomeSections);
   const [categorySections, setCategorySections] = React.useState([]);
+  const [categoryTree, setCategoryTree] = React.useState([]);
+  const [categoriesLoading, setCategoriesLoading] = React.useState(true);
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   const { savedAddresses, selectedAddressId } = useAccountStore();
   const selectedAddr = savedAddresses?.find((a) => a.id === selectedAddressId) || savedAddresses?.[0];
@@ -136,8 +166,6 @@ const QuickShop = () => {
   const [nearbyProducts, setNearbyProducts] = React.useState([]);
   const [nearbyLoading, setNearbyLoading] = React.useState(false);
   const [notDeliverable, setNotDeliverable] = React.useState(false);
-
-  const isFreshGrocery = window.location.pathname.includes('/fresh-grocery');
 
   useEffect(() => {
     if (isFreshGrocery) {
@@ -155,22 +183,31 @@ const QuickShop = () => {
 
   useEffect(() => {
     let cancelled = false;
-    const targetFlow = isFreshGrocery ? 'fresh_grocery' : 'quick_shop';
 
-    getCategories({ commerceFlow: targetFlow })
+    // Previously always fetched the Quick Shop tree, so Groceries & Fresh showed
+    // Quick Shop's categories under a hardcoded grid admin could not control.
+    setCategoriesLoading(true);
+    getCategories({ marketplaceTab })
       .then((data) => {
         if (!cancelled) {
+          setCategoryTree(extractList(data));
           setCategorySections(mapCategorySections(data, []));
         }
       })
       .catch(() => {
-        if (!cancelled) setCategorySections([]);
+        if (!cancelled) {
+          setCategoryTree([]);
+          setCategorySections([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCategoriesLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [isFreshGrocery]);
+  }, [marketplaceTab]);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +216,7 @@ const QuickShop = () => {
     getNearbyProducts({
       lat: effectiveLat,
       lng: effectiveLng,
-      commerceFlow: 'quick_shop',
+      commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
       limit: 12,
     })
       .then((response) => {
@@ -213,7 +250,7 @@ const QuickShop = () => {
     return () => {
       cancelled = true;
     };
-  }, [effectiveLat, effectiveLng]);
+  }, [effectiveLat, effectiveLng, isFreshGrocery]);
 
   // Simulated active tab for the filters
   const [activeFilter, setActiveFilter] = React.useState('All');
@@ -320,44 +357,32 @@ const QuickShop = () => {
             </div>
           </div>
 
-          {/* Categories Grid (2 Rows, 4 Columns) */}
+          {/* Categories Grid — the Groceries & Fresh tab's top-level categories from admin */}
           <div className="px-4 mb-6">
             <div className="grid grid-cols-4 gap-2.5">
-              {[
-                { name: 'Fruits & Veggies', label: 'Fruits & Veggies', key: 'Fruits & Vegetables' },
-                { name: 'Dairy & eggs', label: 'Dairy & eggs', key: 'Dairy, Bread & Eggs' },
-                { name: 'Staples', label: 'Staples', key: 'Atta, Rice & Dal' },
-                { name: 'Beverages', label: 'Beverages', key: 'Drinks & Juices' },
-                { name: 'Snacks', label: 'Snacks', key: 'Chips & Namkeens' },
-                { name: 'Masala & Oil', label: 'Masala & Oil', key: 'Oil, Ghee & Masala' },
-                { name: 'Frozen', label: 'Frozen', key: 'Instant & Frozen Food' },
-                { name: 'Household', label: 'Household', key: 'Cleaning Essentials' },
-              ].map((cat, idx) => {
-                let iconComponent = <FruitsVeggiesIcon />;
-                if (cat.name === 'Dairy & eggs') iconComponent = <DairyEggsIcon />;
-                if (cat.name === 'Staples') iconComponent = <StaplesIcon />;
-                if (cat.name === 'Beverages') iconComponent = <BeveragesIcon />;
-                if (cat.name === 'Snacks') iconComponent = <SnacksIcon />;
-                if (cat.name === 'Masala & Oil') iconComponent = <MasalaOilIcon />;
-                if (cat.name === 'Frozen') iconComponent = <FrozenIcon />;
-                if (cat.name === 'Household') iconComponent = <HouseholdIcon />;
-
-                return (
-                  <div 
-                    key={idx}
-                    onClick={() => {
-                      localStorage.setItem('isFreshGroceryFlow', 'true');
-                      navigate('/fresh-grocery/category', { state: { category: cat.key } });
-                    }}
-                    className="bg-white border border-[#EADCC9]/55 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#D9A21B]"
-                  >
-                    <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[#FFF8EE] rounded-xl">
-                      {iconComponent}
-                    </div>
-                    <span className="text-[10px] md:text-[11px] font-black text-[#3F2A20] leading-tight">{cat.label}</span>
+              {categoriesLoading && Array.from({ length: 8 }).map((_, idx) => (
+                <div key={idx} className="h-[92px] bg-white/70 border border-[#EADCC9]/40 rounded-2xl animate-pulse" />
+              ))}
+              {!categoriesLoading && categoryTree.map((cat) => (
+                <div
+                  key={cat.id}
+                  onClick={() => {
+                    localStorage.setItem('isFreshGroceryFlow', 'true');
+                    navigate('/fresh-grocery/category', { state: { category: cat.name, categoryId: cat.id } });
+                  }}
+                  className="bg-white border border-[#EADCC9]/55 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#D9A21B]"
+                >
+                  <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[#FFF8EE] rounded-xl overflow-hidden">
+                    <GroceryCategoryIcon category={cat} />
                   </div>
-                );
-              })}
+                  <span className="text-[10px] md:text-[11px] font-black text-[#3F2A20] leading-tight line-clamp-2">{cat.name}</span>
+                </div>
+              ))}
+              {!categoriesLoading && categoryTree.length === 0 && (
+                <div className="col-span-4 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#EADCC9]">
+                  <p className="text-[11.5px] font-bold text-[#3F2A20]/70">Categories are coming soon</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -592,7 +617,7 @@ const QuickShop = () => {
                       item={item}
                       onClick={() => {
                         localStorage.setItem('isFreshGroceryFlow', 'true');
-                        navigate('/fresh-grocery/category', { state: { category: item.name } });
+                        navigate('/fresh-grocery/category', { state: { category: item.name, categoryId: item.id } });
                       }}
                     />
                   ))}
@@ -620,7 +645,7 @@ const QuickShop = () => {
                         key={itemIdx}
                         onClick={() => {
                           localStorage.setItem('isFreshGroceryFlow', 'true');
-                          navigate('/fresh-grocery/category', { state: { category: item.name } });
+                          navigate('/fresh-grocery/category', { state: { category: item.name, categoryId: item.id } });
                         }}
                         className="flex flex-col items-center gap-3.5 cursor-pointer group active:scale-95 transition-transform w-full max-w-[160px]"
                       >
@@ -843,7 +868,7 @@ const QuickShop = () => {
                   item={item}
                   onClick={() => {
                     localStorage.setItem('isQuickShopFlow', 'true');
-                    navigate(isFreshGrocery ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name } });
+                    navigate(isFreshGrocery ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name, categoryId: item.id } });
                   }}
                 />
               ))}
@@ -871,7 +896,7 @@ const QuickShop = () => {
                     key={itemIdx}
                     onClick={() => {
                       localStorage.setItem('isQuickShopFlow', 'true');
-                      navigate(isFreshGrocery ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name } });
+                      navigate(isFreshGrocery ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name, categoryId: item.id } });
                     }}
                     className="flex flex-col items-center gap-3.5 cursor-pointer group active:scale-95 transition-transform w-full max-w-[160px]"
                   >

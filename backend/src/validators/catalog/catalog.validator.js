@@ -26,6 +26,24 @@ const categoryCreateSchema = Joi.object({
 
 const categoryUpdateSchema = categoryCreateSchema.fork(['name', 'slug'], (field) => field.optional());
 
+// Cells are validated row-by-row by CategoryBulkImportService so the admin
+// gets a per-row report instead of one 422 for the whole sheet.
+const sheetCell = Joi.alternatives().try(Joi.string().allow(''), Joi.number(), Joi.boolean()).allow(null);
+
+const categoryBulkImportSchema = Joi.object({
+  marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).required(),
+  dryRun: Joi.boolean().default(true),
+  rows: Joi.array().items(Joi.object({
+    category: sheetCell,
+    subcategory: sheetCell,
+    description: sheetCell,
+    imageUrl: sheetCell,
+    iconUrl: sheetCell,
+    sortOrder: sheetCell,
+    isActive: sheetCell,
+  })).min(1).max(2000).required(),
+});
+
 const productBulkSchema = Joi.object({
   ids: Joi.array().items(objectIdSchema).min(1).max(100).required(),
   action: Joi.string().valid('approve', 'reject', 'delete').required(),
@@ -61,6 +79,8 @@ const listProductsQuerySchema = Joi.object({
 module.exports = {
   categoryCreateSchema,
   categoryUpdateSchema,
+  categoryBulkImportSchema,
+  sheetCell,
   productBulkSchema,
   productRejectSchema,
   listProductsQuerySchema,

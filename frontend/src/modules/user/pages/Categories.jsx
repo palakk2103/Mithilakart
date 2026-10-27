@@ -331,11 +331,17 @@ const Categories = () => {
 
   const handleCategoryItemClick = (item) => {
     if (isMithilakFlow) {
-      navigate('/mithilak/category', { state: { category: item.name } });
+      localStorage.setItem('isMithilakFlow', 'true');
+      localStorage.setItem('isQuickShopFlow', 'false');
+      navigate('/mithilak/category', { state: { category: item.name, categoryId: item.id } });
     } else if (isFreshGroceryFlow) {
-      navigate('/fresh-grocery/category', { state: { category: item.name } });
+      localStorage.setItem('isQuickShopFlow', 'true');
+      localStorage.setItem('isMithilakFlow', 'false');
+      navigate('/fresh-grocery/category', { state: { category: item.name, categoryId: item.id } });
     } else if (isQuickShopFlow) {
-      navigate('/quick-shop/category', { state: { category: item.name } });
+      localStorage.setItem('isQuickShopFlow', 'true');
+      localStorage.setItem('isMithilakFlow', 'false');
+      navigate('/quick-shop/category', { state: { category: item.name, categoryId: item.id } });
     } else {
       navigate(item.path || `/category-products?category=${encodeURIComponent(item.name)}`);
     }
@@ -497,6 +503,7 @@ const Categories = () => {
             <div className="bg-white border-x border-b border-slate-100 rounded-b-3xl p-6 shadow-md">
               <div className="grid grid-cols-4 gap-6">
                 {section.items.map((item, idx) => {
+
                   if (isMithilakFlow) {
                     return (
                       <div

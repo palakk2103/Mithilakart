@@ -10,7 +10,7 @@ import { Save, ArrowLeft, Eye, FileText, Package, DollarSign, Image, Settings, G
 import { PageHeader } from '../../components/common';
 import { ImageUploader } from '../../components/common';
 import { Button } from '../../components/ui';
-import { getProduct, createProduct, updateProduct, createProductListing } from '../../services/sellerApi';
+import { getProduct, createProduct, updateProduct, createProductListing, publishProductListing } from '../../services/sellerApi';
 import { customerApi } from '../../../../shared/api/client';
 import toast from 'react-hot-toast';
 

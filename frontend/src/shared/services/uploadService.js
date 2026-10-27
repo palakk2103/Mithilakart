@@ -1,13 +1,13 @@
 import { customerApi } from '../api/client';
 
 /**
- * Upload a file to CMS storage and return the public URL path.
+ * Presign → upload → confirm for one file; returns the public URL path.
  */
-export async function uploadCmsImage(file) {
+async function uploadToContext(file, context, failureMessage) {
   if (!file) throw new Error('No file selected');
 
   const presign = await customerApi.post('/uploads/presign', {
-    context: 'cms',
+    context,
     fileName: file.name,
     mimeType: file.type,
   });
@@ -21,11 +21,13 @@ export async function uploadCmsImage(file) {
   });
 
   if (!uploadResponse.ok) {
-    throw new Error('Image upload failed. Please try again.');
+    const error = new Error(failureMessage);
+    error.status = uploadResponse.status;
+    throw error;
   }
 
   const confirmed = await customerApi.post('/uploads/confirm', {
-    context: 'cms',
+    context,
     storageKey: presign.storageKey,
     mimeType: file.type,
   });
@@ -34,36 +36,17 @@ export async function uploadCmsImage(file) {
 }
 
 /**
+ * Upload a file to CMS storage and return the public URL path.
+ */
+export function uploadCmsImage(file) {
+  return uploadToContext(file, 'cms', 'Image upload failed. Please try again.');
+}
+
+/**
  * Upload a media file (image/video) for product reviews.
  */
-export async function uploadReviewMedia(file) {
-  if (!file) throw new Error('No file selected');
-
-  const presign = await customerApi.post('/uploads/presign', {
-    context: 'reviews',
-    fileName: file.name,
-    mimeType: file.type,
-  });
-
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const uploadResponse = await fetch(presign.uploadUrl, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!uploadResponse.ok) {
-    throw new Error('Media upload failed. Please try again.');
-  }
-
-  const confirmed = await customerApi.post('/uploads/confirm', {
-    context: 'reviews',
-    storageKey: presign.storageKey,
-    mimeType: file.type,
-  });
-
-  return confirmed.url;
+export function uploadReviewMedia(file) {
+  return uploadToContext(file, 'reviews', 'Media upload failed. Please try again.');
 }
 
 /**
@@ -107,3 +90,9 @@ export async function uploadAvatar(file) {
   return confirmed?.url || confirmed?.storageKey;
 }
 
+/**
+ * Upload a product image / video (used by the seller bulk upload).
+ */
+export function uploadProductMedia(file) {
+  return uploadToContext(file, 'products', `Upload failed for ${file?.name || 'file'}.`);
+}

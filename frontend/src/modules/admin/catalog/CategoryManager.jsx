@@ -1,5 +1,6 @@
 import SearchInput from '../../../shared/components/SearchInput';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { categoriesApi } from '../services/api';
 import { extractList, mapCategory } from '../utils/mappers';
 import Modal from '../components/ui/Modal';
@@ -52,6 +53,7 @@ const CategoryManager = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [tabFilter, setTabFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -76,20 +78,64 @@ const CategoryManager = () => {
     loadCategories();
   }, [loadCategories]);
 
+  // The customer app renders two levels (category → subcategory), so only
+  // top-level categories can be chosen as a parent.
   const parentOptions = useMemo(
-    () => categories,
+    () => categories.filter((c) => !c.parentId),
     [categories]
   );
 
-  const filteredCategories = categories.filter((cat) =>
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
-    || cat.slug.toLowerCase().includes(searchQuery.toLowerCase())
+  // Show each subcategory directly under its parent instead of a flat list.
+  const orderedCategories = useMemo(() => {
+    const ids = new Set(categories.map((c) => c.id));
+    const childrenOf = new Map();
+    categories.forEach((c) => {
+      if (c.parentId && ids.has(c.parentId)) {
+        childrenOf.set(c.parentId, [...(childrenOf.get(c.parentId) || []), c]);
+      }
+    });
+    const ordered = [];
+    const visit = (cat, depth) => {
+      ordered.push({ ...cat, depth });
+      (childrenOf.get(cat.id) || []).forEach((child) => visit(child, depth + 1));
+    };
+    categories.filter((c) => !c.parentId || !ids.has(c.parentId)).forEach((root) => visit(root, 0));
+    return ordered;
+  }, [categories]);
+
+  const filteredCategories = orderedCategories.filter((cat) =>
+    (tabFilter === 'all' || (cat.visibleTabs || []).includes(tabFilter))
+    && (cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+      || cat.slug.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const tabsOfParent = (parentId) => {
+    const parent = categories.find((c) => c.id === parentId);
+    return parent?.visibleTabs?.length ? parent.visibleTabs : null;
+  };
+
+  const tabFields = (tabs) => ({
+    visibleTabs: tabs,
+    commerceFlows: [...new Set(tabs.map((t) => VISIBLE_TABS.find((v) => v.value === t)?.flow).filter(Boolean))],
+  });
 
   const openCreate = (parentId = '') => {
     setEditingCategory(null);
-    setForm({ ...EMPTY_FORM, parentId, sortOrder: categories.length });
+    // A new subcategory starts with its parent's tabs; defaulting to all four
+    // tabs used to leak the parent category into tabs it was never meant for.
+    const parentTabs = parentId ? tabsOfParent(parentId) : null;
+    setForm({
+      ...EMPTY_FORM,
+      ...(parentTabs ? tabFields(parentTabs) : {}),
+      parentId,
+      sortOrder: categories.length,
+    });
     setModalOpen(true);
+  };
+
+  const handleParentChange = (parentId) => {
+    const parentTabs = parentId && !editingCategory ? tabsOfParent(parentId) : null;
+    setForm((prev) => ({ ...prev, parentId, ...(parentTabs ? tabFields(parentTabs) : {}) }));
   };
 
   const openEdit = (category) => {
@@ -223,13 +269,22 @@ const CategoryManager = () => {
           <h1 className="text-2xl font-black text-slate-900 tracking-tight font-montserrat uppercase">Category Manager</h1>
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 font-raleway">Manage platform hierarchy — changes reflect on user app immediately</p>
         </div>
-        <button
-          onClick={() => openCreate()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-100 hover:scale-105 active:scale-95 transition-all"
-        >
-          <Plus size={14} />
-          New Category
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/admin/categories/bulk-import"
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-sm hover:bg-slate-50 transition-all"
+          >
+            <Upload size={14} />
+            Bulk Import
+          </Link>
+          <button
+            onClick={() => openCreate()}
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-100 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Plus size={14} />
+            New Category
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -265,9 +320,21 @@ const CategoryManager = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <button className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm">
-          <Filter size={14} />
-        </button>
+        <div className="relative">
+          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <select
+            value={tabFilter}
+            onChange={(e) => setTabFilter(e.target.value)}
+            className="pl-8 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 shadow-sm outline-none appearance-none"
+            aria-label="Filter by marketplace tab"
+          >
+            <option value="all">All tabs</option>
+            {VISIBLE_TABS.map((tab) => (
+              <option key={tab.value} value={tab.value}>{tab.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        </div>
       </div>
 
       {loading ? (
@@ -301,7 +368,8 @@ const CategoryManager = () => {
                       className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors group"
                     >
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3" style={{ paddingLeft: (category.depth || 0) * 28 }}>
+                          {category.depth > 0 && <span className="text-slate-300 font-black">↳</span>}
                           <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex-shrink-0">
                             <img
                               src={category.imageUrl || category.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&auto=format&fit=crop&q=60'}
@@ -361,13 +429,15 @@ const CategoryManager = () => {
 
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openCreate(category.id)}
-                            className="p-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1"
-                          >
-                            <Plus size={12} />
-                            <span>+ Sub</span>
-                          </button>
+                          {!category.parentId && (
+                            <button
+                              onClick={() => openCreate(category.id)}
+                              className="p-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1"
+                            >
+                              <Plus size={12} />
+                              <span>+ Sub</span>
+                            </button>
+                          )}
                           <button
                             onClick={() => openEdit(category)}
                             className="p-2 bg-slate-50 text-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all flex items-center gap-1"
@@ -423,7 +493,7 @@ const CategoryManager = () => {
             <div className="relative">
               <select
                 value={form.parentId}
-                onChange={(e) => setForm((p) => ({ ...p, parentId: e.target.value }))}
+                onChange={(e) => handleParentChange(e.target.value)}
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none appearance-none"
               >
                 <option value="">None (top-level)</option>
@@ -437,7 +507,10 @@ const CategoryManager = () => {
 
           <div>
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Visible Marketplace Tabs (Storefronts) *</label>
-            <p className="text-[11px] text-slate-500 mb-2 font-medium">Select which marketplace tabs this category will appear on for customers:</p>
+            <p className="text-[11px] text-slate-500 mb-2 font-medium">
+              Select which marketplace tabs this category will appear on for customers.
+              {form.parentId && ' A subcategory only appears in tabs where its parent is also enabled.'}
+            </p>
             <div className="flex flex-wrap gap-2">
               {VISIBLE_TABS.map((tab) => {
                 const isSelected = (form.visibleTabs || ['mithilakart']).includes(tab.value);

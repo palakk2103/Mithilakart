@@ -90,6 +90,10 @@ export const getProduct = async (id) => withId(await api.get(`/products/${id}`))
 
 export const createProduct = async (data) => withId(await api.post('/products', data));
 
+/** Bulk upload: dryRun=true returns the per-row preview, false saves. */
+export const bulkImportProducts = ({ rows, dryRun }) =>
+  api.post('/products/bulk-import', { rows, dryRun }, { timeout: 300000 });
+
 export const updateProduct = async (id, data) => api.put(`/products/${id}`, data);
 
 export const deleteProduct = async (id) => api.delete(`/products/${id}`);

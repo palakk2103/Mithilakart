@@ -6,6 +6,7 @@ const { objectIdSchema } = require('../../validators/common.validator');
 const {
   categoryCreateSchema,
   categoryUpdateSchema,
+  categoryBulkImportSchema,
   productBulkSchema,
   productRejectSchema,
   listProductsQuerySchema,
@@ -20,6 +21,7 @@ function createAdminCatalogRoutes(controllers, middleware) {
 
   router.get('/categories', requirePermission('categories.view'), categoryController.listAdmin);
   router.post('/categories', requirePermission('categories.edit'), validateBody(categoryCreateSchema), categoryController.create);
+  router.post('/categories/bulk-import', requirePermission('categories.edit'), validateBody(categoryBulkImportSchema), categoryController.bulkImport);
   router.get('/categories/:id', requirePermission('categories.view'), validateParams(Joi.object({ id: objectIdSchema })), categoryController.getById);
   router.put('/categories/:id', requirePermission('categories.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(categoryUpdateSchema), categoryController.update);
   router.delete('/categories/:id', requirePermission('categories.delete'), validateParams(Joi.object({ id: objectIdSchema })), categoryController.delete);
