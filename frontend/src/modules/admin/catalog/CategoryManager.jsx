@@ -78,12 +78,6 @@ const CategoryManager = () => {
     loadCategories();
   }, [loadCategories]);
 
-  // Categories available as parents for subcategories
-  const parentOptions = useMemo(
-    () => orderedCategories.filter((c) => (c.depth || 0) < 3),
-    [orderedCategories]
-  );
-
   // Show each subcategory directly under its parent instead of a flat list.
   const orderedCategories = useMemo(() => {
     const ids = new Set(categories.map((c) => c.id));
@@ -102,11 +96,74 @@ const CategoryManager = () => {
     return ordered;
   }, [categories]);
 
-  const filteredCategories = orderedCategories.filter((cat) =>
-    (tabFilter === 'all' || (cat.visibleTabs || []).includes(tabFilter))
-    && (cat.name.toLowerCase().includes(searchQuery.toLowerCase())
-      || cat.slug.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Categories available as parents for subcategories
+  const parentOptions = useMemo(
+    () => orderedCategories.filter((c) => (c.depth || 0) < 3),
+    [orderedCategories]
   );
+
+  const filteredCategories = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const tabMatches = (cat) => tabFilter === 'all' || (cat.visibleTabs || []).includes(tabFilter);
+
+    if (!q) {
+      return orderedCategories.filter(tabMatches);
+    }
+
+    // Build parent-child relationships
+    const childrenMap = new Map();
+    const parentMap = new Map();
+    categories.forEach((c) => {
+      if (c.parentId) {
+        parentMap.set(c.id, c.parentId);
+        const currentChildren = childrenMap.get(c.parentId) || [];
+        currentChildren.push(c.id);
+        childrenMap.set(c.parentId, currentChildren);
+      }
+    });
+
+    // Collect all descendants (subcategories, sub-subcategories, etc.)
+    const collectDescendantIds = (catId, set) => {
+      const children = childrenMap.get(catId) || [];
+      for (const childId of children) {
+        if (!set.has(childId)) {
+          set.add(childId);
+          collectDescendantIds(childId, set);
+        }
+      }
+    };
+
+    // Collect all ancestors (parent, root)
+    const collectAncestorIds = (catId, set) => {
+      let currentParentId = parentMap.get(catId);
+      while (currentParentId) {
+        if (set.has(currentParentId)) break;
+        set.add(currentParentId);
+        currentParentId = parentMap.get(currentParentId);
+      }
+    };
+
+    // Find direct matches (by name, slug, or parentName)
+    const directMatches = new Set();
+    categories.forEach((cat) => {
+      const name = (cat.name || '').toLowerCase();
+      const slug = (cat.slug || '').toLowerCase();
+      const parentName = (cat.parentName || '').toLowerCase();
+      if (name.includes(q) || slug.includes(q) || parentName.includes(q)) {
+        directMatches.add(cat.id);
+      }
+    });
+
+    // Combine matching IDs with all their subcategories and parents
+    const visibleIds = new Set();
+    directMatches.forEach((id) => {
+      visibleIds.add(id);
+      collectDescendantIds(id, visibleIds);
+      collectAncestorIds(id, visibleIds);
+    });
+
+    return orderedCategories.filter((cat) => visibleIds.has(cat.id) && tabMatches(cat));
+  }, [orderedCategories, categories, tabFilter, searchQuery]);
 
   const tabsOfParent = (parentId) => {
     const parent = categories.find((c) => c.id === parentId);

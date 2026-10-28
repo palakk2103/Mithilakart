@@ -86,6 +86,48 @@ const mapToSidebarIds = (root, sidebarSubcategories = []) => {
   return owner;
 };
 
+const mapCategoryTree = (child, cards = []) => {
+  let icon = child.imageUrl && !child.imageUrl.includes('placeholder')
+    ? getImageUrl(child.imageUrl)
+    : (child.iconUrl ? getImageUrl(child.iconUrl) : null);
+  if (!icon) {
+    const match = cards.find((c) => String(c.categoryId) === String(child.id) || String(c.category) === String(child.id));
+    icon = match?.img || FALLBACK_IMAGE;
+  }
+  return {
+    id: String(child.id || child._id),
+    name: child.name,
+    icon,
+    parentId: child.parentId ? String(child.parentId) : null,
+    children: (child.children || []).map((grandChild) => mapCategoryTree(grandChild, cards)),
+  };
+};
+
+const findNodeById = (nodes, id) => {
+  if (!nodes || !id) return null;
+  for (const n of nodes) {
+    if (String(n.id) === String(id)) return n;
+    if (n.children && n.children.length > 0) {
+      const found = findNodeById(n.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+const getDescendantIdSet = (node) => {
+  if (!node) return new Set();
+  const ids = new Set([String(node.id)]);
+  const walk = (n) => {
+    (n.children || []).forEach((c) => {
+      ids.add(String(c.id));
+      walk(c);
+    });
+  };
+  walk(node);
+  return ids;
+};
+
 const QuickShopSubcategory = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -125,7 +167,7 @@ const QuickShopSubcategory = () => {
   const rightGridBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]/30' : 'bg-orange-50/15';
   const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[#D9A21B]/25' : isMithilakFlow ? 'bg-[#F5F9FA] border border-[#207C8A]/25' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
 
-  const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
+  const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE, children: [] }]);
   const [productsList, setProductsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notDeliverable, setNotDeliverable] = useState(false);
@@ -177,6 +219,7 @@ const QuickShopSubcategory = () => {
         tags: [fromNearby ? 'Nearby' : 'Fresh'],
         // Sidebar id this product falls under; 'all' when it sits on the parent itself.
         category: sidebarIdOf.get(categoryId) || 'all',
+        categoryId,
       };
     };
 
@@ -186,10 +229,6 @@ const QuickShopSubcategory = () => {
         setNotDeliverable(false);
       }
       try {
-        // 1. Resolve the category and its subcategories FIRST. The old code
-        //    returned as soon as nearby products existed, so the subcategory
-        //    sidebar was never filled and every category showed the same
-        //    (unfiltered) nearby products.
         let tree = treeCacheRef.current.tab === marketplaceTab ? treeCacheRef.current.tree : null;
         if (!tree) {
           tree = extractList(await getCategories({ marketplaceTab }));
@@ -198,33 +237,30 @@ const QuickShopSubcategory = () => {
         const { node, parent } = locateCategory(tree, requestedId, requestedName);
         if (!node) {
           if (!cancelled) {
-            setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
+            setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE, children: [] }]);
             setProductsList([]);
           }
           return;
         }
 
-        // A clicked subcategory opens its parent with that subcategory selected.
-        const root = parent && !(node.children || []).length ? parent : node;
+        // The user clicked this specific category (e.g. Fresh Vegetables).
+        // That category is the root of this screen. Its children are its subcategories in the sidebar.
+        const root = (location.state?.isSubcategory && parent) ? parent : node;
         const sidebarSubcategories = resolveSidebarSubcategories(root);
         const sidebarIdOf = mapToSidebarIds(root, sidebarSubcategories);
 
         let initialActive = 'all';
-        if (sidebarSubcategories.some((s) => String(s.id) === String(node.id))) {
+        if (location.state?.subCategoryId && sidebarSubcategories.some((s) => String(s.id) === String(location.state.subCategoryId))) {
+          initialActive = String(location.state.subCategoryId);
+        } else if (location.state?.isSubcategory && sidebarSubcategories.some((s) => String(s.id) === String(node.id))) {
           initialActive = String(node.id);
-        } else if (sidebarIdOf.has(String(node.id))) {
-          initialActive = sidebarIdOf.get(String(node.id));
         }
 
         if (!cancelled && !isRefresh) {
           setCategoryName(root.name);
           setSubCategories([
-            { id: 'all', name: 'All', icon: getImageUrl(root.imageUrl || root.iconUrl || FALLBACK_IMAGE) },
-            ...sidebarSubcategories.map((child) => ({
-              id: String(child.id),
-              name: child.name,
-              icon: getImageUrl(child.imageUrl || child.iconUrl || FALLBACK_IMAGE),
-            })),
+            { id: 'all', name: 'All', icon: getImageUrl(root.imageUrl || root.iconUrl || FALLBACK_IMAGE), children: [] },
+            ...sidebarSubcategories.map((child) => mapCategoryTree(child)),
           ]);
           setActiveSub(initialActive);
         }
@@ -264,28 +300,15 @@ const QuickShopSubcategory = () => {
           // Update any subcategory placeholder icons with matching product images
           if (!isRefresh && sidebarSubcategories.length > 0) {
             setSubCategories([
-              { id: 'all', name: 'All', icon: getImageUrl(root.imageUrl || root.iconUrl || FALLBACK_IMAGE) },
-              ...sidebarSubcategories.map((child) => {
-                let icon = child.imageUrl && !child.imageUrl.includes('placeholder')
-                  ? getImageUrl(child.imageUrl)
-                  : (child.iconUrl ? getImageUrl(child.iconUrl) : null);
-                if (!icon) {
-                  const match = cards.find((c) => c.category === String(child.id));
-                  icon = match?.img || FALLBACK_IMAGE;
-                }
-                return {
-                  id: String(child.id),
-                  name: child.name,
-                  icon,
-                };
-              }),
+              { id: 'all', name: 'All', icon: getImageUrl(root.imageUrl || root.iconUrl || FALLBACK_IMAGE), children: [] },
+              ...sidebarSubcategories.map((child) => mapCategoryTree(child, cards)),
             ]);
           }
         }
       } catch {
         // A failed background refresh keeps what is already on screen.
         if (!cancelled && !isRefresh) {
-          setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE }]);
+          setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE, children: [] }]);
           setProductsList([]);
         }
       } finally {
@@ -326,9 +349,96 @@ const QuickShopSubcategory = () => {
     });
   };
 
-  const filteredProducts = activeSub === 'all' 
-    ? productsList 
-    : productsList.filter(p => p.category === activeSub);
+  const activeNode = React.useMemo(() => {
+    if (activeSub === 'all') return null;
+    return findNodeById(subCategories, activeSub);
+  }, [activeSub, subCategories]);
+
+  const parentNode = React.useMemo(() => {
+    if (!activeNode || activeSub === 'all') return null;
+    for (const sub of subCategories) {
+      if (sub.id === 'all') continue;
+      if (sub.children && sub.children.some((c) => String(c.id) === String(activeNode.id))) {
+        return sub;
+      }
+      const found = findNodeById(sub.children || [], activeNode.id);
+      if (found) return sub;
+    }
+    return null;
+  }, [activeNode, subCategories]);
+
+  const siblingPills = React.useMemo(() => {
+    if (parentNode && parentNode.children && parentNode.children.length > 0) {
+      return { parent: parentNode, items: parentNode.children };
+    }
+    if (activeNode && activeNode.children && activeNode.children.length > 0) {
+      return { parent: activeNode, items: activeNode.children };
+    }
+    return null;
+  }, [parentNode, activeNode]);
+
+  const isSidebarActive = (sub) => {
+    if (sub.id === 'all') return activeSub === 'all';
+    if (activeSub === sub.id) return true;
+    const descendantIds = getDescendantIdSet(sub);
+    return descendantIds.has(String(activeSub));
+  };
+
+  const currentSubcategoriesToShow = React.useMemo(() => {
+    if (activeSub === 'all') {
+      return subCategories.filter((s) => s.id !== 'all');
+    }
+    if (activeNode && activeNode.children && activeNode.children.length > 0) {
+      return activeNode.children;
+    }
+    return [];
+  }, [activeSub, activeNode, subCategories]);
+
+  const filteredProducts = React.useMemo(() => {
+    if (activeSub === 'all') return productsList;
+    const node = activeNode || findNodeById(subCategories, activeSub);
+    const subName = (node?.name || subCategories.find((s) => String(s.id) === String(activeSub))?.name || '').toLowerCase();
+    const keywords = subName
+      ? subName.split(/[,&\s]+/).map((w) => w.trim().toLowerCase()).filter((w) => w.length > 2)
+      : [];
+
+    if (!node) {
+      return productsList.filter((p) => {
+        if (String(p.category) === String(activeSub) || String(p.categoryId) === String(activeSub)) return true;
+        if (keywords.length > 0) {
+          const title = (p.name || '').toLowerCase();
+          return keywords.some((k) => title.includes(k));
+        }
+        return false;
+      });
+    }
+    const descendantIds = getDescendantIdSet(node);
+    return productsList.filter((p) => {
+      if (descendantIds.has(String(p.categoryId)) || descendantIds.has(String(p.category))) return true;
+      if (keywords.length > 0 && (p.category === 'all' || !descendantIds.size)) {
+        const title = (p.name || '').toLowerCase();
+        return keywords.some((k) => title.includes(k));
+      }
+      return false;
+    });
+  }, [activeSub, activeNode, subCategories, productsList]);
+
+  const getCategoryProductCount = (node) => {
+    if (!node) return 0;
+    const descendantIds = getDescendantIdSet(node);
+    const subName = (node.name || '').toLowerCase();
+    const keywords = subName
+      ? subName.split(/[,&\s]+/).map((w) => w.trim().toLowerCase()).filter((w) => w.length > 2)
+      : [];
+    return productsList.filter((p) => {
+      if (descendantIds.has(String(p.categoryId)) || descendantIds.has(String(p.category))) return true;
+      if (keywords.length > 0 && (p.category === 'all' || !descendantIds.size)) {
+        const title = (p.name || '').toLowerCase();
+        return keywords.some((k) => title.includes(k));
+      }
+      return false;
+    }).length;
+  };
 
   const isQuickShopHeader = !isFreshGroceryFlow && !isMithilakFlow;
 
@@ -568,7 +678,7 @@ const QuickShopSubcategory = () => {
           isFreshGroceryFlow ? 'bg-[#FFFDF3]' : 'bg-gray-50/60'
         }`}>
           {subCategories.map((sub) => {
-            const isActive = activeSub === sub.id;
+            const isActive = isSidebarActive(sub);
             return (
               <div
                 key={sub.id}
@@ -638,135 +748,247 @@ const QuickShopSubcategory = () => {
             </div>
           )}
 
-          {/* Grid list */}
           {!notDeliverable && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {filteredProducts.map((product) => {
-              const isFav = favorites.includes(product.id);
-              return (                <div 
-                  key={product.id}
-                  onClick={() => handleProductClick(product)}
-                  className="bg-white border border-gray-100/60 rounded-xl md:rounded-2xl p-1.5 md:p-2.5 flex flex-col relative shadow-3xs hover:shadow-2xs cursor-pointer active:scale-[0.99] transition-transform"
-                >
-                  {/* Badge label like 'Season's Best' */}
-                  {product.badge && (
-                    <div className="absolute top-0 left-0 bg-[#FF6F3C] text-white text-[7px] md:text-[7.5px] font-bold px-1.5 py-0.2 md:px-2 md:py-0.5 rounded-tl-xl rounded-br z-10 shadow-3xs uppercase tracking-wider leading-none">
-                      {product.badge}
-                    </div>
+            <>
+              {/* Sibling subcategory pills for quick switching */}
+              {siblingPills && (
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-2.5 px-0.5">
+                  <button
+                    onClick={() => setActiveSub(siblingPills.parent.id)}
+                    className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-bold transition-all border ${
+                      activeSub === siblingPills.parent.id
+                        ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
+                        : 'bg-white text-gray-700 border-gray-200/80 hover:bg-gray-50'
+                    }`}
+                  >
+                    All {siblingPills.parent.name}
+                  </button>
+                  {siblingPills.items.map((sibling) => {
+                    const isSiblingActive = activeSub === sibling.id;
+                    return (
+                      <button
+                        key={sibling.id}
+                        onClick={() => setActiveSub(sibling.id)}
+                        className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-bold transition-all border ${
+                          isSiblingActive
+                            ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
+                            : 'bg-white text-gray-700 border-gray-200/80 hover:bg-gray-50'
+                        }`}
+                      >
+                        {sibling.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Header Bar: Clean layout without text crowding or overlap */}
+              <div className="mb-3 px-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  {activeSub !== 'all' ? (
+                    <button
+                      onClick={() => setActiveSub(parentNode ? parentNode.id : 'all')}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-700 hover:text-gray-900 bg-white border border-gray-200/80 rounded-full px-2.5 py-1 shadow-3xs active:scale-95 transition-all flex-shrink-0"
+                    >
+                      <ArrowLeft size={13} strokeWidth={2.5} /> {parentNode ? parentNode.name : 'All Subcategories'}
+                    </button>
+                  ) : (
+                    <span className="text-[13px] md:text-[15px] font-black text-gray-900 tracking-tight">
+                      Subcategories
+                    </span>
                   )}
 
-                  {/* Heart Favorite Button */}
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(product.id);
-                    }}
-                    className="absolute top-1.5 right-1.5 w-5 h-5 md:w-6 md:h-6 bg-white/95 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs border border-gray-100/30 z-10 active:scale-90 transition-transform"
-                  >
-                    <Heart 
-                      size={9.5} 
-                      className={`transition-colors ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} 
-                    />
-                  </button>
-
-                  {/* Product Image Panel */}
-                  <div className="h-16 md:h-24 w-full flex items-center justify-center p-0.5 relative mb-1 md:mb-2">
-                    <img 
-                      src={product.img} 
-                      alt={product.name} 
-                      className="max-h-full max-w-full object-contain mix-blend-multiply"
-                      onError={handleImageError}
-                    />
-                    
-                    {/* Carousel Dots */}
-                    <div className="absolute bottom-0 left-0 flex gap-0.5">
-                      <div className="w-1 h-1 rounded-full bg-gray-600" />
-                      <div className="w-0.5 h-0.5 rounded-full bg-gray-300" />
-                      <div className="w-0.5 h-0.5 rounded-full bg-gray-300" />
-                    </div>
-                  </div>
-
-                  {/* Weight Details */}
-                  <div className="flex items-center gap-1 mb-1">
-                    <span className="text-[8.5px] md:text-[10px] text-gray-500 font-bold border border-gray-200/60 px-1 py-0.2 md:px-1.5 md:py-0.5 rounded bg-gray-50/30">
-                      {product.weight}
-                    </span>
-                    {product.subText && (
-                      <span className="text-[8px] md:text-[9px] text-gray-400 font-semibold">{product.subText}</span>
-                    )}
-                  </div>
-
-                  {/* Product Title */}
-                  <h3 className="text-[10px] md:text-[11.5px] font-bold text-gray-900 leading-[1.25] line-clamp-2 h-[26px] md:h-7.5 mb-1">
-                    {product.name}
-                  </h3>
-
-                  {/* Custom Tags (Hidden on Mobile for compaction) */}
-                  <div className="hidden md:flex flex-wrap gap-1 mb-2">
-                    {product.tags.map((tag, tIdx) => (
-                      <span 
-                        key={tIdx} 
-                        className="bg-[#FAF6EC] text-[#8C6239] text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Price and Add CTA bar */}
-                  <div className="mt-auto pt-1.5 flex items-center justify-between border-t border-gray-50">
-                    <div className="flex flex-col">
-                      <span className="text-[12.5px] md:text-[14px] font-bold text-gray-955 leading-none">
-                        {formatPrice(product.price)}
-                      </span>
-                      {product.oldPrice && (
-                        <span className="text-[9px] md:text-[10px] text-gray-405 line-through mt-0.5">
-                          {formatPrice(product.oldPrice)}
-                        </span>
-                      )}
-                    </div>
-
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
-                      }}
-                      className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
-                    >
-                      Add
-                    </button>
-                  </div>
- 
-                  {/* ETA & Stock status strip */}
-                  <div className="flex items-center gap-1.5 mt-1.5 pt-0.5 border-t border-dashed border-gray-100 text-[8px] md:text-[8.5px] text-gray-400 font-semibold">
-                    <span className={`flex items-center gap-0.5 ${primaryText}`}>
-                      ⏱ {product.eta}
-                    </span>
-                    {product.stock && (
-                      <span className="text-rose-500 font-bold bg-rose-50/50 px-1 rounded-sm">
-                        {product.stock}
-                      </span>
-                    )}
-                  </div>
-
+                  <span className="text-[10px] md:text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-white border border-gray-200/80 text-gray-500 shadow-3xs flex-shrink-0">
+                    {currentSubcategoriesToShow.length > 0
+                      ? `${currentSubcategoriesToShow.length} items`
+                      : `${filteredProducts.length} items`}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+
+                {activeSub !== 'all' && (
+                  <div className="mt-2">
+                    <h2 className="text-[14px] md:text-[15px] font-black text-gray-900 tracking-tight leading-tight">
+                      {parentNode ? `${parentNode.name} > ${activeNode ? activeNode.name : ''}` : (activeNode ? activeNode.name : categoryName)}
+                    </h2>
+                    {currentSubcategoriesToShow.length > 0 && (
+                      <p className="text-[9.5px] text-gray-500 font-medium mt-0.5">
+                        Select a subcategory to browse products
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Case 1: Subcategories exist to show (e.g. Milk -> Cow Milk, Toned Milk, Full Cream Milk cards) */}
+              {currentSubcategoriesToShow.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                  {currentSubcategoriesToShow.map((sub) => {
+                    const count = getCategoryProductCount(sub);
+                    return (
+                      <div
+                        key={sub.id}
+                        onClick={() => setActiveSub(sub.id)}
+                        className="bg-white border border-gray-100 hover:border-amber-300 rounded-2xl p-2.5 md:p-3 flex flex-col items-center justify-between text-center cursor-pointer active:scale-95 transition-all shadow-3xs hover:shadow-2xs group"
+                      >
+                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-[#FFFDF8] border border-gray-100/70 flex items-center justify-center p-2 mb-2 group-hover:scale-105 transition-transform overflow-hidden">
+                          <img
+                            src={sub.icon}
+                            alt={sub.name}
+                            className="w-full h-full object-contain mix-blend-multiply"
+                            onError={handleImageError}
+                          />
+                        </div>
+                        <span className={`text-[10.5px] md:text-[12px] font-bold text-gray-900 leading-tight line-clamp-2 min-h-[26px] flex items-center justify-center group-hover:${primaryText} transition-colors`}>
+                          {sub.name}
+                        </span>
+                        <span className="mt-1 text-[9px] md:text-[10px] font-semibold text-gray-400 group-hover:text-amber-600 transition-colors">
+                          {count > 0 ? `${count} ${count === 1 ? 'item' : 'items'}` : 'Explore'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Case 2: Specific Leaf Subcategory selected (No children) -> Show Products Grid */
+                <div>
+
+                  {filteredProducts.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {filteredProducts.map((product) => {
+                        const isFav = favorites.includes(product.id);
+                        return (
+                          <div 
+                            key={product.id}
+                            onClick={() => handleProductClick(product)}
+                            className="bg-white border border-gray-100/60 rounded-xl md:rounded-2xl p-1.5 md:p-2.5 flex flex-col relative shadow-3xs hover:shadow-2xs cursor-pointer active:scale-[0.99] transition-transform"
+                          >
+                            {/* Badge label like 'Season's Best' */}
+                            {product.badge && (
+                              <div className="absolute top-0 left-0 bg-[#FF6F3C] text-white text-[7px] md:text-[7.5px] font-bold px-1.5 py-0.2 md:px-2 md:py-0.5 rounded-tl-xl rounded-br z-10 shadow-3xs uppercase tracking-wider leading-none">
+                                {product.badge}
+                              </div>
+                            )}
+
+                            {/* Heart Favorite Button */}
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(product.id);
+                              }}
+                              className="absolute top-1.5 right-1.5 w-5 h-5 md:w-6 md:h-6 bg-white/95 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs border border-gray-100/30 z-10 active:scale-90 transition-transform"
+                            >
+                              <Heart 
+                                size={9.5} 
+                                className={`transition-colors ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} 
+                              />
+                            </button>
+
+                            {/* Product Image Panel */}
+                            <div className="h-16 md:h-24 w-full flex items-center justify-center p-0.5 relative mb-1 md:mb-2">
+                              <img 
+                                src={product.img} 
+                                alt={product.name} 
+                                className="max-h-full max-w-full object-contain mix-blend-multiply"
+                                onError={handleImageError}
+                              />
+                              
+                              {/* Carousel Dots */}
+                              <div className="absolute bottom-0 left-0 flex gap-0.5">
+                                <div className="w-1 h-1 rounded-full bg-gray-600" />
+                                <div className="w-0.5 h-0.5 rounded-full bg-gray-300" />
+                                <div className="w-0.5 h-0.5 rounded-full bg-gray-300" />
+                              </div>
+                            </div>
+
+                            {/* Weight Details */}
+                            <div className="flex items-center gap-1 mb-1">
+                              <span className="text-[8.5px] md:text-[10px] text-gray-500 font-bold border border-gray-200/60 px-1 py-0.2 md:px-1.5 md:py-0.5 rounded bg-gray-50/30">
+                                {product.weight}
+                              </span>
+                              {product.subText && (
+                                <span className="text-[8px] md:text-[9px] text-gray-400 font-semibold">{product.subText}</span>
+                              )}
+                            </div>
+
+                            {/* Product Title */}
+                            <h3 className="text-[10px] md:text-[11.5px] font-bold text-gray-900 leading-[1.25] line-clamp-2 h-[26px] md:h-7.5 mb-1">
+                              {product.name}
+                            </h3>
+
+                            {/* Custom Tags (Hidden on Mobile for compaction) */}
+                            <div className="hidden md:flex flex-wrap gap-1 mb-2">
+                              {product.tags.map((tag, tIdx) => (
+                                <span 
+                                  key={tIdx} 
+                                  className="bg-[#FAF6EC] text-[#8C6239] text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Price and Add CTA bar */}
+                            <div className="mt-auto pt-1.5 flex items-center justify-between border-t border-gray-50">
+                              <div className="flex flex-col">
+                                <span className="text-[12.5px] md:text-[14px] font-bold text-gray-955 leading-none">
+                                  {formatPrice(product.price)}
+                                </span>
+                                {product.oldPrice && (
+                                  <span className="text-[9px] md:text-[10px] text-gray-405 line-through mt-0.5">
+                                    {formatPrice(product.oldPrice)}
+                                  </span>
+                                )}
+                              </div>
+
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
+                                }}
+                                className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
+                              >
+                                Add
+                              </button>
+                            </div>
+           
+                            {/* ETA & Stock status strip */}
+                            <div className="flex items-center gap-1.5 mt-1.5 pt-0.5 border-t border-dashed border-gray-100 text-[8px] md:text-[8.5px] text-gray-400 font-semibold">
+                              <span className={`flex items-center gap-0.5 ${primaryText}`}>
+                                ⏱ {product.eta}
+                              </span>
+                              {product.stock && (
+                                <span className="text-rose-500 font-bold bg-rose-50/50 px-1 rounded-sm">
+                                  {product.stock}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 px-4 bg-white/60 rounded-2xl border border-dashed border-gray-200 my-2">
+                      <p className="text-[13px] font-bold text-gray-700">No products here yet</p>
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Try browsing other subcategories.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSub(parentNode ? parentNode.id : 'all')}
+                        className={`mt-3 px-4 py-1.5 rounded-xl text-xs font-bold text-white ${primaryBg} active:scale-95 transition-all shadow-xs`}
+                      >
+                        Back to {parentNode ? parentNode.name : 'Subcategories'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {!notDeliverable && loading && (
             <p className="text-center text-[12px] font-bold text-gray-400 py-10">Loading products…</p>
           )}
-          {!notDeliverable && !loading && filteredProducts.length === 0 && (
-            <div className="text-center py-10 px-4">
-              <p className="text-[13px] font-bold text-gray-700">No products here yet</p>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {activeSub === 'all' ? 'New products for this category are on the way.' : 'Try "All" or another subcategory.'}
-              </p>
-            </div>
-          )}
-
         </div>
 
       </div>
