@@ -4,6 +4,10 @@ const { withTransaction } = require('../../database');
 const { ORDER_STATUS } = require('../../constants/commerce');
 const { RETURN_STATUS } = require('../../constants/pricing');
 
+/** Matches the published Return Policy (section 2.1). */
+const RETURN_WINDOW_DAYS = 10;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 class ReturnService extends BaseService {
   constructor({
     returnRepository,
@@ -18,12 +22,17 @@ class ReturnService extends BaseService {
 
   async initiateReturn(userId, orderId, payload) {
     return withTransaction(async (session) => {
-      const order = await this.orderRepository.findOne({ _id: orderId, userId }, { session });
+      // The app may address the order by its number (MK-...) as well as its id.
+      const order = await this.orderRepository.findActiveById(orderId, userId);
       if (!order) throw AppError.notFound('Order not found');
-
       if (order.status !== ORDER_STATUS.DELIVERED) {
         throw AppError.conflict('Returns are only allowed for delivered orders');
       }
+      const deliveredAt = order.deliveredAt || order.updatedAt;
+      if (deliveredAt && Date.now() - new Date(deliveredAt).getTime() > RETURN_WINDOW_DAYS * DAY_MS) {
+        throw AppError.conflict(`Returns can be requested within ${RETURN_WINDOW_DAYS} days of delivery`);
+      }
+      orderId = order._id;
 
       const orderItem = await this.orderItemRepository.findOne({
         _id: payload.orderItemId,

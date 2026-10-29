@@ -26,6 +26,11 @@ const requiredItemSchema = new mongoose.Schema(
     variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', default: null },
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },
+    /**
+     * The order already deducted this line from `productId` (checkout confirms
+     * before the engine starts), so the engine must not hold it a second time.
+     */
+    deductedWithOrder: { type: Boolean, default: false },
   },
   { _id: false }
 );

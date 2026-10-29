@@ -94,6 +94,7 @@ const { DeliveryPartnerRankingService } = require('../services/fulfillment/Deliv
 const { FulfillmentReservationService } = require('../services/fulfillment/FulfillmentReservationService');
 const { FulfillmentEngineService } = require('../services/fulfillment/FulfillmentEngineService');
 const { FulfillmentSweeper } = require('../services/fulfillment/FulfillmentSweeper');
+const { QuickServiceAreaService } = require('../services/fulfillment/QuickServiceAreaService');
 const { RoutingService } = require('../services/maps/RoutingService');
 const { SellerFulfillmentService } = require('../services/seller/SellerFulfillmentService');
 const { DeliveryOtpService } = require('../services/delivery/DeliveryOtpService');
@@ -523,6 +524,17 @@ function buildContainer() {
   });
 
   orderService.setFulfillmentEngineService(fulfillmentEngineService);
+  fulfillmentSweeper.setOrderService(orderService);
+
+  // Browsing (nearby feed) and quick checkout share the engine's seller rules.
+  const quickServiceAreaService = new QuickServiceAreaService({
+    sellerEligibilityService,
+    fulfillmentConfigService,
+    sellerRepository,
+    productRepository,
+  });
+  nearbyService.setQuickServiceAreaService(quickServiceAreaService);
+  orderService.setQuickServiceAreaService(quickServiceAreaService);
 
   const sellerFulfillmentService = new SellerFulfillmentService({
     orderRepository,
@@ -631,6 +643,8 @@ function buildContainer() {
     walletService,
     productRepository,
     inventoryHistoryRepository,
+    orderRepository,
+    paymentService,
   });
   const adminReturnService = new AdminReturnService({ returnRepository });
 

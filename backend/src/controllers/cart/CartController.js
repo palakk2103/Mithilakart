@@ -67,8 +67,7 @@ class CartController extends BaseController {
     const data = await this.service.updateItemQuantity({
       userId,
       sessionId,
-      commerceFlow: req.body.commerceFlow || 'standard',
-      productId: req.params.id,
+      itemId: req.params.id,
       quantity: req.body.quantity,
     });
 
@@ -80,9 +79,7 @@ class CartController extends BaseController {
     const data = await this.service.removeItem({
       userId,
       sessionId,
-      commerceFlow: req.query.commerceFlow || 'standard',
-      productId: req.params.id,
-      variantId: null,
+      itemId: req.params.id,
     });
 
     return ApiResponse.success(res, data);

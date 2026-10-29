@@ -48,8 +48,11 @@ class DeliveryOtpService extends BaseService {
       throw AppError.gone('OTP has expired or already used');
     }
 
+    // 422, not 401: a wrong code is a typo, not an expired login. As a 401 the
+    // app refreshed the rider's session, retried, and bounced them off the
+    // delivery screen.
     if (stored !== sha256(cleanOtp)) {
-      throw AppError.unauthorized('Invalid OTP');
+      throw AppError.validation('Invalid OTP — check the code and try again');
     }
 
     await this.redis.del(key);

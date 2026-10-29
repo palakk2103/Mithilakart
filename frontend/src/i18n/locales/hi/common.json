@@ -182,7 +182,8 @@
     "orderSummary": "विवरण",
     "platformFees": "प्लेटफॉर्म शुल्क",
     "productDiscount": "उत्पाद छूट",
-    "deliveryText": "2 दिनों में डिलीवरी"
+    "deliveryText": "2 दिनों में डिलीवरी",
+    "deliveryCharges": "डिलीवरी शुल्क"
   },
   "categories": {
     "beautyCare": "सौंदर्य और देखभाल",
@@ -218,7 +219,8 @@
     "viewAll": "सभी देखें",
     "seeAll": "सभी देखें",
     "listening": "सुन रहा है...",
-    "analyzingImage": "छवि का विश्लेषण किया जा रहा है..."
+    "analyzingImage": "छवि का विश्लेषण किया जा रहा है...",
+    "quantity": "मात्रा"
   },
   "product": {
     "mrp": "एमआरपी",

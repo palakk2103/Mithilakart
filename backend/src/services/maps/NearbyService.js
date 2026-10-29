@@ -1,7 +1,7 @@
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
-const { resolveTabFromQuery } = require('../../utils/marketplaceTab');
+const { resolveTabFromQuery, isQuickCommerceTab } = require('../../utils/marketplaceTab');
 
 class NearbyService extends BaseService {
   constructor({ sellerRepository, productRepository, marketplaceListingRepository, geocodingService, categoryRepository = null }) {
@@ -11,6 +11,27 @@ class NearbyService extends BaseService {
     this.productRepository = productRepository;
     this.marketplaceListingRepository = marketplaceListingRepository;
     this.geocodingService = geocodingService;
+    this.quickServiceAreaService = null;
+  }
+
+  setQuickServiceAreaService(quickServiceAreaService) {
+    this.quickServiceAreaService = quickServiceAreaService;
+  }
+
+  /**
+   * Quick tabs only show sellers the fulfilment engine would actually offer
+   * the order to; standard tabs keep the plain distance search.
+   */
+  async _sellersServing(coords, tab) {
+    if (!tab || !isQuickCommerceTab(tab) || !this.quickServiceAreaService) {
+      return this.sellerRepository.findNearby(coords);
+    }
+    const searchRadiusKm = await this.quickServiceAreaService.searchRadiusKm(tab);
+    const sellers = await this.sellerRepository.findNearby({
+      ...coords,
+      radiusKm: Math.max(coords.radiusKm, searchRadiusKm),
+    });
+    return this.quickServiceAreaService.filterServingSellers(sellers, tab);
   }
 
   _parseCoords(query) {
@@ -97,7 +118,8 @@ class NearbyService extends BaseService {
   async nearbyProducts(query) {
     const coords = this._parseCoords(query);
     const pagination = parsePagination(query);
-    const sellers = await this.sellerRepository.findNearby(coords);
+    const tab = resolveTabFromQuery(query);
+    const sellers = await this._sellersServing(coords, tab);
 
     if (!sellers.length) {
       return {
@@ -116,7 +138,6 @@ class NearbyService extends BaseService {
       sellers.map((s) => [String(s._id), s.distanceKm])
     );
 
-    const tab = resolveTabFromQuery(query);
     if (tab && this.marketplaceListingRepository) {
       return this._nearbyListings({
         query,

@@ -2,6 +2,8 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
 
+const TAB_ELIGIBILITY_FIELDS = ['mithilakEligible', 'quickCommerceEligible', 'groceryEligible'];
+
 class AdminVendorService extends BaseService {
   constructor({ sellerRepository, productRepository, orderItemRepository, sellerEarningRepository }) {
     super();
@@ -31,9 +33,26 @@ class AdminVendorService extends BaseService {
     return seller;
   }
 
+  /**
+   * Approval also opens the tabs a seller can sell in. All three flags default
+   * to false and no screen set them, so every approved seller's Quick Shop /
+   * Groceries order was refused by fulfilment and shipped by courier. A seller
+   * the admin already configured keeps that choice.
+   */
   async approve(id) {
+    const seller = await this.getById(id);
+    const configured = TAB_ELIGIBILITY_FIELDS.some((field) => seller[field]);
+    const tabs = configured ? {} : Object.fromEntries(TAB_ELIGIBILITY_FIELDS.map((field) => [field, true]));
+    return this.sellerRepository.updateById(id, { kycStatus: 'approved', status: 'active', ...tabs });
+  }
+
+  /** Admin switches which marketplace tabs the seller may sell in. */
+  async updateTabEligibility(id, flags = {}) {
     await this.getById(id);
-    return this.sellerRepository.updateById(id, { kycStatus: 'approved', status: 'active' });
+    const update = Object.fromEntries(
+      TAB_ELIGIBILITY_FIELDS.filter((field) => typeof flags[field] === 'boolean').map((field) => [field, flags[field]])
+    );
+    return this.sellerRepository.updateById(id, update);
   }
 
   async reject(id) {

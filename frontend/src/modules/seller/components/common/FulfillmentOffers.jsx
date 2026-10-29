@@ -35,6 +35,9 @@ function secondsLeft(expiresAt) {
 export default function FulfillmentOffers({ onAccepted }) {
   const ctx = useFulfillmentOffers();
   const [, forceTick] = useState(0);
+  // Hooks must run before any early return: calling this only once offers
+  // existed crashed the seller Orders page (React #310) as an offer arrived.
+  const navigate = useNavigate();
 
   const offers = ctx?.offers ?? [];
 
@@ -58,7 +61,6 @@ export default function FulfillmentOffers({ onAccepted }) {
 
   if (!offers.length) return null;
 
-  const navigate = useNavigate();
   const respond = async (offer, action, reason) => {
     const targetOrderId = offer.orderId;
     const orderNumber = offer.orderNumber;

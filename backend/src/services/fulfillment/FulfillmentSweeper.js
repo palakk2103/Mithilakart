@@ -36,6 +36,11 @@ class FulfillmentSweeper {
     this._stopped = true;
   }
 
+  /** Optional: lets each pass also expire abandoned online payments. */
+  setOrderService(orderService) {
+    this.orderService = orderService;
+  }
+
   /** Wired after construction: DeliveryOrderService is built later in the container. */
   setDeliveryOrderService(deliveryOrderService) {
     this.deliveryOrderService = deliveryOrderService;
@@ -97,8 +102,17 @@ class FulfillmentSweeper {
       }
     }
 
+    if (this.orderService?.expireAbandonedPayments) {
+      try {
+        result.abandonedPayments = (await this.orderService.expireAbandonedPayments()).expired;
+      } catch (error) {
+        result.errors += 1;
+        logger.error({ err: error }, 'Abandoned payment pass failed');
+      }
+    }
+
     if (result.acceptanceTimeouts || result.searchTimeouts
-      || result.deliveryOfferTimeouts || result.errors) {
+      || result.deliveryOfferTimeouts || result.abandonedPayments || result.errors) {
       logger.info(result, 'CR-002 sweeper pass complete');
     }
 

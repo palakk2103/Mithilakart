@@ -11,8 +11,12 @@ class OrderItemRepository extends BaseRepository {
     return new mongoose.Types.ObjectId(String(sellerId));
   }
 
-  async listByOrderId(orderId) {
-    return this.find({ orderId, deletedAt: null });
+  /**
+   * Pass `options.session` when reading inside the checkout transaction —
+   * items created in that transaction are invisible to an unsessioned read.
+   */
+  async listByOrderId(orderId, options = {}) {
+    return this.find({ orderId, deletedAt: null }, options);
   }
 
   async countDistinctOrdersBySeller(sellerId) {

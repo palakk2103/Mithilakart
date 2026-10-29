@@ -69,6 +69,14 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText,
   );
 };
 
+// Which marketplace tabs the seller may sell in. Quick Shop / Groceries orders
+// are only offered to sellers enabled here (and within delivery range).
+const TAB_FLAGS = [
+  { field: 'mithilakEligible', label: 'Mithilak', hint: 'Mithila art & handicrafts tab' },
+  { field: 'quickCommerceEligible', label: 'Quick Shop', hint: 'Quick delivery from this store' },
+  { field: 'groceryEligible', label: 'Groceries & Fresh', hint: 'Quick grocery delivery from this store' },
+];
+
 const SellerDetail = () => {
   const { vendorId } = useParams();
   const navigate = useNavigate();
@@ -78,6 +86,8 @@ const SellerDetail = () => {
   const [activeTab, setActiveTab] = useState('Storefront');
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null });
+  const [tabFlags, setTabFlags] = useState({});
+  const [savingFlag, setSavingFlag] = useState(null);
 
   const fetchSeller = async () => {
     if (!vendorId) return;
@@ -91,6 +101,7 @@ const SellerDetail = () => {
       setError(sellerRes.error);
     } else {
       setError(null);
+      setTabFlags(Object.fromEntries(TAB_FLAGS.map(({ field }) => [field, Boolean(sellerRes.data?.[field])])));
       setSeller(mapSellerDetail(sellerRes.data, {
         earnings: earningsRes.data?.total ?? 0,
         products: extractList(productsRes.data),
@@ -103,6 +114,20 @@ const SellerDetail = () => {
   useEffect(() => {
     fetchSeller();
   }, [vendorId]);
+
+  const toggleTabFlag = async (field) => {
+    const next = !tabFlags[field];
+    setSavingFlag(field);
+    const result = await sellersApi.updateTabs(vendorId, { [field]: next });
+    setSavingFlag(null);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    setTabFlags((prev) => ({ ...prev, [field]: next }));
+    const label = TAB_FLAGS.find((flag) => flag.field === field)?.label;
+    toast.success(`${label} ${next ? 'enabled' : 'disabled'} for this seller`);
+  };
 
   const handleAction = async (action) => {
     setActionLoading(true);
@@ -362,6 +387,33 @@ const SellerDetail = () => {
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Physical Address</p>
                       <p className="text-sm font-bold text-slate-800 flex items-center gap-2"><MapPin size={14} className="text-slate-400" />{seller.address}</p>
                     </div>
+                  </div>
+
+                  <h3 className="text-base font-black text-slate-900 uppercase font-montserrat tracking-tight border-b border-slate-50 pb-3 pt-4">Marketplace Tabs</h3>
+                  <p className="text-xs font-semibold text-slate-500 -mt-3">
+                    Mithilakart (standard courier) is always on. Quick tabs also need the store location and are limited to the quick-delivery radius.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {TAB_FLAGS.map(({ field, label, hint }) => (
+                      <button
+                        key={field}
+                        type="button"
+                        role="switch"
+                        aria-checked={Boolean(tabFlags[field])}
+                        aria-label={`${label} enabled`}
+                        onClick={() => toggleTabFlag(field)}
+                        disabled={savingFlag === field}
+                        className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-all disabled:opacity-60 ${tabFlags[field] ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}
+                      >
+                        <span>
+                          <span className="block text-sm font-black text-slate-800">{label}</span>
+                          <span className="block text-[11px] font-semibold text-slate-500">{hint}</span>
+                        </span>
+                        <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${tabFlags[field] ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${tabFlags[field] ? 'left-[22px]' : 'left-0.5'}`} />
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}

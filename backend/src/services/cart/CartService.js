@@ -3,6 +3,13 @@ const { AppError } = require('../../utils/AppError');
 const { CART } = require('../../constants/commerce');
 const { resolveTabFromQuery, toLegacyCommerceFlow } = require('../../utils/marketplaceTab');
 
+const TAB_LABELS = {
+  mithilakart: 'Mithilakart',
+  mithilak: 'Mithilak',
+  quick_shop: 'Quick Shop',
+  groceries_fresh: 'Groceries & Fresh',
+};
+
 class CartService extends BaseService {
   constructor({ redisClient, productRepository, pricingService, marketplaceListingService = null }) {
     super();
@@ -123,7 +130,7 @@ class CartService extends BaseService {
     const tab = marketplaceTab || resolveTabFromQuery({ commerceFlow });
 
     if (listingId && this.marketplaceListingService) {
-      const { listing, product } = await this.marketplaceListingService.resolveListingForCart(listingId);
+      const { listing, product } = await this.marketplaceListingService.resolveListingForCart(listingId, tab);
 
       if (tab && listing.marketplaceTab !== tab) {
         throw AppError.conflict('Listing does not belong to active marketplace tab', [
@@ -142,10 +149,9 @@ class CartService extends BaseService {
       const raw = await this.redis.get(key);
       const state = this._deserialize(raw) || { items: [] };
 
+      this._resetTabIfEmpty(state);
       if (state.marketplaceTab && state.marketplaceTab !== listing.marketplaceTab) {
-        throw AppError.conflict('Cart contains items from a different marketplace tab', [
-          { code: 'CART_TAB_MISMATCH' },
-        ]);
+        throw this._tabMismatchError(state.marketplaceTab, listing.marketplaceTab);
       }
 
       const itemKey = `listing:${listingId}`;
@@ -184,6 +190,23 @@ class CartService extends BaseService {
       return this.getCart({ userId, sessionId, marketplaceTab: listing.marketplaceTab, couponCode: state.couponCode });
     }
 
+    // Screens that add by product id still go through the tab's listing, so
+    // the line carries that tab's price and delivery promise. Products with
+    // no listing in the tab (legacy data) keep the plain product path.
+    if (tab && this.marketplaceListingService) {
+      let resolved = null;
+      try {
+        resolved = await this.marketplaceListingService.resolveListingForCart(productId, tab);
+      } catch (err) {
+        if (err?.statusCode !== 404) throw err;
+      }
+      if (resolved?.listing?.marketplaceTab === tab) {
+        return this.addItem({
+          userId, sessionId, commerceFlow, marketplaceTab: tab, listingId: String(resolved.listing._id), variantId, quantity,
+        });
+      }
+    }
+
     const product = await this.productRepository.findPublicById(productId);
     if (!product) throw AppError.notFound('Product not found');
 
@@ -198,6 +221,10 @@ class CartService extends BaseService {
     const key = this._cartKey({ userId, sessionId });
     const raw = await this.redis.get(key);
     const state = this._deserialize(raw) || { commerceFlow, items: [] };
+    this._resetTabIfEmpty(state);
+    if (tab && state.marketplaceTab && state.marketplaceTab !== tab) {
+      throw this._tabMismatchError(state.marketplaceTab, tab);
+    }
 
     const itemKey = `${productId}:${variantId || ''}`;
     const existing = state.items.find((it) => it.itemKey === itemKey);
@@ -237,21 +264,44 @@ class CartService extends BaseService {
     return this.getCart({ userId, sessionId, commerceFlow, couponCode: state.couponCode });
   }
 
-  async updateItemQuantity({ userId, sessionId, commerceFlow = 'standard', productId, variantId = null, quantity }) {
-    // `tab` is read further down but was never declared here, so every call
-    // threw a ReferenceError. Derived the same way as addItem/getCart.
-    const tab = resolveTabFromQuery({ commerceFlow }) || null;
+  /**
+   * Finds a cart line by the itemKey the cart hands out ("listing:<id>" or
+   * "<productId>:<variantId>"). Older clients send a bare listing/product id.
+   * Matching only "<productId>:" broke +/− and Remove for every listing line.
+   */
+  _findLine(state, itemId) {
+    const id = String(itemId || '');
+    const bare = id.replace(/^listing:/, '').split(':')[0];
+    return state.items.find((it) => it.itemKey === id)
+      || state.items.find((it) => it.listingId && String(it.listingId) === bare)
+      || state.items.find((it) => String(it.productId) === bare);
+  }
 
-    const product = await this.productRepository.findPublicById(productId);
-    if (!product) throw AppError.notFound('Product not found');
+  /** An emptied cart forgets its tab, so the next item may come from any tab. */
+  _resetTabIfEmpty(state) {
+    if (state.items.length) return;
+    delete state.marketplaceTab;
+    delete state.commerceFlow;
+  }
 
+  _tabMismatchError(cartTab, newTab) {
+    const label = (tab) => TAB_LABELS[tab] || tab;
+    return AppError.conflict(
+      `Your cart has items from ${label(cartTab)}. Place that order or clear your cart before adding items from ${label(newTab)}.`,
+      [{ code: 'CART_TAB_MISMATCH', cartTab, newTab }]
+    );
+  }
+
+  async updateItemQuantity({ userId, sessionId, itemId, productId, quantity }) {
     const key = this._cartKey({ userId, sessionId });
     const raw = await this.redis.get(key);
-    const state = this._deserialize(raw) || { commerceFlow, items: [] };
+    const state = this._deserialize(raw) || { items: [] };
 
-    const itemKey = `${productId}:${variantId || ''}`;
-    const item = state.items.find((it) => it.itemKey === itemKey);
+    const item = this._findLine(state, itemId || productId);
     if (!item) throw AppError.notFound('Cart item not found');
+
+    const product = await this.productRepository.findPublicById(item.productId);
+    if (!product) throw AppError.notFound('Product not found');
 
     const availableStock = this.productRepository.getAvailableStock(product);
 
@@ -262,47 +312,30 @@ class CartService extends BaseService {
     }
 
     item.quantity = quantity;
-    item.unitPrice = product.price;
-    item.sellerId = product.sellerId;
-    item.variantId = variantId || null;
+    item.sellerId = String(product.sellerId);
+    // Listing lines are priced by their listing (refreshed on every read).
+    if (!item.listingId) item.unitPrice = product.price;
 
-    state.commerceFlow = commerceFlow;
-    if (tab) state.marketplaceTab = tab;
     state.updatedAt = new Date().toISOString();
 
     await this.redis.set(key, this._serialize(state), 'EX', CART.CART_KEY_TTL_SECONDS);
 
-    return this.getCart({ userId, sessionId, commerceFlow, couponCode: state.couponCode });
+    return this.getCart({ userId, sessionId, couponCode: state.couponCode });
   }
 
-  async removeItem({ userId, sessionId, commerceFlow = 'standard', productId, variantId = null }) {
+  async removeItem({ userId, sessionId, itemId, productId }) {
     const key = this._cartKey({ userId, sessionId });
     const raw = await this.redis.get(key);
-    const state = this._deserialize(raw) || { commerceFlow, items: [] };
+    const state = this._deserialize(raw) || { items: [] };
 
-    const rawId = String(productId || '');
-    const cleanId = rawId.replace(/:+$/, '').replace(/^listing:/, '');
-    const itemKey = `${cleanId}:${variantId || ''}`;
-
-    state.items = (state.items || []).filter((it) => {
-      // Direct itemKey match (cartId / itemKey)
-      if (it.itemKey === rawId || it.itemKey === itemKey) return false;
-      if (it.itemKey && it.itemKey.replace(/:+$/, '').replace(/^listing:/, '') === cleanId) return false;
-      // Match by productId
-      if (it.productId && (String(it.productId) === rawId || String(it.productId) === cleanId)) {
-        if (!variantId || it.variantId === variantId) return false;
-      }
-      // Match by listingId
-      if (it.listingId && (String(it.listingId) === rawId || String(it.listingId) === cleanId || `listing:${it.listingId}` === rawId)) {
-        return false;
-      }
-      return true;
-    });
+    const item = this._findLine(state, itemId || productId);
+    if (item) state.items = state.items.filter((it) => it !== item);
+    this._resetTabIfEmpty(state);
     state.updatedAt = new Date().toISOString();
 
     await this.redis.set(key, this._serialize(state), 'EX', CART.CART_KEY_TTL_SECONDS);
 
-    return this.getCart({ userId, sessionId, commerceFlow, couponCode: state.couponCode });
+    return this.getCart({ userId, sessionId, couponCode: state.couponCode });
   }
 
   async clearCart({ userId, sessionId }) {

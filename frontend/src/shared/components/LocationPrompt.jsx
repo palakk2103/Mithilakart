@@ -1,9 +1,15 @@
 import React from 'react';
 import { MapPin, Navigation, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation as useRouterLocation } from 'react-router-dom';
 import { useLocation } from '../context/LocationContext';
 
+// Delivery location only matters to shoppers; on the admin, seller and
+// delivery portals the prompt just blocked the screen.
+const NON_SHOPPER_PORTALS = /^\/(admin|seller|delivery)(\/|$)/;
+
 const LocationPrompt = () => {
+  const { pathname } = useRouterLocation();
   const {
     promptOpen,
     setPromptOpen,
@@ -23,9 +29,11 @@ const LocationPrompt = () => {
     setPromptOpen(false);
   };
 
+  const onShopperPage = !NON_SHOPPER_PORTALS.test(pathname);
+
   return (
     <AnimatePresence>
-      {promptOpen && (
+      {promptOpen && onShopperPage && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

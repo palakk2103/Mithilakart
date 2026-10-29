@@ -17,6 +17,16 @@ import { toast } from 'react-hot-toast';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
 
+// Items from these tabs ship by courier whatever tab the page is themed for.
+const STANDARD_TABS = new Set(['mithilakart', 'mithilak']);
+
+const TAB_TO_COMMERCE_FLOW = {
+  mithilakart: 'standard',
+  mithilak: 'mithilak',
+  quick_shop: 'quick_shop',
+  groceries_fresh: 'fresh_grocery',
+};
+
 const PAYMENT_METHOD_MAP = {
   UPI: 'upi',
   CARD: 'card',
@@ -262,41 +272,19 @@ const Checkout = () => {
 
         const paymentMethod = PAYMENT_METHOD_MAP[selectedPayment] || 'upi';
 
-        // Detect cart commerce flow and marketplace tab from cart items
-        let resolvedFlow = isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'fresh_grocery' : getCommerceFlow();
-        let resolvedTab = getMarketplaceTab();
-
-        const hasQuickItem = checkoutItems.some((it) =>
-          it.marketplaceTab === 'quick_shop' ||
-          it.commerceFlow === 'quick_shop' ||
-          it.commerceFlows?.includes('quick_shop')
-        );
-        const hasGroceryItem = checkoutItems.some((it) =>
-          it.marketplaceTab === 'groceries_fresh' ||
-          it.commerceFlow === 'fresh_grocery' ||
-          it.commerceFlows?.includes('fresh_grocery')
-        );
-        const hasMithilakItem = checkoutItems.some((it) =>
-          it.marketplaceTab === 'mithilak' ||
-          it.commerceFlow === 'mithilak' ||
-          it.commerceFlows?.includes('mithilak')
-        );
-
-        if (hasQuickItem) {
-          resolvedFlow = 'quick_shop';
-          resolvedTab = 'quick_shop';
-        } else if (hasGroceryItem) {
-          resolvedFlow = 'fresh_grocery';
-          resolvedTab = 'groceries_fresh';
-        } else if (hasMithilakItem) {
-          resolvedFlow = 'mithilak';
-          resolvedTab = 'mithilak';
-        }
+        // The tab an item was added from decides quick vs standard delivery.
+        // Product-level flows are not used: a product sold in both Quick Shop
+        // and Mithilakart must ship the way the customer bought it.
+        const itemTab = checkoutItems.find((it) => it.marketplaceTab)?.marketplaceTab;
+        const themeTab = isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'groceries_fresh' : getMarketplaceTab();
+        const resolvedTab = itemTab || themeTab;
+        const resolvedFlow = TAB_TO_COMMERCE_FLOW[resolvedTab] || getCommerceFlow();
 
         const buyNowItem = location.state?.product;
         const buyNowItems = buyNowItem ? [
           {
-            productId: buyNowItem._id || buyNowItem.id,
+            productId: buyNowItem.productId || buyNowItem._id || buyNowItem.id,
+            ...(buyNowItem.listingId ? { listingId: buyNowItem.listingId } : {}),
             variantId: buyNowItem.variantId || null,
             quantity: Number(buyNowItem.quantity || buyNowItem.qty) || 1,
           }
@@ -306,7 +294,6 @@ const Checkout = () => {
           addressId,
           paymentMethod,
           commerceFlow: resolvedFlow,
-          marketplaceTab: resolvedTab,
           ...(buyNowItems ? { items: buyNowItems } : {}),
           ...(couponApplied && couponCode ? { couponCode: couponCode.trim().toUpperCase() } : {}),
         });
@@ -367,7 +354,8 @@ const Checkout = () => {
 
         addOrder(newOrder);
         setPlacedOrder(newOrder);
-        await clearCart();
+        // Buy Now bypasses the cart, so the cart's other items must survive it.
+        if (!buyNowItems) await clearCart();
         dispatchCartUpdated();
         navigate('/order-confirmation', { state: { placedOrder: newOrder, checkoutItems } });
         setOrderStatus('idle');
@@ -504,7 +492,7 @@ const Checkout = () => {
                   <>
                     <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in {item.deliveryPromiseMinutes} mins
                   </>
-                ) : isQuickShopFlow ? (
+                ) : (isQuickShopFlow || isFreshGroceryFlow) && !STANDARD_TABS.has(item.marketplaceTab) ? (
                   <>
                     <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in 15-30 mins
                   </>
@@ -686,9 +674,11 @@ const Checkout = () => {
            {selectedPayment === 'CARD' && (
              <div className="px-4 pb-5 pt-1 animate-in slide-in-from-top duration-200">
                <div className="border border-slate-100 rounded-2xl p-5 bg-white">
-                 <p className="text-[11.5px] text-slate-500 font-bold leading-relaxed mb-4">
-                   Razorpay test card: <span className="font-mono text-slate-800">4111 1111 1111 1111</span> — any future expiry, any CVV.
-                 </p>
+                 {import.meta.env.DEV && (
+                   <p className="text-[11.5px] text-slate-500 font-bold leading-relaxed mb-4">
+                     Razorpay test card: <span className="font-mono text-slate-800">4111 1111 1111 1111</span> — any future expiry, any CVV.
+                   </p>
+                 )}
                  <button
                    onClick={handleContinue}
                    className={`w-full ${primaryBgHover} text-white py-3.5 rounded-full font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}

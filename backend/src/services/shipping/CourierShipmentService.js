@@ -27,8 +27,8 @@ class CourierShipmentService extends BaseService {
     this.sellerRepository = sellerRepository;
   }
 
-  async buildShipmentPayload(order) {
-    const items = await this.orderItemRepository.listByOrderId(order._id);
+  async buildShipmentPayload(order, session = null) {
+    const items = await this.orderItemRepository.listByOrderId(order._id, { session });
     const productIds = [...new Set(items.map((it) => it.productId).filter(Boolean))];
     const products = productIds.length
       ? await this.productRepository.find({ _id: { $in: productIds } })
@@ -77,7 +77,7 @@ class CourierShipmentService extends BaseService {
 
   async createForOrder(order, session = null) {
     const shipping = getProvider('shipping');
-    const payload = await this.buildShipmentPayload(order);
+    const payload = await this.buildShipmentPayload(order, session);
     try {
       return await shipping.createShipment(payload);
     } catch (err) {

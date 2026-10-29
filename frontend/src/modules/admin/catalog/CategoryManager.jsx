@@ -80,7 +80,7 @@ const CategoryManager = () => {
     loadCategories();
   }, [loadCategories]);
 
-  // Show each subcategory directly under its parent instead of a flat list.
+  // Show each subcategory / child category directly under its parent instead of a flat list.
   const orderedCategories = useMemo(() => {
     const ids = new Set(categories.map((c) => c.id));
     const childrenOf = new Map();
@@ -111,9 +111,10 @@ const CategoryManager = () => {
     return ordered;
   }, [categories]);
 
-  // Available parent categories, excluding current category & its descendants to prevent circular loops
+  // Available parent categories (depth < 2 for up to 3 levels), excluding self & descendants to prevent cycles
   const availableParentCategories = useMemo(() => {
-    if (!editingCategory) return categories;
+    const depthFiltered = orderedCategories.filter((c) => (c.depth || 0) < 2);
+    if (!editingCategory) return depthFiltered;
     const invalidIds = new Set([editingCategory.id]);
     let added = true;
     while (added) {
@@ -126,8 +127,8 @@ const CategoryManager = () => {
         }
       });
     }
-    return categories.filter((c) => !invalidIds.has(c.id));
-  }, [categories, editingCategory]);
+    return depthFiltered.filter((c) => !invalidIds.has(c.id));
+  }, [categories, orderedCategories, editingCategory]);
 
   const filteredParentOptions = useMemo(() => {
     const q = parentSearch.trim().toLowerCase();
@@ -527,8 +528,10 @@ const CategoryManager = () => {
                             ))}
                           </div>
                         ) : category.parentName ? (
-                          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-black rounded-lg uppercase tracking-wider">
-                            Sub of {category.parentName}
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-1 text-[8px] font-black rounded-lg uppercase tracking-wider ${
+                            (category.depth || 0) >= 2 ? 'bg-purple-50 text-purple-700' : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            {(category.depth || 0) >= 2 ? `Child of ${category.parentName}` : `Sub of ${category.parentName}`}
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 text-[8px] font-black rounded-lg uppercase tracking-wider">
@@ -539,18 +542,14 @@ const CategoryManager = () => {
 
                       <td className="py-4 px-6">
                         <div className="flex flex-wrap gap-1">
-                          {(category.visibleTabs?.length ? category.visibleTabs : category.commerceFlows || ['mithilakart']).map((tab) => {
-                            const labelMap = {
-                              mithilakart: 'Mithilakart',
-                              mithilak: 'Mithilak',
-                              quick_shop: 'Quick Shop',
-                              groceries_fresh: 'Groceries & Fresh',
-                              standard: 'Mithilakart',
-                              fresh_grocery: 'Groceries & Fresh',
-                            };
+                          {(category.visibleTabs || []).map((t) => {
+                            const tabMeta = VISIBLE_TABS.find((v) => v.value === t);
                             return (
-                              <span key={tab} className="text-[8px] font-black uppercase tracking-widest bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100">
-                                {labelMap[tab] || tab}
+                              <span
+                                key={t}
+                                className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-bold uppercase tracking-wider"
+                              >
+                                {tabMeta?.label || t}
                               </span>
                             );
                           })}
@@ -570,13 +569,14 @@ const CategoryManager = () => {
 
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {(category.depth || 0) < 3 && (
+                          {(category.depth || 0) < 2 && (
                             <button
                               onClick={() => openCreate(category.id)}
                               className="p-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1"
+                              title={category.depth === 1 ? 'Add Child Category' : 'Add Subcategory'}
                             >
                               <Plus size={12} />
-                              <span>+ Sub</span>
+                              <span>{category.depth === 1 ? '+ Child' : '+ Sub'}</span>
                             </button>
                           )}
                           <button

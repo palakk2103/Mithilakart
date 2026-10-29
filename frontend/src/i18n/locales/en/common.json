@@ -182,7 +182,8 @@
     "orderSummary": "Summary",
     "platformFees": "Platform Fees",
     "productDiscount": "Product Discount",
-    "deliveryText": "Delivery in 2 days"
+    "deliveryText": "Delivery in 2 days",
+    "deliveryCharges": "Delivery Charges"
   },
   "categories": {
     "beautyCare": "Beauty & Care",
@@ -218,7 +219,8 @@
     "viewAll": "View All",
     "seeAll": "See all",
     "listening": "Listening...",
-    "analyzingImage": "Analyzing image..."
+    "analyzingImage": "Analyzing image...",
+    "quantity": "Qty"
   },
   "product": {
     "mrp": "MRP",

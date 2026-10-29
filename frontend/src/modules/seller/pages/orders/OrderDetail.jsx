@@ -132,6 +132,15 @@ const OrderDetail = () => {
 
   useOrderSocket(id, 'seller', { onStatusUpdate: handleSocketUpdate });
 
+  // A rider accepting is not a status change, so poll while a quick order
+  // waits for pickup — that is when the pickup code appears.
+  const awaitingPickup = isQuickHyperlocal && ['confirmed', 'packed'].includes(order?.status);
+  useEffect(() => {
+    if (!awaitingPickup) return undefined;
+    const timer = setInterval(refetchOrderSilently, 15000);
+    return () => clearInterval(timer);
+  }, [awaitingPickup, id]);
+
   if (loading) {
     return (
       <div className="text-center py-20">
@@ -278,6 +287,15 @@ const OrderDetail = () => {
                       {action.label}
                     </Button>
                   ))}
+                </div>
+              )}
+              {order.pickup?.pickupOtp && (
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3.5" data-testid="pickup-code">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Rider pickup code</p>
+                  <p className="mt-1 font-mono text-2xl font-black tracking-[0.3em] text-blue-950">{order.pickup.pickupOtp}</p>
+                  <p className="mt-1 text-xs text-blue-900">
+                    Tell this code to {order.pickup.partnerName}{order.pickup.partnerPhone ? ` (${order.pickup.partnerPhone})` : ''} when you hand over the package.
+                  </p>
                 </div>
               )}
               {order.trackingId && (

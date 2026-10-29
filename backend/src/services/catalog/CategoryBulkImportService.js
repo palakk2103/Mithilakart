@@ -20,14 +20,13 @@ const FIELD_KEYS = ['description', 'imageUrl', 'iconUrl', 'sortOrder', 'isActive
 /**
  * Admin bulk import of a category tree into one marketplace tab.
  *
- * One sheet row = one category, optionally with one subcategory under it:
- *   category | subcategory | description | imageUrl | iconUrl | sortOrder | isActive
+ * One sheet row = one category, optionally with subcategory and child category:
+ *   category | subcategory | childCategory | description | imageUrl | iconUrl | sortOrder | isActive
  * Image/description/sort/active apply to the deepest name on the row.
  *
- * Matching is by name (case-insensitive): an existing top-level category with
- * the same name is reused and enabled for the tab instead of duplicated, and
- * likewise for a subcategory under the same parent. Always run with
- * dryRun=true first — it returns the per-row plan without writing anything.
+ * Matching is by name (case-insensitive): an existing category at the same
+ * hierarchy level is reused and enabled for the tab instead of duplicated.
+ * Always run with dryRun=true first — it returns the per-row plan without writing anything.
  */
 class CategoryBulkImportService {
   constructor({ categoryRepository, categoryService }) {
@@ -108,16 +107,18 @@ class CategoryBulkImportService {
       rowNumber: index + 2, // header is sheet row 1
       category: cleanString(raw.category),
       subcategory: cleanString(raw.subcategory),
+      childCategory: cleanString(raw.childCategory || raw.childcategory || raw['child category'] || raw.child_category),
       imageUrl: cleanString(raw.imageUrl) || null,
       categoryAction: null,
       subcategoryAction: null,
+      childCategoryAction: null,
       status: 'ok',
       errors: [],
       warnings: [],
       nodes: [],
     };
 
-    const allBlank = ['category', 'subcategory', ...FIELD_KEYS].every((k) => isBlank(raw[k]));
+    const allBlank = ['category', 'subcategory', 'childCategory', ...FIELD_KEYS].every((k) => isBlank(raw[k]));
     if (allBlank) {
       row.status = 'skipped';
       row.warnings.push('Empty row');
@@ -130,9 +131,9 @@ class CategoryBulkImportService {
       return row;
     }
 
-    const dupKey = `${lowerKey(row.category)}|${lowerKey(row.subcategory)}`;
+    const dupKey = `${lowerKey(row.category)}|${lowerKey(row.subcategory)}|${lowerKey(row.childCategory)}`;
     if (state.seenRows.has(dupKey)) {
-      row.warnings.push(`Same category/subcategory as row ${state.seenRows.get(dupKey)} — values merged`);
+      row.warnings.push(`Same category hierarchy as row ${state.seenRows.get(dupKey)} — values merged`);
     } else {
       state.seenRows.set(dupKey, row.rowNumber);
     }
@@ -145,12 +146,19 @@ class CategoryBulkImportService {
       const child = this._resolveNode(state, parent.nodeId, parent, row.subcategory);
       row.nodes.push(child);
       target = child;
+
+      if (row.childCategory) {
+        const grandchild = this._resolveNode(state, child.nodeId, child, row.childCategory);
+        row.nodes.push(grandchild);
+        target = grandchild;
+      }
     }
     row.nodes.forEach((node) => { node.touched = true; });
 
     this._applyFields(target, fields);
     row.categoryAction = this._actionFor(parent, tab);
-    if (row.subcategory) row.subcategoryAction = this._actionFor(target, tab);
+    if (row.subcategory) row.subcategoryAction = this._actionFor(row.nodes[1], tab);
+    if (row.childCategory) row.childCategoryAction = this._actionFor(row.nodes[2], tab);
     return row;
   }
 
@@ -164,6 +172,12 @@ class CategoryBulkImportService {
     }
     if (row.subcategory && (row.subcategory.length < 2 || row.subcategory.length > 100)) {
       row.errors.push('Subcategory name must be 2–100 characters');
+    }
+    if (row.childCategory && (row.childCategory.length < 2 || row.childCategory.length > 100)) {
+      row.errors.push('Child category name must be 2–100 characters');
+    }
+    if (row.childCategory && !row.subcategory) {
+      row.errors.push('Child category requires a subcategory');
     }
 
     if (!isBlank(raw.description)) fields.description = cleanString(raw.description).slice(0, 1000);
@@ -314,7 +328,8 @@ class CategoryBulkImportService {
       errorRows: count('error'),
       skippedRows: count('skipped'),
       categoriesToCreate: state.order.filter((n) => !n.parentNode).length,
-      subcategoriesToCreate: state.order.filter((n) => n.parentNode).length,
+      subcategoriesToCreate: state.order.filter((n) => n.parentNode && !n.parentNode.parentNode).length,
+      childCategoriesToCreate: state.order.filter((n) => n.parentNode && n.parentNode.parentNode).length,
       existingAddedToTab: existingTouched.filter((n) => this._actionFor(n, tab) === 'add-to-tab').length,
       existingUpdated: existingTouched.filter((n) => this._actionFor(n, tab) === 'update').length,
     };

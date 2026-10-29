@@ -8,6 +8,8 @@ const placeOrderSchema = Joi.object({
     .items(
       Joi.object({
         productId: objectIdSchema.required(),
+        // The listing the customer bought from — fixes tab, price and promise.
+        listingId: objectIdSchema.optional().allow(null),
         variantId: objectIdSchema.optional().allow(null),
         quantity: Joi.number().integer().min(1).max(100).required(),
       })

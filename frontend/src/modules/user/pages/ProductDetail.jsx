@@ -238,17 +238,19 @@ const ProductDetail = () => {
     }
   };
 
+  // Real ratings only: a product nobody has reviewed shows "No ratings yet",
+  // never an invented 4.2 from 120 people.
+  const ratingCount = reviews.length || Number(product?.ratingCount || product?.reviewCount || 0);
   const avgRating = reviews.length
     ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
-    : product?.rating || '4.2';
+    : (Number(product?.rating) > 0 && ratingCount > 0 ? Number(product.rating).toFixed(1) : null);
+  // Badges come from the seller's own tags, not a hardcoded label on every product.
+  const productTags = (product?.tags || []).map((tag) => String(tag).toLowerCase());
 
   // Rating distribution calculations
   const ratingDistribution = useMemo(() => {
     const dist = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    if (!reviews.length) {
-      // Default placeholder distribution
-      return { 5: 75, 4: 15, 3: 5, 2: 3, 1: 2 };
-    }
+    if (!reviews.length) return dist;
     reviews.forEach(r => {
       const rating = Math.round(r.rating || 5);
       if (dist[rating] !== undefined) dist[rating]++;
@@ -458,7 +460,8 @@ const ProductDetail = () => {
     } catch (err) {
       setToastMessage(err?.message || 'Could not add to cart');
       setShowToast(true);
-      setTimeout(() => setShowToast(false), 2000);
+      // Errors explain what to do (e.g. mixed-tab cart) — leave time to read.
+      setTimeout(() => setShowToast(false), 4500);
     }
   }, [product, quantity, navigate, theme.activeFlow, location.pathname]);
 
@@ -770,15 +773,17 @@ const ProductDetail = () => {
                 </button>
               </div>
 
-              {/* Rating & Trending Badge */}
-              <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 z-10">
-                <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-gray-100 flex items-center gap-1 shadow-sm">
-                  <span className="text-[11px] font-black text-slate-800">{avgRating}</span>
-                  <Star size={10} fill="#e2a750" className="text-amber-500" />
-                  <div className="w-[1px] h-2.5 bg-gray-200 mx-0.5" />
-                  <span className="text-[9.5px] font-bold text-slate-500">{reviews.length || product.ratingCount || 120} ratings</span>
+              {/* Rating badge — only when the product has real ratings */}
+              {avgRating && (
+                <div className="absolute bottom-4 left-4 flex flex-col gap-1.5 z-10">
+                  <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-gray-100 flex items-center gap-1 shadow-sm">
+                    <span className="text-[11px] font-black text-slate-800">{avgRating}</span>
+                    <Star size={10} fill="#e2a750" className="text-amber-500" />
+                    <div className="w-[1px] h-2.5 bg-gray-200 mx-0.5" />
+                    <span className="text-[9.5px] font-bold text-slate-500">{ratingCount} {ratingCount === 1 ? 'rating' : 'ratings'}</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Custom active thumbnail list */}
@@ -814,18 +819,26 @@ const ProductDetail = () => {
           
           {/* Brand & Name Header */}
           <div className="px-4 py-2 mt-1">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-red-100">
-                <Flame size={10} /> BESTSELLER
-              </span>
-              <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-100">
-                <Award size={10} /> TRENDING
-              </span>
-            </div>
+            {(productTags.includes('bestseller') || productTags.includes('trending')) && (
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                {productTags.includes('bestseller') && (
+                  <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-red-100">
+                    <Flame size={10} /> BESTSELLER
+                  </span>
+                )}
+                {productTags.includes('trending') && (
+                  <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-100">
+                    <Award size={10} /> TRENDING
+                  </span>
+                )}
+              </div>
+            )}
             
-            <span className={`text-[11px] font-black tracking-[0.25em] ${primaryText} uppercase block mb-1`}>
-              {product.brand || 'Mithilakart Premium'}
-            </span>
+            {product.brand && (
+              <span className={`text-[11px] font-black tracking-[0.25em] ${primaryText} uppercase block mb-1`}>
+                {product.brand}
+              </span>
+            )}
             <h1 className="text-[22px] font-extrabold text-slate-800 leading-tight mb-2 tracking-tight">
               {product.name}
             </h1>
@@ -858,9 +871,6 @@ const ProductDetail = () => {
                 ) : (
                   <div className="text-emerald-700 font-semibold">Direct Artisan & Verified Seller Deal</div>
                 )}
-                <div className="text-red-500 font-semibold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span> Offer ends soon!
-                </div>
               </div>
             </div>
           </div>
@@ -1256,13 +1266,15 @@ const ProductDetail = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center pb-6 border-b border-slate-100 mb-4">
             <div className="md:col-span-4 text-center">
-              <span className="text-[44px] font-black text-slate-900 leading-none">{avgRating}</span>
+              <span className="text-[44px] font-black text-slate-900 leading-none">{avgRating || '–'}</span>
               <div className="flex justify-center gap-0.5 mt-1">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <Star key={n} size={14} className={n <= Math.round(parseFloat(avgRating)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200'} />
+                  <Star key={n} size={14} className={avgRating && n <= Math.round(parseFloat(avgRating)) ? 'text-amber-400 fill-amber-400' : 'text-slate-200'} />
                 ))}
               </div>
-              <p className="text-[10px] text-slate-400 font-extrabold mt-1.5 uppercase">Based on verified purchases</p>
+              <p className="text-[10px] text-slate-400 font-extrabold mt-1.5 uppercase">
+                {ratingCount ? `Based on ${ratingCount} ${ratingCount === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}
+              </p>
             </div>
 
             {/* Progress Bars */}

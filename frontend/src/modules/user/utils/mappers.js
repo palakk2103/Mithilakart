@@ -136,6 +136,7 @@ export const mapCartItem = (item, lang = '') => {
     img: getProductImage(item),
     marketplaceTab: item.marketplaceTab || item.tab || null,
     commerceFlow: item.commerceFlow || null,
+    deliveryPromiseMinutes: item.deliveryPromiseMinutes || null,
   };
 };
 

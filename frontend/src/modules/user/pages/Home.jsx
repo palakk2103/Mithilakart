@@ -313,14 +313,16 @@ const Home = () => {
                         e.preventDefault();
                         try {
                           await addProductToCart({
-                            id: deal.id,
+                            id: deal.productId || deal.product?._id || deal.product?.id || deal.id,
+                            listingId: deal.listingId,
+                            marketplaceTab: 'mithilakart',
                             name: deal.title || deal.name,
                             price: deal.product?.price ?? deal.price,
                             image: deal.img,
                           });
                           toast.success(`${deal.title || deal.name} added to cart!`);
-                        } catch {
-                          toast.error('Could not add to cart');
+                        } catch (err) {
+                          toast.error(err?.message || 'Could not add to cart');
                         }
                       }}
                       className="p-1.5 bg-white border border-[#3E5A44]/30 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer active:scale-90"

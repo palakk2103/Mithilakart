@@ -182,7 +182,8 @@
     "orderSummary": "ऑर्डरक सारांश",
     "platformFees": "प्लेटफॉर्म शुल्क",
     "productDiscount": "सामान पर छूट",
-    "deliveryText": "२ दिन में पहुंचावेब"
+    "deliveryText": "२ दिन में पहुंचावेब",
+    "deliveryCharges": "डिलीवरी शुल्क"
   },
   "categories": {
     "beautyCare": "सौंदर्य आ देखभाल",
@@ -218,7 +219,8 @@
     "viewAll": "सभ देखी",
     "seeAll": "सभ देखी",
     "listening": "सुनि रहल छी...",
-    "analyzingImage": "छविक विश्लेषण भ रहल अछि..."
+    "analyzingImage": "छविक विश्लेषण भ रहल अछि...",
+    "quantity": "मात्रा"
   },
   "product": {
     "mrp": "एमआरपी",
