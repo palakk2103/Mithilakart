@@ -1,6 +1,6 @@
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
-const { CACHE_KEYS, CACHE_TTL } = require('../../constants/catalog');
+const { CACHE_KEYS, CACHE_TTL, COMMERCE_FLOWS } = require('../../constants/catalog');
 const { MARKETPLACE_TAB_VALUES } = require('../../constants/marketplace');
 const {
   resolveTabFromQuery,
@@ -250,8 +250,16 @@ class CategoryService extends BaseService {
     return roots;
   }
 
+  /**
+   * Invalidate ALL category-related caches:
+   * 1. Category tree cache (cache:categories:tree:*)
+   * 2. Storefront home cache (cache:storefront:home:*) — this embeds categories
+   *    inside the home response, so without clearing it, customers see stale
+   *    categories for up to HOME_SECTIONS TTL (900s) after an admin change.
+   */
   async _invalidateCache() {
-    const keys = [
+    // Category tree keys
+    const catKeys = [
       'all',
       'standard',
       'mithilak',
@@ -259,9 +267,14 @@ class CategoryService extends BaseService {
       'fresh_grocery',
       ...MARKETPLACE_TAB_VALUES,
     ];
-    await Promise.all(
-      [...new Set(keys)].map((k) => this.cacheService.del(CACHE_KEYS.categoriesTree(k)))
-    );
+
+    // Storefront home keys (one per commerce flow)
+    const homeFlows = Object.values(COMMERCE_FLOWS);
+
+    await Promise.all([
+      ...[...new Set(catKeys)].map((k) => this.cacheService.del(CACHE_KEYS.categoriesTree(k))),
+      ...[...new Set(homeFlows)].map((f) => this.cacheService.del(CACHE_KEYS.homeSections(f))),
+    ]);
   }
 }
 
