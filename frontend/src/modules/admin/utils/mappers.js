@@ -291,23 +291,35 @@ export const mapDeliveryApplication = (p = {}) => ({
   status: titleCaseStatus(p.status || 'pending'),
 });
 
-export const mapCategory = (c = {}) => ({
-  id: c._id || c.id || '',
-  name: c.name || 'Category',
-  slug: c.slug || c.name?.toLowerCase().replace(/\s+/g, '-') || '',
-  description: c.description || '',
-  parentId: c.parentId?._id || c.parentId || '',
-  parentName: c.parentId?.name || c.parentName || '',
-  count: c.productCount ?? c.count ?? 0,
-  status: c.isActive === false ? 'Inactive' : (c.status === 'draft' ? 'Draft' : 'Active'),
-  isActive: c.isActive !== false,
-  image: c.image || c.imageUrl || 'https://via.placeholder.com/400',
-  imageUrl: c.imageUrl || c.image || '',
-  iconUrl: c.iconUrl || '',
-  sortOrder: c.sortOrder ?? 0,
-  commerceFlows: c.commerceFlows || ['standard'],
-  visibleTabs: c.visibleTabs?.length ? c.visibleTabs : ['mithilakart'],
-});
+export const mapCategory = (c = {}) => {
+  const pIds = Array.isArray(c.parentIds) && c.parentIds.length
+    ? c.parentIds.map((p) => p?._id || p).filter(Boolean)
+    : (c.parentId ? [c.parentId?._id || c.parentId] : []);
+
+  const pNames = Array.isArray(c.parentNames) && c.parentNames.length
+    ? c.parentNames
+    : (c.parentId?.name ? [c.parentId.name] : (c.parentName ? [c.parentName] : []));
+
+  return {
+    id: c._id || c.id || '',
+    name: c.name || 'Category',
+    slug: c.slug || c.name?.toLowerCase().replace(/\s+/g, '-') || '',
+    description: c.description || '',
+    parentId: pIds[0] || '',
+    parentIds: pIds,
+    parentName: pNames.join(', ') || '',
+    parentNames: pNames,
+    count: c.productCount ?? c.count ?? 0,
+    status: c.isActive === false ? 'Inactive' : (c.status === 'draft' ? 'Draft' : 'Active'),
+    isActive: c.isActive !== false,
+    image: c.image || c.imageUrl || 'https://via.placeholder.com/400',
+    imageUrl: c.imageUrl || c.image || '',
+    iconUrl: c.iconUrl || '',
+    sortOrder: c.sortOrder ?? 0,
+    commerceFlows: c.commerceFlows || ['standard'],
+    visibleTabs: c.visibleTabs?.length ? c.visibleTabs : ['mithilakart'],
+  };
+};
 
 export const mapChip = (c = {}, index = 0) => ({
   id: c._id || c.id || c.slug || `chip-${index}`,

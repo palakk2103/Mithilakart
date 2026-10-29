@@ -66,15 +66,24 @@ class CategoryService extends BaseService {
       if (depth > 10) return null;
 
       const own = tabsOf(cat);
+      const pIds = (cat.parentIds && cat.parentIds.length)
+        ? cat.parentIds.map(String)
+        : (cat.parentId ? [String(cat.parentId)] : []);
+
       let result = own;
-      if (cat.parentId) {
-        const parent = byId.get(String(cat.parentId));
-        const parentTabs = parent ? resolve(parent, depth + 1) : null;
-        if (!parentTabs) {
+      if (pIds.length) {
+        const parentTabsLists = pIds
+          .map((pid) => byId.get(pid))
+          .filter(Boolean)
+          .map((parent) => resolve(parent, depth + 1))
+          .filter(Boolean);
+
+        if (!parentTabsLists.length) {
           result = null;
         } else {
-          const overlap = own.filter((t) => parentTabs.includes(t));
-          result = overlap.length ? overlap : parentTabs;
+          const allParentTabs = [...new Set(parentTabsLists.flat())];
+          const overlap = own.filter((t) => allParentTabs.includes(t));
+          result = overlap.length ? overlap : allParentTabs;
         }
       }
       memo.set(key, result);
@@ -90,8 +99,15 @@ class CategoryService extends BaseService {
     const byId = new Map(categories.map((c) => [String(c._id), c]));
     return categories.map((c) => {
       const obj = c.toObject ? c.toObject() : { ...c };
-      const parent = obj.parentId ? byId.get(String(obj.parentId)) : null;
-      obj.parentName = parent ? parent.name : null;
+      const pIds = (obj.parentIds && obj.parentIds.length)
+        ? obj.parentIds.map((p) => String(p?._id || p))
+        : (obj.parentId ? [String(obj.parentId?._id || obj.parentId)] : []);
+
+      const parentDocs = pIds.map((pid) => byId.get(pid)).filter(Boolean);
+      obj.parentIds = pIds;
+      obj.parentId = pIds[0] || null;
+      obj.parentNames = parentDocs.map((p) => p.name);
+      obj.parentName = obj.parentNames.join(', ') || null;
       return obj;
     });
   }
@@ -111,12 +127,28 @@ class CategoryService extends BaseService {
 
     const payload = { ...data, slug: data.slug.toLowerCase() };
 
-    if (payload.parentId) {
-      const parent = await this.getById(payload.parentId);
-      // A subcategory without explicit tabs used to fall back to the schema
-      // default ['mithilakart'] and silently vanish from the parent's tab.
+    // Support both multi-parent parentIds and legacy parentId
+    if (payload.parentIds !== undefined) {
+      payload.parentIds = Array.isArray(payload.parentIds)
+        ? payload.parentIds.map((p) => String(p?._id || p)).filter(Boolean)
+        : [];
+      payload.parentId = payload.parentIds[0] || null;
+    } else if (payload.parentId) {
+      payload.parentIds = [String(payload.parentId?._id || payload.parentId)];
+      payload.parentId = payload.parentIds[0];
+    } else {
+      payload.parentIds = [];
+      payload.parentId = null;
+    }
+
+    if (payload.parentIds.length) {
+      const parentDocs = await Promise.all(payload.parentIds.map((pid) => this.getById(pid)));
+      // A subcategory without explicit tabs inherits tabs from its parent(s)
       if (!payload.visibleTabs?.length) {
-        payload.visibleTabs = tabsOf(parent);
+        const inheritedTabs = [...new Set(parentDocs.flatMap((p) => tabsOf(p)))];
+        if (inheritedTabs.length) {
+          payload.visibleTabs = inheritedTabs;
+        }
       }
     }
 
@@ -149,21 +181,38 @@ class CategoryService extends BaseService {
       throw AppError.conflict('Category slug already exists');
     }
 
-    if (data.parentId) {
-      if (String(data.parentId) === String(id)) {
-        throw AppError.validation('A category cannot be its own parent');
-      }
-      await this.getById(data.parentId);
-      const subtree = await this.categoryRepository.findSubtreeIds(id);
-      if (subtree.some((sid) => String(sid) === String(data.parentId))) {
-        throw AppError.validation('A category cannot be moved under its own subcategory');
-      }
-    }
-
     const payload = {
       ...data,
       ...(data.slug ? { slug: data.slug.toLowerCase() } : {}),
     };
+
+    if (data.parentIds !== undefined) {
+      payload.parentIds = Array.isArray(data.parentIds)
+        ? data.parentIds.map((p) => String(p?._id || p)).filter(Boolean)
+        : [];
+      payload.parentId = payload.parentIds[0] || null;
+    } else if (data.parentId !== undefined) {
+      payload.parentIds = data.parentId ? [String(data.parentId?._id || data.parentId)] : [];
+      payload.parentId = payload.parentIds[0] || null;
+    }
+
+    const targetParents = payload.parentIds !== undefined
+      ? payload.parentIds
+      : (existing.parentIds?.length ? existing.parentIds.map(String) : (existing.parentId ? [String(existing.parentId)] : []));
+
+    if (targetParents.length) {
+      const subtree = await this.categoryRepository.findSubtreeIds(id);
+      for (const pid of targetParents) {
+        if (String(pid) === String(id)) {
+          throw AppError.validation('A category cannot be its own parent');
+        }
+        await this.getById(pid);
+        if (subtree.some((sid) => String(sid) === String(pid))) {
+          throw AppError.validation('A category cannot be moved under its own subcategory');
+        }
+      }
+    }
+
     if (payload.visibleTabs?.length) {
       payload.commerceFlows = flowsForTabs(payload.visibleTabs);
     }
@@ -255,13 +304,18 @@ class CategoryService extends BaseService {
       const localizedName = (isLocalized && category.translations?.[lang]?.name) || category.name;
       const localizedDesc = (isLocalized && category.translations?.[lang]?.description) || category.description;
 
+      const pIds = (category.parentIds && category.parentIds.length)
+        ? category.parentIds.map((p) => String(p?._id || p))
+        : (category.parentId ? [String(category.parentId?._id || category.parentId)] : []);
+
       map.set(String(category._id), {
         id: category._id,
         name: localizedName,
         originalName: category.name,
         slug: category.slug,
         description: localizedDesc,
-        parentId: category.parentId,
+        parentId: pIds[0] || null,
+        parentIds: pIds,
         imageUrl: category.imageUrl,
         iconUrl: category.iconUrl,
         sortOrder: category.sortOrder,
@@ -273,8 +327,21 @@ class CategoryService extends BaseService {
     });
 
     map.forEach((node) => {
-      if (node.parentId && map.has(String(node.parentId))) {
-        map.get(String(node.parentId)).children.push(node);
+      const pIds = (node.parentIds && node.parentIds.length)
+        ? node.parentIds
+        : (node.parentId ? [String(node.parentId)] : []);
+
+      if (pIds.length) {
+        let attached = false;
+        pIds.forEach((pid) => {
+          if (map.has(pid)) {
+            map.get(pid).children.push(node);
+            attached = true;
+          }
+        });
+        if (!attached) {
+          roots.push(node);
+        }
       } else {
         roots.push(node);
       }

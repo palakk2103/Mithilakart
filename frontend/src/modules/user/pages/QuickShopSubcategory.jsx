@@ -67,11 +67,6 @@ const resolveSidebarSubcategories = (root) => {
     list = list[0].children;
   }
 
-  // If every child in the list has children (e.g. grouping folders), flatten to subcategories
-  if (list.length > 0 && list.every((c) => (c.children || []).length > 0)) {
-    list = list.flatMap((c) => (c.children && c.children.length > 0 ? c.children : [c]));
-  }
-
   return list;
 };
 
@@ -245,15 +240,17 @@ const QuickShopSubcategory = () => {
 
         // The user clicked this specific category (e.g. Fresh Vegetables).
         // That category is the root of this screen. Its children are its subcategories in the sidebar.
-        const root = (location.state?.isSubcategory && parent) ? parent : node;
+        const root = (parent && (location.state?.isSubcategory || !parent.parentId || !(node.children || []).length)) ? parent : node;
         const sidebarSubcategories = resolveSidebarSubcategories(root);
         const sidebarIdOf = mapToSidebarIds(root, sidebarSubcategories);
 
         let initialActive = 'all';
         if (location.state?.subCategoryId && sidebarSubcategories.some((s) => String(s.id) === String(location.state.subCategoryId))) {
           initialActive = String(location.state.subCategoryId);
-        } else if (location.state?.isSubcategory && sidebarSubcategories.some((s) => String(s.id) === String(node.id))) {
-          initialActive = String(node.id);
+        } else if (sidebarSubcategories.some((s) => String(s.id) === String(node.id))) {
+          initialActive = root === node ? 'all' : String(node.id);
+        } else if (sidebarIdOf.has(String(node.id))) {
+          initialActive = sidebarIdOf.get(String(node.id));
         }
 
         if (!cancelled && !isRefresh) {

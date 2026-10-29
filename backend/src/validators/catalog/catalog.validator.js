@@ -16,6 +16,7 @@ const categoryCreateSchema = Joi.object({
   slug: Joi.string().trim().lowercase().pattern(/^[a-z0-9-]+$/).required(),
   description: Joi.string().allow('').optional(),
   parentId: objectIdSchema.optional().allow(null),
+  parentIds: Joi.array().items(objectIdSchema).optional().allow(null),
   imageUrl: mediaUrlSchema.optional().allow(null, ''),
   iconUrl: mediaUrlSchema.optional().allow(null, ''),
   sortOrder: Joi.number().integer().min(0).optional(),

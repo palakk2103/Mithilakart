@@ -255,7 +255,7 @@ const VendorLayout = () => {
             : effectiveFlow === 'freshgrocery'
               ? 'bg-[#D9A21B] text-[#3F2A20]'
               : effectiveFlow === 'quickshop'
-                ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00] text-white'
+                ? 'bg-[#F26522] text-white'
                 : `${getMithilakartHeaderBg(selectedCategory)} ${
                     selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory
                       ? 'text-white'
@@ -309,7 +309,7 @@ const VendorLayout = () => {
               : '0 1px 0px rgba(0,0,0,0.02)',
           }}
           transition={{ duration: 0.22 }}
-          className={`md:hidden sticky top-0 z-50 pb-3 ${(location.pathname === '/home' || location.pathname === '/') ? 'mb-1.5' : 'mb-4'} rounded-b-[24px] transition-colors duration-300 ${
+          className={`md:hidden sticky top-0 z-50 pb-3 ${(location.pathname === '/home' || location.pathname === '/' || location.pathname === '/quick-shop' || location.pathname === '/fresh-grocery' || location.pathname === '/mithilak') ? 'mb-1.5' : 'mb-4'} rounded-b-[24px] transition-colors duration-300 ${
             effectiveFlow === 'mithilak'
               ? 'bg-[#207C8A]'
               : effectiveFlow === 'freshgrocery'

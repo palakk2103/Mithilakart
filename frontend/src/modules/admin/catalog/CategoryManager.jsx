@@ -7,7 +7,7 @@ import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { uploadCmsImage } from '../../../shared/services/uploadService';
 import {
-  Plus, Edit2, Trash2, CheckCircle2, AlertCircle, Grid, Filter, Loader2, Upload, ChevronDown
+  Plus, Edit2, Trash2, CheckCircle2, AlertCircle, Grid, Filter, Loader2, Upload, ChevronDown, Check, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -32,6 +32,7 @@ const EMPTY_FORM = {
   slug: '',
   description: '',
   parentId: '',
+  parentIds: [],
   imageUrl: '',
   iconUrl: '',
   sortOrder: 0,
@@ -57,6 +58,7 @@ const CategoryManager = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [parentSearch, setParentSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -83,24 +85,57 @@ const CategoryManager = () => {
     const ids = new Set(categories.map((c) => c.id));
     const childrenOf = new Map();
     categories.forEach((c) => {
-      if (c.parentId && ids.has(c.parentId)) {
-        childrenOf.set(c.parentId, [...(childrenOf.get(c.parentId) || []), c]);
-      }
+      const pIds = c.parentIds?.length ? c.parentIds : (c.parentId ? [c.parentId] : []);
+      pIds.forEach((pid) => {
+        if (ids.has(pid)) {
+          childrenOf.set(pid, [...(childrenOf.get(pid) || []), c]);
+        }
+      });
     });
     const ordered = [];
+    const visitedInPath = new Set();
     const visit = (cat, depth) => {
       ordered.push({ ...cat, depth });
-      (childrenOf.get(cat.id) || []).forEach((child) => visit(child, depth + 1));
+      (childrenOf.get(cat.id) || []).forEach((child) => {
+        const edge = `${cat.id}->${child.id}`;
+        if (!visitedInPath.has(edge)) {
+          visitedInPath.add(edge);
+          visit(child, depth + 1);
+        }
+      });
     };
-    categories.filter((c) => !c.parentId || !ids.has(c.parentId)).forEach((root) => visit(root, 0));
+    categories.filter((c) => {
+      const pIds = c.parentIds?.length ? c.parentIds : (c.parentId ? [c.parentId] : []);
+      return !pIds.length || !pIds.some((pid) => ids.has(pid));
+    }).forEach((root) => visit(root, 0));
     return ordered;
   }, [categories]);
 
-  // Categories available as parents for subcategories
-  const parentOptions = useMemo(
-    () => orderedCategories.filter((c) => (c.depth || 0) < 3),
-    [orderedCategories]
-  );
+  // Available parent categories, excluding current category & its descendants to prevent circular loops
+  const availableParentCategories = useMemo(() => {
+    if (!editingCategory) return categories;
+    const invalidIds = new Set([editingCategory.id]);
+    let added = true;
+    while (added) {
+      added = false;
+      categories.forEach((c) => {
+        const pIds = c.parentIds?.length ? c.parentIds : (c.parentId ? [c.parentId] : []);
+        if (pIds.some((pid) => invalidIds.has(pid)) && !invalidIds.has(c.id)) {
+          invalidIds.add(c.id);
+          added = true;
+        }
+      });
+    }
+    return categories.filter((c) => !invalidIds.has(c.id));
+  }, [categories, editingCategory]);
+
+  const filteredParentOptions = useMemo(() => {
+    const q = parentSearch.trim().toLowerCase();
+    if (!q) return availableParentCategories;
+    return availableParentCategories.filter((c) =>
+      (c.name || '').toLowerCase().includes(q) || (c.slug || '').toLowerCase().includes(q)
+    );
+  }, [availableParentCategories, parentSearch]);
 
   const filteredCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -114,12 +149,13 @@ const CategoryManager = () => {
     const childrenMap = new Map();
     const parentMap = new Map();
     categories.forEach((c) => {
-      if (c.parentId) {
-        parentMap.set(c.id, c.parentId);
-        const currentChildren = childrenMap.get(c.parentId) || [];
+      const pIds = c.parentIds?.length ? c.parentIds : (c.parentId ? [c.parentId] : []);
+      pIds.forEach((pid) => {
+        parentMap.set(c.id, pid);
+        const currentChildren = childrenMap.get(pid) || [];
         currentChildren.push(c.id);
-        childrenMap.set(c.parentId, currentChildren);
-      }
+        childrenMap.set(pid, currentChildren);
+      });
     });
 
     // Collect all descendants (subcategories, sub-subcategories, etc.)
@@ -177,30 +213,63 @@ const CategoryManager = () => {
 
   const openCreate = (parentId = '') => {
     setEditingCategory(null);
-    // A new subcategory starts with its parent's tabs; defaulting to all four
-    // tabs used to leak the parent category into tabs it was never meant for.
+    setParentSearch('');
+    const initialParentIds = parentId ? [parentId] : [];
     const parentTabs = parentId ? tabsOfParent(parentId) : null;
     setForm({
       ...EMPTY_FORM,
       ...(parentTabs ? tabFields(parentTabs) : {}),
       parentId,
+      parentIds: initialParentIds,
       sortOrder: categories.length,
     });
     setModalOpen(true);
   };
 
-  const handleParentChange = (parentId) => {
-    const parentTabs = parentId && !editingCategory ? tabsOfParent(parentId) : null;
-    setForm((prev) => ({ ...prev, parentId, ...(parentTabs ? tabFields(parentTabs) : {}) }));
+  const toggleParentCategory = (pId) => {
+    setForm((prev) => {
+      const current = prev.parentIds || (prev.parentId ? [prev.parentId] : []);
+      const exists = current.includes(pId);
+      const nextParentIds = exists ? current.filter((id) => id !== pId) : [...current, pId];
+      const nextParentId = nextParentIds[0] || '';
+
+      let extra = {};
+      if (!editingCategory && nextParentIds.length) {
+        const combinedTabs = [...new Set(nextParentIds.flatMap((id) => tabsOfParent(id) || []))];
+        if (combinedTabs.length) {
+          extra = tabFields(combinedTabs);
+        }
+      }
+      return {
+        ...prev,
+        parentIds: nextParentIds,
+        parentId: nextParentId,
+        ...extra,
+      };
+    });
+  };
+
+  const clearParentCategories = () => {
+    setForm((prev) => ({
+      ...prev,
+      parentIds: [],
+      parentId: '',
+    }));
   };
 
   const openEdit = (category) => {
     setEditingCategory(category);
+    setParentSearch('');
+    const pIds = category.parentIds?.length
+      ? category.parentIds
+      : (category.parentId ? [category.parentId] : []);
+
     setForm({
       name: category.name,
       slug: category.slug,
       description: category.description || '',
-      parentId: category.parentId || '',
+      parentId: pIds[0] || '',
+      parentIds: pIds,
       imageUrl: category.imageUrl || category.image || '',
       iconUrl: category.iconUrl || '',
       sortOrder: category.sortOrder ?? 0,
@@ -266,11 +335,16 @@ const CategoryManager = () => {
     }
 
     setSaving(true);
+    const pIds = form.parentIds?.length
+      ? form.parentIds
+      : (form.parentId ? [form.parentId] : []);
+
     const payload = {
       name: form.name.trim(),
       slug: slugify(form.slug),
       description: form.description,
-      parentId: form.parentId || null,
+      parentId: pIds[0] || null,
+      parentIds: pIds,
       imageUrl: form.imageUrl || null,
       iconUrl: form.iconUrl || null,
       sortOrder: Number(form.sortOrder) || 0,
@@ -441,8 +515,19 @@ const CategoryManager = () => {
                       </td>
 
                       <td className="py-4 px-6">
-                        {category.parentName ? (
-                          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-700 text-[8px] font-black rounded-lg uppercase tracking-wider">
+                        {category.parentNames?.length ? (
+                          <div className="flex flex-wrap gap-1 max-w-[220px]">
+                            {category.parentNames.map((pName) => (
+                              <span
+                                key={pName}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-800 text-[8px] font-bold rounded-lg uppercase tracking-wider"
+                              >
+                                ↳ {pName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : category.parentName ? (
+                          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-black rounded-lg uppercase tracking-wider">
                             Sub of {category.parentName}
                           </div>
                         ) : (
@@ -545,21 +630,133 @@ const CategoryManager = () => {
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Parent Category (sub-category)</label>
-            <div className="relative">
-              <select
-                value={form.parentId}
-                onChange={(e) => handleParentChange(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none appearance-none"
-              >
-                <option value="">None (top-level)</option>
-                {parentOptions.filter((p) => p.id !== editingCategory?.id).map((parent) => (
-                  <option key={parent.id} value={parent.id}>
-                    {parent.depth ? `${'— '.repeat(parent.depth)}${parent.name}` : parent.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <div className="flex items-center justify-between mb-1.5">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Parent Categories (Department Selection)
+                </label>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  Select one or more parent categories using checkboxes (e.g. check both <b>Dairy Products</b> and <b>Drinks & Beverages</b> for Buttermilk). Leave all unchecked for a Top-Level category.
+                </p>
+              </div>
+              {(form.parentIds?.length > 0 || form.parentId) && (
+                <button
+                  type="button"
+                  onClick={clearParentCategories}
+                  className="text-[10px] font-bold text-red-500 hover:text-red-700 hover:underline px-2 py-1 transition-colors"
+                >
+                  Clear Selection (Top-Level)
+                </button>
+              )}
+            </div>
+
+            <div className="border border-slate-200 rounded-2xl p-3 bg-slate-50/50 space-y-2.5">
+              {/* Search input for parent categories */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Filter parent categories..."
+                  value={parentSearch}
+                  onChange={(e) => setParentSearch(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                {parentSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setParentSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Selected parents summary chips */}
+              {(() => {
+                const selectedIds = form.parentIds?.length
+                  ? form.parentIds
+                  : (form.parentId ? [form.parentId] : []);
+                if (selectedIds.length === 0) {
+                  return (
+                    <div className="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50 border border-blue-100 rounded-xl text-blue-700 text-xs font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                      <span>No parent selected &mdash; this will be created as a <b>Top-Level Category</b>.</span>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                      Selected ({selectedIds.length}):
+                    </span>
+                    {selectedIds.map((id) => {
+                      const parentCat = categories.find((c) => c.id === id);
+                      return (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500 text-white rounded-lg text-xs font-bold shadow-xs"
+                        >
+                          {parentCat?.name || id}
+                          <button
+                            type="button"
+                            onClick={() => toggleParentCategory(id)}
+                            className="hover:bg-amber-600 rounded-full p-0.5 transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              {/* Scrollable list of parent checkboxes */}
+              <div className="max-h-48 overflow-y-auto space-y-1 pr-1 border-t border-slate-100 pt-2">
+                {filteredParentOptions.length === 0 ? (
+                  <p className="text-xs text-slate-400 py-3 text-center">No categories matching "{parentSearch}"</p>
+                ) : (
+                  filteredParentOptions.map((parent) => {
+                    const selectedIds = form.parentIds?.length
+                      ? form.parentIds
+                      : (form.parentId ? [form.parentId] : []);
+                    const isChecked = selectedIds.includes(parent.id);
+                    return (
+                      <label
+                        key={parent.id}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition-all border ${
+                          isChecked
+                            ? 'bg-amber-50/80 border-amber-200 text-amber-950 font-bold'
+                            : 'bg-white border-slate-100 hover:border-slate-200 text-slate-700 font-medium'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleParentCategory(parent.id)}
+                          className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                        />
+                        <div className="w-6 h-6 rounded-md overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+                          <img
+                            src={parent.imageUrl || parent.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&auto=format&fit=crop&q=60'}
+                            alt={parent.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs block truncate">{parent.name}</span>
+                          <span className="text-[10px] text-slate-400 block truncate">/{parent.slug}</span>
+                        </div>
+                        {isChecked && (
+                          <span className="text-[9px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
+                            Selected
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
 
@@ -567,7 +764,7 @@ const CategoryManager = () => {
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Visible Marketplace Tabs (Storefronts) *</label>
             <p className="text-[11px] text-slate-500 mb-2 font-medium">
               Select which marketplace tabs this category will appear on for customers.
-              {form.parentId && ' A subcategory only appears in tabs where its parent is also enabled.'}
+              {(form.parentIds?.length > 0 || form.parentId) && ' A subcategory only appears in tabs where its parent is also enabled.'}
             </p>
             <div className="flex flex-wrap gap-2">
               {VISIBLE_TABS.map((tab) => {

@@ -59,7 +59,12 @@ class CategoryRepository extends BaseRepository {
     let frontier = [root._id];
     const seen = new Set([String(root._id)]);
     while (frontier.length) {
-      const children = await this.find(this._activeFilter({ parentId: { $in: frontier } }));
+      const children = await this.find(this._activeFilter({
+        $or: [
+          { parentId: { $in: frontier } },
+          { parentIds: { $in: frontier } },
+        ],
+      }));
       frontier = children
         .filter((c) => !seen.has(String(c._id)))
         .map((c) => {

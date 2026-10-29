@@ -67,15 +67,9 @@ const HeaderTabs = () => {
   const isMithilakartActive = effectiveFlow === 'mithilakart';
 
   const handleTabClick = (tab) => {
-    const targetFlow = tab.flow || (
-      tab.route?.includes('/quick-shop') ? 'quickshop' :
-      tab.route?.includes('/fresh-grocery') ? 'freshgrocery' :
-      tab.route?.includes('/mithilak') ? 'mithilak' : 'mithilakart'
-    );
-    if (targetFlow) {
-      setActiveFlow(targetFlow);
-    }
-    navigate(tab.route || '/home');
+    const targetRoute = tab.route || '/home';
+    if (location.pathname === targetRoute) return;
+    navigate(targetRoute);
   };
 
   const renderTabIcon = (tab, isActive) => {
@@ -163,7 +157,7 @@ const HeaderTabs = () => {
             key={tab.id}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleTabClick(tab)}
-            className={`flex flex-col items-center justify-center py-1 rounded-lg border h-[50px] md:h-[46px] gap-0.5 md:gap-1 cursor-pointer transition-all duration-300 ${
+            className={`flex flex-col items-center justify-center py-1 rounded-lg border h-[50px] md:h-[46px] gap-0.5 md:gap-1 cursor-pointer transition-colors duration-200 ${
               isActive ? activeStyle : inactiveStyle
             }`}
           >

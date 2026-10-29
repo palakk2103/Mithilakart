@@ -146,6 +146,19 @@ const GroceryCategoryIcon = ({ category }) => {
   return <span className="text-[18px] font-black text-[#D9A21B]">{category.name.charAt(0).toUpperCase()}</span>;
 };
 
+// In-memory cache across tab switches to render instantly and eliminate page blinking
+const quickShopDataCache = {
+  quick_shop: {
+    categoryTree: null,
+    categorySections: null,
+  },
+  groceries_fresh: {
+    categoryTree: null,
+    categorySections: null,
+  },
+  nearbyProducts: {},
+};
+
 const QuickShop = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -153,49 +166,48 @@ const QuickShop = () => {
   // instance when switching between them, so everything below keys off this.
   const isFreshGrocery = pathname.includes('/fresh-grocery');
   const marketplaceTab = isFreshGrocery ? 'groceries_fresh' : 'quick_shop';
-  const fetchHomeSections = useVendorStore((state) => state.fetchHomeSections);
-  const [categorySections, setCategorySections] = React.useState([]);
-  const [categoryTree, setCategoryTree] = React.useState([]);
-  const [categoriesLoading, setCategoriesLoading] = React.useState(true);
+
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   const { savedAddresses, selectedAddressId } = useAccountStore();
   const selectedAddr = savedAddresses?.find((a) => a.id === selectedAddressId) || savedAddresses?.[0];
   const effectiveLat = liveLocation?.latitude ?? selectedAddr?.latitude ?? 28.5385859;
   const effectiveLng = liveLocation?.longitude ?? selectedAddr?.longitude ?? 77.1182734;
 
-  const [nearbyProducts, setNearbyProducts] = React.useState([]);
-  const [nearbyLoading, setNearbyLoading] = React.useState(false);
-  const [notDeliverable, setNotDeliverable] = React.useState(false);
+  const cachedCatTree = quickShopDataCache[marketplaceTab]?.categoryTree;
+  const cachedCatSections = quickShopDataCache[marketplaceTab]?.categorySections;
+  const [categorySections, setCategorySections] = React.useState(() => cachedCatSections || []);
+  const [categoryTree, setCategoryTree] = React.useState(() => cachedCatTree || []);
+  const [categoriesLoading, setCategoriesLoading] = React.useState(() => !cachedCatSections);
 
-  useEffect(() => {
-    if (isFreshGrocery) {
-      localStorage.setItem('isFreshGroceryFlow', 'true');
-      localStorage.setItem('isQuickShopFlow', 'false');
-      localStorage.setItem('isMithilakFlow', 'false');
-      fetchHomeSections('groceries_fresh');
-    } else {
-      localStorage.setItem('isQuickShopFlow', 'true');
-      localStorage.setItem('isMithilakFlow', 'false');
-      localStorage.setItem('isFreshGroceryFlow', 'false');
-      fetchHomeSections('quick_shop');
-    }
-  }, [fetchHomeSections, isFreshGrocery]);
+  const locKey = `${effectiveLat}_${effectiveLng}_${isFreshGrocery ? 'fresh' : 'quick'}`;
+  const cachedNearby = quickShopDataCache.nearbyProducts[locKey];
+  const [nearbyProducts, setNearbyProducts] = React.useState(() => cachedNearby || []);
+  const [nearbyLoading, setNearbyLoading] = React.useState(() => !cachedNearby);
+  const [notDeliverable, setNotDeliverable] = React.useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    // Previously always fetched the Quick Shop tree, so Groceries & Fresh showed
-    // Quick Shop's categories under a hardcoded grid admin could not control.
-    setCategoriesLoading(true);
+    // Only show skeleton if not already cached
+    if (!quickShopDataCache[marketplaceTab]?.categorySections) {
+      setCategoriesLoading(true);
+    }
+
     getCategories({ marketplaceTab })
       .then((data) => {
         if (!cancelled) {
-          setCategoryTree(extractList(data));
-          setCategorySections(mapCategorySections(data, []));
+          const list = extractList(data);
+          const sections = mapCategorySections(data, []);
+          quickShopDataCache[marketplaceTab] = {
+            categoryTree: list,
+            categorySections: sections,
+          };
+          setCategoryTree(list);
+          setCategorySections(sections);
         }
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!cancelled && !quickShopDataCache[marketplaceTab]?.categorySections) {
           setCategoryTree([]);
           setCategorySections([]);
         }
@@ -212,7 +224,10 @@ const QuickShop = () => {
   useEffect(() => {
     let cancelled = false;
 
-    setNearbyLoading(true);
+    if (!quickShopDataCache.nearbyProducts[locKey]) {
+      setNearbyLoading(true);
+    }
+
     getNearbyProducts({
       lat: effectiveLat,
       lng: effectiveLng,
@@ -233,12 +248,13 @@ const QuickShop = () => {
           };
         });
         if (!cancelled) {
+          quickShopDataCache.nearbyProducts[locKey] = items;
           setNearbyProducts(items);
           setNotDeliverable(payload?.deliverable === false && items.length === 0);
         }
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!cancelled && !quickShopDataCache.nearbyProducts[locKey]) {
           setNearbyProducts([]);
           setNotDeliverable(false);
         }
@@ -250,7 +266,7 @@ const QuickShop = () => {
     return () => {
       cancelled = true;
     };
-  }, [effectiveLat, effectiveLng, isFreshGrocery]);
+  }, [effectiveLat, effectiveLng, isFreshGrocery, locKey]);
 
   // Simulated active tab for the filters
   const [activeFilter, setActiveFilter] = React.useState('All');
@@ -742,9 +758,9 @@ const QuickShop = () => {
           </div>
         )}
         <div className="grid grid-cols-3 gap-2">
-          {nearbyLoading && (
-            <p className="col-span-3 text-center text-[10px] text-slate-500 py-4">Loading nearby products…</p>
-          )}
+          {nearbyLoading && Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="h-32 bg-slate-100 rounded-xl animate-pulse" />
+          ))}
           {!nearbyLoading && nearbyProducts.slice(0, 3).map((product) => {
             const discount = product.oldPrice > product.price
               ? `${Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}% OFF`
@@ -807,7 +823,10 @@ const QuickShop = () => {
 
         {/* Deals grid */}
         <div className="grid grid-cols-3 gap-2.5">
-          {(nearbyProducts.length > 3 ? nearbyProducts.slice(3, 6) : nearbyProducts.slice(0, 3)).map((prod) => {
+          {nearbyLoading && Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="h-36 bg-slate-100 rounded-2xl animate-pulse" />
+          ))}
+          {!nearbyLoading && (nearbyProducts.length > 3 ? nearbyProducts.slice(3, 6) : nearbyProducts.slice(0, 3)).map((prod) => {
             const discount = prod.oldPrice > prod.price
               ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
               : null;
@@ -844,7 +863,7 @@ const QuickShop = () => {
               </div>
             );
           })}
-          {nearbyProducts.length === 0 && (
+          {!nearbyLoading && nearbyProducts.length === 0 && (
             <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
               <p className="text-[11.5px] font-bold text-slate-700">
                 {notDeliverable ? 'Share location to explore special deals in your area' : 'No deals available right now'}
@@ -856,7 +875,21 @@ const QuickShop = () => {
 
       {/* ── RESTORED CATEGORY SECTIONS (Mobile View) ── */}
       <div className="md:hidden px-4 space-y-8">
-        {categorySections.map((section, sIdx) => (
+        {categoriesLoading && (
+          <div className="space-y-6">
+            {Array.from({ length: 2 }).map((_, sIdx) => (
+              <div key={sIdx} className="space-y-3">
+                <div className="h-4 w-32 bg-slate-200 rounded-md animate-pulse" />
+                <div className="grid grid-cols-4 gap-2">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {!categoriesLoading && categorySections.map((section, sIdx) => (
           <div key={sIdx} className="mb-6">
             <h2 className="text-[15px] font-extrabold text-[#F26522] mb-3 tracking-tight pl-1">
               {section.title}
@@ -879,7 +912,17 @@ const QuickShop = () => {
 
       {/* ── RESTORED CATEGORY SECTIONS (Desktop View) ── */}
       <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-4 md:py-6 space-y-8">
-        {categorySections.map((section, sIdx) => (
+        {categoriesLoading && (
+          <div className="space-y-6">
+            <div className="h-10 bg-[#F26522]/30 rounded-t-3xl animate-pulse" />
+            <div className="bg-white p-6 rounded-b-3xl border border-slate-100 shadow-md grid grid-cols-4 lg:grid-cols-8 gap-6">
+              {Array.from({ length: 8 }).map((_, idx) => (
+                <div key={idx} className="h-28 bg-slate-100 rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          </div>
+        )}
+        {!categoriesLoading && categorySections.map((section, sIdx) => (
           <div key={sIdx} className="flex flex-col">
             {/* Header Banner */}
             <div className={`px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[#F26522]`}>
