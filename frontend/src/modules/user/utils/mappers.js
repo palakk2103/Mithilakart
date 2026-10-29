@@ -120,6 +120,7 @@ export const mapCartItem = (item) => ({
   img: getProductImage(item),
   marketplaceTab: item.marketplaceTab || item.tab || null,
   commerceFlow: item.commerceFlow || null,
+  deliveryPromiseMinutes: item.deliveryPromiseMinutes || null,
 });
 
 export const mapOrderForList = (order) => ({

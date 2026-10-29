@@ -30,6 +30,11 @@ function createAdminPlatformRoutes(services, middleware) {
   router.patch('/vendors/:id/reject', authAdmin, requirePermission('sellers.approve'), validateParams(Joi.object({ id: objectIdSchema })), h.rejectVendor);
   router.patch('/vendors/:id/suspend', authAdmin, requirePermission('sellers.suspend'), validateParams(Joi.object({ id: objectIdSchema })), h.suspendVendor);
   router.patch('/vendors/:id/activate', authAdmin, requirePermission('sellers.edit'), validateParams(Joi.object({ id: objectIdSchema })), h.activateVendor);
+  router.patch('/vendors/:id/tabs', authAdmin, requirePermission('sellers.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({
+    mithilakEligible: Joi.boolean().optional(),
+    quickCommerceEligible: Joi.boolean().optional(),
+    groceryEligible: Joi.boolean().optional(),
+  }).min(1)), h.updateVendorTabs);
   router.get('/vendors/:id/products', authAdmin, requirePermission('sellers.view'), validateParams(Joi.object({ id: objectIdSchema })), h.vendorProducts);
   router.get('/vendors/:id/earnings', authAdmin, requirePermission('finance.view'), validateParams(Joi.object({ id: objectIdSchema })), h.vendorEarnings);
 

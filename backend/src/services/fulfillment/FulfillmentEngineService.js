@@ -7,6 +7,7 @@ const { toFiniteNumber } = require('../../utils/numeric');
 const { isQuickCommerceTab } = require('../../utils/marketplaceTab');
 const {
   FULFILLMENT_STATE: STATE,
+  TERMINAL_FULFILLMENT_STATES,
   FULFILLMENT_TYPE,
   DELIVERY_MODE,
   FALLBACK_LEVEL,
@@ -113,6 +114,7 @@ class FulfillmentEngineService extends BaseService {
       variantId: it.variantId || null,
       quantity: it.quantity,
       unitPrice: it.unitPrice,
+      deductedWithOrder: Boolean(order.inventoryDeducted),
     }));
   }
 
@@ -408,6 +410,8 @@ class FulfillmentEngineService extends BaseService {
 
     if (!fulfillment) return { ok: false, code: 'EXPIRED' };
 
+    await this.reservationService.settleAttempt(attempt, fulfillment.traceId);
+
     await this._writeOrderSnapshot(fulfillment, {
       type: FULFILLMENT_TYPE.QUICK_LOCAL,
       source: 'seller',
@@ -593,6 +597,11 @@ class FulfillmentEngineService extends BaseService {
       );
       return null;
     }
+
+    await this.reservationService.settleAttempt(
+      { ...(attempt.toObject?.() || attempt), reservations: reservation.reserved },
+      fulfillment.traceId
+    );
 
     const etaMinutes = await this._computeEta({ candidate, config, fulfillment: moved });
 
@@ -835,6 +844,71 @@ class FulfillmentEngineService extends BaseService {
     }
 
     return this.orderRepository.updateById(order._id, update);
+  }
+
+  /**
+   * The order was cancelled (customer, seller, or admin). Withdraws any live
+   * seller offer, returns stock held by attempts, and closes the fulfillment
+   * so the sweeper, seller panel and delivery partners stop acting on it.
+   *
+   * Attempts are closed BEFORE the state moves: a seller tapping Accept at the
+   * same moment then loses the OFFERED→ACCEPTED compare-and-set cleanly.
+   */
+  async cancelForOrder(orderId) {
+    const fulfillment = await this.orderFulfillmentRepository.findByOrderId(orderId);
+    if (!fulfillment || TERMINAL_FULFILLMENT_STATES.has(fulfillment.state)) return fulfillment || null;
+
+    const attempts = await this.fulfillmentAttemptRepository.listByFulfillment(fulfillment._id);
+    const withdrawn = [];
+    for (const attempt of attempts) {
+      if ([ATTEMPT_STATUS.OFFERED, ATTEMPT_STATUS.RESERVED].includes(attempt.status)) {
+        const closed = await this.fulfillmentAttemptRepository.transitionStatus(
+          attempt._id, attempt.status, ATTEMPT_STATUS.RELEASED,
+          { respondedAt: new Date(), failureDetail: 'order_cancelled' }
+        );
+        if (closed && attempt.status === ATTEMPT_STATUS.OFFERED) withdrawn.push(attempt);
+      }
+    }
+
+    await this._releaseAllOutstanding(fulfillment);
+
+    const cancelled = await this.orderFulfillmentRepository.transitionState(
+      fulfillment._id, fulfillment.state, STATE.CANCELLED,
+      { currentAttemptId: null, acceptanceDeadlineAt: null }
+    );
+
+    // Closes the offer popup on the seller panel. Not FAILED: the customer
+    // cancelled, so they must not be told fulfilment failed.
+    for (const attempt of withdrawn) {
+      this._emit(FULFILLMENT_EVENTS.SELLER_REJECTED, cancelled || fulfillment, {
+        sellerId: attempt.sellerId,
+        attemptId: attempt._id,
+        reason: 'order_cancelled',
+      });
+    }
+    if (cancelled) {
+      logger.info({ traceId: fulfillment.traceId, orderId: String(orderId) }, 'CR-002 fulfillment cancelled with order');
+    }
+    return cancelled;
+  }
+
+  /** The fulfillment for an order plus this seller's live offer on it, if any. */
+  async sellerView(orderId, sellerId) {
+    const fulfillment = await this.orderFulfillmentRepository.findByOrderId(orderId);
+    if (!fulfillment) return null;
+    const offer = await this.fulfillmentAttemptRepository.findCurrentOffer(sellerId, fulfillment.orderId);
+    return { fulfillment, offer };
+  }
+
+  /**
+   * Substitute lines this order's accepted attempt took from another shelf —
+   * cancellation must give those units back instead of the ordered product's.
+   */
+  async listSettledSubstitutions(orderId) {
+    const attempts = await this.fulfillmentAttemptRepository.listByOrderId(orderId);
+    return attempts
+      .filter((attempt) => attempt.status === ATTEMPT_STATUS.ACCEPTED)
+      .flatMap((attempt) => (attempt.reservations || []).filter((entry) => entry.settledAt && entry.originProductId));
   }
 
   /** Admin: force a stuck fulfillment onto the courier path. */

@@ -772,7 +772,8 @@ const QuickShop = () => {
         </div>
       </div>
 
-      {/* ── SHARE LOCATION BANNER ── */}
+      {/* ── SHARE LOCATION BANNER (only while we have no location) ── */}
+      {liveLocation?.latitude == null && (
       <div className="bg-[#FFF5EE] border border-[#FFD9C7]/40 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
         <div className="flex flex-col gap-3 flex-1 pr-2">
           <span className="text-[12.5px] font-extrabold text-slate-800 leading-snug">
@@ -788,6 +789,7 @@ const QuickShop = () => {
         </div>
         <ChevronDown size={20} className="text-slate-500 flex-shrink-0 cursor-pointer" />
       </div>
+      )}
 
       {/* ── TODAY'S SPECIAL DEALS ── */}
       <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">

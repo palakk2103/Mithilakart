@@ -100,6 +100,19 @@ class DeliveryOrderService extends BaseService {
     return null;
   }
 
+  /**
+   * The rider must not see either handover code: the pickup code comes from
+   * the seller and the delivery code from the customer — that is the proof
+   * the rider actually met them.
+   */
+  _riderSafe(assignment) {
+    if (!assignment) return assignment;
+    const plain = assignment.toObject?.() || { ...assignment };
+    delete plain.deliveryOtp;
+    delete plain.pickupOtp;
+    return plain;
+  }
+
   _mapOrderForDelivery(order, assignment = null, seller = null) {
     const addr = order?.addressSnapshot || {};
 
@@ -144,7 +157,7 @@ class DeliveryOrderService extends BaseService {
       lat: addr.lat ?? addr.latitude ?? null,
       lng: addr.lng ?? addr.longitude ?? null,
       earningAmount: assignment?.earningAmount ?? DEFAULT_DELIVERY_EARNING_AMOUNT,
-      assignment,
+      assignment: this._riderSafe(assignment),
       // Vendor / Store details
       storeName,
       sellerName,
@@ -218,6 +231,7 @@ class DeliveryOrderService extends BaseService {
         const order = orderMap.get(String(assignment.orderId));
         return (
           order &&
+          [ORDER_STATUS.CONFIRMED, ORDER_STATUS.PACKED].includes(order.status) &&
           order.fulfilmentType !== 'courier' &&
           order.fulfillment?.type !== 'courier' &&
           order.fulfillment?.deliveryMode !== 'standard'
@@ -228,7 +242,7 @@ class DeliveryOrderService extends BaseService {
         const sId = ord?.fulfillment?.sellerId || (ord?.sellerSubOrders || [])[0]?.sellerId;
         const seller = sId ? sellerMap.get(String(sId)) : null;
         return {
-          ...assignment.toObject?.() || assignment,
+          ...this._riderSafe(assignment),
           order: this._mapOrderForDelivery(ord, assignment, seller),
           orderId: ord || assignment.orderId,
         };
@@ -239,7 +253,7 @@ class DeliveryOrderService extends BaseService {
       const sId = ord?.fulfillment?.sellerId || (ord?.sellerSubOrders || [])[0]?.sellerId;
       const seller = sId ? sellerMap.get(String(sId)) : null;
       return {
-        ...assignment.toObject?.() || assignment,
+        ...this._riderSafe(assignment),
         order: this._mapOrderForDelivery(ord, assignment, seller),
         orderId: ord || assignment.orderId,
       };
@@ -263,7 +277,7 @@ class DeliveryOrderService extends BaseService {
 
     return {
       order: this._mapOrderForDelivery(order, assignment, seller),
-      assignment,
+      assignment: this._riderSafe(assignment),
     };
   }
 
@@ -298,6 +312,7 @@ class DeliveryOrderService extends BaseService {
       // back rather than a 409, so a retried request is harmless.
       if (existing?.partnerId && String(existing.partnerId) === String(partnerId)) {
         const otp = await this.deliveryOtpService.createOtp(existing._id, 'pickup');
+        await this.deliveryAssignmentRepository.updateById(existing._id, { pickupOtp: otp }, session);
         eventBus.publish(DELIVERY_EVENTS.OTP_CREATED, {
           type: 'pickup',
           orderId: order._id,
@@ -305,7 +320,7 @@ class DeliveryOrderService extends BaseService {
           assignmentId: existing._id,
           otp,
         });
-        return { assignment: existing, idempotent: true, ...this._otpEcho('pickupOtp', otp) };
+        return { assignment: this._riderSafe(existing), idempotent: true, ...this._otpEcho('pickupOtp', otp) };
       }
 
       const config = await this._resolveAssignmentConfig(order.marketplaceTab);
@@ -327,6 +342,7 @@ class DeliveryOrderService extends BaseService {
       }
 
       const pickupOtp = await this.deliveryOtpService.createOtp(updated._id, 'pickup');
+      await this.deliveryAssignmentRepository.updateById(updated._id, { pickupOtp }, session);
 
       eventBus.publish(DELIVERY_EVENTS.ASSIGNMENT_ACCEPTED, {
         orderId: order._id,
@@ -344,7 +360,7 @@ class DeliveryOrderService extends BaseService {
         otp: pickupOtp,
       });
 
-      return { assignment: updated, ...this._otpEcho('pickupOtp', pickupOtp) };
+      return { assignment: this._riderSafe(updated), ...this._otpEcho('pickupOtp', pickupOtp) };
     });
   }
 
@@ -364,6 +380,7 @@ class DeliveryOrderService extends BaseService {
         {
           status: ASSIGNMENT_STATUS.PICKED_UP,
           pickedUpAt: new Date(),
+          pickupOtp: null,
           deliveryOtp,
         },
         session
@@ -586,6 +603,31 @@ class DeliveryOrderService extends BaseService {
       status: ASSIGNMENT_STATUS.PENDING,
       earningAmount: DEFAULT_DELIVERY_EARNING_AMOUNT,
     }, session);
+  }
+
+  /** What the seller needs at handover: who is coming and the pickup code. */
+  async getPickupInfo(orderId) {
+    const assignment = await this.deliveryAssignmentRepository.findByOrderId(orderId);
+    if (!assignment?.partnerId || assignment.status !== ASSIGNMENT_STATUS.ACCEPTED) return null;
+    const partner = await this.deliveryPartnerRepository.findById(assignment.partnerId);
+    return {
+      pickupOtp: assignment.pickupOtp || null,
+      partnerName: partner?.name || 'Delivery Partner',
+      partnerPhone: partner?.phone || '',
+    };
+  }
+
+  /** Order cancelled: withdraw it from riders unless it is already delivered. */
+  async cancelAssignmentForOrder(orderId, session = null) {
+    const assignment = await this.deliveryAssignmentRepository.findByOrderId(orderId);
+    if (!assignment || [ASSIGNMENT_STATUS.DELIVERED, ASSIGNMENT_STATUS.CANCELLED].includes(assignment.status)) {
+      return assignment || null;
+    }
+    return this.deliveryAssignmentRepository.updateById(
+      assignment._id,
+      { status: ASSIGNMENT_STATUS.CANCELLED, deliveryOtp: null, pickupOtp: null },
+      session
+    );
   }
 
   async notifyNearbyPartnersForOrder(orderId, session = null) {

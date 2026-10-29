@@ -1,7 +1,11 @@
 const { BaseService } = require('../../core/BaseService');
 const { getProvider } = require('../../core/providers.registry');
 const { AppError } = require('../../utils/AppError');
-const { PAYMENT_METHOD, PAYMENT_STATUS } = require('../../constants/commerce');
+const { PAYMENT_METHOD, PAYMENT_STATUS, ORDER_STATUS } = require('../../constants/commerce');
+const { logger } = require('../../utils/logger');
+
+/** Razorpay webhook events that mean the money was captured. */
+const WEBHOOK_PAID_EVENTS = new Set(['payment.captured', 'order.paid']);
 
 class PaymentService extends BaseService {
   constructor({
@@ -168,7 +172,7 @@ class PaymentService extends BaseService {
     const order = await this.orderRepository.findActiveById(orderId, userId);
     if (!order) throw AppError.notFound('Order not found');
 
-    const paymentTx = await this.paymentTransactionRepository.findByOrderId(orderId);
+    const paymentTx = await this.paymentTransactionRepository.findByOrderId(order._id);
     if (!paymentTx) throw AppError.notFound('Payment transaction not found');
 
     const resolvedOrderId = providerOrderId
@@ -181,17 +185,64 @@ class PaymentService extends BaseService {
       _payload: { signature, razorpay_payment_id: providerPaymentId, razorpay_order_id: resolvedOrderId, razorpay_signature: signature, sessionMeta },
     });
 
-    const status = verified.status === 'paid' ? PAYMENT_STATUS.PAID : PAYMENT_STATUS.FAILED;
+    return this._settlePayment({
+      paymentTx,
+      order,
+      status: verified.status === 'paid' ? PAYMENT_STATUS.PAID : PAYMENT_STATUS.FAILED,
+      providerPaymentId,
+      providerOrderId: resolvedOrderId,
+      raw: verified,
+      session,
+    });
+  }
 
-    await this.paymentTransactionRepository.updateStatus(paymentTx._id, status, verified, session);
-    await this.orderRepository.updateById(orderId, { paymentStatus: status }, session);
+  /**
+   * Applies a provider outcome to the transaction and the order, exactly once.
+   *
+   * A captured payment is final: a later "failed" (a retried or replayed
+   * verify, a payment.failed webhook for an earlier attempt, a forged
+   * signature) must never turn a paid order back into a failed one.
+   */
+  async _settlePayment({ paymentTx, order, status, providerPaymentId, providerOrderId, raw = {}, session = null }) {
+    if (paymentTx.status === PAYMENT_STATUS.PAID) {
+      return {
+        paymentTransactionId: paymentTx._id,
+        paymentStatus: PAYMENT_STATUS.PAID,
+        providerPaymentId: paymentTx.rawResponse?.providerPaymentId || providerPaymentId,
+        idempotent: true,
+      };
+    }
+
+    await this.paymentTransactionRepository.updateStatus(paymentTx._id, status, {
+      ...(paymentTx.rawResponse || {}),
+      ...raw,
+      providerOrderId: providerOrderId || paymentTx.rawResponse?.providerOrderId || null,
+      // The captured payment id (pay_...) is what a refund needs; the
+      // transaction field providerPaymentId holds the provider ORDER id.
+      providerPaymentId: providerPaymentId || null,
+    }, session);
+
+    // Paid after the order was already cancelled (abandoned-payment sweep or a
+    // cancel racing the payment): record the money and send it back.
+    if (order.status === ORDER_STATUS.CANCELLED) {
+      if (status === PAYMENT_STATUS.PAID) {
+        await this.orderRepository.updateById(order._id, { paymentStatus: PAYMENT_STATUS.PAID }, session);
+        const refund = () => this.refundOrderPayment(order._id, { reason: 'paid_after_cancellation' })
+          .catch((err) => logger.error({ err, orderId: String(order._id) }, 'Refund of payment on cancelled order failed'));
+        if (session && typeof session.afterCommit === 'function') session.afterCommit(refund);
+        else await refund();
+      }
+      return { paymentTransactionId: paymentTx._id, paymentStatus: status, providerPaymentId, orderCancelled: true };
+    }
+
+    await this.orderRepository.updateById(order._id, { paymentStatus: status }, session);
 
     if (status === PAYMENT_STATUS.FAILED && this.orderService) {
-      await this.orderService.releaseOrderReservations(orderId, session);
+      await this.orderService.releaseOrderReservations(order._id, session);
     }
 
     if (status === PAYMENT_STATUS.PAID && this.orderService) {
-      await this.orderService.confirmOrder(orderId, userId, session);
+      await this.orderService.confirmOrder(order._id, order.userId, session);
     }
 
     return {
@@ -199,6 +250,42 @@ class PaymentService extends BaseService {
       paymentStatus: status,
       providerPaymentId,
     };
+  }
+
+  /**
+   * Returns money for a prepaid order to the original payment method.
+   * COD and unpaid orders have nothing to refund. Pass `amount` for a partial
+   * refund (returns); omit it to refund whatever is left of the payment.
+   */
+  async refundOrderPayment(orderId, { amount = null, reason = null } = {}) {
+    const paymentTx = await this.paymentTransactionRepository.findOne({
+      orderId, status: PAYMENT_STATUS.PAID, deletedAt: null,
+    });
+    if (!paymentTx || paymentTx.paymentMethod === PAYMENT_METHOD.COD) {
+      return { refunded: false, reason: 'not_prepaid' };
+    }
+
+    const previous = paymentTx.rawResponse?.refunds || [];
+    const alreadyRefunded = previous.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const refundable = Math.max(0, Number(paymentTx.amount) - alreadyRefunded);
+    const refundAmount = Math.min(amount == null ? refundable : Number(amount), refundable);
+    if (refundAmount <= 0) return { refunded: false, reason: 'nothing_left_to_refund' };
+
+    const providerPaymentId = paymentTx.rawResponse?.providerPaymentId || paymentTx.providerPaymentId;
+    const result = await this.paymentProvider.refund({ providerPaymentId, amount: refundAmount });
+
+    const refunds = [...previous, { amount: refundAmount, refundId: result?.refundId || null, reason, at: new Date() }];
+    const fullyRefunded = alreadyRefunded + refundAmount >= Number(paymentTx.amount);
+    await this.paymentTransactionRepository.updateById(paymentTx._id, {
+      rawResponse: { ...(paymentTx.rawResponse || {}), refunds },
+      ...(fullyRefunded ? { status: PAYMENT_STATUS.REFUNDED } : {}),
+    });
+    if (fullyRefunded) {
+      await this.orderRepository.updateById(orderId, { paymentStatus: PAYMENT_STATUS.REFUNDED });
+    }
+
+    logger.info({ orderId: String(orderId), amount: refundAmount, reason }, 'Order payment refunded to source');
+    return { refunded: true, amount: refundAmount, refundId: result?.refundId || null, fullyRefunded };
   }
 
   async handleRazorpayWebhook({ provider, payload = {}, signature = null, rawBody = null }, session = null) {
@@ -248,6 +335,15 @@ class PaymentService extends BaseService {
       throw AppError.notFound('Payment transaction not found for webhook');
     }
 
+    // The webhook signature (checked above) already proves Razorpay sent this,
+    // so the outcome comes from the event. Re-running the checkout-signature
+    // check here (the old behaviour) could never pass, so every
+    // payment.captured webhook marked a paid order as FAILED.
+    const event = String(payload.event || '');
+    const outcome = WEBHOOK_PAID_EVENTS.has(event)
+      ? PAYMENT_STATUS.PAID
+      : (event === 'payment.failed' ? PAYMENT_STATUS.FAILED : null);
+
     await this.paymentWebhookRepository.create(
       {
         provider,
@@ -261,17 +357,30 @@ class PaymentService extends BaseService {
       session
     );
 
-    const verification = await this.verifyPayment({
-      userId: existingTx.userId,
-      orderId: existingTx.orderId,
+    if (!outcome) return { processed: true, ignored: event || 'unknown_event' };
+
+    const paidPaise = Number(paymentEntity?.amount);
+    if (outcome === PAYMENT_STATUS.PAID && Number.isFinite(paidPaise)
+      && paidPaise !== Math.round(Number(existingTx.amount) * 100)) {
+      logger.error({ orderId: String(existingTx.orderId), paidPaise, expected: existingTx.amount },
+        'Razorpay webhook amount does not match the order; not marking it paid');
+      return { processed: true, ignored: 'amount_mismatch' };
+    }
+
+    const order = await this.orderRepository.findById(existingTx.orderId, { session });
+    if (!order) throw AppError.notFound('Order not found for webhook');
+
+    const settled = await this._settlePayment({
+      paymentTx: existingTx,
+      order,
+      status: outcome,
       providerPaymentId,
       providerOrderId: providerOrderId || existingTx.rawResponse?.providerOrderId,
-      signature,
-      sessionMeta: {},
+      raw: { webhookEvent: event },
       session,
     });
 
-    return { processed: true, ...verification };
+    return { processed: true, ...settled };
   }
 }
 

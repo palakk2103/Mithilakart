@@ -212,10 +212,17 @@ const Mithilak = () => {
                       e.stopPropagation();
                       e.preventDefault();
                       try {
-                        await addProductToCart({ id, name, price, image });
+                        await addProductToCart({
+                          id: prod.productId || prod.product?._id || prod.product?.id || id,
+                          listingId: prod.listingId,
+                          marketplaceTab: 'mithilak',
+                          name,
+                          price,
+                          image,
+                        });
                         triggerToast(`${name} added to cart!`);
-                      } catch {
-                        triggerToast('Could not add to cart');
+                      } catch (err) {
+                        triggerToast(err?.message || 'Could not add to cart');
                       }
                     }}
                     className="p-1.5 bg-white border border-[#207C8A]/30 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer active:scale-90"

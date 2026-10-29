@@ -180,7 +180,8 @@
     "orderSummary": "विवरण",
     "platformFees": "प्लेटफॉर्म शुल्क",
     "productDiscount": "उत्पाद छूट",
-    "deliveryText": "2 दिनों में डिलीवरी"
+    "deliveryText": "2 दिनों में डिलीवरी",
+    "deliveryCharges": "डिलीवरी शुल्क"
   },
   "categories": {
     "beautyCare": "सौंदर्य और देखभाल",
@@ -212,7 +213,8 @@
     "save": "सहेजें",
     "confirm": "क्या आप निश्चित हैं?",
     "ad": "विज्ञापन",
-    "sponsored": "प्रायोजित"
+    "sponsored": "प्रायोजित",
+    "quantity": "मात्रा"
   },
   "product": {
     "mrp": "एमआरपी",

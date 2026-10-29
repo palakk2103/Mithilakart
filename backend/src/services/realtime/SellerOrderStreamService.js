@@ -68,6 +68,7 @@ class SellerOrderStreamService {
             customerPhone: order.address?.phone || '',
             address: [order.address?.address, order.address?.city, order.address?.pincode].filter(Boolean).join(', '),
             commerceFlow: order.commerceFlow,
+            marketplaceTab: order.marketplaceTab || null,
             paymentMethod: order.paymentMethod,
             createdAt: order.createdAt,
           };

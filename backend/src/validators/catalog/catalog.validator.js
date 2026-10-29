@@ -36,6 +36,8 @@ const categoryBulkImportSchema = Joi.object({
   rows: Joi.array().items(Joi.object({
     category: sheetCell,
     subcategory: sheetCell,
+    childCategory: sheetCell,
+    childcategory: sheetCell,
     description: sheetCell,
     imageUrl: sheetCell,
     iconUrl: sheetCell,

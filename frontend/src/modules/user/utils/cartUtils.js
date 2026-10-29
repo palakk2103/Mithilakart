@@ -24,7 +24,8 @@ const normalizeCommerceFlow = (flow) => {
   if (!flow) return 'standard';
   if (flow === 'quickshop' || flow === 'quick_shop') return 'quick_shop';
   if (flow === 'freshgrocery' || flow === 'fresh_grocery') return 'fresh_grocery';
-  if (flow === 'mithilak' || flow === 'mithilakart') return 'mithilak';
+  if (flow === 'mithilak') return 'mithilak';
+  if (flow === 'mithilakart') return 'standard';
   return flow;
 };
 

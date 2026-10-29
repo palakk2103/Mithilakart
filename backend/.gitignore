@@ -10,3 +10,6 @@ coverage/
 keys/
 *.pem
 *.key
+
+# reconcile-stock.js backups (contain live product data)
+scripts/stock-backup-*.json

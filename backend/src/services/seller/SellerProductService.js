@@ -128,6 +128,13 @@ class SellerProductService extends BaseService {
         ? product.commerceFlows
         : ['standard'];
 
+      // A tab the seller unticked must stop showing the product there.
+      const keepTabs = flows.map((flow) => LEGACY_FLOW_TO_TAB[flow] || flow).filter(Boolean);
+      await MarketplaceListing.updateMany(
+        { productId: product._id, marketplaceTab: { $nin: keepTabs }, deletedAt: null },
+        { $set: { isVisible: false, deletedAt: new Date() } }
+      );
+
       for (const flow of flows) {
         const tab = LEGACY_FLOW_TO_TAB[flow] || flow;
         if (!tab) continue;

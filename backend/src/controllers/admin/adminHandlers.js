@@ -69,6 +69,9 @@ function createAdminHandlers(services) {
     activateVendor: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.vendors.activate(req.params.id));
     }),
+    updateVendorTabs: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.vendors.updateTabEligibility(req.params.id, req.body));
+    }),
     vendorProducts: asyncHandler(async (req, res) => {
       const result = await services.vendors.getProducts(req.params.id, req.query);
       return ApiResponse.paginated(res, result.items, result.meta);

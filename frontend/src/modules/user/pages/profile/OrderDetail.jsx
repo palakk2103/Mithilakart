@@ -290,7 +290,10 @@ const OrderDetail = () => {
     try {
       setIsCancelling(true);
       await cancelOrder(order.id || order.mongoId || orderId, { reason: cancelReason });
-      toast.success('Order cancelled successfully! Stock released & refund initiated.');
+      const paidOnline = order?.paymentStatus === 'paid' && order?.paymentMethod && order.paymentMethod !== 'cod';
+      toast.success(paidOnline
+        ? 'Order cancelled. Your refund has been sent to your original payment method.'
+        : 'Order cancelled successfully.');
       setShowCancelModal(false);
       loadOrder(true);
     } catch (err) {

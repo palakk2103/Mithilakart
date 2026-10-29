@@ -64,6 +64,7 @@ export const sellersApi = {
   reject: (id, reason) => asyncHandler(() => api.patch(`/vendors/${id}/reject`, { reason })),
   suspend: (id) => asyncHandler(() => api.patch(`/vendors/${id}/suspend`)),
   activate: (id) => asyncHandler(() => api.patch(`/vendors/${id}/activate`)),
+  updateTabs: (id, flags) => asyncHandler(() => api.patch(`/vendors/${id}/tabs`, flags)),
   getProducts: (id) => asyncHandler(() => api.get(`/vendors/${id}/products`)),
   getOrders: (id) => asyncHandler(() => api.get(`/vendors/${id}/orders`)),
   getEarnings: (id) => asyncHandler(() => api.get(`/vendors/${id}/earnings`)),

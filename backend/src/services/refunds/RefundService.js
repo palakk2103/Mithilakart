@@ -14,8 +14,12 @@ class RefundService extends BaseService {
     walletService,
     productRepository,
     inventoryHistoryRepository,
+    orderRepository = null,
+    paymentService = null,
   }) {
     super();
+    this.paymentService = paymentService;
+    this.orderRepository = orderRepository;
     this.refundRepository = refundRepository;
     this.returnRepository = returnRepository;
     this.orderItemRepository = orderItemRepository;
@@ -58,6 +62,20 @@ class RefundService extends BaseService {
           idempotencyKey,
           processedBy: adminId,
         }, session);
+      }
+
+      // "source" sends the money back to the card/UPI that paid. It used to
+      // mark the refund completed without moving any money.
+      if (method === REFUND_METHOD.SOURCE) {
+        const order = await this.orderRepository?.findById(ret.orderId, { session });
+        if (!order || order.paymentMethod === 'cod') {
+          throw AppError.validation('Cash on Delivery orders can only be refunded to the wallet');
+        }
+        if (!this.paymentService) throw AppError.serviceUnavailable('Online refunds are not available');
+        const result = await this.paymentService.refundOrderPayment(ret.orderId, { amount, reason: `return:${ret._id}` });
+        if (!result.refunded) {
+          throw AppError.conflict('This order has no online payment left to refund — use wallet instead');
+        }
       }
 
       if (method === REFUND_METHOD.WALLET) {

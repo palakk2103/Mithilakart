@@ -78,14 +78,7 @@ const CategoryManager = () => {
     loadCategories();
   }, [loadCategories]);
 
-  // The customer app renders two levels (category → subcategory), so only
-  // top-level categories can be chosen as a parent.
-  const parentOptions = useMemo(
-    () => categories.filter((c) => !c.parentId),
-    [categories]
-  );
-
-  // Show each subcategory directly under its parent instead of a flat list.
+  // Show each subcategory / child category directly under its parent instead of a flat list.
   const orderedCategories = useMemo(() => {
     const ids = new Set(categories.map((c) => c.id));
     const childrenOf = new Map();
@@ -102,6 +95,12 @@ const CategoryManager = () => {
     categories.filter((c) => !c.parentId || !ids.has(c.parentId)).forEach((root) => visit(root, 0));
     return ordered;
   }, [categories]);
+
+  // Categories eligible to be parents (top-level or subcategories up to depth 1, supporting 3 levels)
+  const parentOptions = useMemo(
+    () => orderedCategories.filter((c) => (c.depth || 0) < 2),
+    [orderedCategories]
+  );
 
   const filteredCategories = orderedCategories.filter((cat) =>
     (tabFilter === 'all' || (cat.visibleTabs || []).includes(tabFilter))
@@ -121,8 +120,6 @@ const CategoryManager = () => {
 
   const openCreate = (parentId = '') => {
     setEditingCategory(null);
-    // A new subcategory starts with its parent's tabs; defaulting to all four
-    // tabs used to leak the parent category into tabs it was never meant for.
     const parentTabs = parentId ? tabsOfParent(parentId) : null;
     setForm({
       ...EMPTY_FORM,
@@ -386,8 +383,10 @@ const CategoryManager = () => {
 
                       <td className="py-4 px-6">
                         {category.parentName ? (
-                          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-700 text-[8px] font-black rounded-lg uppercase tracking-wider">
-                            Sub of {category.parentName}
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-1 text-[8px] font-black rounded-lg uppercase tracking-wider ${
+                            (category.depth || 0) >= 2 ? 'bg-purple-50 text-purple-700' : 'bg-amber-50 text-amber-700'
+                          }`}>
+                            {(category.depth || 0) >= 2 ? `Child of ${category.parentName}` : `Sub of ${category.parentName}`}
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 text-[8px] font-black rounded-lg uppercase tracking-wider">
@@ -398,18 +397,14 @@ const CategoryManager = () => {
 
                       <td className="py-4 px-6">
                         <div className="flex flex-wrap gap-1">
-                          {(category.visibleTabs?.length ? category.visibleTabs : category.commerceFlows || ['mithilakart']).map((tab) => {
-                            const labelMap = {
-                              mithilakart: 'Mithilakart',
-                              mithilak: 'Mithilak',
-                              quick_shop: 'Quick Shop',
-                              groceries_fresh: 'Groceries & Fresh',
-                              standard: 'Mithilakart',
-                              fresh_grocery: 'Groceries & Fresh',
-                            };
+                          {(category.visibleTabs || []).map((t) => {
+                            const tabMeta = VISIBLE_TABS.find((v) => v.value === t);
                             return (
-                              <span key={tab} className="text-[8px] font-black uppercase tracking-widest bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100">
-                                {labelMap[tab] || tab}
+                              <span
+                                key={t}
+                                className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[9px] font-bold uppercase tracking-wider"
+                              >
+                                {tabMeta?.label || t}
                               </span>
                             );
                           })}
@@ -429,13 +424,14 @@ const CategoryManager = () => {
 
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {!category.parentId && (
+                          {(category.depth || 0) < 2 && (
                             <button
                               onClick={() => openCreate(category.id)}
                               className="p-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-1"
+                              title={category.depth === 1 ? 'Add Child Category' : 'Add Subcategory'}
                             >
                               <Plus size={12} />
-                              <span>+ Sub</span>
+                              <span>{category.depth === 1 ? '+ Child' : '+ Sub'}</span>
                             </button>
                           )}
                           <button
@@ -489,7 +485,7 @@ const CategoryManager = () => {
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Parent Category (sub-category)</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Parent Category</label>
             <div className="relative">
               <select
                 value={form.parentId}
@@ -498,7 +494,9 @@ const CategoryManager = () => {
               >
                 <option value="">None (top-level)</option>
                 {parentOptions.filter((p) => p.id !== editingCategory?.id).map((parent) => (
-                  <option key={parent.id} value={parent.id}>{parent.name}</option>
+                  <option key={parent.id} value={parent.id}>
+                    {(parent.depth || 0) > 0 ? `↳ ${parent.name} (Sub of ${parent.parentName})` : parent.name}
+                  </option>
                 ))}
               </select>
               <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

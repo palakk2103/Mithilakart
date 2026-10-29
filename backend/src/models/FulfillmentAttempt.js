@@ -19,6 +19,16 @@ const reservationSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     quantity: { type: Number, required: true, min: 1 },
+    /**
+     * The order's own product: its stock was already deducted when the order
+     * was confirmed, so this line is recorded (the offer shows it) but holds
+     * no extra stock and is never released or committed again.
+     */
+    heldByOrder: { type: Boolean, default: false },
+    /** For a cross-seller substitute: the product the customer ordered. */
+    originProductId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+    /** Set when a substitute's reservation became the order's deduction. */
+    settledAt: { type: Date, default: null },
     /** Set once released. Guards against a double release by a re-run sweeper. */
     releasedAt: { type: Date, default: null },
   },

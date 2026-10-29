@@ -26,6 +26,12 @@ const playAlertBeep = () => {
   }
 };
 
+// Quick Shop / Groceries orders are offered through IncomingOfferModal
+// (accept/decline the fulfilment offer). Showing this popup as well put two
+// competing Accept buttons on one order.
+const QUICK_FLOWS = new Set(['quick_shop', 'fresh_grocery', 'groceries_fresh']);
+const isQuickOrder = (order) => QUICK_FLOWS.has(order?.commerceFlow) || QUICK_FLOWS.has(order?.marketplaceTab);
+
 const NewOrderModal = () => {
   const [activeOrder, setActiveOrder] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -44,14 +50,18 @@ const NewOrderModal = () => {
         try {
           const data = JSON.parse(e.data);
           if (data?.type === 'new_order') {
-            playAlertBeep();
             if (data.order) {
+              if (isQuickOrder(data.order)) return;
+              playAlertBeep();
               setActiveOrder(data.order);
             } else if (data.orderId) {
               try {
                 const fullOrder = await getOrder(data.orderId);
+                if (isQuickOrder(fullOrder)) return;
+                playAlertBeep();
                 setActiveOrder(fullOrder);
               } catch {
+                playAlertBeep();
                 setActiveOrder({
                   id: data.orderId,
                   orderNumber: data.orderNumber || `#${data.orderId.slice(-6)}`,

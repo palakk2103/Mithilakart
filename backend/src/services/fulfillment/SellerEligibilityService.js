@@ -117,7 +117,11 @@ class SellerEligibilityService extends BaseService {
         return { ok: false, failureCode: FAIL.SELLER_MISSING_PRODUCT, failedItem: item };
       }
 
-      if (this.availableStock(product) < item.quantity) {
+      // A confirmed order already deducted the ordered product: those units
+      // belong to this order, so requiring them again pushed every last-unit
+      // order to courier and double-held stock.
+      const heldByOrder = Boolean(item.deductedWithOrder) && String(product._id) === String(item.productId);
+      if (!heldByOrder && this.availableStock(product) < item.quantity) {
         return { ok: false, failureCode: FAIL.SELLER_INSUFFICIENT_QUANTITY, failedItem: item };
       }
 
@@ -133,6 +137,10 @@ class SellerEligibilityService extends BaseService {
 
       resolvedItems.push({
         productId: product._id,
+        // Set only when a substitute replaces an already-deducted line, so
+        // acceptance can move the deduction onto the substitute's shelf.
+        originProductId: item.deductedWithOrder && !heldByOrder ? item.productId : null,
+        heldByOrder,
         catalogKey: item.catalogKey || null,
         quantity: item.quantity,
         unitPrice: listing.price != null ? listing.price : item.unitPrice,

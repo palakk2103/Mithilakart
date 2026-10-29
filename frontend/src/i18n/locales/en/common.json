@@ -180,7 +180,8 @@
     "orderSummary": "Summary",
     "platformFees": "Platform Fees",
     "productDiscount": "Product Discount",
-    "deliveryText": "Delivery in 2 days"
+    "deliveryText": "Delivery in 2 days",
+    "deliveryCharges": "Delivery Charges"
   },
   "categories": {
     "beautyCare": "Beauty & Care",
@@ -212,7 +213,8 @@
     "save": "Save",
     "confirm": "Are you sure?",
     "ad": "AD",
-    "sponsored": "Sponsored"
+    "sponsored": "Sponsored",
+    "quantity": "Qty"
   },
   "product": {
     "mrp": "MRP",

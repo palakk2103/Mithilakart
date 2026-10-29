@@ -18,7 +18,8 @@ const TARGET_TABS = [
 
 const COLUMNS = [
   { key: 'category', label: 'Category', aliases: ['category name', 'parent category', 'main category'], required: true },
-  { key: 'subcategory', label: 'Subcategory', aliases: ['sub category', 'subcategory name', 'child category'] },
+  { key: 'subcategory', label: 'Subcategory', aliases: ['sub category', 'subcategory name', 'sub-category'] },
+  { key: 'childCategory', label: 'Childcategory', aliases: ['child category', 'childcategory', 'child-category', 'sub-subcategory', 'sub subcategory', 'child'] },
   { key: 'description', label: 'Description' },
   { key: 'imageUrl', label: 'Image URL', aliases: ['image', 'image link', 'photo'] },
   { key: 'iconUrl', label: 'Icon URL', aliases: ['icon'] },
@@ -27,11 +28,12 @@ const COLUMNS = [
 ];
 
 const TEMPLATE_ROWS = [
-  ['Fruits & Vegetables', '', 'Farm fresh produce', 'https://example.com/fruits-veg.png', '', 0, 'yes'],
-  ['Fruits & Vegetables', 'Fresh Fruits', '', 'https://example.com/fresh-fruits.png', '', 0, 'yes'],
-  ['Fruits & Vegetables', 'Fresh Vegetables', '', 'https://example.com/fresh-veg.png', '', 1, 'yes'],
-  ['Dairy, Bread & Eggs', 'Milk', '', '', '', 0, 'yes'],
-  ['Dairy, Bread & Eggs', 'Paneer & Curd', '', '', '', 1, 'yes'],
+  ['Pooja Needs', 'Pooja Prasad & Bhog', 'Sweets', 'Fresh sweets for pooja and bhog', 'https://example.com/sweets.png', '', 0, 'yes'],
+  ['Pooja Needs', 'Pooja Prasad & Bhog', 'Dry-Fruits', 'Premium dry fruits', 'https://example.com/dry-fruits.png', '', 1, 'yes'],
+  ['Pooja Needs', 'Pooja Prasad & Bhog', 'Panchamrit', 'Pure panchamrit samagri', '', '', 2, 'yes'],
+  ['Fruits & Vegetables', 'Fresh Fruits', '', 'Farm fresh produce', 'https://example.com/fresh-fruits.png', '', 0, 'yes'],
+  ['Fruits & Vegetables', 'Fresh Vegetables', '', 'Farm fresh produce', 'https://example.com/fresh-veg.png', '', 1, 'yes'],
+  ['Dairy, Bread & Eggs', 'Milk', '', '', '', '', 0, 'yes'],
 ];
 
 const ACTION_BADGES = {
@@ -185,7 +187,7 @@ const CategoryBulkImport = () => {
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight font-montserrat uppercase">Bulk Category Import</h1>
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 font-raleway">
-            Upload a CSV / Excel sheet of categories &amp; subcategories into one marketplace tab
+            Upload a CSV / Excel sheet of categories, subcategories &amp; child categories into one marketplace tab
           </p>
         </div>
         <button
@@ -251,7 +253,7 @@ const CategoryBulkImport = () => {
             {busy === 'parse' ? <Loader2 className="animate-spin text-slate-400" size={26} /> : <Upload className="text-slate-400" size={26} />}
             <p className="text-sm font-bold text-slate-700">Drop a .csv or .xlsx file here, or click to choose</p>
             <p className="text-[11px] text-slate-400 font-semibold text-center max-w-md">
-              One row per category or subcategory. Leave “Subcategory” empty for a top-level category.
+              One row per category, subcategory, or child category. Leave “Childcategory” empty for subcategories, or leave “Subcategory” empty for top-level.
               Existing categories with the same name are reused and enabled for {tabLabel || 'the tab'}.
             </p>
             <input ref={inputRef} type="file" accept={SPREADSHEET_ACCEPT} className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
@@ -285,7 +287,11 @@ const CategoryBulkImport = () => {
             <StatCard label="Errors" value={summary.errorRows} tone={summary.errorRows ? 'red' : 'slate'} />
             <StatCard label="New categories" value={summary.categoriesToCreate} tone="blue" />
             <StatCard label="New subcategories" value={summary.subcategoriesToCreate} tone="blue" />
-            <StatCard label="Existing → tab / updated" value={`${summary.existingAddedToTab} / ${summary.existingUpdated}`} tone="amber" />
+            {summary.childCategoriesToCreate > 0 ? (
+              <StatCard label="New child categories" value={summary.childCategoriesToCreate} tone="blue" />
+            ) : (
+              <StatCard label="Existing → tab / updated" value={`${summary.existingAddedToTab} / ${summary.existingUpdated}`} tone="amber" />
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -293,7 +299,7 @@ const CategoryBulkImport = () => {
               <table className="w-full text-left border-collapse">
                 <thead className="sticky top-0 bg-slate-50 z-10">
                   <tr className="border-b border-slate-100">
-                    {['Row', 'Image', 'Category', 'Subcategory', 'Status', 'Notes'].map((h) => (
+                    {['Row', 'Image', 'Category', 'Subcategory', 'Childcategory', 'Status', 'Notes'].map((h) => (
                       <th key={h} className="py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -322,6 +328,14 @@ const CategoryBulkImport = () => {
                         ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="py-2.5 px-4">
+                        {row.childCategory ? (
+                          <>
+                            <p className="text-[13px] font-semibold text-slate-700">{row.childCategory}</p>
+                            <ActionBadge action={row.childCategoryAction} />
+                          </>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="py-2.5 px-4">
                         {row.status === 'ok' && <CheckCircle2 size={16} className="text-green-500" />}
                         {row.status === 'error' && <AlertCircle size={16} className="text-red-500" />}
                         {row.status === 'skipped' && <span className="text-[10px] font-bold text-slate-400 uppercase">Skipped</span>}
@@ -335,7 +349,7 @@ const CategoryBulkImport = () => {
                     </tr>
                   ))}
                   {!visibleRows.length && (
-                    <tr><td colSpan={6} className="py-8 text-center text-sm font-bold text-slate-400">No rows with problems 🎉</td></tr>
+                    <tr><td colSpan={7} className="py-8 text-center text-sm font-bold text-slate-400">No rows with problems 🎉</td></tr>
                   )}
                 </tbody>
               </table>

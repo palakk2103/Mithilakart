@@ -412,7 +412,12 @@ class MarketplaceListingService extends BaseService {
     };
   }
 
-  async resolveListingForCart(listingId) {
+  /**
+   * @param {string} listingId listing id (or, from older clients, a product id)
+   * @param {string} [marketplaceTab] tab the customer is shopping in — picks
+   *   that tab's listing when a product id is passed, never an arbitrary one
+   */
+  async resolveListingForCart(listingId, marketplaceTab = null) {
     if (!listingId) {
       throw AppError.badRequest('Listing ID is required');
     }
@@ -426,7 +431,10 @@ class MarketplaceListingService extends BaseService {
       // Lookup product by SKU / ID and find active listing
       const product = await this.productRepository.findPublicById(listingId);
       if (product) {
-        listing = await this.marketplaceListingRepository.findPublicOne({ productId: product._id });
+        listing = await this.marketplaceListingRepository.findPublicOne({
+          productId: product._id,
+          ...(marketplaceTab ? { marketplaceTab } : {}),
+        });
         if (listing) {
           const availableStock = this.productRepository.getAvailableStock(product);
           if (availableStock <= 0) {

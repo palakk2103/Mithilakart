@@ -9,6 +9,7 @@ import { formatLocationLabel } from '../../../shared/services/locationService';
 import { extractList, mapProductForCard } from '../utils/mappers';
 import { getImageUrl } from '../../../shared/utils/imageUtils';
 import { addProductToCart } from '../utils/cartUtils';
+import toast from 'react-hot-toast';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
 import useAccountStore from '../../../store/useAccountStore';
 
@@ -60,6 +61,41 @@ const mapToSidebarIds = (root) => {
   (root.children || []).forEach((child) => walk(child, String(child.id)));
   return owner;
 };
+
+/** Time left until the quick shop reopens at 6:00 AM. */
+function ReopenCountdown() {
+  const compute = () => {
+    const now = new Date();
+    const target = new Date();
+    target.setHours(6, 0, 0, 0);
+    if (now.getHours() >= 6) target.setDate(target.getDate() + 1);
+    const diff = Math.max(0, target.getTime() - now.getTime());
+    const pad = (n) => String(n).padStart(2, '0');
+    return {
+      h: pad(Math.floor(diff / (1000 * 60 * 60))),
+      m: pad(Math.floor((diff / (1000 * 60)) % 60)),
+      s: pad(Math.floor((diff / 1000) % 60)),
+    };
+  };
+  const [timeLeft, setTimeLeft] = useState(compute);
+  useEffect(() => {
+    const timer = setInterval(() => setTimeLeft(compute()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-start">
+      <div className="font-mono text-xl font-black text-white tracking-wide">
+        {timeLeft.h} : {timeLeft.m} : {timeLeft.s}
+      </div>
+      <div className="flex items-center gap-2 text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
+        <span>Hours</span>
+        <span>Minutes</span>
+        <span>Seconds</span>
+      </div>
+    </div>
+  );
+}
 
 const QuickShopSubcategory = () => {
   const navigate = useNavigate();
@@ -125,6 +161,8 @@ const QuickShopSubcategory = () => {
       const categoryId = String(p.categoryId ?? p.product?.categoryId ?? '');
       return {
         id: card.id,
+        listingId: card.listingId,
+        marketplaceTab,
         name: card.name,
         img: card.image,
         brand: card.brand || (fromNearby ? 'Nearby Seller' : 'Mithila Brand'),
@@ -240,15 +278,16 @@ const QuickShopSubcategory = () => {
   };
 
   const handleProductClick = (product) => {
-    const discountPct = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) + '% OFF';
+    const discountPct = product.oldPrice > product.price
+      ? `${Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}% OFF`
+      : undefined;
     navigate('/vendor/product-detail', {
       state: {
+        productId: product.id,
         product: {
           ...product,
           image: product.img,
           discount: discountPct,
-          rating: 4.5,
-          ratingCount: 42,
           category: categoryName
         }
       }
@@ -417,48 +456,7 @@ const QuickShopSubcategory = () => {
               {/* Digital countdown timer on the right */}
               <div className="flex flex-col items-start gap-0.5">
                 <div className="text-[10px] font-bold text-slate-400 tracking-wide">We open in</div>
-                {(() => {
-                  const [timeLeft, setTimeLeft] = React.useState({ h: '00', m: '00', s: '00' });
-                  React.useEffect(() => {
-                    const calculateTimeLeft = () => {
-                      const now = new Date();
-                      let target = new Date();
-                      target.setHours(6, 0, 0, 0);
-                      if (now.getHours() >= 6) {
-                        target.setDate(target.getDate() + 1);
-                      }
-                      const diff = target.getTime() - now.getTime();
-                      if (diff <= 0) {
-                        return { h: '00', m: '00', s: '00' };
-                      }
-                      const hrs = Math.floor(diff / (1000 * 60 * 60));
-                      const mins = Math.floor((diff / (1000 * 60)) % 60);
-                      const secs = Math.floor((diff / 1000) % 60);
-                      return {
-                        h: String(hrs).padStart(2, '0'),
-                        m: String(mins).padStart(2, '0'),
-                        s: String(secs).padStart(2, '0')
-                      };
-                    };
-                    setTimeLeft(calculateTimeLeft());
-                    const timer = setInterval(() => {
-                      setTimeLeft(calculateTimeLeft());
-                    }, 1000);
-                    return () => clearInterval(timer);
-                  }, []);
-                  return (
-                    <div className="flex flex-col items-start">
-                      <div className="font-mono text-xl font-black text-white tracking-wide">
-                        {timeLeft.h} : {timeLeft.m} : {timeLeft.s}
-                      </div>
-                      <div className="flex items-center gap-2 text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                        <span>Hours</span>
-                        <span>Minutes</span>
-                        <span>Seconds</span>
-                      </div>
-                    </div>
-                  );
-                })()}
+                <ReopenCountdown />
               </div>
             </div>
 
@@ -658,7 +656,16 @@ const QuickShopSubcategory = () => {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
+                        addProductToCart({
+                          id: product.id,
+                          listingId: product.listingId,
+                          marketplaceTab: product.marketplaceTab,
+                          name: product.name,
+                          price: product.price,
+                          image: product.img,
+                        })
+                          .then(() => toast.success(`${product.name} added to cart`))
+                          .catch((err) => toast.error(err?.message || 'Could not add to cart'));
                       }}
                       className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
                     >

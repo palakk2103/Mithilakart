@@ -5,7 +5,8 @@
  *  - a subcategory created without explicit tabs got the schema default
  *    ['mithilakart'] and vanished from its parent's tab;
  *  - a subcategory enabled for "all tabs" pulled its parent into every tab;
- *  - a child of a deleted parent was rendered as a top-level category.
+ *  - a child of a deleted parent was rendered as a top-level category;
+ *  - 3-level category hierarchy: Category -> Subcategory -> Childcategory.
  */
 const { CategoryService } = require('../../../src/services/catalog/CategoryService');
 const { CategoryBulkImportService } = require('../../../src/services/catalog/CategoryBulkImportService');
@@ -184,5 +185,70 @@ describe('CategoryBulkImportService', () => {
 
     expect(result.rows.map((r) => r.status)).toEqual(['error', 'error', 'error', 'error', 'ok', 'skipped']);
     expect(repo.docs.map((d) => d.name)).toEqual(['Books']);
+  });
+
+  it('correctly creates 3 levels: Category -> Subcategory -> Childcategory', async () => {
+    const { repo, importer } = setup();
+    const result = await importer.import({
+      marketplaceTab: 'groceries_fresh',
+      dryRun: false,
+      rows: [
+        { category: 'Pooja Needs', subcategory: 'Pooja Prasad & Bhog', childCategory: 'Sweets', sortOrder: 0 },
+        { category: 'Pooja Needs', subcategory: 'Pooja Prasad & Bhog', childCategory: 'Dry-Fruits', sortOrder: 1 },
+        { category: 'Pooja Needs', subcategory: 'Pooja Prasad & Bhog', childCategory: 'Panchamrit', sortOrder: 2 },
+      ],
+    });
+
+    expect(result.summary).toMatchObject({
+      totalRows: 3,
+      validRows: 3,
+      errorRows: 0,
+      categoriesToCreate: 1,
+      subcategoriesToCreate: 1,
+      childCategoriesToCreate: 3,
+    });
+
+    const root = repo.docs.find((d) => d.name === 'Pooja Needs');
+    expect(root).toBeDefined();
+    expect(root.parentId).toBeNull();
+
+    const sub = repo.docs.find((d) => d.name === 'Pooja Prasad & Bhog');
+    expect(sub).toBeDefined();
+    expect(sub.parentId).toBe(root._id);
+
+    const sweets = repo.docs.find((d) => d.name === 'Sweets');
+    const dryFruits = repo.docs.find((d) => d.name === 'Dry-Fruits');
+    const panchamrit = repo.docs.find((d) => d.name === 'Panchamrit');
+
+    expect(sweets).toBeDefined();
+    expect(sweets.parentId).toBe(sub._id);
+    expect(dryFruits).toBeDefined();
+    expect(dryFruits.parentId).toBe(sub._id);
+    expect(panchamrit).toBeDefined();
+    expect(panchamrit.parentId).toBe(sub._id);
+  });
+
+  it('reuses existing root and subcategory when importing new childcategories', async () => {
+    const root = cat('root1', 'Pooja Needs', { visibleTabs: ['groceries_fresh'], commerceFlows: ['fresh_grocery'] });
+    const sub = cat('sub1', 'Pooja Prasad & Bhog', { parentId: 'root1', visibleTabs: ['groceries_fresh'], commerceFlows: ['fresh_grocery'] });
+    const { repo, importer } = setup([root, sub]);
+
+    const result = await importer.import({
+      marketplaceTab: 'groceries_fresh',
+      dryRun: false,
+      rows: [
+        { category: 'Pooja Needs', subcategory: 'Pooja Prasad & Bhog', childCategory: 'Sweets' },
+      ],
+    });
+
+    expect(result.rows[0].categoryAction).toBe('unchanged');
+    expect(result.rows[0].subcategoryAction).toBe('unchanged');
+    expect(result.rows[0].childCategoryAction).toBe('create');
+
+    const createdSweets = repo.docs.find((d) => d.name === 'Sweets');
+    expect(createdSweets).toBeDefined();
+    expect(createdSweets.parentId).toBe('sub1');
+    expect(repo.docs.filter((d) => d.name === 'Pooja Needs')).toHaveLength(1);
+    expect(repo.docs.filter((d) => d.name === 'Pooja Prasad & Bhog')).toHaveLength(1);
   });
 });

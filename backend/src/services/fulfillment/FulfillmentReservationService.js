@@ -56,9 +56,19 @@ class FulfillmentReservationService extends BaseService {
     const reserved = [];
 
     for (const item of ordered) {
+      if (item.heldByOrder) {
+        // Already deducted for this order at confirmation — record, don't hold twice.
+        reserved.push({ productId: item.productId, quantity: item.quantity, heldByOrder: true, releasedAt: null });
+        continue;
+      }
       try {
         await this.productRepository.reserveStock(item.productId, item.quantity, session);
-        reserved.push({ productId: item.productId, quantity: item.quantity, releasedAt: null });
+        reserved.push({
+          productId: item.productId,
+          quantity: item.quantity,
+          ...(item.originProductId ? { originProductId: item.originProductId } : {}),
+          releasedAt: null,
+        });
       } catch (error) {
         // Lost the race to a concurrent order, or stock moved between the
         // eligibility read and this write. Expected under load — the
@@ -112,6 +122,7 @@ class FulfillmentReservationService extends BaseService {
    */
   async _rollback(reserved, session, traceId) {
     for (const entry of [...reserved].reverse()) {
+      if (entry.heldByOrder) continue;
       try {
         await this.productRepository.releaseReservedStock(entry.productId, entry.quantity, session);
       } catch (error) {
@@ -139,6 +150,7 @@ class FulfillmentReservationService extends BaseService {
 
     let released = 0;
     for (const entry of outstanding) {
+      if (entry.heldByOrder) continue;
       try {
         await this.productRepository.releaseReservedStock(entry.productId, entry.quantity, session);
         released += 1;
@@ -169,12 +181,46 @@ class FulfillmentReservationService extends BaseService {
 
     let committed = 0;
     for (const entry of attempt.reservations) {
-      if (entry.releasedAt) continue;
+      if (entry.releasedAt || entry.heldByOrder) continue;
       await this.productRepository.decrementStock(entry.productId, entry.quantity, session);
       committed += 1;
     }
 
     return { committed };
+  }
+
+  /**
+   * Runs once the fulfilling seller/warehouse is final. Lines served from the
+   * ordered product need nothing (deducted at confirmation). A substitute's
+   * reservation becomes the real deduction and the ordered product gets its
+   * units back, so each order is deducted exactly once, from the right shelf.
+   */
+  async settleAttempt(attempt, traceId = null) {
+    const pending = (attempt?.reservations || []).filter(
+      (entry) => entry.originProductId && !entry.heldByOrder && !entry.releasedAt && !entry.settledAt
+    );
+    if (!pending.length) return { settled: 0 };
+
+    for (const entry of pending) {
+      await this.productRepository.decrementStock(entry.productId, entry.quantity);
+      await this.productRepository.incrementStock(entry.originProductId, entry.quantity);
+    }
+
+    if (this.fulfillmentAttemptRepository) {
+      const now = new Date();
+      await this.fulfillmentAttemptRepository.updateById(attempt._id, {
+        reservations: attempt.reservations.map((entry) => {
+          const plain = entry.toObject ? entry.toObject() : entry;
+          return pending.some((p) => String(p.productId) === String(plain.productId))
+            ? { ...plain, settledAt: now, releasedAt: now }
+            : plain;
+        }),
+      });
+    }
+
+    logger.info({ traceId, attemptId: String(attempt._id), settled: pending.length },
+      'CR-002 substitute stock settled');
+    return { settled: pending.length };
   }
 }
 

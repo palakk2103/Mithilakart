@@ -10,6 +10,8 @@ const { logger } = require('../../utils/logger');
 
 const { resolveTabFromQuery, toLegacyCommerceFlow, deliveryTypeForTab, isQuickCommerceTab } = require('../../utils/marketplaceTab');
 const LOCAL_DELIVERY_FLOWS = new Set(['quick_shop', 'fresh_grocery']);
+/** An unpaid online order releases its stock after this long. */
+const ABANDONED_PAYMENT_MINUTES = 30;
 
 class OrderService extends BaseService {
   constructor({
@@ -45,6 +47,12 @@ class OrderService extends BaseService {
     this.courierShipmentService = courierShipmentService;
     this.deliveryOrderService = null;
     this.fulfillmentEngineService = null;
+    this.quickServiceAreaService = null;
+  }
+
+  /** Optional: when set, quick-tab checkout verifies the address is in range. */
+  setQuickServiceAreaService(quickServiceAreaService) {
+    this.quickServiceAreaService = quickServiceAreaService;
   }
 
   setCourierShipmentService(courierShipmentService) {
@@ -100,29 +108,33 @@ class OrderService extends BaseService {
         throw AppError.validation('Cart is empty');
       }
 
+      // The tab the customer shopped in decides the delivery mode. A product
+      // listed in several tabs (Quick Shop AND Mithilakart) used to turn every
+      // Mithilakart order for it into a quick one; product flows are no longer
+      // consulted here.
+      const marketplaceTab = cart.marketplaceTab || resolveTabFromQuery({ commerceFlow }) || 'mithilakart';
+      if (cart.items.some((it) => it.marketplaceTab && it.marketplaceTab !== marketplaceTab)) {
+        throw AppError.conflict(
+          'Your cart has items from different sections. Please check out one section at a time.',
+          [{ code: 'CART_TAB_MISMATCH' }]
+        );
+      }
+
+      const addressSnapshot = await this._buildAddressSnapshot(userId, addressId);
+      if (isQuickCommerceTab(marketplaceTab) && this.quickServiceAreaService) {
+        await this.quickServiceAreaService.assertDeliverable({
+          items: cart.items,
+          location: { lat: addressSnapshot.lat, lng: addressSnapshot.lng },
+          marketplaceTab,
+        });
+      }
+
       for (const it of cart.items) {
         await this.productRepository.reserveStock(it.productId, it.quantity, session);
       }
 
       const orderNumber = this._generateOrderNumber();
       const sellerSubOrders = this.pricingService.buildSellerSubOrders(cart.items, ORDER_STATUS.PENDING);
-      const addressSnapshot = await this._buildAddressSnapshot(userId, addressId);
-
-      let marketplaceTab = cart.marketplaceTab || resolveTabFromQuery({ commerceFlow }) || null;
-      if (!marketplaceTab || marketplaceTab === 'mithilakart' || marketplaceTab === 'general') {
-        const hasQuick = cart.items?.some(it =>
-          it.marketplaceTab === 'quick_shop' ||
-          it.commerceFlow === 'quick_shop' ||
-          (it.commerceFlows && it.commerceFlows.includes('quick_shop'))
-        );
-        const hasGrocery = cart.items?.some(it =>
-          it.marketplaceTab === 'groceries_fresh' ||
-          it.commerceFlow === 'fresh_grocery' ||
-          (it.commerceFlows && it.commerceFlows.includes('fresh_grocery'))
-        );
-        if (hasQuick) marketplaceTab = 'quick_shop';
-        else if (hasGrocery) marketplaceTab = 'groceries_fresh';
-      }
       const legacyFlow = marketplaceTab ? toLegacyCommerceFlow(marketplaceTab) : commerceFlow;
       const deliveryType = marketplaceTab ? deliveryTypeForTab(marketplaceTab) : null;
       const promiseMinutes = cart.items.reduce(
@@ -253,7 +265,10 @@ class OrderService extends BaseService {
     // whole cart there would delete unrelated items the customer still wants.
     const placedFromCart = !items;
 
-    if (placedFromCart && result?.orderId) {
+    // An online payment still pending (Razorpay sheet open) keeps the cart:
+    // if the customer closes the sheet they can retry without re-adding
+    // everything. The app clears the cart once the payment is verified.
+    if (placedFromCart && result?.orderId && result.paymentStatus === PAYMENT_STATUS.PAID) {
       try {
         await this.cartService.clearCart({ userId, sessionId: null });
       } catch (err) {
@@ -308,10 +323,57 @@ class OrderService extends BaseService {
     const order = await this.orderRepository.findById(orderId, { session });
     if (!order || order.inventoryDeducted) return;
 
-    const orderItems = await this.orderItemRepository.listByOrderId(orderId);
+    const orderItems = await this.orderItemRepository.listByOrderId(orderId, { session });
     for (const it of orderItems) {
       await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
     }
+  }
+
+  /**
+   * Online orders whose payment was never completed (sheet closed, app
+   * killed) hold reserved stock. Without this they held it until the same
+   * customer happened to order again. Run by the fulfillment sweeper.
+   */
+  async expireAbandonedPayments({ olderThanMinutes = ABANDONED_PAYMENT_MINUTES, limit = 100 } = {}) {
+    const cutoff = new Date(Date.now() - olderThanMinutes * 60 * 1000);
+    const stale = await this.orderRepository.find({
+      status: ORDER_STATUS.PENDING,
+      paymentStatus: PAYMENT_STATUS.PENDING,
+      inventoryDeducted: false,
+      deletedAt: null,
+      createdAt: { $lt: cutoff },
+    }, { limit });
+
+    let expired = 0;
+    for (const order of stale) {
+      try {
+        await withTransaction(async (session) => {
+          const moved = await this.orderRepository.updateStatusOptimistic(
+            order._id, ORDER_STATUS.PENDING, ORDER_STATUS.CANCELLED, session
+          );
+          if (!moved) return; // paid or cancelled meanwhile
+          await this.releaseOrderReservations(order._id, session);
+          await this.orderRepository.updateById(order._id, {
+            paymentStatus: PAYMENT_STATUS.FAILED,
+            cancelledAt: new Date(),
+          }, session);
+          await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED,
+            'Payment was not completed — order cancelled', { source: 'system' }, session);
+          await this.orderStatusHistoryRepository.addTransition({
+            orderId: order._id,
+            fromStatus: ORDER_STATUS.PENDING,
+            toStatus: ORDER_STATUS.CANCELLED,
+            changedBy: 'system',
+            changedById: null,
+            note: 'Payment not completed',
+          }, session);
+          expired += 1;
+        });
+      } catch (err) {
+        logger.error({ err, orderId: String(order._id) }, 'Expiring abandoned payment failed');
+      }
+    }
+    return { expired };
   }
 
   async _releaseStalePendingOrders(userId, session = null) {
@@ -339,7 +401,10 @@ class OrderService extends BaseService {
       return order;
     }
 
-    const orderItems = await this.orderItemRepository.listByOrderId(order._id);
+    // Read inside the session: for COD this runs in the checkout transaction,
+    // and an unsessioned read saw no items, so stock was never deducted while
+    // the order was still flagged inventoryDeducted.
+    const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
     for (const it of orderItems) {
       await this.productRepository.decrementStock(it.productId, it.quantity, session);
     }
@@ -438,9 +503,11 @@ class OrderService extends BaseService {
     let tab = order.marketplaceTab || null;
     let flow = tab ? toLegacyCommerceFlow(tab) : (order.commerceFlow || 'standard');
 
-    if (!tab || tab === 'mithilakart') {
+    // Only legacy orders without a tab are inferred from product flows; a
+    // Mithilakart order for a product also sold in Quick Shop stays courier.
+    if (!tab) {
       try {
-        const orderItems = await this.orderItemRepository.listByOrderId(order._id);
+        const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
         for (const it of orderItems) {
           const prod = await this.productRepository.findById(it.productId);
           if (prod?.commerceFlows?.includes('quick_shop')) {
@@ -556,10 +623,21 @@ class OrderService extends BaseService {
     }
 
     const lineItems = [];
+    const requestedTab = resolveTabFromQuery({ commerceFlow });
+    const listingService = this.cartService?.marketplaceListingService || null;
 
     for (const line of items) {
-      const product = await this.productRepository.findPublicById(line.productId);
+      // Buy Now carries the listing the customer was looking at: it fixes the
+      // tab, price and delivery promise exactly as the cart would.
+      const resolved = line.listingId && listingService
+        ? await listingService.resolveListingForCart(line.listingId, requestedTab)
+        : null;
+      const listing = resolved?.listing || null;
+      const product = resolved?.product || await this.productRepository.findPublicById(line.productId);
       if (!product) throw AppError.notFound('Product not found');
+      if (listing && line.productId && String(product._id) !== String(line.productId)) {
+        throw AppError.validation('Listing does not match product');
+      }
 
       const availableStock = this.productRepository.getAvailableStock(product);
 
@@ -569,25 +647,32 @@ class OrderService extends BaseService {
         ]);
       }
 
-      const itemTab = line.marketplaceTab || (
-        product.commerceFlows?.includes('quick_shop')
-          ? 'quick_shop'
-          : product.commerceFlows?.includes('fresh_grocery')
-          ? 'groceries_fresh'
-          : 'mithilakart'
-      );
-      const itemFlow = line.commerceFlow || (product.commerceFlows?.[0] || 'standard');
+      const flows = product.commerceFlows || [];
+      const requestedFlow = requestedTab ? toLegacyCommerceFlow(requestedTab) : null;
+      const itemTab = listing?.marketplaceTab
+        || (requestedFlow && flows.includes(requestedFlow) ? requestedTab : null)
+        || (flows.includes('quick_shop') ? 'quick_shop'
+          : flows.includes('fresh_grocery') ? 'groceries_fresh'
+            : flows.includes('mithilak') ? 'mithilak' : 'mithilakart');
 
       lineItems.push({
-        productId: line.productId,
+        productId: String(product._id),
+        listingId: listing ? String(listing._id) : null,
         variantId: line.variantId || null,
         sellerId: product.sellerId,
+        title: product.title,
         quantity: line.quantity,
-        unitPrice: product.price,
-        commerceFlow: itemFlow,
-        commerceFlows: product.commerceFlows || [],
+        unitPrice: listing ? listing.price : product.price,
+        deliveryPromiseMinutes: listing?.deliveryPromiseMinutes || null,
+        commerceFlow: toLegacyCommerceFlow(itemTab),
+        commerceFlows: flows,
         marketplaceTab: itemTab,
       });
+    }
+
+    const resolvedTab = lineItems[0].marketplaceTab;
+    if (lineItems.some((it) => it.marketplaceTab !== resolvedTab)) {
+      throw AppError.conflict('Buy Now items must come from one section', [{ code: 'CART_TAB_MISMATCH' }]);
     }
 
     const pricing = await this.pricingService.calculateTotals({
@@ -596,19 +681,9 @@ class OrderService extends BaseService {
       userId,
     });
 
-    let resolvedFlow = commerceFlow;
-    let resolvedTab = null;
-    if (lineItems.some((it) => it.marketplaceTab === 'quick_shop' || it.commerceFlows?.includes('quick_shop'))) {
-      resolvedFlow = 'quick_shop';
-      resolvedTab = 'quick_shop';
-    } else if (lineItems.some((it) => it.marketplaceTab === 'groceries_fresh' || it.commerceFlows?.includes('fresh_grocery'))) {
-      resolvedFlow = 'fresh_grocery';
-      resolvedTab = 'groceries_fresh';
-    }
-
     return {
       items: lineItems,
-      commerceFlow: resolvedFlow || commerceFlow,
+      commerceFlow: toLegacyCommerceFlow(resolvedTab) || commerceFlow,
       marketplaceTab: resolvedTab,
       couponCode,
       ...pricing,
@@ -659,9 +734,40 @@ class OrderService extends BaseService {
     ]);
 
     return {
-      items: items.map((o) => this._serializeOrder(o)),
+      items: await this._withLineDetails(items.map((o) => this._serializeOrder(o))),
       meta: buildPaginationMeta(pagination.page, pagination.limit, total),
     };
+  }
+
+  /**
+   * Sub-order lines store only ids and prices; the order list needs the
+   * product name and picture, or every card reads "Product".
+   */
+  async _withLineDetails(orders) {
+    const productIds = [...new Set(orders.flatMap((o) => (o.sellerSubOrders || [])
+      .flatMap((sub) => (sub.items || []).map((it) => String(it.productId)))))];
+    if (!productIds.length) return orders;
+
+    const products = await this.productRepository.find({ _id: { $in: productIds } });
+    const productById = new Map(products.map((p) => [String(p._id), p]));
+
+    return orders.map((order) => ({
+      ...order,
+      sellerSubOrders: (order.sellerSubOrders || []).map((sub) => {
+        const plain = sub.toObject ? sub.toObject() : sub;
+        return {
+          ...plain,
+          items: (plain.items || []).map((it) => {
+            const product = productById.get(String(it.productId));
+            return {
+              ...it,
+              name: it.name || product?.title || 'Product',
+              image: it.image || product?.images?.[0]?.url || null,
+            };
+          }),
+        };
+      }),
+    }));
   }
 
   async listOrdersForSeller(sellerId, query = {}) {
@@ -723,8 +829,13 @@ class OrderService extends BaseService {
       { sort: { createdAt: 1 } }
     );
 
+    const pickup = this.deliveryOrderService && order.fulfilmentType === 'local_delivery'
+      ? await this.deliveryOrderService.getPickupInfo(order._id)
+      : null;
+
     return {
       ...this._serializeSellerOrder(order, sellerItems, productMap),
+      pickup,
       tracking: tracking.map((entry) => ({
         id: entry._id,
         status: entry.status,
@@ -839,12 +950,99 @@ class OrderService extends BaseService {
     };
   }
 
+  /**
+   * Gives back the stock an order holds. Confirmed orders were deducted (and a
+   * line a substitute seller fulfilled was deducted from that seller's shelf);
+   * unconfirmed ones only hold a reservation.
+   */
+  async _restoreInventory(order, session = null) {
+    const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
+    if (!order.inventoryDeducted) {
+      for (const it of orderItems) {
+        await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
+      }
+      return;
+    }
+
+    const substitutions = this.fulfillmentEngineService
+      ? await this.fulfillmentEngineService.listSettledSubstitutions(order._id)
+      : [];
+    for (const it of orderItems) {
+      const substitute = substitutions.find((s) => String(s.originProductId) === String(it.productId));
+      await this.productRepository.incrementStock(substitute ? substitute.productId : it.productId, it.quantity, session);
+    }
+  }
+
+  /**
+   * Everything a cancellation must undo besides the status: stock, the
+   * courier booking, a quick-delivery search/offer, and the rider assignment.
+   * Whoever cancels (customer, seller, admin) goes through here.
+   */
+  async _applyCancellation({ order, session, source, actorId, note }) {
+    await this._restoreInventory(order, session);
+
+    if (order.fulfilmentType === 'courier' && order.shipment && this.courierShipmentService) {
+      try {
+        await this.courierShipmentService.cancelCourierShipment(order);
+      } catch (error) {
+        logger.warn({ err: error, orderId: order._id }, 'Courier shipment cancellation failed');
+      }
+    }
+
+    if (order.fulfilmentType === 'local_delivery' && this.deliveryOrderService) {
+      await this.deliveryOrderService.cancelAssignmentForOrder(order._id, session);
+    }
+
+    await this.orderRepository.updateById(
+      order._id,
+      { status: ORDER_STATUS.CANCELLED, cancelledAt: new Date(), inventoryDeducted: false },
+      session
+    );
+
+    await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED, note || 'Order cancelled', { source }, session);
+    await this.orderStatusHistoryRepository.addTransition(
+      {
+        orderId: order._id,
+        fromStatus: order.status,
+        toStatus: ORDER_STATUS.CANCELLED,
+        changedBy: source,
+        changedById: actorId,
+        note: note || null,
+      },
+      session
+    );
+
+    // A prepaid order gets its money back to the original payment method once
+    // the cancellation has committed. COD orders have nothing to refund.
+    if (order.paymentStatus === PAYMENT_STATUS.PAID && order.paymentMethod !== 'cod' && this.paymentService?.refundOrderPayment) {
+      const refund = () => this.paymentService.refundOrderPayment(order._id, { reason: `cancelled_by_${source}` })
+        .catch(async (err) => {
+          logger.error({ err, orderId: order._id }, 'Refund on cancellation failed — needs manual refund');
+          await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED,
+            'Refund could not be sent automatically — our team will process it', { source: 'system' }).catch(() => {});
+        });
+      if (session && typeof session.afterCommit === 'function') session.afterCommit(refund);
+      else await refund();
+    }
+
+    // The engine works on its own connection, so it is told only once the
+    // cancellation has committed.
+    if (this.fulfillmentEngineService && order.fulfilmentType === 'local_delivery') {
+      const cancelFulfillment = () => this.fulfillmentEngineService.cancelForOrder(order._id).catch((err) => {
+        logger.error({ err, orderId: order._id }, 'Cancelling quick fulfillment failed');
+      });
+      if (session && typeof session.afterCommit === 'function') session.afterCommit(cancelFulfillment);
+      else await cancelFulfillment();
+    }
+
+    this._emitStatusChange(order, ORDER_STATUS.CANCELLED);
+  }
+
   async cancelOrder(orderId, userId) {
     return withTransaction(async (session) => {
       const order = await this.orderRepository.findActiveById(orderId, userId);
       if (!order) throw AppError.notFound('Order not found');
 
-      const previousStatus = order.status;
       if (order.status === ORDER_STATUS.CANCELLED) {
         return { orderId: order._id, status: order.status };
       }
@@ -853,46 +1051,9 @@ class OrderService extends BaseService {
         throw AppError.conflict('Cannot cancel this order at the current status');
       }
 
-      if (order.inventoryDeducted) {
-        const orderItems = await this.orderItemRepository.listByOrderId(order._id);
-        for (const it of orderItems) {
-          await this.productRepository.incrementStock(it.productId, it.quantity, session);
-        }
-      } else {
-        const orderItems = await this.orderItemRepository.listByOrderId(order._id);
-        for (const it of orderItems) {
-          await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
-        }
-      }
-
-      if (order.fulfilmentType === 'courier' && order.shipment && this.courierShipmentService) {
-        try {
-          await this.courierShipmentService.cancelCourierShipment(order);
-        } catch (error) {
-          logger.warn({ err: error, orderId: order._id }, 'Courier shipment cancellation failed');
-        }
-      }
-
-      await this.orderRepository.updateById(
-        order._id,
-        { status: ORDER_STATUS.CANCELLED, cancelledAt: new Date(), inventoryDeducted: false },
-        session
-      );
-
-      await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED, 'Order cancelled', { source: 'customer' }, session);
-      await this.orderStatusHistoryRepository.addTransition(
-        {
-          orderId: order._id,
-          fromStatus: previousStatus,
-          toStatus: ORDER_STATUS.CANCELLED,
-          changedBy: 'customer',
-          changedById: userId,
-          note: 'Cancellation request',
-        },
-        session
-      );
-
-      this._emitStatusChange(order, ORDER_STATUS.CANCELLED);
+      await this._applyCancellation({
+        order, session, source: 'customer', actorId: userId, note: 'Cancellation request',
+      });
 
       return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
     });
@@ -916,7 +1077,49 @@ class OrderService extends BaseService {
     return toIdx === fromIdx + 1;
   }
 
+  /**
+   * A quick-commerce order is accepted or declined through the fulfillment
+   * offer. The seller panel's generic "new order" popup sends status
+   * confirmed/cancelled instead; without this, Accept left the engine's offer
+   * dangling (it later timed out and re-routed an order already being packed)
+   * and Reject cancelled the customer's order outright.
+   *
+   * Returns null when the request is not an offer response.
+   */
+  async _respondToQuickOffer({ orderId, sellerId, toStatus, note }) {
+    if (!this.fulfillmentEngineService
+      || ![ORDER_STATUS.CONFIRMED, ORDER_STATUS.CANCELLED].includes(toStatus)) {
+      return null;
+    }
+
+    const view = await this.fulfillmentEngineService.sellerView(orderId, sellerId);
+    if (!view?.fulfillment) return null;
+
+    if (!view.offer) {
+      const searching = ['searching', 'seller_assigned', 'warehouse_pending'].includes(view.fulfillment.state);
+      if (toStatus === ORDER_STATUS.CONFIRMED && searching) {
+        throw AppError.conflict('This quick order is being offered to another store');
+      }
+      return null;
+    }
+
+    if (toStatus === ORDER_STATUS.CONFIRMED) {
+      const accepted = await this.fulfillmentEngineService.handleSellerAccept({ attemptId: view.offer._id, sellerId });
+      if (!accepted.ok) throw AppError.offerExpired('This order is no longer available');
+      return { orderId: view.fulfillment.orderId, status: ORDER_STATUS.CONFIRMED };
+    }
+
+    const rejected = await this.fulfillmentEngineService.handleSellerReject({
+      attemptId: view.offer._id, sellerId, reason: note || 'seller_declined',
+    });
+    if (!rejected.ok) throw AppError.offerExpired('This order is no longer available');
+    return { orderId: view.fulfillment.orderId, status: 'declined', offerDeclined: true };
+  }
+
   async updateStatusAsSeller({ orderId, sellerId, toStatus, note = null }) {
+    const offerResponse = await this._respondToQuickOffer({ orderId, sellerId, toStatus, note });
+    if (offerResponse) return offerResponse;
+
     return withTransaction(async (session) => {
       const order = await this.orderRepository.findActiveById(orderId);
       if (!order) throw AppError.notFound('Order not found');
@@ -929,10 +1132,22 @@ class OrderService extends BaseService {
         throw AppError.validation('Invalid status transition');
       }
 
+      if (toStatus === ORDER_STATUS.CANCELLED) {
+        await this._applyCancellation({
+          order, session, source: 'seller', actorId: sellerId, note: note || 'Cancelled by seller',
+        });
+        return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
+      }
+
       const previousStatus = order.status;
       const updated = await this.orderRepository.updateStatusOptimistic(order._id, previousStatus, toStatus, session);
       if (!updated) {
         throw AppError.conflict('Order status was changed by another actor — please retry');
+      }
+
+      // The return window counts from here.
+      if (toStatus === ORDER_STATUS.DELIVERED) {
+        await this.orderRepository.updateById(order._id, { deliveredAt: new Date() }, session);
       }
 
       await this.orderTrackingRepository.createInitial(order._id, toStatus, note, { source: 'seller', sellerId }, session);
@@ -973,10 +1188,21 @@ class OrderService extends BaseService {
         throw AppError.validation('Invalid status transition');
       }
 
+      if (toStatus === ORDER_STATUS.CANCELLED) {
+        await this._applyCancellation({
+          order, session, source: 'admin', actorId: adminId, note: note || 'Cancelled by admin',
+        });
+        return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
+      }
+
       const previousStatus = order.status;
       const updated = await this.orderRepository.updateStatusOptimistic(order._id, previousStatus, toStatus, session);
       if (!updated) {
         throw AppError.conflict('Order status was changed by another actor — please retry');
+      }
+
+      if (toStatus === ORDER_STATUS.DELIVERED) {
+        await this.orderRepository.updateById(order._id, { deliveredAt: new Date() }, session);
       }
 
       await this.orderTrackingRepository.createInitial(order._id, toStatus, note, { source: 'admin', adminId }, session);

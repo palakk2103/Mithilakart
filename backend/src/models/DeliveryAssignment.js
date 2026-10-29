@@ -12,6 +12,12 @@ const deliveryAssignmentSchema = new mongoose.Schema(
     pickedUpAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
     deliveryOtp: { type: String, default: null },
+    /**
+     * Shown to the seller, who reads it to the rider at handover. Before this
+     * it was only published on an event nothing listened to, so outside dev
+     * nobody could see the pickup code.
+     */
+    pickupOtp: { type: String, default: null },
     cancelledAt: { type: Date, default: null },
     cancelReason: { type: String, default: null },
 

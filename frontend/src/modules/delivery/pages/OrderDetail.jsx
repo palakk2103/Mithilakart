@@ -72,6 +72,9 @@ const DeliveryOrderDetail = () => {
   const [order, setOrder] = useState(null);
   const [currentStatus, setCurrentStatus] = useState('accepted');
   const [otpInput, setOtpInput] = useState('');
+  // The store reads this code to the rider at handover (shown on the seller's
+  // order page). Dev builds pre-fill it from the accept response.
+  const [pickupCode, setPickupCode] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [delivered, setDelivered] = useState(false);
@@ -100,6 +103,7 @@ const DeliveryOrderDetail = () => {
         if (!data) throw new Error('Order not found');
         const mapped = mapApiOrder(data);
         setOrder(mapped);
+        setPickupCode(sessionStorage.getItem(`delivery_pickup_otp_${mapped.id}`) || '');
         setCurrentStatus(mapped.status === 'delivered' ? 'delivered' : mapped.status);
         setDelivered(mapped.status === 'delivered');
       } catch (err) {
@@ -119,10 +123,13 @@ const DeliveryOrderDetail = () => {
       return;
     }
     if (statusIndex === 1) {
+      if (pickupCode.length < 4) {
+        toast.error('Enter the pickup code the store gives you');
+        return;
+      }
       setActionLoading(true);
       try {
-        const pickupOtp = sessionStorage.getItem(`delivery_pickup_otp_${order.id}`) || '0000';
-        const pickupResult = await markPickup(order.id, pickupOtp);
+        const pickupResult = await markPickup(order.id, pickupCode);
         const otpCode = pickupResult?.deliveryOtp || pickupResult?.data?.deliveryOtp;
         if (otpCode) {
           sessionStorage.setItem(`delivery_customer_otp_hint_${order.id}`, String(otpCode));
@@ -371,16 +378,19 @@ const DeliveryOrderDetail = () => {
               onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))} 
               className="w-full py-3.5 px-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center text-2xl font-black tracking-widest text-slate-900 focus:border-amber-400 outline-none" 
             />
-            <div className="flex justify-between items-center mt-2 px-1">
-              <span className="text-[10px] font-bold text-slate-400">Default test OTP: 0000 or 1234</span>
-              <button
-                type="button"
-                onClick={() => setOtpInput('0000')}
-                className="text-[10px] font-extrabold text-blue-600 hover:underline cursor-pointer"
-              >
-                Use 0000
-              </button>
-            </div>
+            {/* Test shortcut — never shipped to riders in a production build. */}
+            {import.meta.env.DEV && (
+              <div className="flex justify-between items-center mt-2 px-1">
+                <span className="text-[10px] font-bold text-slate-400">Default test OTP: 0000 or 1234</span>
+                <button
+                  type="button"
+                  onClick={() => setOtpInput('0000')}
+                  className="text-[10px] font-extrabold text-blue-600 hover:underline cursor-pointer"
+                >
+                  Use 0000
+                </button>
+              </div>
+            )}
           </div>
 
           {geofenceWarning && !gpsOverridden && (
@@ -418,6 +428,23 @@ const DeliveryOrderDetail = () => {
 
       {!delivered && (
         <div className="fixed bottom-6 left-6 right-6 z-50">
+           {statusIndex === 1 && (
+             <div className="mb-3 bg-white rounded-3xl border border-slate-200 shadow-xl p-3">
+               <label htmlFor="pickup-code" className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 px-1">
+                 Pickup code from store
+               </label>
+               <input
+                 id="pickup-code"
+                 type="tel"
+                 inputMode="numeric"
+                 maxLength={6}
+                 placeholder="6-digit code"
+                 value={pickupCode}
+                 onChange={(e) => setPickupCode(e.target.value.replace(/\D/g, ''))}
+                 className="w-full py-3 px-4 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center text-xl font-black tracking-widest text-slate-900 focus:border-blue-500 outline-none"
+               />
+             </div>
+           )}
            <motion.button whileTap={{ scale: 0.95 }} onClick={handleNextStep} disabled={actionLoading || statusIndex >= 2} className={`w-full py-5 rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 ${statusIndex >= 2 ? 'bg-slate-100 text-slate-400 pointer-events-none' : 'bg-blue-600 text-white shadow-blue-200'}`}>
               {getPrimaryButtonLabel()} <ArrowRight size={18} />
            </motion.button>

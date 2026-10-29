@@ -147,16 +147,16 @@ const TopSelection = ({ items = [] }) => {
   const handleProductClick = useCallback((product) => {
     navigate('/product-detail', {
       state: {
-        product: {
-          id: Math.random().toString(36).substr(2, 9),
+        // The real product the admin placed in this section — it used to open
+        // a made-up one (random id, Rs 999, 4.8 stars).
+        productId: product.id,
+        product: product.product && Object.keys(product.product).length ? product.product : {
+          id: product.id,
           name: product.name,
-          brand: 'Top Selection',
-          price: 999,
-          oldPrice: 1999,
-          discount: '50% off',
-          rating: 4.8,
+          brand: product.brand,
+          price: product.price,
+          oldPrice: product.mrp,
           image: product.img,
-          label: 'Top Selection'
         }
       }
     });
