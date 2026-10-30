@@ -15,16 +15,16 @@ const {
 } = require('../../utils/bulkImport');
 
 const MAX_ROWS = 2000;
-const FIELD_KEYS = ['description', 'imageUrl', 'iconUrl', 'sortOrder', 'isActive'];
+const FIELD_KEYS = ['slug', 'description', 'imageUrl', 'iconUrl', 'sortOrder', 'isActive'];
 
 /**
  * Admin bulk import of a category tree into one marketplace tab.
  *
  * One sheet row = one category, optionally with subcategory and child category:
- *   category | subcategory | childCategory | description | imageUrl | iconUrl | sortOrder | isActive
- * Image/description/sort/active apply to the deepest name on the row.
+ *   category | subcategory | childCategory | slug | description | imageUrl | iconUrl | sortOrder | isActive
+ * Image/description/slug/sort/active apply to the deepest name on the row.
  *
- * Matching is by name (case-insensitive): an existing category at the same
+ * Matching is by name (case-insensitive) or by explicit slug: an existing category at the same
  * hierarchy level is reused and enabled for the tab instead of duplicated.
  * Always run with dryRun=true first — it returns the per-row plan without writing anything.
  */
@@ -73,8 +73,9 @@ class CategoryBulkImportService {
   _indexExisting(categories) {
     const state = {
       nodes: new Map(),
+      bySlug: new Map(),
       order: [],
-      slugs: new Set(categories.map((c) => c.slug)),
+      slugs: new Set(categories.map((c) => c.slug).filter(Boolean)),
       siblingCount: new Map(),
       seenRows: new Map(),
     };
@@ -86,7 +87,7 @@ class CategoryBulkImportService {
       const parentKey = doc.parentId ? String(doc.parentId) : 'root';
       const key = `${parentKey}|${lowerKey(doc.name)}`;
       if (state.nodes.has(key)) return; // keep the first (lowest sortOrder) duplicate
-      state.nodes.set(key, {
+      const entry = {
         key,
         nodeId: String(doc._id),
         doc,
@@ -95,7 +96,11 @@ class CategoryBulkImportService {
         slug: doc.slug,
         parentNodeId: doc.parentId ? String(doc.parentId) : null,
         fields: {},
-      });
+      };
+      state.nodes.set(key, entry);
+      if (doc.slug) {
+        state.bySlug.set(doc.slug.toLowerCase(), entry);
+      }
       state.siblingCount.set(parentKey, (state.siblingCount.get(parentKey) || 0) + 1);
     });
 
@@ -108,6 +113,7 @@ class CategoryBulkImportService {
       category: cleanString(raw.category),
       subcategory: cleanString(raw.subcategory),
       childCategory: cleanString(raw.childCategory || raw.childcategory || raw['child category'] || raw.child_category),
+      slug: cleanString(raw.slug || raw.categorySlug || raw.category_slug),
       imageUrl: cleanString(raw.imageUrl) || null,
       categoryAction: null,
       subcategoryAction: null,
@@ -138,17 +144,19 @@ class CategoryBulkImportService {
       state.seenRows.set(dupKey, row.rowNumber);
     }
 
-    const parent = this._resolveNode(state, 'root', null, row.category);
+    const parentSlug = (!row.subcategory && !row.childCategory) ? fields.slug : null;
+    const parent = this._resolveNode(state, 'root', null, row.category, parentSlug);
     row.nodes.push(parent);
     let target = parent;
 
     if (row.subcategory) {
-      const child = this._resolveNode(state, parent.nodeId, parent, row.subcategory);
+      const subSlug = (!row.childCategory) ? fields.slug : null;
+      const child = this._resolveNode(state, parent.nodeId, parent, row.subcategory, subSlug);
       row.nodes.push(child);
       target = child;
 
       if (row.childCategory) {
-        const grandchild = this._resolveNode(state, child.nodeId, child, row.childCategory);
+        const grandchild = this._resolveNode(state, child.nodeId, child, row.childCategory, fields.slug);
         row.nodes.push(grandchild);
         target = grandchild;
       }
@@ -156,6 +164,11 @@ class CategoryBulkImportService {
     row.nodes.forEach((node) => { node.touched = true; });
 
     this._applyFields(target, fields);
+    row.slug = target.slug;
+    if (target.slugConflict) {
+      row.warnings.push(target.slugConflict);
+    }
+
     row.categoryAction = this._actionFor(parent, tab);
     if (row.subcategory) row.subcategoryAction = this._actionFor(row.nodes[1], tab);
     if (row.childCategory) row.childCategoryAction = this._actionFor(row.nodes[2], tab);
@@ -178,6 +191,16 @@ class CategoryBulkImportService {
     }
     if (row.childCategory && !row.subcategory) {
       row.errors.push('Child category requires a subcategory');
+    }
+
+    if (!isBlank(raw.slug || raw.categorySlug || raw.category_slug)) {
+      const inputSlug = cleanString(raw.slug || raw.categorySlug || raw.category_slug);
+      const cleaned = slugify(inputSlug);
+      if (cleaned.length < 2 || cleaned.length > 120) {
+        row.errors.push('Slug must be 2–120 characters (letters, numbers, hyphens)');
+      } else {
+        fields.slug = cleaned;
+      }
     }
 
     if (!isBlank(raw.description)) fields.description = cleanString(raw.description).slice(0, 1000);
@@ -210,13 +233,48 @@ class CategoryBulkImportService {
     return fields;
   }
 
-  _resolveNode(state, parentKey, parentNode, name) {
+  _resolveNode(state, parentKey, parentNode, name, requestedSlug = null) {
     const key = `${parentKey}|${lowerKey(name)}`;
     let node = state.nodes.get(key);
-    if (node) return node;
+
+    // If not found by name, check if requestedSlug matches an existing category under the same parent
+    if (!node && requestedSlug && state.bySlug && state.bySlug.has(requestedSlug.toLowerCase())) {
+      const match = state.bySlug.get(requestedSlug.toLowerCase());
+      if ((!parentNode && !match.parentNodeId) || (parentNode && match.parentNodeId === parentNode.nodeId)) {
+        node = match;
+      }
+    }
+
+    if (node) {
+      if (requestedSlug && requestedSlug.toLowerCase() !== (node.slug || '').toLowerCase()) {
+        const targetSlug = requestedSlug.toLowerCase();
+        if (state.slugs.has(targetSlug)) {
+          node.slugConflict = `Requested slug "${requestedSlug}" already in use; kept existing slug "${node.slug}"`;
+        } else {
+          state.slugs.delete(node.slug);
+          state.slugs.add(targetSlug);
+          node.fields.slug = targetSlug;
+          node.slug = targetSlug;
+        }
+      }
+      return node;
+    }
 
     const position = state.siblingCount.get(parentKey) || 0;
     state.siblingCount.set(parentKey, position + 1);
+
+    let assignedSlug;
+    if (requestedSlug) {
+      const targetSlug = requestedSlug.toLowerCase();
+      if (!state.slugs.has(targetSlug)) {
+        assignedSlug = targetSlug;
+        state.slugs.add(assignedSlug);
+      } else {
+        assignedSlug = this._uniqueSlug(state, targetSlug, parentNode);
+      }
+    } else {
+      assignedSlug = this._uniqueSlug(state, name, parentNode);
+    }
 
     node = {
       key,
@@ -224,12 +282,13 @@ class CategoryBulkImportService {
       doc: null,
       isNew: true,
       name,
-      slug: this._uniqueSlug(state, name, parentNode),
+      slug: assignedSlug,
       parentNode,
       defaultSortOrder: position,
       fields: {},
     };
     state.nodes.set(key, node);
+    if (state.bySlug) state.bySlug.set(assignedSlug, node);
     state.order.push(node);
     return node;
   }
@@ -282,6 +341,7 @@ class CategoryBulkImportService {
       try {
         await this.categoryRepository.updateById(node.nodeId, {
           ...this._changedFields(node),
+          ...(node.fields.slug && node.fields.slug !== node.doc.slug ? { slug: node.fields.slug } : {}),
           ...tabFields(node.doc),
         });
       } catch (err) {
@@ -298,7 +358,7 @@ class CategoryBulkImportService {
       try {
         const created = await this.categoryRepository.create({
           name: node.name,
-          slug: node.slug,
+          slug: node.fields.slug || node.slug,
           description: node.fields.description || '',
           imageUrl: node.fields.imageUrl || null,
           iconUrl: node.fields.iconUrl || null,

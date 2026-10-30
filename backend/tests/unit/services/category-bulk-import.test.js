@@ -251,4 +251,46 @@ describe('CategoryBulkImportService', () => {
     expect(repo.docs.filter((d) => d.name === 'Pooja Needs')).toHaveLength(1);
     expect(repo.docs.filter((d) => d.name === 'Pooja Prasad & Bhog')).toHaveLength(1);
   });
+
+  it('supports custom slug in CSV rows and allows same-name subcategories under different categories', async () => {
+    const { repo, importer } = setup();
+
+    const result = await importer.import({
+      marketplaceTab: 'mithilakart',
+      dryRun: false,
+      rows: [
+        { category: 'Men', subcategory: 'Shirts', slug: 'men-shirts' },
+        { category: 'Women', subcategory: 'Shirts', slug: 'women-shirts' },
+      ],
+    });
+
+    expect(result.summary.validRows).toBe(2);
+    expect(result.summary.errorRows).toBe(0);
+
+    const menShirts = repo.docs.find((d) => d.slug === 'men-shirts');
+    const womenShirts = repo.docs.find((d) => d.slug === 'women-shirts');
+
+    expect(menShirts).toBeDefined();
+    expect(menShirts.name).toBe('Shirts');
+    expect(womenShirts).toBeDefined();
+    expect(womenShirts.name).toBe('Shirts');
+    expect(menShirts.parentId).not.toBe(womenShirts.parentId);
+  });
+
+  it('updates an existing category slug if requested in CSV', async () => {
+    const existing = cat('e1', 'Kurtas', { slug: 'old-kurtas-slug', visibleTabs: ['mithilakart'] });
+    const { repo, importer } = setup([existing]);
+
+    const result = await importer.import({
+      marketplaceTab: 'mithilakart',
+      dryRun: false,
+      rows: [
+        { category: 'Kurtas', slug: 'new-kurtas-slug' },
+      ],
+    });
+
+    expect(result.rows[0].categoryAction).toBe('update');
+    const updated = repo.docs.find((d) => d._id === 'e1');
+    expect(updated.slug).toBe('new-kurtas-slug');
+  });
 });
