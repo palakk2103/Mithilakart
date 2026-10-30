@@ -328,15 +328,22 @@ const Categories = () => {
       : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#65B842]');
 
   const [activeSectionIndex, setActiveSectionIndex] = React.useState(0);
+  const [selectedSubCategory, setSelectedSubCategory] = React.useState(null);
   const rightContentRef = React.useRef(null);
 
   React.useEffect(() => {
     if (rightContentRef.current) {
       rightContentRef.current.scrollTop = 0;
     }
-  }, [activeSectionIndex]);
+  }, [activeSectionIndex, selectedSubCategory]);
 
   const handleCategoryItemClick = (item) => {
+    // If the category has Level 3 subcategories, display them inside this page!
+    if (item.children && item.children.length > 0) {
+      setSelectedSubCategory(item);
+      return;
+    }
+
     if (isMithilakFlow) {
       localStorage.setItem('isMithilakFlow', 'true');
       localStorage.setItem('isQuickShopFlow', 'false');
@@ -352,6 +359,17 @@ const Categories = () => {
     } else {
       navigate(item.path || `/category-products?category=${encodeURIComponent(item.name)}`);
     }
+  };
+
+  const handleSubCategoryClick = (subItem) => {
+    const parentName = selectedSubCategory?.rawName || selectedSubCategory?.name || '';
+    const subName = subItem.rawName || subItem.name || '';
+    navigate(`/category-products?category=${encodeURIComponent(parentName)}&subcategory=${encodeURIComponent(subName)}`);
+  };
+
+  const handleViewAllForSubCategory = () => {
+    const catName = selectedSubCategory?.rawName || selectedSubCategory?.name || '';
+    navigate(`/category-products?category=${encodeURIComponent(catName)}`);
   };
 
   return (
@@ -370,7 +388,16 @@ const Categories = () => {
       {/* Header */}
       <div className={`sticky top-0 z-50 ${headerBg} px-4 py-3.5 flex items-center justify-between shadow-sm transition-colors`}>
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className={`p-0.5 active:scale-95 transition-transform ${headerTextColor}`}>
+          <button 
+            onClick={() => {
+              if (selectedSubCategory) {
+                setSelectedSubCategory(null);
+              } else {
+                navigate(-1);
+              }
+            }} 
+            className={`p-0.5 active:scale-95 transition-transform ${headerTextColor}`}
+          >
             <ArrowLeft size={22} />
           </button>
           <h1 className={`text-[19px] font-black tracking-tight ${headerTextColor}`}>
@@ -388,17 +415,20 @@ const Categories = () => {
         </button>
       </div>
 
-      {/* Split-pane Layout (Mobile View) */}
-      <div className="flex md:hidden relative z-10 flex-1 h-[calc(100vh-60px)] overflow-hidden">
+      {/* Split-pane Layout (All Screen Sizes — scrollable category tabs + content) */}
+      <div className="flex relative z-10 flex-1 h-[calc(100vh-60px)] overflow-hidden md:max-w-5xl md:mx-auto md:w-full md:border-x md:border-slate-200/70 md:shadow-sm">
         {/* Left Sidebar */}
-        <div className="w-[95px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto overscroll-contain no-scrollbar pb-24">
+        <div className="w-[95px] md:w-[190px] lg:w-[220px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto overscroll-contain no-scrollbar pb-24">
           {sectionsList.map((section, sIdx) => {
             const isActive = activeSectionIndex === sIdx;
             const sectionImg = section.items[0]?.img;
             return (
               <button
                 key={sIdx}
-                onClick={() => setActiveSectionIndex(sIdx)}
+                onClick={() => {
+                  setActiveSectionIndex(sIdx);
+                  setSelectedSubCategory(null);
+                }}
                 className={`w-full py-4 px-1.5 flex flex-col items-center gap-1.5 border-b border-slate-100 relative transition-all duration-200 ${
                   isActive 
                     ? 'bg-white font-black' 
@@ -436,7 +466,66 @@ const Categories = () => {
 
         {/* Right Content Area */}
         <div ref={rightContentRef} className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-4">
-          {sectionsList[activeSectionIndex] && (
+          {selectedSubCategory ? (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Back button & Title Header */}
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                <button
+                  onClick={() => setSelectedSubCategory(null)}
+                  className="p-1.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center shadow-xs"
+                  aria-label="Back"
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {sectionsList[activeSectionIndex]?.title}
+                  </div>
+                  <h2 className="text-[14px] font-black text-slate-800 tracking-tight uppercase truncate">
+                    {selectedSubCategory.name}
+                  </h2>
+                </div>
+              </div>
+
+              {/* View All banner for this parent subcategory */}
+              <button
+                onClick={handleViewAllForSubCategory}
+                className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-emerald-800 flex items-center justify-between text-[11px] font-extrabold active:scale-[0.98] transition-transform shadow-xs"
+              >
+                <span>All {selectedSubCategory.name} Products</span>
+                <span className="text-[10px] bg-[#6FAE4A] text-white px-2.5 py-0.5 rounded-full font-black">View All →</span>
+              </button>
+
+              {/* 3-Column Grid of Level 3 Subcategories */}
+              <div>
+                <h3 className="text-[10.5px] font-black text-slate-400 tracking-tight mb-3 uppercase">
+                  Explore Subcategories ({selectedSubCategory.children?.length || 0})
+                </h3>
+                <div className="grid grid-cols-3 gap-x-2 gap-y-4">
+                  {selectedSubCategory.children?.map((sub, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleSubCategoryClick(sub)}
+                      className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
+                    >
+                      <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 relative shadow-[0_2px_6px_rgba(0,0,0,0.03)] hover:border-emerald-300 transition-colors">
+                        <img
+                          src={sub.img || DEFAULT_PRODUCT_IMAGE}
+                          alt={sub.name}
+                          onError={handleImageError}
+                          className="w-full h-full object-cover rounded-xl"
+                          loading="lazy"
+                        />
+                      </div>
+                      <span className="text-[9.5px] font-bold text-slate-700 text-center leading-tight tracking-tight line-clamp-2">
+                        {sub.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : sectionsList[activeSectionIndex] && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-[13px] font-black text-slate-800 tracking-tight mb-4 uppercase">
@@ -458,6 +547,11 @@ const Categories = () => {
                           onError={handleImageError}
                           className="w-full h-full object-cover rounded-xl" 
                         />
+                        {item.children && item.children.length > 0 && (
+                          <div className="absolute -bottom-1 -right-1 bg-[#6FAE4A] text-white text-[7.5px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
+                            {item.children.length}
+                          </div>
+                        )}
                       </div>
                       <span className="text-[9.5px] font-bold text-slate-700 text-center leading-tight tracking-tight line-clamp-2">
                         {item.name.replace('Mithila ', '')}
@@ -491,134 +585,6 @@ const Categories = () => {
         </div>
       </div>
 
-      {/* Desktop view */}
-      <div className="hidden md:block md:max-w-6xl md:mx-auto md:px-4 md:py-8 space-y-10 relative z-10">
-        {sectionsList.map((section, sIdx) => (
-          <div key={sIdx} className="flex flex-col">
-            {/* Header Banner */}
-            <div className={`px-6 py-4 rounded-t-3xl flex items-center justify-between shadow-sm border-x border-t transition-colors ${
-              (isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow)
-                ? `text-white ${headerBg} border-transparent`
-                : 'bg-[#3E5A44] text-white border-transparent'
-            }`}>
-              <h2 className="text-[14px] md:text-[16px] font-black uppercase tracking-wider">
-                {section.title}
-              </h2>
-            </div>
-
-            {/* White container panel with rounded-b corners containing the cards */}
-            <div className="bg-white border-x border-b border-slate-100 rounded-b-3xl p-6 shadow-md">
-              <div className="grid grid-cols-4 gap-6">
-                {section.items.map((item, idx) => {
-
-                  if (isMithilakFlow) {
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => handleCategoryItemClick(item)}
-                        className="flex flex-col items-center gap-3 cursor-pointer group active:scale-95 transition-transform w-[180px] mx-auto"
-                      >
-                        <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden bg-white border border-[#EADCC9]/55 flex items-center justify-center group-hover:bg-slate-50 transition-colors duration-300 shadow-sm">
-                          <img
-                            src={item.img || DEFAULT_PRODUCT_IMAGE}
-                            alt={item.name}
-                            onError={handleImageError}
-                            className="w-[82%] h-[82%] object-contain z-10 group-hover:scale-[1.08] transition-transform duration-500"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 rounded-full border-[8px] border-white z-20 pointer-events-none" />
-                        </div>
-                        <div className="px-1 text-center">
-                          <h3 className={`text-[13px] font-black text-[#3F2A20] leading-tight group-hover:${textPrimary} transition-colors line-clamp-2`}>
-                            {item.name.replace('Mithila ', '')}
-                          </h3>
-                          <p className="text-[11px] font-black text-[#207C8A] mt-1 uppercase tracking-wider">View Collection</p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (isFreshGroceryFlow) {
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => handleCategoryItemClick(item)}
-                        className="flex flex-col items-center gap-3 cursor-pointer group active:scale-95 transition-transform w-[180px] mx-auto"
-                      >
-                        <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-[#FFFDF8] border border-[#EADCC9]/60 flex items-center justify-center p-4 group-hover:border-[#D9A21B] transition-colors duration-300">
-                          <img
-                            src={item.img || DEFAULT_PRODUCT_IMAGE}
-                            alt={item.name}
-                            onError={handleImageError}
-                            className="h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="px-1 text-center">
-                          <h3 className={`text-[13px] font-black text-[#3F2A20] leading-tight group-hover:text-[#D9A21B] transition-colors line-clamp-2`}>
-                            {item.name}
-                          </h3>
-                          <p className="text-[11px] font-black text-[#D9A21B] mt-1 uppercase tracking-wider">Fresh Deals</p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (isQuickShopFlow) {
-                    return (
-                      <div
-                        key={idx}
-                        onClick={() => handleCategoryItemClick(item)}
-                        className="flex flex-col items-center gap-3 cursor-pointer group active:scale-95 transition-transform w-[180px] mx-auto"
-                      >
-                        <div className="relative w-full aspect-square rounded-[24px] overflow-hidden bg-slate-50 border border-slate-100/60 flex items-center justify-center p-5 group-hover:bg-slate-100/65 transition-colors duration-300">
-                          <img
-                            src={item.img || DEFAULT_PRODUCT_IMAGE}
-                            alt={item.name}
-                            onError={handleImageError}
-                            className="h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                        </div>
-                        <div className="px-1 text-center">
-                          <h3 className={`text-[13px] font-black text-slate-800 leading-tight group-hover:${textPrimary} transition-colors line-clamp-2`}>
-                            {item.name}
-                          </h3>
-                          <p className="text-[11px] font-black text-[#F26522] mt-1 uppercase tracking-wider">Fast Delivery</p>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // Standard Mithilakart user flow
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => handleCategoryItemClick(item)}
-                      className="flex flex-col items-center cursor-pointer group active:scale-95 transition-transform w-[160px] mx-auto"
-                    >
-                      <div className="w-full aspect-[1/1.18] bg-white border border-[#EADCC9]/70 rounded-t-[64px] rounded-b-[24px] overflow-hidden flex flex-col items-center justify-between p-3 pt-2 shadow-[0_4px_10px_rgba(61,35,20,0.02)] group-hover:shadow-[0_8px_20px_rgba(61,35,20,0.08)] group-hover:border-[#6FAE4A]/40 transition-all duration-300">
-                        <span className="text-[12px] md:text-[13px] font-black text-[#3F2A20] text-center mt-6 px-1.5 leading-tight tracking-tight min-h-[26px] flex items-center justify-center line-clamp-2">
-                          {item.name}
-                        </span>
-                        <div className="w-[82%] aspect-square rounded-[16px] overflow-hidden bg-[#FFFDFB] border border-slate-100 flex items-center justify-center p-1 mb-0.5 relative">
-                          <img
-                            src={item.img || DEFAULT_PRODUCT_IMAGE}
-                            alt={item.name}
-                            onError={handleImageError}
-                            className="w-full h-full object-cover rounded-xl group-hover:scale-[1.04] transition-transform duration-500"
-                            loading="lazy"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };

@@ -43,4 +43,21 @@ describe('CategoryService tree builder', () => {
     expect(drinks.children).toHaveLength(1);
     expect(drinks.children[0].slug).toBe('buttermilk-lassi');
   });
+
+  it('deduplicates parentIds and parentNames in listAdmin', async () => {
+    const mockRepo = {
+      findActive: jest.fn().mockResolvedValue([
+        { _id: 'p1', name: 'Parent 1', slug: 'p1' },
+        { _id: 'c1', name: 'Child 1', slug: 'c1', parentIds: ['p1', 'p1'] },
+      ]),
+    };
+
+    const cache = new CacheService(new MemoryRedisClient());
+    const service = new CategoryService(mockRepo, cache);
+    const list = await service.listAdmin();
+
+    const child = list.find((c) => c.slug === 'c1');
+    expect(child.parentIds).toEqual(['p1']);
+    expect(child.parentNames).toEqual(['Parent 1']);
+  });
 });

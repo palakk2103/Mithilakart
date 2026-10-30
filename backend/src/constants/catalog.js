@@ -57,6 +57,46 @@ const UPLOAD_CONTEXTS = {
   REVIEW: 'reviews',
 };
 
+// Safe allowlist of react-icons identifiers an Admin may assign to a header
+// category chip. Keys here must exactly match the keys in
+// frontend/src/shared/constants/headerChipIcons.js — never execute or import
+// an icon name received from the database/client directly.
+const HEADER_CHIP_ICON_KEYS = [
+  'shop',
+  'fashion',
+  'electronics',
+  'grocery',
+  'home',
+  'beauty',
+  'sports',
+  'toys',
+  'jewellery',
+  'stationery',
+  'gifting',
+  'electrical',
+  'mobile',
+  'laptop',
+  'camera',
+  'books',
+  'pets',
+  'furniture',
+  'baby',
+  'health',
+  'music',
+  'food',
+  'shoes',
+  'bags',
+  'watches',
+  'appliances',
+  'tools',
+  'garden',
+  'automotive',
+  'gaming',
+  'art',
+  'fitness',
+  'kids',
+];
+
 module.exports = {
   COMMERCE_FLOWS,
   COMMERCE_FLOW_VALUES,
@@ -68,4 +108,5 @@ module.exports = {
   CACHE_TTL,
   CACHE_KEYS,
   UPLOAD_CONTEXTS,
+  HEADER_CHIP_ICON_KEYS,
 };

@@ -66,7 +66,9 @@ const VendorLayout = () => {
   const fetchStandardNav = useVendorStore((state) => state.fetchStandardNav);
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   useHydrateAddresses();
-  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
+  const deliverTo = useMemo(() => {
+    return getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
+  }, [savedAddresses, selectedAddressId, liveLocation?.latitude, liveLocation?.longitude, liveLocation?.city, liveLocation?.shortLabel]);
   const selectedAddress = savedAddresses.find(a => a.id === selectedAddressId) || savedAddresses[0];
 
   const effectiveFlow = useMemo(() => {
@@ -150,7 +152,7 @@ const VendorLayout = () => {
       if (ro) ro.disconnect();
       window.removeEventListener('resize', updateHeaderHeights);
     };
-  }, [location.pathname, effectiveFlow, selectedCategory, deliverTo]);
+  }, [location.pathname, effectiveFlow, selectedCategory, deliverTo?.label]);
 
   /* ── Scroll shadow listener ── */
   useEffect(() => {

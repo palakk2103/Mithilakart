@@ -16,7 +16,7 @@ import { getImageUrl, handleImageError } from '../../../shared/utils/imageUtils'
 const COMMERCE_FLOWS = [
   { value: 'standard', label: 'Mithilakart', tab: 'mithilakart' },
   { value: 'quick_shop', label: 'Quick Shop', tab: 'quick_shop' },
-  { value: 'fresh_grocery', label: 'Groceries & Fresh', tab: 'groceries_fresh' },
+  { value: 'fresh_grocery', label: 'Fresh & Groceries', tab: 'groceries_fresh' },
   { value: 'mithilak', label: 'Mithilak', tab: 'mithilak' },
 ];
 
@@ -24,7 +24,7 @@ const VISIBLE_TABS = [
   { value: 'mithilakart', label: 'Mithilakart', flow: 'standard' },
   { value: 'mithilak', label: 'Mithilak', flow: 'mithilak' },
   { value: 'quick_shop', label: 'Quick Shop', flow: 'quick_shop' },
-  { value: 'groceries_fresh', label: 'Groceries & Fresh', flow: 'fresh_grocery' },
+  { value: 'groceries_fresh', label: 'Fresh & Groceries', flow: 'fresh_grocery' },
 ];
 
 const EMPTY_FORM = {
@@ -81,33 +81,45 @@ const CategoryManager = () => {
   }, [loadCategories]);
 
   // Show each subcategory / child category directly under its parent instead of a flat list.
+  // Each category is rendered EXACTLY ONCE in the admin table, anchored under its primary parent.
   const orderedCategories = useMemo(() => {
     const ids = new Set(categories.map((c) => c.id));
     const childrenOf = new Map();
     categories.forEach((c) => {
       const pIds = c.parentIds?.length ? c.parentIds : (c.parentId ? [c.parentId] : []);
-      pIds.forEach((pid) => {
-        if (ids.has(pid)) {
-          childrenOf.set(pid, [...(childrenOf.get(pid) || []), c]);
-        }
-      });
+      // Anchor category under its primary parent present in the list to avoid duplicate entries in admin
+      const primaryPid = pIds.find((pid) => ids.has(pid));
+      if (primaryPid) {
+        childrenOf.set(primaryPid, [...(childrenOf.get(primaryPid) || []), c]);
+      }
     });
+
     const ordered = [];
-    const visitedInPath = new Set();
+    const visited = new Set();
     const visit = (cat, depth) => {
+      if (visited.has(cat.id)) return;
+      visited.add(cat.id);
       ordered.push({ ...cat, depth });
       (childrenOf.get(cat.id) || []).forEach((child) => {
-        const edge = `${cat.id}->${child.id}`;
-        if (!visitedInPath.has(edge)) {
-          visitedInPath.add(edge);
-          visit(child, depth + 1);
-        }
+        visit(child, depth + 1);
       });
     };
-    categories.filter((c) => {
+
+    // Roots: categories with no parent present in current list
+    const roots = categories.filter((c) => {
       const pIds = c.parentIds?.length ? c.parentIds : (c.parentId ? [c.parentId] : []);
-      return !pIds.length || !pIds.some((pid) => ids.has(pid));
-    }).forEach((root) => visit(root, 0));
+      return !pIds.some((pid) => ids.has(pid));
+    });
+
+    roots.forEach((root) => visit(root, 0));
+
+    // Fallback for any disconnected or cyclic categories so no categories are ever dropped
+    categories.forEach((cat) => {
+      if (!visited.has(cat.id)) {
+        visit(cat, 0);
+      }
+    });
+
     return ordered;
   }, [categories]);
 
@@ -146,13 +158,13 @@ const CategoryManager = () => {
       return orderedCategories.filter(tabMatches);
     }
 
-    // Build parent-child relationships
+    // Build parent-child relationships supporting multiple parents
     const childrenMap = new Map();
-    const parentMap = new Map();
+    const parentsMap = new Map();
     categories.forEach((c) => {
       const pIds = c.parentIds?.length ? c.parentIds : (c.parentId ? [c.parentId] : []);
+      parentsMap.set(c.id, pIds);
       pIds.forEach((pid) => {
-        parentMap.set(c.id, pid);
         const currentChildren = childrenMap.get(pid) || [];
         currentChildren.push(c.id);
         childrenMap.set(pid, currentChildren);
@@ -170,14 +182,15 @@ const CategoryManager = () => {
       }
     };
 
-    // Collect all ancestors (parent, root)
+    // Collect all ancestors across all parents
     const collectAncestorIds = (catId, set) => {
-      let currentParentId = parentMap.get(catId);
-      while (currentParentId) {
-        if (set.has(currentParentId)) break;
-        set.add(currentParentId);
-        currentParentId = parentMap.get(currentParentId);
-      }
+      const pIds = parentsMap.get(catId) || [];
+      pIds.forEach((pid) => {
+        if (!set.has(pid)) {
+          set.add(pid);
+          collectAncestorIds(pid, set);
+        }
+      });
     };
 
     // Find direct matches (by name, slug, or parentName)

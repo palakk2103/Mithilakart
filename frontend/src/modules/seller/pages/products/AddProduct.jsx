@@ -18,7 +18,7 @@ const MARKETPLACE_TAB_OPTIONS = [
   { key: 'mithilakart', label: 'Mithilakart', legacyFlow: 'standard' },
   { key: 'mithilak', label: 'Mithilak', legacyFlow: 'mithilak' },
   { key: 'quick_shop', label: 'Quick Shop', legacyFlow: 'quick_shop' },
-  { key: 'groceries_fresh', label: 'Groceries & Fresh', legacyFlow: 'fresh_grocery' },
+  { key: 'groceries_fresh', label: 'Fresh & Groceries', legacyFlow: 'fresh_grocery' },
 ];
 const QUICK_TAB_KEYS = new Set(['quick_shop', 'groceries_fresh']);
 
@@ -58,6 +58,7 @@ const mapProductToForm = (product) => ({
   description: product?.description || '',
   categoryId: product?.categoryId ? String(product.categoryId) : '',
   subcategoryId: '',
+  childSubcategoryId: '',
   brand: product?.brand || '',
   sku: product?.sku || '',
   price: product?.price ?? '',
@@ -102,7 +103,9 @@ const AddProduct = () => {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   const selectedCategoryId = watch('categoryId');
+  const selectedSubcategoryId = watch('subcategoryId');
   const selectedRootCategory = categoriesTree.find((c) => String(c.id || c._id) === String(selectedCategoryId));
+  const selectedSubCategory = (selectedRootCategory?.children || []).find((c) => String(c.id || c._id) === String(selectedSubcategoryId));
 
   // Fetch category tree based on the selected commerce flow.
   useEffect(() => {
@@ -186,22 +189,38 @@ const AddProduct = () => {
     if (rootMatch) {
       setValue('categoryId', String(rootMatch.id || rootMatch._id));
       setValue('subcategoryId', '');
+      setValue('childSubcategoryId', '');
       return;
     }
 
-    // Case 2: target is a child.
+    // Case 2: target is a level-2 child (subcategory).
     for (const root of categoriesTree) {
       const child = (root.children || []).find((ch) => String(ch.id || ch._id) === targetId);
       if (child) {
         setValue('categoryId', String(root.id || root._id));
         setValue('subcategoryId', String(child.id || child._id));
+        setValue('childSubcategoryId', '');
         return;
+      }
+    }
+
+    // Case 3: target is a level-3 grandchild (child subcategory).
+    for (const root of categoriesTree) {
+      for (const child of (root.children || [])) {
+        const grandChild = (child.children || []).find((gc) => String(gc.id || gc._id) === targetId);
+        if (grandChild) {
+          setValue('categoryId', String(root.id || root._id));
+          setValue('subcategoryId', String(child.id || child._id));
+          setValue('childSubcategoryId', String(grandChild.id || grandChild._id));
+          return;
+        }
       }
     }
 
     // Fallback: keep it as categoryId.
     setValue('categoryId', targetId);
     setValue('subcategoryId', '');
+    setValue('childSubcategoryId', '');
   }, [categoriesTree, existingProduct, isEdit, setValue]);
 
   const sections = [
@@ -215,7 +234,7 @@ const AddProduct = () => {
   const buildPayload = (data, status = 'active') => {
     const dims = data.dimensions?.split('x').map(Number) || [];
 
-    const categoryIdEffective = data.subcategoryId || data.categoryId;
+    const categoryIdEffective = data.childSubcategoryId || data.subcategoryId || data.categoryId;
     const tagsArr = data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
     const specificationsArr = specifications.filter((s) => s.key && s.value);
     const price = Number(data.price);
@@ -438,13 +457,18 @@ const AddProduct = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className={labelClass}>Category *</label>
                     <select
                       {...register('categoryId', { required: 'Category is required' })}
                       className={inputClass}
                       disabled={categoriesLoading}
+                      onChange={(e) => {
+                        register('categoryId').onChange(e);
+                        setValue('subcategoryId', '');
+                        setValue('childSubcategoryId', '');
+                      }}
                     >
                       <option value="">{categoriesLoading ? 'Loading...' : 'Select category'}</option>
                       {(categoriesTree || []).map((c) => (
@@ -461,11 +485,39 @@ const AddProduct = () => {
                       {...register('subcategoryId')}
                       className={inputClass}
                       disabled={categoriesLoading || !selectedRootCategory?.children?.length}
+                      onChange={(e) => {
+                        register('subcategoryId').onChange(e);
+                        setValue('childSubcategoryId', '');
+                      }}
                     >
-                      <option value="">Use category</option>
+                      <option value="">
+                        {!selectedRootCategory?.children?.length ? 'No subcategories' : 'Select subcategory'}
+                      </option>
                       {(selectedRootCategory?.children || []).map((s) => (
                         <option key={s.id || s._id} value={String(s.id || s._id)}>
                           {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Child Category / Item Type</label>
+                    <select
+                      {...register('childSubcategoryId')}
+                      className={inputClass}
+                      disabled={categoriesLoading || !selectedSubCategory?.children?.length}
+                    >
+                      <option value="">
+                        {!selectedSubCategory
+                          ? 'Select subcategory first'
+                          : !selectedSubCategory?.children?.length
+                          ? 'No child categories'
+                          : 'Select child category (optional)'}
+                      </option>
+                      {(selectedSubCategory?.children || []).map((gc) => (
+                        <option key={gc.id || gc._id} value={String(gc.id || gc._id)}>
+                          {gc.name}
                         </option>
                       ))}
                     </select>

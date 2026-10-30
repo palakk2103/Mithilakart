@@ -292,13 +292,15 @@ export const mapDeliveryApplication = (p = {}) => ({
 });
 
 export const mapCategory = (c = {}) => {
-  const pIds = Array.isArray(c.parentIds) && c.parentIds.length
-    ? c.parentIds.map((p) => p?._id || p).filter(Boolean)
-    : (c.parentId ? [c.parentId?._id || c.parentId] : []);
+  const rawPIds = Array.isArray(c.parentIds) && c.parentIds.length
+    ? c.parentIds.map((p) => String(p?._id || p)).filter(Boolean)
+    : (c.parentId ? [String(c.parentId?._id || c.parentId)] : []);
+  const pIds = [...new Set(rawPIds)];
 
-  const pNames = Array.isArray(c.parentNames) && c.parentNames.length
+  const rawPNames = Array.isArray(c.parentNames) && c.parentNames.length
     ? c.parentNames
     : (c.parentId?.name ? [c.parentId.name] : (c.parentName ? [c.parentName] : []));
+  const pNames = [...new Set(rawPNames.filter(Boolean))];
 
   return {
     id: c._id || c.id || '',
@@ -326,6 +328,7 @@ export const mapChip = (c = {}, index = 0) => ({
   label: c.label || c.name || 'Chip',
   emoji: c.emoji || c.icon || '🏷️',
   imageUrl: c.imageUrl || '',
+  iconKey: c.iconKey || '',
   categoryId: c.categoryId?._id || c.categoryId || '',
   commerceFlow: c.commerceFlow || 'standard',
   active: c.isActive !== false,

@@ -7,7 +7,7 @@ const TAB_LABELS = {
   mithilakart: 'Mithilakart',
   mithilak: 'Mithilak',
   quick_shop: 'Quick Shop',
-  groceries_fresh: 'Groceries & Fresh',
+  groceries_fresh: 'Fresh & Groceries',
 };
 
 class CartService extends BaseService {

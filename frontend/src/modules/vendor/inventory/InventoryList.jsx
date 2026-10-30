@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, Search, Filter, Edit3, Trash2, 
   Eye, Package, MoreVertical, ExternalLink, 
-  TrendingUp, Layers, AlertTriangle
+  TrendingUp, Layers, AlertTriangle, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,10 @@ const InventoryList = () => {
   const [myProducts, setMyProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('Default');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewingProduct, setViewingProduct] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', category: '', price: '', stock: '' });
@@ -42,10 +46,33 @@ const InventoryList = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const filteredProducts = myProducts.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = useMemo(() => {
+    let list = myProducts.filter(p => {
+      const pName = (p.name || '').toLowerCase();
+      const pCat = (p.category || '').toLowerCase();
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = pName.includes(query) || pCat.includes(query);
+      const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
+      const matchesStatus = statusFilter === 'All' || 
+                           (statusFilter === 'Approved' && p.status === 'Approved') ||
+                           (statusFilter === 'Low Stock' && p.stock < 10 && p.stock > 0) ||
+                           (statusFilter === 'Out of Stock' && p.stock === 0) ||
+                           (statusFilter === 'Pending' && p.status === 'Pending');
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+
+    if (sortBy === 'Price: Low to High') {
+      list = [...list].sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+    } else if (sortBy === 'Price: High to Low') {
+      list = [...list].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+    } else if (sortBy === 'Stock: High to Low') {
+      list = [...list].sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0));
+    } else if (sortBy === 'Stock: Low to High') {
+      list = [...list].sort((a, b) => (Number(a.stock) || 0) - (Number(b.stock) || 0));
+    }
+
+    return list;
+  }, [myProducts, searchQuery, selectedCategory, statusFilter, sortBy]);
 
   const handleEditClick = (product) => {
     setEditingProduct(product);
@@ -114,9 +141,93 @@ const InventoryList = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className="p-3.5 bg-white border border-slate-200 rounded-2xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
-            <Filter size={20} />
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowFilterDropdown(prev => !prev)}
+              className={`p-3.5 border rounded-2xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer ${
+                selectedCategory !== 'All' || statusFilter !== 'All' || sortBy !== 'Default'
+                  ? 'bg-blue-500 text-white border-blue-500 shadow-blue-100'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Filter size={20} />
+              {(selectedCategory !== 'All' || statusFilter !== 'All' || sortBy !== 'Default') && (
+                <span className="text-[10px] font-black uppercase">Active</span>
+              )}
+            </button>
+
+            {showFilterDropdown && (
+              <div className="absolute right-0 top-14 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-40 min-w-[220px] space-y-3">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <span className="text-xs font-black uppercase text-slate-800">Filter & Sort</span>
+                  <button 
+                    onClick={() => {
+                      setSelectedCategory('All');
+                      setStatusFilter('All');
+                      setSortBy('Default');
+                    }}
+                    className="text-[10px] font-bold text-red-500 hover:underline"
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Status</p>
+                  <select 
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full text-xs font-bold p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="Approved">Live / Approved</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Low Stock">Low Stock (&lt; 10)</option>
+                    <option value="Out of Stock">Out of Stock</option>
+                  </select>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Category</p>
+                  <select 
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full text-xs font-bold p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+                  >
+                    <option value="All">All Categories</option>
+                    {categories.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sort */}
+                <div>
+                  <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Sort By</p>
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full text-xs font-bold p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+                  >
+                    <option value="Default">Default</option>
+                    <option value="Price: Low to High">Price: Low to High</option>
+                    <option value="Price: High to Low">Price: High to Low</option>
+                    <option value="Stock: High to Low">Stock: High to Low</option>
+                    <option value="Stock: Low to High">Stock: Low to High</option>
+                  </select>
+                </div>
+
+                <button
+                  onClick={() => setShowFilterDropdown(false)}
+                  className="w-full py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase tracking-wider"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
           <button 
             onClick={() => navigate('/admin/inventory/add')}
             className="px-8 py-3.5 bg-blue-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-100 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"

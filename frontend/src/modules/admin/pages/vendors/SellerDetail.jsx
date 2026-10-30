@@ -74,7 +74,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText,
 const TAB_FLAGS = [
   { field: 'mithilakEligible', label: 'Mithilak', hint: 'Mithila art & handicrafts tab' },
   { field: 'quickCommerceEligible', label: 'Quick Shop', hint: 'Quick delivery from this store' },
-  { field: 'groceryEligible', label: 'Groceries & Fresh', hint: 'Quick grocery delivery from this store' },
+  { field: 'groceryEligible', label: 'Fresh & Groceries', hint: 'Quick grocery delivery from this store' },
 ];
 
 const SellerDetail = () => {

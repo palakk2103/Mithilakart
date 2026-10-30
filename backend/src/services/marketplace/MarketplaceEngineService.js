@@ -24,7 +24,7 @@ class MarketplaceEngineService extends BaseService {
       { tab: MARKETPLACE_TABS.MITHILAKART, displayName: 'Mithilakart', deliveryModel: DELIVERY_TYPE.STANDARD, isActive: true },
       { tab: MARKETPLACE_TABS.MITHILAK, displayName: 'Mithilak', deliveryModel: DELIVERY_TYPE.STANDARD, isActive: true },
       { tab: MARKETPLACE_TABS.QUICK_SHOP, displayName: 'Quick Shop', deliveryModel: DELIVERY_TYPE.FIXED_PROMISE, isActive: true },
-      { tab: MARKETPLACE_TABS.GROCERIES_FRESH, displayName: 'Groceries & Fresh', deliveryModel: DELIVERY_TYPE.FIXED_PROMISE, isActive: true },
+      { tab: MARKETPLACE_TABS.GROCERIES_FRESH, displayName: 'Fresh & Groceries', deliveryModel: DELIVERY_TYPE.FIXED_PROMISE, isActive: true },
     ];
   }
 
@@ -53,7 +53,7 @@ class MarketplaceEngineService extends BaseService {
       throw AppError.forbidden('Seller is not eligible for Quick Shop', [{ code: 'TAB_NOT_ALLOWED' }]);
     }
     if (normalized === MARKETPLACE_TABS.GROCERIES_FRESH && !seller.groceryEligible) {
-      throw AppError.forbidden('Seller is not eligible for Groceries & Fresh', [{ code: 'TAB_NOT_ALLOWED' }]);
+      throw AppError.forbidden('Seller is not eligible for Fresh & Groceries', [{ code: 'TAB_NOT_ALLOWED' }]);
     }
 
   }

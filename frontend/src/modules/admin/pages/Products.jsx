@@ -2,7 +2,8 @@ import SearchInput from '../../../shared/components/SearchInput';
 import React, { useState, useMemo } from 'react';
 import { 
   Edit2, Trash2, Plus, Search, Filter, MoreVertical, Eye,
-  Package, Download, AlertCircle, CheckCircle2, XCircle, Clock
+  Package, Download, AlertCircle, CheckCircle2, XCircle, Clock,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StatusBadge, Pagination } from '../components/ui';
@@ -20,21 +21,52 @@ const PRODUCTS = [
 
 const Products = () => {
   const [activeTab, setActiveTab] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const tabs = ['All', 'Approved', 'Pending', 'Rejected', 'In Stock', 'Low Stock', 'Out of Stock'];
+  const allCategories = ['All', 'Electronics', 'Fashion', 'Beauty'];
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
 
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter(p => {
+    let list = PRODUCTS.filter(p => {
       const matchesTab = activeTab === 'All' || p.status === activeTab || p.approval === activeTab;
+      const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            p.vendor.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesTab && matchesSearch;
+      return matchesTab && matchesCategory && matchesSearch;
     });
-  }, [activeTab, searchQuery]);
+
+    if (sortKey) {
+      list = [...list].sort((a, b) => {
+        let aVal = a[sortKey];
+        let bVal = b[sortKey];
+        if (sortKey === 'price') {
+          aVal = parseInt(String(aVal).replace(/[^0-9]/g, '')) || 0;
+          bVal = parseInt(String(bVal).replace(/[^0-9]/g, '')) || 0;
+        }
+        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return list;
+  }, [activeTab, selectedCategory, searchQuery, sortKey, sortDir]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -112,10 +144,40 @@ const Products = () => {
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             />
-            <button className="h-[52px] px-6 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest w-full sm:w-auto">
-              <Filter size={16} />
-              Filters
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowFilterDropdown(prev => !prev)}
+                className={`h-[52px] px-6 border rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest w-full sm:w-auto ${
+                  selectedCategory !== 'All' 
+                    ? 'bg-blue-500 text-white border-blue-500 shadow-blue-100' 
+                    : 'bg-slate-50 border-slate-100 text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Filter size={16} />
+                {selectedCategory !== 'All' ? selectedCategory : 'Filters'}
+              </button>
+
+              {showFilterDropdown && (
+                <div className="absolute right-0 top-14 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-30 min-w-[180px] space-y-1">
+                  <p className="text-[9px] font-black uppercase text-slate-400 px-3 py-1">Filter by Category</p>
+                  {allCategories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        setShowFilterDropdown(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
+                        selectedCategory === cat ? 'bg-blue-50 text-blue-600' : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -123,11 +185,27 @@ const Products = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <th className="px-6 py-4">Product</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Price</th>
-                <th className="px-6 py-4">Stock</th>
+              <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest select-none">
+                <th className="px-6 py-4 cursor-pointer hover:text-slate-700" onClick={() => handleSort('name')}>
+                  <div className="flex items-center gap-1.5">
+                    Product {sortKey === 'name' ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-slate-700" onClick={() => handleSort('category')}>
+                  <div className="flex items-center gap-1.5">
+                    Category {sortKey === 'category' ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-slate-700" onClick={() => handleSort('price')}>
+                  <div className="flex items-center gap-1.5">
+                    Price {sortKey === 'price' ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
+                  </div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:text-slate-700" onClick={() => handleSort('stock')}>
+                  <div className="flex items-center gap-1.5">
+                    Stock {sortKey === 'stock' ? (sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-30" />}
+                  </div>
+                </th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Approval</th>
                 <th className="px-6 py-4 text-right">Actions</th>

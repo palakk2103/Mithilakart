@@ -13,7 +13,7 @@ const TARGET_TABS = [
   { value: 'mithilakart', label: 'Mithilakart', hint: 'Main marketplace' },
   { value: 'mithilak', label: 'Mithilak', hint: 'Mithila culture & crafts' },
   { value: 'quick_shop', label: 'Quick Shop', hint: 'Quick commerce' },
-  { value: 'groceries_fresh', label: 'Groceries & Fresh', hint: 'Daily groceries' },
+  { value: 'groceries_fresh', label: 'Fresh & Groceries', hint: 'Daily groceries' },
 ];
 
 const COLUMNS = [

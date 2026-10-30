@@ -82,6 +82,14 @@ export const mapProductForCard = (product, fallbackImage = '', lang = '') => {
     delivery: product.deliveryLabel || product.delivery || undefined,
     stock: product.stock ?? product.availableStock,
     categoryId: product.categoryId,
+    subcategoryId: product.subcategoryId,
+    category: product.category,
+    description: product.description || product.shortDescription || '',
+    tags: Array.isArray(product.tags) ? product.tags : [],
+    rawPrice: parsePrice(price),
+    rawMrp: parsePrice(mrp),
+    popularity: Number(product.popularity ?? product.salesCount ?? product.ordersCount ?? product.reviewCount ?? 0),
+    createdAt: product.createdAt,
   };
 };
 
@@ -248,12 +256,27 @@ export const mapCategorySections = (categories, fallbackSections = [], lang = 'e
     const items = rawChildren.length > 0
       ? rawChildren.map((child) => {
           const localizedChildName = (lang && lang !== 'en' && child.translations?.[lang]?.name) || child.name;
+          const subChildren = Array.isArray(child.children)
+            ? child.children.map((sub) => {
+                const localizedSubName = (lang && lang !== 'en' && sub.translations?.[lang]?.name) || sub.name;
+                return {
+                  name: localizedSubName,
+                  rawName: sub.name,
+                  img: getImageUrl(sub.imageUrl || sub.iconUrl || child.imageUrl || child.iconUrl || DEFAULT_PRODUCT_IMAGE),
+                  path: `/category-products?category=${encodeURIComponent(child.name)}&subcategory=${encodeURIComponent(sub.name)}`,
+                  id: getEntityId(sub),
+                  children: sub.children || [],
+                };
+              })
+            : [];
+
           return {
             name: localizedChildName,
             rawName: child.name,
             img: getImageUrl(child.imageUrl || child.iconUrl || cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
-            path: `/vendor/category-products?category=${encodeURIComponent(child.name)}`,
+            path: `/category-products?category=${encodeURIComponent(child.name)}`,
             id: getEntityId(child),
+            children: subChildren,
           };
         })
       : [
@@ -261,14 +284,16 @@ export const mapCategorySections = (categories, fallbackSections = [], lang = 'e
             name: localizedTitle,
             rawName: cat.name,
             img: getImageUrl(cat.imageUrl || cat.iconUrl || DEFAULT_PRODUCT_IMAGE),
-            path: `/vendor/category-products?category=${encodeURIComponent(cat.name)}`,
+            path: `/category-products?category=${encodeURIComponent(cat.name)}`,
             id: getEntityId(cat),
+            children: [],
           },
         ];
 
     return {
       title: localizedTitle,
       rawTitle: cat.name,
+      id: getEntityId(cat),
       items,
     };
   });
@@ -277,18 +302,37 @@ export const mapCategorySections = (categories, fallbackSections = [], lang = 'e
 export const findCategoryByName = (categories, name) => {
   const normalized = (name || '').toLowerCase().trim();
   if (!normalized) return null;
-  const walk = (nodes) => {
+  const list = extractList(categories);
+
+  // Pass 1: Exact match by name or slug
+  const walkExact = (nodes) => {
     for (const node of nodes) {
       const nodeName = (node.name || '').toLowerCase().trim();
-      if (nodeName === normalized || nodeName.includes(normalized) || normalized.includes(nodeName)) return node;
+      const nodeSlug = (node.slug || '').toLowerCase().trim();
+      if (nodeName === normalized || nodeSlug === normalized) return node;
       if (node.children?.length) {
-        const found = walk(node.children);
+        const found = walkExact(node.children);
         if (found) return found;
       }
     }
     return null;
   };
-  return walk(extractList(categories));
+  const exact = walkExact(list);
+  if (exact) return exact;
+
+  // Pass 2: Fallback partial match
+  const walkPartial = (nodes) => {
+    for (const node of nodes) {
+      const nodeName = (node.name || '').toLowerCase().trim();
+      if (nodeName.includes(normalized) || normalized.includes(nodeName)) return node;
+      if (node.children?.length) {
+        const found = walkPartial(node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  return walkPartial(list);
 };
 
 export const mapWishlistItem = (product, fallbackImage = '') => mapProductForCard(product, fallbackImage);
@@ -523,12 +567,17 @@ export const mapNavChips = (chips, fallback = []) => {
   const list = extractList(chips);
   if (!list.length) return fallback;
 
-  return list.map((chip) => ({
-    id: NAV_CHIP_ICON_KEYS[chip.label] || slugifyLabel(chip.label),
-    label: chip.label,
-    categoryId: chip.categoryId,
-    imageUrl: chip.imageUrl,
-  }));
+  return list.map((chip) => {
+    const raw = chip.rawLabel || chip.label;
+    return {
+      id: NAV_CHIP_ICON_KEYS[raw] || NAV_CHIP_ICON_KEYS[chip.label] || slugifyLabel(raw || chip.label),
+      label: chip.label,
+      rawLabel: raw,
+      categoryId: chip.categoryId,
+      imageUrl: chip.imageUrl,
+      iconKey: chip.iconKey || null,
+    };
+  });
 };
 
 const slugifyLabel = (label) =>

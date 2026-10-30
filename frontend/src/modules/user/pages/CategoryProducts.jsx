@@ -5,6 +5,7 @@ import { findCategoryByName, extractList, mapProductForCard } from '../utils/map
 import { fetchCartCount } from '../utils/cartUtils';
 import SEO from '../../../shared/components/SEO';
 import { getCurrentMarketplaceTab } from '../../../shared/utils/marketplaceHelpers';
+import { parsePrice } from '../../../shared/utils/priceFormatter';
 import { 
   Heart, 
   Star, 
@@ -166,8 +167,9 @@ const CategoryProductCard = React.memo(({ product }) => {
 });
 
 const CategoryProducts = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const category = searchParams.get('category') || 'Jewellery';
+  const subcategoryParam = searchParams.get('subcategory') || '';
   // Explicit ?tab= wins (shareable/crawlable URL); falls back to whatever
   // marketplace tab the customer is currently browsing. Without this, the
   // category and product lookups below were unscoped and returned listings
@@ -179,8 +181,15 @@ const CategoryProducts = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [products, setProducts] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [activeSubcategory, setActiveSubcategory] = useState(subcategoryParam || 'All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const sub = searchParams.get('subcategory');
+    setActiveSubcategory(sub || 'All');
+  }, [searchParams]);
 
   useEffect(() => {
     const updateCartCount = async () => {
@@ -212,8 +221,14 @@ const CategoryProducts = () => {
         const categories = await getCategories({ marketplaceTab });
         const match = findCategoryByName(categories, category);
         if (!match) {
-          if (!cancelled) setProducts([]);
+          if (!cancelled) {
+            setProducts([]);
+            setSubcategories([]);
+          }
           return;
+        }
+        if (!cancelled) {
+          setSubcategories(Array.isArray(match.children) ? match.children : []);
         }
         const data = await getCategoryProducts(match.id, { limit: 40, marketplaceTab });
         if (!cancelled) {
@@ -232,15 +247,89 @@ const CategoryProducts = () => {
     };
   }, [category, marketplaceTab]);
 
-  // Sorting logic
-  const sortedProducts = [...products].sort((a, b) => {
-    const priceA = parseInt(String(a.price).replace(/,/g, ''));
-    const priceB = parseInt(String(b.price).replace(/,/g, ''));
-    if (activeSort === 'Price: Low to High') return priceA - priceB;
-    if (activeSort === 'Price: High to Low') return priceB - priceA;
-    if (activeSort === 'Customer Rating') return parseFloat(b.rating) - parseFloat(a.rating);
-    return 0;
+  const [filters, setFilters] = useState({
+    minPrice: '',
+    maxPrice: '',
+    quickDelivery: false,
+    minRating: 0,
+    inStockOnly: false,
   });
+  const [tempFilters, setTempFilters] = useState({
+    minPrice: '',
+    maxPrice: '',
+    quickDelivery: false,
+    minRating: 0,
+    inStockOnly: false,
+  });
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.minPrice !== '' || filters.maxPrice !== '') count++;
+    if (filters.quickDelivery) count++;
+    if (filters.minRating > 0) count++;
+    if (filters.inStockOnly) count++;
+    return count;
+  }, [filters]);
+
+  // Sorting & Filtering logic
+  const sortedProducts = useMemo(() => {
+    let list = [...products];
+
+    // Filter: Min Price
+    if (filters.minPrice !== '' && !isNaN(Number(filters.minPrice))) {
+      list = list.filter((p) => (p.rawPrice ?? parsePrice(p.price)) >= Number(filters.minPrice));
+    }
+    // Filter: Max Price
+    if (filters.maxPrice !== '' && !isNaN(Number(filters.maxPrice))) {
+      list = list.filter((p) => (p.rawPrice ?? parsePrice(p.price)) <= Number(filters.maxPrice));
+    }
+    // Filter: Quick Delivery
+    if (filters.quickDelivery) {
+      list = list.filter((p) => Boolean(p.deliveryPromiseMinutes || (p.commerceFlows && p.commerceFlows.includes('hyperlocal')) || p.deliveryEtaText));
+    }
+    // Filter: Min Rating
+    if (filters.minRating > 0) {
+      list = list.filter((p) => (Number(p.rating) || 0) >= filters.minRating);
+    }
+    // Filter: In Stock Only
+    if (filters.inStockOnly) {
+      list = list.filter((p) => p.stock === undefined || p.stock > 0);
+    }
+
+    // Filter: Subcategory
+    if (activeSubcategory && activeSubcategory !== 'All') {
+      const normSub = activeSubcategory.toLowerCase().trim();
+      list = list.filter((p) => {
+        const pSubName = (p.subcategoryName || p.subcategory || p.subCategory || '').toLowerCase();
+        const pTitle = (p.name || p.title || '').toLowerCase();
+        const pTags = Array.isArray(p.tags) ? p.tags.map(t => String(t).toLowerCase()) : [];
+        const pDesc = (p.description || '').toLowerCase();
+        return (
+          pSubName.includes(normSub) ||
+          normSub.includes(pSubName) ||
+          pTitle.includes(normSub) ||
+          pTags.some(t => t.includes(normSub)) ||
+          pDesc.includes(normSub)
+        );
+      });
+    }
+
+    // Sort
+    const getPrice = (p) => p.rawPrice ?? parsePrice(p.price) ?? 0;
+    const getRating = (p) => Number(p.rating) || 0;
+    const getPopularity = (p) => Number(p.popularity ?? p.reviewCount ?? 0);
+
+    if (activeSort === 'Price: Low to High') {
+      list.sort((a, b) => getPrice(a) - getPrice(b));
+    } else if (activeSort === 'Price: High to Low') {
+      list.sort((a, b) => getPrice(b) - getPrice(a));
+    } else if (activeSort === 'Customer Rating') {
+      list.sort((a, b) => getRating(b) - getRating(a));
+    } else if (activeSort === 'Popularity') {
+      list.sort((a, b) => getPopularity(b) - getPopularity(a));
+    }
+    return list;
+  }, [products, filters, activeSort, activeSubcategory]);
 
   const trendingItems = useMemo(
     () => sortedProducts.slice(0, 4).map((product) => ({
@@ -291,14 +380,22 @@ const CategoryProducts = () => {
             onClick={() => setShowSortModal(true)}
             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold uppercase tracking-wide active:bg-white/10"
           >
-            Sort <ChevronDown size={12} strokeWidth={2.5} />
+            Sort: <span className="font-extrabold underline decoration-white/40">{activeSort}</span> <ChevronDown size={12} strokeWidth={2.5} />
           </button>
           <div className="w-[1px] h-3.5 bg-white/20"></div>
           <button 
-            onClick={() => setShowFilterModal(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold uppercase tracking-wide active:bg-white/10"
+            onClick={() => {
+              setTempFilters(filters);
+              setShowFilterModal(true);
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold uppercase tracking-wide active:bg-white/10 relative"
           >
             <SlidersHorizontal size={12} strokeWidth={2.5} /> Filter
+            {activeFilterCount > 0 && (
+              <span className="w-4 h-4 bg-white text-[#6FAE4A] rounded-full text-[9px] font-black flex items-center justify-center ml-1">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -307,13 +404,90 @@ const CategoryProducts = () => {
       <div className="px-3.5 py-2.5 bg-white border-b border-gray-100 flex items-center justify-between shadow-xs">
         <div>
           <h2 className="text-[16px] font-black text-slate-800 uppercase tracking-tight leading-none">{category}</h2>
-          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Curated collection for you</p>
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+            {sortedProducts.length} items available
+          </p>
         </div>
         <div className="flex -space-x-1.5">
            <div className="w-7 h-7 rounded-full border-2 border-white bg-primary-light flex items-center justify-center text-[9px] font-bold text-[#6FAE4A]">NEW</div>
            <div className="w-7 h-7 rounded-full border-2 border-white bg-green-50 flex items-center justify-center text-[9px] font-bold text-[#388e3c]">SALE</div>
         </div>
       </div>
+
+      {/* ── Subcategory Chips (Level 3) ── */}
+      {subcategories.length > 0 && (
+        <div className="bg-white border-b border-gray-100 py-2 px-3 shadow-2xs">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
+            <button
+              onClick={() => {
+                setActiveSubcategory('All');
+                const next = new URLSearchParams(searchParams);
+                next.delete('subcategory');
+                setSearchParams(next, { replace: true });
+              }}
+              className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-black transition-all ${
+                !activeSubcategory || activeSubcategory === 'All'
+                  ? 'bg-[#6FAE4A] text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              All
+            </button>
+            {subcategories.map((sub) => {
+              const subName = sub.name;
+              const isSelected = activeSubcategory && activeSubcategory.toLowerCase() === subName.toLowerCase();
+              return (
+                <button
+                  key={sub._id || sub.id || subName}
+                  onClick={() => {
+                    const nextVal = isSelected ? 'All' : subName;
+                    setActiveSubcategory(nextVal);
+                    const next = new URLSearchParams(searchParams);
+                    if (nextVal === 'All') {
+                      next.delete('subcategory');
+                    } else {
+                      next.set('subcategory', nextVal);
+                    }
+                    setSearchParams(next, { replace: true });
+                  }}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black transition-all ${
+                    isSelected
+                      ? 'bg-[#6FAE4A] text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {(sub.imageUrl || sub.iconUrl) && (
+                    <img 
+                      src={sub.imageUrl || sub.iconUrl} 
+                      alt="" 
+                      className="w-4 h-4 rounded-full object-cover" 
+                      onError={(e) => { e.target.style.display = 'none'; }} 
+                    />
+                  )}
+                  <span>{subName}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State when filters match nothing */}
+      {!loading && sortedProducts.length === 0 && (
+        <div className="py-14 px-4 text-center max-w-sm mx-auto">
+          <p className="text-sm font-bold text-slate-700">No products match your selected filters</p>
+          <p className="text-xs text-slate-500 mt-1">Try broadening your price range or turning off filters.</p>
+          <button
+            onClick={() => {
+              setFilters({ minPrice: '', maxPrice: '', quickDelivery: false, minRating: 0, inStockOnly: false });
+              setTempFilters({ minPrice: '', maxPrice: '', quickDelivery: false, minRating: 0, inStockOnly: false });
+            }}
+            className="mt-4 px-4 py-2 bg-[#6FAE4A] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      )}
 
       {/* 🔶 Main Product Grid (Top Part) */}
       <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 md:max-w-[1000px] md:mx-auto w-full">
@@ -382,33 +556,138 @@ const CategoryProducts = () => {
 
       {/* 🔶 Filter Modal (Full Screen Overlay) */}
       {showFilterModal && (
-        <div className="fixed inset-0 z-[200] bg-black animate-in fade-in duration-200">
-          <div className="h-full flex flex-col">
-            <div className="p-4 border-b border-gray-900 flex justify-between items-center">
+        <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200 flex justify-center">
+          <div className="w-full max-w-lg h-full flex flex-col bg-[#111111] text-white">
+            <div className="p-4 border-b border-gray-800 flex justify-between items-center">
               <h2 className="text-sm font-black text-[#6FAE4A] uppercase tracking-widest">Filters</h2>
-              <button onClick={() => setShowFilterModal(false)} className="text-white">✕</button>
+              <button onClick={() => setShowFilterModal(false)} className="text-white p-1 hover:text-[#6FAE4A]">✕</button>
             </div>
-            <div className="flex-1 p-6 space-y-8">
+            
+            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+              {/* Price Range */}
               <div>
-                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Price Range</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-900 border border-gray-800 p-3 rounded-lg text-xs font-bold text-white">Min: ₹0</div>
-                  <div className="bg-gray-900 border border-gray-800 p-3 rounded-lg text-xs font-bold text-white">Max: ₹50,000+</div>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Availability</h3>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-5 bg-[#6FAE4A] rounded-full relative">
-                    <div className="absolute right-0.5 top-0.5 w-4 h-4 bg-black rounded-full"></div>
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Price Range (₹)</h3>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-[9px] text-gray-400 block mb-1">Min Price</label>
+                    <input 
+                      type="number" 
+                      placeholder="₹0"
+                      value={tempFilters.minPrice}
+                      onChange={(e) => setTempFilters(p => ({ ...p, minPrice: e.target.value }))}
+                      className="w-full bg-gray-900 border border-gray-800 p-2.5 rounded-lg text-xs font-bold text-white outline-none focus:border-[#6FAE4A]"
+                    />
                   </div>
-                  <span className="text-sm font-bold text-white">Quick Delivery Only</span>
+                  <div>
+                    <label className="text-[9px] text-gray-400 block mb-1">Max Price</label>
+                    <input 
+                      type="number" 
+                      placeholder="No limit"
+                      value={tempFilters.maxPrice}
+                      onChange={(e) => setTempFilters(p => ({ ...p, maxPrice: e.target.value }))}
+                      className="w-full bg-gray-900 border border-gray-800 p-2.5 rounded-lg text-xs font-bold text-white outline-none focus:border-[#6FAE4A]"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Price Buttons */}
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: 'All', min: '', max: '' },
+                    { label: 'Under ₹500', min: '', max: '500' },
+                    { label: '₹500 - ₹2,000', min: '500', max: '2000' },
+                    { label: '₹2,000+', min: '2000', max: '' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setTempFilters(p => ({ ...p, minPrice: preset.min, maxPrice: preset.max }))}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-md transition-colors ${
+                        tempFilters.minPrice === preset.min && tempFilters.maxPrice === preset.max
+                          ? 'bg-[#6FAE4A] text-black font-extrabold'
+                          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Customer Rating */}
+              <div>
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Customer Rating</h3>
+                <div className="flex gap-2">
+                  {[
+                    { label: 'Any', value: 0 },
+                    { label: '3★ & above', value: 3 },
+                    { label: '4★ & above', value: 4 },
+                  ].map((r) => (
+                    <button
+                      key={r.label}
+                      type="button"
+                      onClick={() => setTempFilters(p => ({ ...p, minRating: r.value }))}
+                      className={`flex-1 text-[11px] font-bold py-2 rounded-lg transition-colors border ${
+                        tempFilters.minRating === r.value
+                          ? 'bg-[#6FAE4A] text-black border-[#6FAE4A]'
+                          : 'bg-gray-900 text-gray-300 border-gray-800 hover:border-gray-700'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Delivery Toggle */}
+              <div>
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Delivery & Availability</h3>
+                <div className="space-y-3">
+                  <div 
+                    onClick={() => setTempFilters(p => ({ ...p, quickDelivery: !p.quickDelivery }))}
+                    className="flex items-center justify-between p-3 bg-gray-900 border border-gray-800 rounded-lg cursor-pointer"
+                  >
+                    <span className="text-xs font-bold text-white">⚡ Quick Delivery / 30m</span>
+                    <div className={`w-10 h-5 rounded-full relative transition-colors ${tempFilters.quickDelivery ? 'bg-[#6FAE4A]' : 'bg-gray-700'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${tempFilters.quickDelivery ? 'right-0.5' : 'left-0.5'}`}></div>
+                    </div>
+                  </div>
+
+                  <div 
+                    onClick={() => setTempFilters(p => ({ ...p, inStockOnly: !p.inStockOnly }))}
+                    className="flex items-center justify-between p-3 bg-gray-900 border border-gray-800 rounded-lg cursor-pointer"
+                  >
+                    <span className="text-xs font-bold text-white">In Stock Only</span>
+                    <div className={`w-10 h-5 rounded-full relative transition-colors ${tempFilters.inStockOnly ? 'bg-[#6FAE4A]' : 'bg-gray-700'}`}>
+                      <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${tempFilters.inStockOnly ? 'right-0.5' : 'left-0.5'}`}></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="p-4 border-t border-gray-900 flex gap-4">
-              <button onClick={() => setShowFilterModal(false)} className="flex-1 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Clear All</button>
-              <button onClick={() => setShowFilterModal(false)} className="flex-[2] py-4 bg-[#6FAE4A] text-black text-[11px] font-black uppercase tracking-widest rounded-lg">Apply Filters</button>
+
+            {/* Bottom Actions */}
+            <div className="p-4 border-t border-gray-800 flex gap-4">
+              <button 
+                onClick={() => {
+                  const reset = { minPrice: '', maxPrice: '', quickDelivery: false, minRating: 0, inStockOnly: false };
+                  setTempFilters(reset);
+                  setFilters(reset);
+                  setShowFilterModal(false);
+                }} 
+                className="flex-1 py-3 text-[11px] font-black text-gray-400 hover:text-white uppercase tracking-widest"
+              >
+                Clear All
+              </button>
+              <button 
+                onClick={() => {
+                  setFilters(tempFilters);
+                  setShowFilterModal(false);
+                }} 
+                className="flex-[2] py-3 bg-[#6FAE4A] text-black text-[11px] font-black uppercase tracking-widest rounded-lg shadow-sm active:scale-98 transition-all"
+              >
+                Apply Filters
+              </button>
             </div>
           </div>
         </div>

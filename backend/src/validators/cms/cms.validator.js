@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const { objectIdSchema } = require('../common.validator');
-const { COMMERCE_FLOW_VALUES, HOME_SECTION_KEYS, UPLOAD_CONTEXTS } = require('../../constants/catalog');
+const { COMMERCE_FLOW_VALUES, HOME_SECTION_KEYS, UPLOAD_CONTEXTS, HEADER_CHIP_ICON_KEYS } = require('../../constants/catalog');
 
 const mediaUrlSchema = Joi.string().trim().custom((value, helpers) => {
   if (!value) return value;
@@ -30,6 +30,9 @@ const chipSchema = Joi.object({
   commerceFlow: Joi.string().valid(...COMMERCE_FLOW_VALUES).optional(),
   sortOrder: Joi.number().integer().min(0).optional(),
   isActive: Joi.boolean().optional(),
+  // React icon identifier for the header category chip — allowlisted, never
+  // an arbitrary string, so the client can never smuggle in a component path.
+  iconKey: Joi.string().valid(...HEADER_CHIP_ICON_KEYS).optional().allow(null, ''),
 });
 
 const chipUpdateSchema = chipSchema.fork(['label'], (field) => field.optional());

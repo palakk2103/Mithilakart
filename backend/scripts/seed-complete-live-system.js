@@ -5,7 +5,7 @@
  * 1. Synchronizes all target user accounts & passwords (Admin, Sellers, Riders, Customer)
  * 2. Positions sellers, warehouse, and riders in Mahipalpur Delhi for the client's test address
  * 3. Seeds the exact client address as the default address for customer 9827607086
- * 4. Seeds rich categories and subcategories across all 4 tabs (Mithilakart, Quick Shop, Groceries & Fresh, Mithilak)
+ * 4. Seeds rich categories and subcategories across all 4 tabs (Mithilakart, Quick Shop, Fresh & Groceries, Mithilak)
  * 5. Seeds shared-catalogKey products across Seller 1, Seller 2, Warehouse, and Standard Seller for full cascading ladder testing
  * 6. Seeds complete category catalog so no category or tab is empty
  * 7. Creates approved MarketplaceListing records for all tabs
@@ -307,7 +307,7 @@ async function main() {
   // 5. CATEGORIES CATALOG SETUP
   // Parent & subcategories covering all 4 tabs
   const CATEGORIES_TREE = [
-    // Groceries & Fresh
+    // Fresh & Groceries
     {
       name: 'Fruits & Vegetables',
       slug: 'fruits-vegetables',

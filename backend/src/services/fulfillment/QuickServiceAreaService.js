@@ -7,7 +7,7 @@ const FALLBACK_SEARCH_RADIUS_KM = 10;
 
 /**
  * Decides whether a seller can serve a customer location on a quick-commerce
- * tab (Quick Shop, Groceries & Fresh).
+ * tab (Quick Shop, Fresh & Groceries).
  *
  * Browsing and fulfilment must agree. The nearby feed used to show every
  * approved seller within 25 km, while the fulfilment engine only offers orders

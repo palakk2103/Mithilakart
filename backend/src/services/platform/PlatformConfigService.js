@@ -99,8 +99,8 @@ class PlatformConfigService extends BaseService {
       {
         id: 'freshgrocery',
         tabId: 'freshgrocery',
-        name: 'Groceries & Fresh',
-        label: 'Groceries & Fresh',
+        name: 'Fresh & Groceries',
+        label: 'Fresh & Groceries',
         route: '/fresh-grocery',
         commerceFlow: 'fresh_grocery',
         enabled: true,

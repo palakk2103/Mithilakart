@@ -99,14 +99,15 @@ class CategoryService extends BaseService {
     const byId = new Map(categories.map((c) => [String(c._id), c]));
     return categories.map((c) => {
       const obj = c.toObject ? c.toObject() : { ...c };
-      const pIds = (obj.parentIds && obj.parentIds.length)
-        ? obj.parentIds.map((p) => String(p?._id || p))
+      const rawPIds = (obj.parentIds && obj.parentIds.length)
+        ? obj.parentIds.map((p) => String(p?._id || p)).filter(Boolean)
         : (obj.parentId ? [String(obj.parentId?._id || obj.parentId)] : []);
+      const pIds = [...new Set(rawPIds)];
 
       const parentDocs = pIds.map((pid) => byId.get(pid)).filter(Boolean);
       obj.parentIds = pIds;
       obj.parentId = pIds[0] || null;
-      obj.parentNames = parentDocs.map((p) => p.name);
+      obj.parentNames = [...new Set(parentDocs.map((p) => p.name).filter(Boolean))];
       obj.parentName = obj.parentNames.join(', ') || null;
       return obj;
     });
@@ -130,7 +131,7 @@ class CategoryService extends BaseService {
     // Support both multi-parent parentIds and legacy parentId
     if (payload.parentIds !== undefined) {
       payload.parentIds = Array.isArray(payload.parentIds)
-        ? payload.parentIds.map((p) => String(p?._id || p)).filter(Boolean)
+        ? [...new Set(payload.parentIds.map((p) => String(p?._id || p)).filter(Boolean))]
         : [];
       payload.parentId = payload.parentIds[0] || null;
     } else if (payload.parentId) {
@@ -188,7 +189,7 @@ class CategoryService extends BaseService {
 
     if (data.parentIds !== undefined) {
       payload.parentIds = Array.isArray(data.parentIds)
-        ? data.parentIds.map((p) => String(p?._id || p)).filter(Boolean)
+        ? [...new Set(data.parentIds.map((p) => String(p?._id || p)).filter(Boolean))]
         : [];
       payload.parentId = payload.parentIds[0] || null;
     } else if (data.parentId !== undefined) {
@@ -327,15 +328,19 @@ class CategoryService extends BaseService {
     });
 
     map.forEach((node) => {
-      const pIds = (node.parentIds && node.parentIds.length)
+      const rawPIds = (node.parentIds && node.parentIds.length)
         ? node.parentIds
         : (node.parentId ? [String(node.parentId)] : []);
+      const pIds = [...new Set(rawPIds.map(String).filter(Boolean))];
 
       if (pIds.length) {
         let attached = false;
         pIds.forEach((pid) => {
           if (map.has(pid)) {
-            map.get(pid).children.push(node);
+            const parent = map.get(pid);
+            if (!parent.children.some((child) => String(child.id) === String(node.id))) {
+              parent.children.push(node);
+            }
             attached = true;
           }
         });

@@ -23,7 +23,7 @@ const TAB_LABELS = {
   mithilakart: 'Mithilakart',
   mithilak: 'Mithilak',
   quick_shop: 'Quick Shop',
-  groceries_fresh: 'Groceries & Fresh',
+  groceries_fresh: 'Fresh & Groceries',
 };
 
 const COLUMNS = [
@@ -32,7 +32,7 @@ const COLUMNS = [
   { key: 'description', label: 'Description', aliases: ['full description', 'details'], example: 'Sweet Ratnagiri mangoes', help: 'Optional.' },
   { key: 'category', label: 'Category', required: true, example: 'Fruits & Vegetables', help: 'Required. Must match a category name (see "Category list").' },
   { key: 'subcategory', label: 'Subcategory', aliases: ['sub category'], example: 'Fresh Fruits', help: 'Optional. Must be under the category.' },
-  { key: 'tabs', label: 'Marketplace Tabs', aliases: ['tabs', 'tab', 'marketplace', 'marketplace tab'], example: 'Groceries & Fresh, Quick Shop', help: 'Comma-separated: Mithilakart, Mithilak, Quick Shop, Groceries & Fresh. Default Mithilakart.' },
+  { key: 'tabs', label: 'Marketplace Tabs', aliases: ['tabs', 'tab', 'marketplace', 'marketplace tab'], example: 'Fresh & Groceries, Quick Shop', help: 'Comma-separated: Mithilakart, Mithilak, Quick Shop, Fresh & Groceries. Default Mithilakart.' },
   { key: 'price', label: 'Selling Price', aliases: ['price', 'sale price'], required: true, example: '249', help: 'Required. Must not exceed MRP.' },
   { key: 'mrp', label: 'MRP', aliases: ['max retail price'], example: '299', help: 'Optional. Defaults to selling price.' },
   { key: 'stock', label: 'Stock', aliases: ['quantity', 'qty', 'inventory'], example: '40', help: 'Whole number. Default 0.' },

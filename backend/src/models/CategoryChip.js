@@ -1,10 +1,13 @@
 const mongoose = require('mongoose');
-const { COMMERCE_FLOW_VALUES } = require('../constants/catalog');
+const { COMMERCE_FLOW_VALUES, HEADER_CHIP_ICON_KEYS } = require('../constants/catalog');
 
 const categoryChipSchema = new mongoose.Schema(
   {
     label: { type: String, required: true, trim: true },
     imageUrl: { type: String, default: null },
+    // Optional react-icons identifier shown beside the chip label on the
+    // storefront; null/missing falls back to the legacy label-based icon.
+    iconKey: { type: String, enum: [...HEADER_CHIP_ICON_KEYS, null], default: null },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
     commerceFlow: { type: String, enum: COMMERCE_FLOW_VALUES, default: 'standard' },
     sortOrder: { type: Number, default: 0 },

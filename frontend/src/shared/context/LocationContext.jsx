@@ -77,11 +77,20 @@ export const LocationProvider = ({ children }) => {
           source: 'gps',
         };
 
-        setLocation((prev) => ({
-          ...(prev || {}),
-          ...coords,
-          updatedAt: new Date().toISOString(),
-        }));
+        setLocation((prev) => {
+          if (prev && prev.latitude != null && prev.longitude != null) {
+            const latDiff = Math.abs(prev.latitude - coords.latitude);
+            const lngDiff = Math.abs(prev.longitude - coords.longitude);
+            if (latDiff < 0.0005 && lngDiff < 0.0005) {
+              return prev;
+            }
+          }
+          return {
+            ...(prev || {}),
+            ...coords,
+            updatedAt: new Date().toISOString(),
+          };
+        });
 
         if (now - lastGeocodeRef.current < 30000) return;
         lastGeocodeRef.current = now;
@@ -96,7 +105,7 @@ export const LocationProvider = ({ children }) => {
         }
       },
       () => {},
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+      { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 }
     );
   }, [applyResolvedLocation, resolveAddressForCoords]);
 

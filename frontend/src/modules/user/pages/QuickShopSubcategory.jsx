@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Search, Share2, ChevronDown, Heart } from 'lucide-react';
-import { formatPrice } from '../../../shared/utils/priceFormatter';
+import { ArrowLeft, Search, Share2, ChevronDown, Heart, Check, X, Sparkles, Clock, Star, Zap } from 'lucide-react';
+import { formatPrice, parsePrice } from '../../../shared/utils/priceFormatter';
 import closedShutter from '../../../assets/closed_shutter.png';
 import { getCategories, getCategoryProducts, getNearbyProducts } from '../services/catalogApi';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
@@ -183,52 +183,81 @@ const QuickShopSubcategory = () => {
   const marketplaceTab = isFreshGroceryFlow ? 'groceries_fresh' : isMithilakFlow ? 'mithilak' : 'quick_shop';
   const commerceFlow = isFreshGroceryFlow ? 'fresh_grocery' : isMithilakFlow ? 'mithilak' : 'quick_shop';
   const [activeSub, setActiveSub] = useState('all');
+  const [visibleCount, setVisibleCount] = useState(12);
   const rightGridRef = useRef(null);
-  const [visibleCount, setVisibleCount] = useState(16);
-  const loadMoreRef = useRef(null);
+  const sentinelRef = useRef(null);
 
-  // Reset visible products and scroll to top on subcategory/category change
+  // Filter, Sort, and Type States
+  const [openModal, setOpenModal] = useState(null); // 'filter' | 'sort' | 'type' | null
+  const [sortBy, setSortBy] = useState('relevance');
+  const [filterType, setFilterType] = useState('all');
+  const [filterPriceMin, setFilterPriceMin] = useState('');
+  const [filterPriceMax, setFilterPriceMax] = useState('');
+  const [filterFastDelivery, setFilterFastDelivery] = useState(false);
+  const [filterInStock, setFilterInStock] = useState(false);
+  const [filterDiscountOnly, setFilterDiscountOnly] = useState(false);
+
+  // Temporary state for filter modal
+  const [tempPriceMin, setTempPriceMin] = useState('');
+  const [tempPriceMax, setTempPriceMax] = useState('');
+  const [tempFastDelivery, setTempFastDelivery] = useState(false);
+  const [tempInStock, setTempInStock] = useState(false);
+  const [tempDiscountOnly, setTempDiscountOnly] = useState(false);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterPriceMin !== '' || filterPriceMax !== '') count++;
+    if (filterFastDelivery) count++;
+    if (filterInStock) count++;
+    if (filterDiscountOnly) count++;
+    return count;
+  }, [filterPriceMin, filterPriceMax, filterFastDelivery, filterInStock, filterDiscountOnly]);
+
+  const hasActiveFilters = activeFilterCount > 0;
+
+  const isAnyFilterOrSortActive = Boolean(
+    sortBy !== 'relevance' ||
+    filterType !== 'all' ||
+    hasActiveFilters
+  );
+
+  const sortLabel = useMemo(() => {
+    switch (sortBy) {
+      case 'price_asc': return 'Low to High';
+      case 'price_desc': return 'High to Low';
+      case 'delivery': return 'Fast Delivery';
+      case 'rating': return 'Top Rated';
+      default: return 'Relevance';
+    }
+  }, [sortBy]);
+
+  const typeLabel = useMemo(() => {
+    if (filterType === 'all') return 'All';
+    if (filterType === 'veg') return 'Pure Veg';
+    if (filterType === 'fresh') return 'Fresh';
+    if (filterType === 'organic') return 'Organic';
+    if (filterType === 'deals') return 'Offers';
+    const match = subCategories.find(s => s.id === filterType);
+    return match ? match.name : filterType;
+  }, [filterType, subCategories]);
+
+  const resetAllFilters = () => {
+    setSortBy('relevance');
+    setFilterType('all');
+    setFilterPriceMin('');
+    setFilterPriceMax('');
+    setFilterFastDelivery(false);
+    setFilterInStock(false);
+    setFilterDiscountOnly(false);
+    setOpenModal(null);
+  };
+
   useEffect(() => {
-    setVisibleCount(16);
+    setVisibleCount(12);
     if (rightGridRef.current) {
       rightGridRef.current.scrollTop = 0;
     }
-  }, [activeSub, categoryName]);
-
-  // Infinite lazy loaded scroll observer
-  useEffect(() => {
-    const el = loadMoreRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0] && entries[0].isIntersecting) {
-          setVisibleCount((prev) => {
-            if (prev < filteredProducts.length) {
-              return Math.min(prev + 16, filteredProducts.length);
-            }
-            return prev;
-          });
-        }
-      },
-      {
-        root: rightGridRef.current,
-        rootMargin: '250px',
-        threshold: 0.1,
-      }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [filteredProducts.length]);
-
-  const visibleProducts = React.useMemo(() => {
-    return filteredProducts.slice(0, visibleCount);
-  }, [filteredProducts, visibleCount]);
-
-  useEffect(() => {
-    if (rightGridRef.current) {
-      rightGridRef.current.scrollTop = 0;
-    }
-  }, [activeSub, categoryName]);
+  }, [activeSub, categoryName, sortBy, filterType, filterPriceMin, filterPriceMax, filterFastDelivery, filterInStock, filterDiscountOnly]);
 
   // The tab's category tree doesn't depend on location ΓÇö fetch it once per tab.
   const treeCacheRef = useRef({ tab: null, tree: null });
@@ -250,15 +279,21 @@ const QuickShopSubcategory = () => {
         img: card.image,
         brand: card.brand || (fromNearby ? 'Nearby Seller' : 'Mithila Brand'),
         weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
-        price: parseInt(String(card.price).replace(/,/g, ''), 10) || 0,
-        oldPrice: parseInt(String(card.oldPrice || card.mrp || '0').replace(/,/g, ''), 10) || undefined,
+        price: card.rawPrice != null ? card.rawPrice : parsePrice(card.price),
+        oldPrice: card.rawMrp != null ? card.rawMrp : (card.oldPrice || card.mrp ? parsePrice(card.oldPrice || card.mrp) : undefined),
         eta: p.deliveryPromiseMinutes
           ? `${p.deliveryPromiseMinutes} mins`
           : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
-        tags: [fromNearby ? 'Nearby' : 'Fresh'],
+        tags: Array.isArray(p.tags) && p.tags.length > 0 ? p.tags : [fromNearby ? 'Nearby' : 'Fresh'],
         // Sidebar id this product falls under; 'all' when it sits on the parent itself.
         category: sidebarIdOf.get(categoryId) || 'all',
         categoryId,
+        rating: Number(card.rating) || Number(p.rating) || 0,
+        reviewCount: card.reviewCount || p.reviewCount || 0,
+        stock: p.stock ?? card.stock,
+        deliveryPromiseMinutes: p.deliveryPromiseMinutes || (p.distanceKm != null ? Math.max(10, Math.round(p.distanceKm * 4)) : 20),
+        isOrganic: Boolean(p.isOrganic || (p.tags && p.tags.includes('organic')) || (card.name && /organic/i.test(card.name))),
+        isVeg: Boolean(p.isVeg || p.veg || (p.tags && p.tags.some(t => /veg/i.test(t))) || (card.name && /veg/i.test(card.name))),
       };
     };
 
@@ -273,7 +308,11 @@ const QuickShopSubcategory = () => {
           tree = extractList(await getCategories({ marketplaceTab }));
           treeCacheRef.current = { tab: marketplaceTab, tree };
         }
-        const { node, parent } = locateCategory(tree, requestedId, requestedName);
+        let { node, parent } = locateCategory(tree, requestedId, requestedName);
+        if (!node && tree && tree.length > 0) {
+          node = tree[0];
+          parent = null;
+        }
         if (!node) {
           if (!cancelled) {
             setSubCategories([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE, children: [] }]);
@@ -429,43 +468,155 @@ const QuickShopSubcategory = () => {
   );
 
   const currentSubcategoriesToShow = React.useMemo(() => {
+    if (isAnyFilterOrSortActive) {
+      return [];
+    }
     if (activeSub === 'all') {
       return subCategories.filter((s) => s.id !== 'all');
     }
-    if (activeNode && activeNode.children && activeNode.children.length > 0) {
-      return activeNode.children;
-    }
     return [];
-  }, [activeSub, activeNode, subCategories]);
+  }, [activeSub, subCategories, isAnyFilterOrSortActive]);
 
   const filteredProducts = React.useMemo(() => {
-    if (activeSub === 'all') return productsList;
-    const node = activeNode || findNodeById(subCategories, activeSub);
-    const subName = (node?.name || subCategories.find((s) => String(s.id) === String(activeSub))?.name || '').toLowerCase();
-    const keywords = subName
-      ? subName.split(/[,&\s]+/).map((w) => w.trim().toLowerCase()).filter((w) => w.length > 2)
-      : [];
+    let list = [...productsList];
 
-    if (!node) {
-      return productsList.filter((p) => {
-        if (String(p.category) === String(activeSub) || String(p.categoryId) === String(activeSub)) return true;
-        if (keywords.length > 0) {
-          const title = (p.name || '').toLowerCase();
-          return keywords.some((k) => title.includes(k));
+    // 1. Subcategory filter
+    if (activeSub !== 'all') {
+      const node = activeNode || findNodeById(subCategories, activeSub);
+      const subName = (node?.name || subCategories.find((s) => String(s.id) === String(activeSub))?.name || '').toLowerCase();
+      const keywords = subName
+        ? subName.split(/[,&\s]+/).map((w) => w.trim().toLowerCase()).filter((w) => w.length > 2)
+        : [];
+
+      if (!node) {
+        list = list.filter((p) => {
+          if (String(p.category) === String(activeSub) || String(p.categoryId) === String(activeSub)) return true;
+          if (keywords.length > 0) {
+            const title = (p.name || '').toLowerCase();
+            return keywords.some((k) => title.includes(k));
+          }
+          return false;
+        });
+      } else {
+        const descendantIds = getDescendantIdSet(node);
+        const parentId = parentNode ? String(parentNode.id) : null;
+        list = list.filter((p) => {
+          if (descendantIds.has(String(p.categoryId)) || descendantIds.has(String(p.category))) return true;
+          if (keywords.length > 0 && (p.category === 'all' || (parentId && String(p.category) === parentId) || !descendantIds.size)) {
+            const title = (p.name || '').toLowerCase();
+            return keywords.some((k) => title.includes(k));
+          }
+          return false;
+        });
+      }
+    }
+
+    // 2. Type filter
+    if (filterType !== 'all') {
+      if (filterType === 'veg') {
+        list = list.filter((p) => p.isVeg);
+      } else if (filterType === 'organic') {
+        list = list.filter((p) => p.isOrganic || /organic/i.test(p.name || ''));
+      } else if (filterType === 'fresh') {
+        list = list.filter((p) => (p.tags && p.tags.includes('Fresh')) || /fresh/i.test(p.name || ''));
+      } else if (filterType === 'deals') {
+        list = list.filter((p) => p.oldPrice && p.oldPrice > p.price);
+      } else {
+        // match specific subcategory selected in Type dropdown
+        const matchSub = subCategories.find((s) => s.id === filterType || s.name.toLowerCase() === filterType.toLowerCase());
+        if (matchSub) {
+          const subId = matchSub.id;
+          const subKeywords = matchSub.name.toLowerCase().split(/[,&\s]+/).filter(w => w.length > 2);
+          list = list.filter((p) => {
+            if (String(p.category) === String(subId) || String(p.categoryId) === String(subId)) return true;
+            return subKeywords.some((k) => (p.name || '').toLowerCase().includes(k));
+          });
         }
-        return false;
+      }
+    }
+
+    // 3. Price Filter
+    if (filterPriceMin !== '' && !isNaN(Number(filterPriceMin))) {
+      list = list.filter((p) => p.price >= Number(filterPriceMin));
+    }
+    if (filterPriceMax !== '' && !isNaN(Number(filterPriceMax))) {
+      list = list.filter((p) => p.price <= Number(filterPriceMax));
+    }
+
+    // 4. Fast Delivery filter
+    if (filterFastDelivery) {
+      list = list.filter((p) => (p.deliveryPromiseMinutes || 999) <= 30);
+    }
+
+    // 5. In Stock filter
+    if (filterInStock) {
+      list = list.filter((p) => p.stock === undefined || p.stock > 0);
+    }
+
+    // 6. Discount only filter
+    if (filterDiscountOnly) {
+      list = list.filter((p) => p.oldPrice && p.oldPrice > p.price);
+    }
+
+    // 7. Sorting
+    if (sortBy === 'price_asc') {
+      list.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price_desc') {
+      list.sort((a, b) => b.price - a.price);
+    } else if (sortBy === 'delivery') {
+      list.sort((a, b) => (a.deliveryPromiseMinutes || 99) - (b.deliveryPromiseMinutes || 99));
+    } else if (sortBy === 'rating') {
+      list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    }
+
+    return list;
+  }, [
+    activeSub, activeNode, subCategories, productsList,
+    sortBy, filterType, filterPriceMin, filterPriceMax,
+    filterFastDelivery, filterInStock, filterDiscountOnly
+  ]);
+
+  const visibleProducts = React.useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
+
+  const handleGridScroll = (e) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 300) {
+      setVisibleCount((prev) => {
+        if (prev < filteredProducts.length) {
+          return Math.min(prev + 12, filteredProducts.length);
+        }
+        return prev;
       });
     }
-    const descendantIds = getDescendantIdSet(node);
-    return productsList.filter((p) => {
-      if (descendantIds.has(String(p.categoryId)) || descendantIds.has(String(p.category))) return true;
-      if (keywords.length > 0 && (p.category === 'all' || !descendantIds.size)) {
-        const title = (p.name || '').toLowerCase();
-        return keywords.some((k) => title.includes(k));
+  };
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => {
+            if (prev < filteredProducts.length) {
+              return Math.min(prev + 12, filteredProducts.length);
+            }
+            return prev;
+          });
+        }
+      },
+      {
+        root: rightGridRef.current,
+        rootMargin: '200px',
+        threshold: 0.1,
       }
-      return false;
-    });
-  }, [activeSub, activeNode, subCategories, productsList]);
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [filteredProducts.length, visibleCount]);
 
   const getCategoryProductCount = (node) => {
     if (!node) return 0;
@@ -696,22 +847,68 @@ const QuickShopSubcategory = () => {
         </div>
       )}
 
-      <div className={`flex-1 flex flex-col overflow-hidden ${isClosed ? "filter grayscale opacity-65 pointer-events-none select-none" : ""}`}>
-
+      <div className={`flex-1 flex flex-col overflow-hidden ${isClosed ? "filter grayscale opacity-75 select-none" : ""}`}>
 
       {/* Filters & Sort Header */}
-      <div className={`flex-shrink-0 border-b border-gray-100/80 px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar shadow-3xs transition-colors duration-300 ${
+      <div className={`flex-shrink-0 border-b border-gray-100/80 px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-3xs transition-colors duration-300 relative ${
         isFreshGroceryFlow ? 'bg-[#FFFDF3]' : 'bg-white'
       }`}>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200/80 rounded-full text-[11px] font-bold text-gray-700 hover:bg-gray-50 transition-colors">
-          <SlidersHorizontalIcon /> Filters <ChevronDown size={10} />
+        <button 
+          onClick={() => {
+            setTempPriceMin(filterPriceMin);
+            setTempPriceMax(filterPriceMax);
+            setTempFastDelivery(filterFastDelivery);
+            setTempInStock(filterInStock);
+            setTempDiscountOnly(filterDiscountOnly);
+            setOpenModal(openModal === 'filter' ? null : 'filter');
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+            hasActiveFilters 
+              ? `${primaryBg} text-white ${primaryBorder} shadow-2xs` 
+              : 'border-gray-200/80 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <SlidersHorizontalIcon /> Filters {hasActiveFilters && `(${activeFilterCount})`} <ChevronDown size={10} />
         </button>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200/80 rounded-full text-[11px] font-bold text-gray-700 hover:bg-gray-50 transition-colors">
-          Sort <ChevronDown size={10} />
+
+        <button 
+          onClick={() => setOpenModal(openModal === 'sort' ? null : 'sort')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+            sortBy !== 'relevance'
+              ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
+              : 'border-gray-200/80 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          {sortBy !== 'relevance' ? (
+            <>Sort: <span className="font-extrabold">{sortLabel}</span></>
+          ) : (
+            'Sort'
+          )} <ChevronDown size={10} />
         </button>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200/80 rounded-full text-[11px] font-bold text-gray-700 hover:bg-gray-50 transition-colors">
-          Type <ChevronDown size={10} />
+
+        <button 
+          onClick={() => setOpenModal(openModal === 'type' ? null : 'type')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+            filterType !== 'all'
+              ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
+              : 'border-gray-200/80 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          {filterType !== 'all' ? (
+            <>Type: <span className="font-extrabold">{typeLabel}</span></>
+          ) : (
+            'Type'
+          )} <ChevronDown size={10} />
         </button>
+
+        {isAnyFilterOrSortActive && (
+          <button
+            onClick={resetAllFilters}
+            className="text-[10.5px] font-bold text-red-500 hover:underline px-2 py-1 flex items-center gap-1 flex-shrink-0 cursor-pointer whitespace-nowrap"
+          >
+            Clear All
+          </button>
+        )}
       </div>
 
       {/* Main Dual-Column Content with Independent Scrolling */}
@@ -749,7 +946,7 @@ const QuickShopSubcategory = () => {
         </div>
 
         {/* Right Product Grid Area - Scrolls Separately */}
-        <div ref={rightGridRef} className={`flex-1 min-w-0 ${rightGridBg} overflow-y-auto overscroll-contain h-full p-3 pb-24`}>
+        <div ref={rightGridRef} onScroll={handleGridScroll} className={`flex-1 min-w-0 ${rightGridBg} overflow-y-auto overscroll-contain h-full p-3 pb-24`}>
           
           {/* Promo banner */}
           <div className={`${promoBg} rounded-xl p-3 flex justify-between items-center mb-4 relative overflow-hidden`}>
@@ -834,17 +1031,17 @@ const QuickShopSubcategory = () => {
                       onClick={() => setActiveSub(parentNode ? parentNode.id : 'all')}
                       className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-700 hover:text-gray-900 bg-white border border-gray-200/80 rounded-full px-2.5 py-1 shadow-3xs active:scale-95 transition-all flex-shrink-0"
                     >
-                      <ArrowLeft size={13} strokeWidth={2.5} /> {parentNode ? parentNode.name : 'All Subcategories'}
+                      <ArrowLeft size={13} strokeWidth={2.5} /> {parentNode ? parentNode.name : 'All Categories'}
                     </button>
                   ) : (
                     <span className="text-[13px] md:text-[15px] font-black text-gray-900 tracking-tight">
-                      Subcategories
+                      Browse Categories
                     </span>
                   )}
 
                   <span className="text-[10px] md:text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-white border border-gray-200/80 text-gray-500 shadow-3xs flex-shrink-0">
                     {!isAllItems && currentSubcategoriesToShow.length > 0
-                      ? `${currentSubcategoriesToShow.length} items`
+                      ? `${currentSubcategoriesToShow.length} categories`
                       : `${filteredProducts.length} items`}
                   </span>
                 </div>
@@ -897,125 +1094,135 @@ const QuickShopSubcategory = () => {
                 <div>
 
                   {filteredProducts.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {visibleProducts.map((product) => {
-                        const isFav = favorites.includes(product.id);
-                        return (
-                          <div 
-                            key={product.id}
-                            onClick={() => handleProductClick(product)}
-                            className="bg-white border border-gray-100/60 rounded-xl md:rounded-2xl p-1.5 md:p-2.5 flex flex-col relative shadow-3xs hover:shadow-2xs cursor-pointer active:scale-[0.99] transition-transform"
-                          >
-                            {/* Badge label like 'Season's Best' */}
-                            {product.badge && (
-                              <div className="absolute top-0 left-0 bg-[#FF6F3C] text-white text-[7px] md:text-[7.5px] font-bold px-1.5 py-0.2 md:px-2 md:py-0.5 rounded-tl-xl rounded-br z-10 shadow-3xs uppercase tracking-wider leading-none">
-                                {product.badge}
-                              </div>
-                            )}
-
-                            {/* Heart Favorite Button */}
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleFavorite(product.id);
-                              }}
-                              className="absolute top-1.5 right-1.5 w-5 h-5 md:w-6 md:h-6 bg-white/95 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs border border-gray-100/30 z-10 active:scale-90 transition-transform"
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {visibleProducts.map((product) => {
+                          const isFav = favorites.includes(product.id);
+                          return (
+                            <div 
+                              key={product.id}
+                              onClick={() => handleProductClick(product)}
+                              className="bg-white border border-gray-100/60 rounded-xl md:rounded-2xl p-1.5 md:p-2.5 flex flex-col relative shadow-3xs hover:shadow-2xs cursor-pointer active:scale-[0.99] transition-transform"
                             >
-                              <Heart 
-                                size={9.5} 
-                                className={`transition-colors ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} 
-                              />
-                            </button>
-
-                            {/* Product Image Panel */}
-                            <div className="h-16 md:h-24 w-full flex items-center justify-center p-0.5 relative mb-1 md:mb-2">
-                              <img 
-                                src={product.img} 
-                                alt={product.name} 
-                                className="max-h-full max-w-full object-contain mix-blend-multiply"
-                                onError={handleImageError}
-                              />
-                              
-                              {/* Carousel Dots */}
-                              <div className="absolute bottom-0 left-0 flex gap-0.5">
-                                <div className="w-1 h-1 rounded-full bg-gray-600" />
-                                <div className="w-0.5 h-0.5 rounded-full bg-gray-300" />
-                                <div className="w-0.5 h-0.5 rounded-full bg-gray-300" />
-                              </div>
-                            </div>
-
-                            {/* Weight Details */}
-                            <div className="flex items-center gap-1 mb-1">
-                              <span className="text-[8.5px] md:text-[10px] text-gray-500 font-bold border border-gray-200/60 px-1 py-0.2 md:px-1.5 md:py-0.5 rounded bg-gray-50/30">
-                                {product.weight}
-                              </span>
-                              {product.subText && (
-                                <span className="text-[8px] md:text-[9px] text-gray-400 font-semibold">{product.subText}</span>
+                              {/* Badge label like 'Season's Best' */}
+                              {product.badge && (
+                                <div className="absolute top-0 left-0 bg-[#FF6F3C] text-white text-[7px] md:text-[7.5px] font-bold px-1.5 py-0.2 md:px-2 md:py-0.5 rounded-tl-xl rounded-br z-10 shadow-3xs uppercase tracking-wider leading-none">
+                                  {product.badge}
+                                </div>
                               )}
-                            </div>
 
-                            {/* Product Title */}
-                            <h3 className="text-[10px] md:text-[11.5px] font-bold text-gray-900 leading-[1.25] line-clamp-2 h-[26px] md:h-7.5 mb-1">
-                              {product.name}
-                            </h3>
-
-                            {/* Custom Tags (Hidden on Mobile for compaction) */}
-                            <div className="hidden md:flex flex-wrap gap-1 mb-2">
-                              {product.tags.map((tag, tIdx) => (
-                                <span 
-                                  key={tIdx} 
-                                  className="bg-[#FAF6EC] text-[#8C6239] text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-
-                            {/* Price and Add CTA bar */}
-                            <div className="mt-auto pt-1.5 flex items-center justify-between border-t border-gray-50">
-                              <div className="flex flex-col">
-                                <span className="text-[12.5px] md:text-[14px] font-bold text-gray-955 leading-none">
-                                  {formatPrice(product.price)}
-                                </span>
-                                {product.oldPrice && (
-                                  <span className="text-[9px] md:text-[10px] text-gray-405 line-through mt-0.5">
-                                    {formatPrice(product.oldPrice)}
-                                  </span>
-                                )}
-                              </div>
-
+                              {/* Heart Favorite Button */}
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
+                                  toggleFavorite(product.id);
                                 }}
-                                className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
+                                className="absolute top-1.5 right-1.5 w-5 h-5 md:w-6 md:h-6 bg-white/95 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs border border-gray-100/30 z-10 active:scale-90 transition-transform"
                               >
-                                Add
+                                <Heart 
+                                  size={9.5} 
+                                  className={`transition-colors ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} 
+                                />
                               </button>
-                            </div>
-           
-                            {/* ETA & Stock status strip */}
-                            <div className="flex items-center gap-1.5 mt-1.5 pt-0.5 border-t border-dashed border-gray-100 text-[8px] md:text-[8.5px] text-gray-400 font-semibold">
-                              <span className={`flex items-center gap-0.5 ${primaryText}`}>
-                                ΓÅ▒ {product.eta}
-                              </span>
-                              {product.stock && (
-                                <span className="text-rose-500 font-bold bg-rose-50/50 px-1 rounded-sm">
-                                  {product.stock}
+
+                              {/* Product Image Panel */}
+                              <div className="h-16 md:h-24 w-full flex items-center justify-center p-0.5 relative mb-1 md:mb-2">
+                                <img 
+                                  src={product.img} 
+                                  alt={product.name} 
+                                  loading="lazy"
+                                  className="max-h-full max-w-full object-contain mix-blend-multiply"
+                                  onError={handleImageError}
+                                />
+                                
+                                {/* Carousel Dots */}
+                                <div className="absolute bottom-0 left-0 flex gap-0.5">
+                                  <div className="w-1 h-1 rounded-full bg-gray-600" />
+                                  <div className="w-0.5 h-0.5 rounded-full bg-gray-300" />
+                                  <div className="w-0.5 h-0.5 rounded-full bg-gray-300" />
+                                </div>
+                              </div>
+
+                              {/* Weight Details */}
+                              <div className="flex items-center gap-1 mb-1">
+                                <span className="text-[8.5px] md:text-[10px] text-gray-500 font-bold border border-gray-200/60 px-1 py-0.2 md:px-1.5 md:py-0.5 rounded bg-gray-50/30">
+                                  {product.weight}
                                 </span>
-                              )}
+                                {product.subText && (
+                                  <span className="text-[8px] md:text-[9px] text-gray-400 font-semibold">{product.subText}</span>
+                                )}
+                              </div>
+
+                              {/* Product Title */}
+                              <h3 className="text-[10px] md:text-[11.5px] font-bold text-gray-900 leading-[1.25] line-clamp-2 h-[26px] md:h-7.5 mb-1">
+                                {product.name}
+                              </h3>
+
+                              {/* Custom Tags (Hidden on Mobile for compaction) */}
+                              <div className="hidden md:flex flex-wrap gap-1 mb-2">
+                                {product.tags.map((tag, tIdx) => (
+                                  <span 
+                                    key={tIdx} 
+                                    className="bg-[#FAF6EC] text-[#8C6239] text-[8px] font-bold px-1.5 py-0.5 rounded-md leading-none"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* Price and Add CTA bar */}
+                              <div className="mt-auto pt-1.5 flex items-center justify-between border-t border-gray-50">
+                                <div className="flex flex-col">
+                                  <span className="text-[12.5px] md:text-[14px] font-bold text-gray-955 leading-none">
+                                    {formatPrice(product.price)}
+                                  </span>
+                                  {product.oldPrice && (
+                                    <span className="text-[9px] md:text-[10px] text-gray-405 line-through mt-0.5">
+                                      {formatPrice(product.oldPrice)}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
+                                  }}
+                                  className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
+                                >
+                                  Add
+                                </button>
+                              </div>
+             
+                              {/* ETA & Stock status strip */}
+                              <div className="flex items-center gap-1.5 mt-1.5 pt-0.5 border-t border-dashed border-gray-100 text-[8px] md:text-[8.5px] text-gray-400 font-semibold">
+                                <span className={`flex items-center gap-0.5 ${primaryText}`}>
+                                  ⏱ {product.eta}
+                                </span>
+                                {product.stock && (
+                                  <span className="text-rose-500 font-bold bg-rose-50/50 px-1 rounded-sm">
+                                    {product.stock}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+
+                      {/* Lazy Loaded Scroll Sentinel & Loading Indicator */}
                       {visibleCount < filteredProducts.length && (
-                        <div ref={loadMoreRef} className="col-span-2 md:col-span-3 lg:col-span-4 py-4 flex items-center justify-center gap-2 text-xs font-bold text-gray-400">
-                          <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                          <span>Loading more products...</span>
+                        <div ref={sentinelRef} className="py-4 flex items-center justify-center gap-2 text-gray-400">
+                          <div className={`w-4 h-4 border-2 ${primaryBorder} border-t-transparent rounded-full animate-spin`} />
+                          <span className="text-[11px] font-semibold text-gray-500">Loading more products...</span>
                         </div>
                       )}
-                    </div>
+                      {visibleCount >= filteredProducts.length && filteredProducts.length > 12 && (
+                        <div className="py-4 text-center text-[10.5px] font-semibold text-gray-400">
+                          Showing all {filteredProducts.length} items
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-10 px-4 bg-white/60 rounded-2xl border border-dashed border-gray-200 my-2">
                       <p className="text-[13px] font-bold text-gray-700">No products here yet</p>
@@ -1043,6 +1250,245 @@ const QuickShopSubcategory = () => {
 
       </div>
       </div>
+
+      {/* Sort Modal */}
+      {openModal === 'sort' && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setOpenModal(null)} />
+          <div className="relative w-full max-w-sm bg-white rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+              <h3 className="text-sm font-black text-slate-800">Sort Products By</h3>
+              <button onClick={() => setOpenModal(null)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="py-2 space-y-1">
+              {[
+                { id: 'relevance', label: 'Relevance (Default)', desc: 'Best matching products' },
+                { id: 'price_asc', label: 'Price: Low to High', desc: 'Cheapest items first' },
+                { id: 'price_desc', label: 'Price: High to Low', desc: 'Premium items first' },
+                { id: 'delivery', label: 'Fastest Delivery', desc: 'Express 15-20 min arrival' },
+                { id: 'rating', label: 'Customer Rating', desc: 'Highest rated first' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    setSortBy(opt.id);
+                    setOpenModal(null);
+                  }}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-colors cursor-pointer ${
+                    sortBy === opt.id ? `${primaryLightBg} ${primaryText} font-bold` : 'hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-bold">{opt.label}</div>
+                    <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                  </div>
+                  {sortBy === opt.id && <Check size={16} className={primaryText} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Type Modal */}
+      {openModal === 'type' && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setOpenModal(null)} />
+          <div className="relative w-full max-w-sm bg-white rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200 max-h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-100 flex-shrink-0">
+              <h3 className="text-sm font-black text-slate-800">Select Product Type</h3>
+              <button onClick={() => setOpenModal(null)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="py-2 space-y-1 overflow-y-auto flex-1">
+              {[
+                { id: 'all', label: 'All Types', desc: 'Show all items in this section' },
+                { id: 'veg', label: '🌱 100% Pure Vegetarian', desc: 'Pure vegetarian products only' },
+                { id: 'fresh', label: '🥬 Fresh & Daily', desc: 'Freshly sourced daily' },
+                { id: 'organic', label: '✨ Organic & Natural', desc: 'Chemical & pesticide-free' },
+                { id: 'deals', label: '🏷️ Special Offers', desc: 'Items with discounts & deals' },
+                ...subCategories.filter(s => s.id !== 'all').map(s => ({
+                  id: s.id,
+                  label: s.name,
+                  desc: `Switch to ${s.name}`,
+                  isSubcategory: true,
+                }))
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    if (opt.isSubcategory) {
+                      setActiveSub(opt.id);
+                      setFilterType('all');
+                    } else {
+                      setFilterType(opt.id);
+                    }
+                    setOpenModal(null);
+                  }}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-colors cursor-pointer ${
+                    (filterType === opt.id || (opt.isSubcategory && activeSub === opt.id)) ? `${primaryLightBg} ${primaryText} font-bold` : 'hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-bold">{opt.label}</div>
+                    <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                  </div>
+                  {(filterType === opt.id || (opt.isSubcategory && activeSub === opt.id)) && <Check size={16} className={primaryText} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filters Modal */}
+      {openModal === 'filter' && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setOpenModal(null)} />
+          <div className="relative w-full max-w-sm bg-white rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200 max-h-[85vh] flex flex-col">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-100 flex-shrink-0">
+              <h3 className="text-sm font-black text-slate-800">Filter Products</h3>
+              <button onClick={() => setOpenModal(null)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="py-3 space-y-4 overflow-y-auto flex-1">
+              {/* Price Range */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">Price Range (₹)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min ₹"
+                    value={tempPriceMin}
+                    onChange={(e) => setTempPriceMin(e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-amber-500"
+                  />
+                  <span className="text-slate-400 font-bold">-</span>
+                  <input
+                    type="number"
+                    placeholder="Max ₹"
+                    value={tempPriceMax}
+                    onChange={(e) => setTempPriceMax(e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-amber-500"
+                  />
+                </div>
+                {/* Presets */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    { label: 'All', min: '', max: '' },
+                    { label: 'Under ₹100', min: '', max: '100' },
+                    { label: '₹100 - ₹300', min: '100', max: '300' },
+                    { label: '₹300 - ₹1,000', min: '300', max: '1000' },
+                    { label: '₹1,000+', min: '1000', max: '' },
+                  ].map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => {
+                        setTempPriceMin(p.min);
+                        setTempPriceMax(p.max);
+                      }}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                        tempPriceMin === p.min && tempPriceMax === p.max
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Delivery */}
+              <div 
+                onClick={() => setTempFastDelivery(prev => !prev)}
+                className="flex items-center justify-between p-3 border border-slate-200/80 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+              >
+                <div>
+                  <div className="text-xs font-bold text-slate-800">⚡ Fast Delivery Only</div>
+                  <div className="text-[10px] text-slate-400">Under 25-30 minutes arrival</div>
+                </div>
+                <div className={`w-9 h-5 rounded-full relative transition-colors ${tempFastDelivery ? 'bg-green-500' : 'bg-slate-300'}`}>
+                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${tempFastDelivery ? 'right-1' : 'left-1'}`} />
+                </div>
+              </div>
+
+              {/* In Stock */}
+              <div 
+                onClick={() => setTempInStock(prev => !prev)}
+                className="flex items-center justify-between p-3 border border-slate-200/80 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+              >
+                <div>
+                  <div className="text-xs font-bold text-slate-800">In Stock Items Only</div>
+                  <div className="text-[10px] text-slate-400">Hide out-of-stock items</div>
+                </div>
+                <div className={`w-9 h-5 rounded-full relative transition-colors ${tempInStock ? 'bg-green-500' : 'bg-slate-300'}`}>
+                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${tempInStock ? 'right-1' : 'left-1'}`} />
+                </div>
+              </div>
+
+              {/* Discounts */}
+              <div 
+                onClick={() => setTempDiscountOnly(prev => !prev)}
+                className="flex items-center justify-between p-3 border border-slate-200/80 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+              >
+                <div>
+                  <div className="text-xs font-bold text-slate-800">Discounted / Offers Only</div>
+                  <div className="text-[10px] text-slate-400">Show items with price discounts</div>
+                </div>
+                <div className={`w-9 h-5 rounded-full relative transition-colors ${tempDiscountOnly ? 'bg-green-500' : 'bg-slate-300'}`}>
+                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${tempDiscountOnly ? 'right-1' : 'left-1'}`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setTempPriceMin('');
+                  setTempPriceMax('');
+                  setTempFastDelivery(false);
+                  setTempInStock(false);
+                  setTempDiscountOnly(false);
+                  setFilterPriceMin('');
+                  setFilterPriceMax('');
+                  setFilterFastDelivery(false);
+                  setFilterInStock(false);
+                  setFilterDiscountOnly(false);
+                  setOpenModal(null);
+                }}
+                className="flex-1 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Clear All
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterPriceMin(tempPriceMin);
+                  setFilterPriceMax(tempPriceMax);
+                  setFilterFastDelivery(tempFastDelivery);
+                  setFilterInStock(tempInStock);
+                  setFilterDiscountOnly(tempDiscountOnly);
+                  setOpenModal(null);
+                }}
+                className={`flex-[2] py-2.5 ${primaryBg} text-white text-xs font-bold rounded-xl shadow-sm transition-opacity hover:opacity-95 cursor-pointer`}
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

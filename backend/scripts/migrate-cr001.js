@@ -19,7 +19,7 @@ const TAB_SEEDS = [
   { tab: MARKETPLACE_TABS.MITHILAKART, displayName: 'Mithilakart', deliveryModel: DELIVERY_TYPE.STANDARD, sellerEligibilityRule: 'all_approved' },
   { tab: MARKETPLACE_TABS.MITHILAK, displayName: 'Mithilak', deliveryModel: DELIVERY_TYPE.STANDARD, sellerEligibilityRule: 'mithilak_approved' },
   { tab: MARKETPLACE_TABS.QUICK_SHOP, displayName: 'Quick Shop', deliveryModel: DELIVERY_TYPE.FIXED_PROMISE, sellerEligibilityRule: 'quick_enabled', allowedPromiseMinutes: [15, 20, 25, 30] },
-  { tab: MARKETPLACE_TABS.GROCERIES_FRESH, displayName: 'Groceries & Fresh', deliveryModel: DELIVERY_TYPE.FIXED_PROMISE, sellerEligibilityRule: 'grocery_enabled', allowedPromiseMinutes: [15, 20, 25, 30] },
+  { tab: MARKETPLACE_TABS.GROCERIES_FRESH, displayName: 'Fresh & Groceries', deliveryModel: DELIVERY_TYPE.FIXED_PROMISE, sellerEligibilityRule: 'grocery_enabled', allowedPromiseMinutes: [15, 20, 25, 30] },
 ];
 
 function mapProductStatus(status) {

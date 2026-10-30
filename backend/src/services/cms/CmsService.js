@@ -68,6 +68,7 @@ class CmsService extends BaseService {
   async createChip(data) {
     const payload = {
       ...data,
+      iconKey: data.iconKey || null,
       categoryId: (data.categoryId && String(data.categoryId).trim() !== '') ? data.categoryId : null,
     };
     const chip = await this.categoryChipRepository.create(payload);
@@ -79,6 +80,9 @@ class CmsService extends BaseService {
     const payload = { ...data };
     if ('categoryId' in data) {
       payload.categoryId = (data.categoryId && String(data.categoryId).trim() !== '') ? data.categoryId : null;
+    }
+    if ('iconKey' in payload) {
+      payload.iconKey = payload.iconKey || null;
     }
     const chip = await this.categoryChipRepository.updateById(id, payload);
     await this._invalidateStorefrontCache(chip.commerceFlow);

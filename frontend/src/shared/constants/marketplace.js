@@ -27,7 +27,7 @@ export const MARKETPLACE_TABS = {
   },
   GROCERIES_FRESH: {
     id: 'groceries_fresh',
-    label: 'Groceries & Fresh',
+    label: 'Fresh & Groceries',
     deliveryType: 'quick',
     defaultDeliveryTime: '20 Minutes',
     deliveryOptions: ['15 Minutes', '20 Minutes', '25 Minutes', '30 Minutes'],

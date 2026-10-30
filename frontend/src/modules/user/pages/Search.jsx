@@ -7,6 +7,7 @@ import SearchInput from '../../../shared/components/SearchInput';
 import { search } from '../services/userApi';
 import { extractList, mapProductForCard } from '../utils/mappers';
 import { getCurrentMarketplaceTab, productBelongsToTab } from '../../../shared/utils/marketplaceHelpers';
+import { parsePrice } from '../../../shared/utils/priceFormatter';
 
 import SamsungImg from '../../../assets/products/product01.jpg';
 
@@ -50,7 +51,7 @@ const MARKETPLACE_TAB_CONFIG = [
   },
   {
     id: 'groceries_fresh',
-    label: 'Groceries & Fresh',
+    label: 'Fresh & Groceries',
     iconType: 'bag',
     headerBg: 'bg-gradient-to-r from-[#F5B014] to-[#E59800]',
     pageBg: 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]',
@@ -81,6 +82,8 @@ const Search = () => {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('Relevance');
+  const [filterPrice, setFilterPrice] = useState('all');
+  const [filterRating, setFilterRating] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [searchValue, setSearchValue] = useState(urlQuery);
   const [debouncedQuery, setDebouncedQuery] = useState(urlQuery.trim());
@@ -267,20 +270,43 @@ const Search = () => {
     return MARKETPLACE_TAB_CONFIG.find((t) => t.id === activeTab) || MARKETPLACE_TAB_CONFIG[0];
   }, [activeTab]);
 
-  // Apply sorting
+  // Apply filtering & sorting
   const sortedProducts = useMemo(() => {
-    const list = [...products];
+    let list = [...products];
+
+    // Price Filter
+    if (filterPrice === 'under500') {
+      list = list.filter((p) => (p.rawPrice ?? parsePrice(p.price)) < 500);
+    } else if (filterPrice === '500-2000') {
+      list = list.filter((p) => {
+        const val = p.rawPrice ?? parsePrice(p.price);
+        return val >= 500 && val <= 2000;
+      });
+    } else if (filterPrice === '2000+') {
+      list = list.filter((p) => (p.rawPrice ?? parsePrice(p.price)) > 2000);
+    }
+
+    // Rating Filter
+    if (filterRating > 0) {
+      list = list.filter((p) => (Number(p.rating) || 0) >= filterRating);
+    }
+
+    // Sorting
+    const getPrice = (p) => p.rawPrice ?? parsePrice(p.price) ?? 0;
+    const getRating = (p) => Number(p.rating) || 0;
+    const getPopularity = (p) => Number(p.popularity ?? p.reviewCount ?? 0);
+
     if (sortBy === 'Price: Low-High') {
-      return list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
-    }
-    if (sortBy === 'Price: High-Low') {
-      return list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
-    }
-    if (sortBy === 'Top Rated') {
-      return list.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+      list.sort((a, b) => getPrice(a) - getPrice(b));
+    } else if (sortBy === 'Price: High-Low') {
+      list.sort((a, b) => getPrice(b) - getPrice(a));
+    } else if (sortBy === 'Top Rated') {
+      list.sort((a, b) => getRating(b) - getRating(a));
+    } else if (sortBy === 'Relevance') {
+      list.sort((a, b) => getPopularity(b) - getPopularity(a));
     }
     return list;
-  }, [products, sortBy]);
+  }, [products, sortBy, filterPrice, filterRating]);
 
   const renderTabIcon = (tab, isActive) => {
     if (tab.id === 'mithilakart') {
@@ -404,21 +430,73 @@ const Search = () => {
            </div>
         </div>
 
-        {/* Sorting Tags */}
-        <div className="flex gap-1.5 mb-5 overflow-x-auto no-scrollbar pb-1">
-           {['Relevance', 'Price: Low-High', 'Price: High-Low', 'Top Rated'].map((tag) => (
-             <button 
-               key={tag}
-               onClick={() => setSortBy(tag)}
-               className={`whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-xs border ${
-                 sortBy === tag
-                   ? `${currentTabConfig.headerBg} text-white border-transparent`
-                   : `bg-white text-slate-700 hover:border-slate-300 border-slate-200/80`
+        {/* Sorting & Filter Controls */}
+        <div className="flex flex-col gap-2 mb-5">
+          {/* Sort row */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Sort:</span>
+             {['Relevance', 'Price: Low-High', 'Price: High-Low', 'Top Rated'].map((tag) => (
+               <button 
+                 key={tag}
+                 onClick={() => setSortBy(tag)}
+                 className={`whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-xs border ${
+                   sortBy === tag
+                     ? `${currentTabConfig.headerBg} text-white border-transparent`
+                     : `bg-white text-slate-700 hover:border-slate-300 border-slate-200/80`
+                 }`}
+               >
+                  {tag}
+               </button>
+             ))}
+          </div>
+
+          {/* Filter row */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0 flex items-center gap-1">
+               <Filter size={10} /> Filter:
+             </span>
+             {[
+               { id: 'all', label: 'All Prices' },
+               { id: 'under500', label: '< ₹500' },
+               { id: '500-2000', label: '₹500 - ₹2,000' },
+               { id: '2000+', label: '> ₹2,000' },
+             ].map((f) => (
+               <button
+                 key={f.id}
+                 onClick={() => setFilterPrice(f.id)}
+                 className={`whitespace-nowrap px-2.5 py-0.5 rounded-full text-[9.5px] font-bold transition-all border ${
+                   filterPrice === f.id
+                     ? `${currentTabConfig.headerBg} text-white border-transparent shadow-xs`
+                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                 }`}
+               >
+                 {f.label}
+               </button>
+             ))}
+
+             <button
+               onClick={() => setFilterRating((prev) => (prev === 4 ? 0 : 4))}
+               className={`whitespace-nowrap px-2.5 py-0.5 rounded-full text-[9.5px] font-bold transition-all border flex items-center gap-0.5 ${
+                 filterRating === 4
+                   ? `${currentTabConfig.headerBg} text-white border-transparent shadow-xs`
+                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                }`}
              >
-                {tag}
+               ★ 4+ Rated
              </button>
-           ))}
+
+             {(filterPrice !== 'all' || filterRating > 0) && (
+               <button
+                 onClick={() => {
+                   setFilterPrice('all');
+                   setFilterRating(0);
+                 }}
+                 className="text-[9.5px] font-bold text-red-600 hover:underline px-1.5 whitespace-nowrap"
+               >
+                 Reset
+               </button>
+             )}
+          </div>
         </div>
 
         {/* Loading Skeletons */}

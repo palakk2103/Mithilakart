@@ -46,7 +46,7 @@ export const DEFAULT_USER_APP_TABS = [
   },
   {
     id: 'freshgrocery',
-    label: 'Groceries & Fresh',
+    label: 'Fresh & Groceries',
     i18nKey: 'nav.groceriesAndFresh',
     route: '/fresh-grocery',
     flow: 'freshgrocery',

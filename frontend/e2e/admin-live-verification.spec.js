@@ -152,7 +152,7 @@ test.describe('Admin UI — live verification', () => {
     const categoryId = created.body.id || created.body._id;
 
     try {
-      // Confirmed absent from Groceries & Fresh before any UI action.
+      // Confirmed absent from Fresh & Groceries before any UI action.
       // GET /categories returns the tree array directly as `data` (see
       // CategoryService._buildTree), not wrapped in a `categories` key.
       const beforeFresh = await api('/categories?marketplaceTab=groceries_fresh', { method: 'GET' });
@@ -170,8 +170,8 @@ test.describe('Admin UI — live verification', () => {
       const modalHeading = page.getByText('Edit Category', { exact: true });
       await expect(modalHeading).toBeVisible({ timeout: 10_000 });
 
-      // Real UI: toggle the "Groceries & Fresh" tab pill ON.
-      await page.getByRole('button', { name: 'Groceries & Fresh' }).click();
+      // Real UI: toggle the "Fresh & Groceries" tab pill ON.
+      await page.getByRole('button', { name: 'Fresh & Groceries' }).click();
       await page.getByRole('button', { name: /update category/i }).click();
 
       await expect(modalHeading).toBeHidden({ timeout: 15_000 });

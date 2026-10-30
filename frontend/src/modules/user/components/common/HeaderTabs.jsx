@@ -68,6 +68,9 @@ const HeaderTabs = () => {
 
   const handleTabClick = (tab) => {
     const targetRoute = tab.route || '/home';
+    if (tab.flow && tab.flow !== activeFlow) {
+      setActiveFlow(tab.flow);
+    }
     if (location.pathname === targetRoute) return;
     navigate(targetRoute);
   };

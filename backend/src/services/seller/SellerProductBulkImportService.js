@@ -24,12 +24,15 @@ const TAB_LABELS = {
   [MARKETPLACE_TABS.MITHILAKART]: 'Mithilakart',
   [MARKETPLACE_TABS.MITHILAK]: 'Mithilak',
   [MARKETPLACE_TABS.QUICK_SHOP]: 'Quick Shop',
-  [MARKETPLACE_TABS.GROCERIES_FRESH]: 'Groceries & Fresh',
+  [MARKETPLACE_TABS.GROCERIES_FRESH]: 'Fresh & Groceries',
 };
 
 /** Accepts canonical keys, legacy flows and the labels customers see. */
 const TAB_ALIASES = {
   ...Object.fromEntries(Object.entries(TAB_LABELS).map(([tab, label]) => [lowerKey(label), tab])),
+  'fresh & groceries': MARKETPLACE_TABS.GROCERIES_FRESH,
+  'fresh and groceries': MARKETPLACE_TABS.GROCERIES_FRESH,
+  'groceries & fresh': MARKETPLACE_TABS.GROCERIES_FRESH,
   'groceries and fresh': MARKETPLACE_TABS.GROCERIES_FRESH,
   groceries: MARKETPLACE_TABS.GROCERIES_FRESH,
   grocery: MARKETPLACE_TABS.GROCERIES_FRESH,
@@ -182,7 +185,7 @@ class SellerProductBulkImportService {
 
     const quick = row.tabs.filter((t) => QUICK_COMMERCE_TABS.has(t));
     if (quick.length && !context.hasStoreLocation) {
-      err('Set your store location in Settings before listing in Quick Shop / Groceries & Fresh');
+      err('Set your store location in Settings before listing in Quick Shop / Fresh & Groceries');
     }
 
     let deliveryPromiseMinutes = null;
@@ -191,7 +194,7 @@ class SellerProductBulkImportService {
       if (!DELIVERY_PROMISE_MINUTES.includes(promise)) {
         err(`Delivery promise must be one of ${DELIVERY_PROMISE_MINUTES.join(', ')} minutes`);
       } else if (!quick.length) {
-        row.warnings.push('Delivery promise is only used for Quick Shop / Groceries & Fresh — ignored');
+        row.warnings.push('Delivery promise is only used for Quick Shop / Fresh & Groceries — ignored');
       } else {
         deliveryPromiseMinutes = promise;
       }

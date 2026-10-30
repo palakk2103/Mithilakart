@@ -8,7 +8,9 @@ import useTabTheme from '../../../../shared/hooks/useTabTheme';
 import { getCurrentMarketplaceTab } from '../../../../shared/utils/marketplaceHelpers';
 import { allCategoryProducts } from '../../../../data/categoryData';
 import { getImageUrl, handleImageError } from '../../../../shared/utils/imageUtils';
+import { parsePrice } from '../../../../shared/utils/priceFormatter';
 import toast from 'react-hot-toast';
+import { getFashionFallbackImage } from './home/SubCategoryGrid';
 
 // Fallback images for subcategories when admin hasn't set an image yet
 import FashionHero from '../../../../assets/products/product06.jpg';
@@ -183,14 +185,23 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         const match = findCategoryByName(categories, selectedCategory);
 
         if (match) {
-          // Dynamic subcategories created by Admin in CategoryManager
-          const rawChildren = Array.isArray(match.children) ? match.children : [];
-          const dynamicSubs = rawChildren.map((sub) => ({
-            id: String(sub.id || sub._id),
-            name: sub.name,
-            img: sub.imageUrl ? getImageUrl(sub.imageUrl) : (sub.iconUrl ? getImageUrl(sub.iconUrl) : ''),
-            slug: sub.slug,
-          }));
+          // Dynamic subcategories created by Admin in CategoryManager (preserving full hierarchy)
+          const mapSubTree = (list) => {
+            if (!Array.isArray(list)) return [];
+            return list.map((sub) => {
+              const rawImg = sub.imageUrl || sub.iconUrl;
+              const img = rawImg && !rawImg.includes('via.placeholder') ? getImageUrl(rawImg) : getFashionFallbackImage(sub.name);
+              return {
+                id: String(sub.id || sub._id),
+                name: sub.name,
+                img,
+                slug: sub.slug,
+                children: mapSubTree(sub.children),
+              };
+            });
+          };
+
+          const dynamicSubs = mapSubTree(match.children);
 
           if (!cancelled) {
             setAdminSubcategories(dynamicSubs);
@@ -275,13 +286,39 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
   const subcategoriesToDisplay = adminSubcategories.length > 0 ? adminSubcategories : fallbackSubcategories;
 
+  // Resolve Active Parent & Child Subcategories
+  const { activeParentSub, activeChildSub } = useMemo(() => {
+    if (!selectedSubcategory) return { activeParentSub: null, activeChildSub: null };
+    const norm = String(selectedSubcategory).toLowerCase().trim();
+
+    // 1. Direct match with a top-level subcategory (e.g. Men's Wear)
+    const directMatch = subcategoriesToDisplay.find(
+      (s) => s.id === selectedSubcategory || s.slug?.toLowerCase() === norm || s.name?.toLowerCase() === norm
+    );
+    if (directMatch) {
+      return { activeParentSub: directMatch, activeChildSub: null };
+    }
+
+    // 2. Match with a child of one of the subcategories (e.g. Casual Shirts under Men's Wear)
+    for (const parent of subcategoriesToDisplay) {
+      if (Array.isArray(parent.children) && parent.children.length > 0) {
+        const childMatch = parent.children.find(
+          (c) => c.id === selectedSubcategory || c.slug?.toLowerCase() === norm || c.name?.toLowerCase() === norm
+        );
+        if (childMatch) {
+          return { activeParentSub: parent, activeChildSub: childMatch };
+        }
+      }
+    }
+
+    return { activeParentSub: null, activeChildSub: null };
+  }, [selectedSubcategory, subcategoriesToDisplay]);
+
   // Active Subcategory Object
   const currentSubcategoryObj = useMemo(() => {
     if (!selectedSubcategory) return null;
-    return subcategoriesToDisplay.find(
-      (s) => s.id === selectedSubcategory || s.name === selectedSubcategory || s.slug === selectedSubcategory
-    ) || { name: selectedSubcategory, id: selectedSubcategory };
-  }, [selectedSubcategory, subcategoriesToDisplay]);
+    return activeChildSub || activeParentSub || { name: selectedSubcategory, id: selectedSubcategory };
+  }, [selectedSubcategory, activeChildSub, activeParentSub]);
 
   // Real-time backend fetching when a dynamic subcategory from Admin is selected
   useEffect(() => {
@@ -290,11 +327,11 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       return;
     }
 
-    const activeSub = subcategoriesToDisplay.find(
+    const activeTarget = activeChildSub || activeParentSub || subcategoriesToDisplay.find(
       (s) => s.id === selectedSubcategory || s.name === selectedSubcategory || s.slug === selectedSubcategory
     );
 
-    const subId = activeSub?.id;
+    const subId = activeTarget?.id;
     const isMongoId = subId && /^[0-9a-fA-F]{24}$/.test(subId);
 
     if (isMongoId) {
@@ -323,14 +360,17 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     } else {
       setSubProducts(null);
     }
-  }, [selectedSubcategory, subcategoriesToDisplay]);
+  }, [selectedSubcategory, activeChildSub, activeParentSub, subcategoriesToDisplay]);
 
-  // Click handler for subcategory card - fully responsive and updates URL & state
+  // Click handler for top-level subcategory card (e.g. Men's Wear, Women's Wear)
   const handleSubcategoryClick = useCallback((sub) => {
     const isAlreadySelected =
       selectedSubcategory === sub.id ||
       selectedSubcategory === sub.name ||
-      selectedSubcategory === sub.slug;
+      selectedSubcategory === sub.slug ||
+      activeParentSub?.id === sub.id ||
+      activeParentSub?.name === sub.name ||
+      activeParentSub?.slug === sub.slug;
 
     const nextVal = isAlreadySelected ? null : (sub.slug || sub.name || sub.id);
 
@@ -348,6 +388,35 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     }, { replace: true });
 
     // Smoothly scroll down to products view so user immediately sees results
+    setTimeout(() => {
+      const el = document.getElementById('category-products-grid');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 50);
+  }, [selectedSubcategory, activeParentSub, setSearchParams]);
+
+  // Click handler for nested / child subcategory (e.g. Casual Shirts, Jeans under Men's Wear)
+  const handleChildSubcategoryClick = useCallback((child, parent) => {
+    const isAlreadySelected =
+      selectedSubcategory === child.id ||
+      selectedSubcategory === child.name ||
+      selectedSubcategory === child.slug;
+
+    const nextVal = isAlreadySelected ? (parent.name || parent.slug || parent.id) : (child.name || child.slug || child.id);
+
+    setSelectedSubcategory(nextVal);
+
+    setSearchParams((prevParams) => {
+      const next = new URLSearchParams(prevParams);
+      if (nextVal) {
+        next.set('subcategory', nextVal);
+      } else {
+        next.delete('subcategory');
+      }
+      return next;
+    }, { replace: true });
+
     setTimeout(() => {
       const el = document.getElementById('category-products-grid');
       if (el) {
@@ -374,12 +443,12 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
     // Otherwise, filter in-memory products against selected subcategory
     if (selectedSubcategory && (subProducts === null || subProducts.length === 0)) {
-      const activeSub = subcategoriesToDisplay.find(
+      const activeTarget = activeChildSub || activeParentSub || subcategoriesToDisplay.find(
         (s) => s.id === selectedSubcategory || s.name === selectedSubcategory || s.slug === selectedSubcategory
       );
-      const subName = (activeSub?.name || selectedSubcategory || '').toLowerCase().trim();
-      const subSlug = (activeSub?.slug || '').toLowerCase().trim();
-      const subId = String(activeSub?.id || selectedSubcategory).toLowerCase().trim();
+      const subName = (activeTarget?.name || selectedSubcategory || '').toLowerCase().trim();
+      const subSlug = (activeTarget?.slug || '').toLowerCase().trim();
+      const subId = String(activeTarget?.id || selectedSubcategory).toLowerCase().trim();
 
       // Normalize search keywords (including singular and plural variants)
       const rawKeywords = [
@@ -428,16 +497,24 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     }
 
     // Sort
+    const getPrice = (p) => p.rawPrice ?? parsePrice(p.price) ?? 0;
+    const getRating = (p) => Number(p.rating) || 0;
+    const getPopularity = (p) => Number(p.popularity ?? p.reviewCount ?? 0);
+
+    const sorted = [...list];
     if (activeSort === 'Price: Low to High') {
-      return list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+      return sorted.sort((a, b) => getPrice(a) - getPrice(b));
     }
     if (activeSort === 'Price: High to Low') {
-      return list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+      return sorted.sort((a, b) => getPrice(b) - getPrice(a));
     }
     if (activeSort === 'Customer Rating') {
-      return list.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+      return sorted.sort((a, b) => getRating(b) - getRating(a));
     }
-    return list;
+    if (activeSort === 'Popularity') {
+      return sorted.sort((a, b) => getPopularity(b) - getPopularity(a));
+    }
+    return sorted;
   }, [allProducts, subProducts, selectedSubcategory, subcategoriesToDisplay, activeSort]);
 
   const displayedProducts = useMemo(
@@ -552,7 +629,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               }`}>
                 <Layers size={17} />
               </div>
-              <span className="text-[11px] font-black leading-tight text-center">All {selectedCategory}</span>
+              <span className="text-[11px] font-black leading-tight text-center">All Items</span>
               <span className={`text-[9px] mt-0.5 ${!selectedSubcategory ? 'text-[#FDE68A]' : 'text-slate-400'}`}>
                 {allProducts.length} items
               </span>
@@ -563,7 +640,10 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               const isSelected =
                 selectedSubcategory === sub.id ||
                 selectedSubcategory === sub.name ||
-                selectedSubcategory === sub.slug;
+                selectedSubcategory === sub.slug ||
+                activeParentSub?.id === sub.id ||
+                activeParentSub?.name === sub.name ||
+                activeParentSub?.slug === sub.slug;
 
               return (
                 <button
@@ -607,6 +687,80 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                       </span>
                     )}
                   </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 1B: Secondary / Nested Subcategories Strip (e.g. Men's Wear -> Casual Shirts, Jeans, Denim, Festive, etc.) ── */}
+      {activeParentSub && Array.isArray(activeParentSub.children) && activeParentSub.children.length > 0 && (
+        <div className="mb-6 bg-[#FAF9F5] border border-[#EADCC9]/80 rounded-2xl p-3 shadow-xs">
+          <div className="flex items-center justify-between mb-2.5 px-0.5">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#3E5A44]" />
+              <h4 className="text-[13px] font-black text-[#3F2A20]">
+                {activeParentSub.name} Collections ({activeParentSub.children.length})
+              </h4>
+            </div>
+            {activeChildSub && (
+              <button
+                type="button"
+                onClick={() => handleSubcategoryClick(activeParentSub)}
+                className="text-[10.5px] font-bold text-[#3E5A44] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <X size={11} /> View All {activeParentSub.name}
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1 pt-0.5 -mx-0.5 px-0.5">
+            {/* "All [Parent]" pill */}
+            <button
+              type="button"
+              onClick={() => handleSubcategoryClick(activeParentSub)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer transition-all active:scale-95 border ${
+                !activeChildSub
+                  ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
+                  : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:bg-[#FFF8EE]'
+              }`}
+            >
+              All {activeParentSub.name}
+            </button>
+
+            {/* Child subcategories: Casual Shirts, Jeans, Denim Wear, Festive Wear, Workwear, Sleepwear, etc. */}
+            {activeParentSub.children.map((child) => {
+              const isChildSelected =
+                activeChildSub?.id === child.id ||
+                activeChildSub?.name === child.name ||
+                activeChildSub?.slug === child.slug ||
+                selectedSubcategory === child.name ||
+                selectedSubcategory === child.slug ||
+                selectedSubcategory === child.id;
+
+              const fallbackImg = getFashionFallbackImage(child.name);
+
+              return (
+                <button
+                  key={child.id}
+                  type="button"
+                  onClick={() => handleChildSubcategoryClick(child, activeParentSub)}
+                  className={`flex-shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] font-bold cursor-pointer transition-all active:scale-95 border ${
+                    isChildSelected
+                      ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
+                      : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:border-[#3E5A44]/60 hover:bg-[#FFF8EE]'
+                  }`}
+                >
+                  <div className="w-5 h-5 rounded-lg overflow-hidden bg-[#FAF9F5] flex-shrink-0 border border-[#EADCC9]/60">
+                    <img
+                      src={child.img || fallbackImg}
+                      alt={child.name}
+                      onError={handleImageError}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <span className="whitespace-nowrap">{child.name}</span>
                 </button>
               );
             })}

@@ -26,7 +26,7 @@ const ROUTE_SUGGESTIONS = [
   { label: 'Home Page', value: '/home', flow: 'mithilakart' },
   { label: 'Quick Shop', value: '/quick-shop', flow: 'quickshop' },
   { label: 'Mithilak Express', value: '/mithilak', flow: 'mithilak' },
-  { label: 'Groceries & Fresh', value: '/fresh-grocery', flow: 'freshgrocery' },
+  { label: 'Fresh & Groceries', value: '/fresh-grocery', flow: 'freshgrocery' },
   { label: 'Deals & Offers', value: '/deals', flow: 'mithilakart' },
   { label: 'All Categories', value: '/categories', flow: 'mithilakart' },
   { label: 'All Offers Page', value: '/all-offers', flow: 'mithilakart' },

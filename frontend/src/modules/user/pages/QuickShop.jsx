@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight } from 'lucide-react';
+import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight, Zap } from 'lucide-react';
 import CategoryCard from '../components/vendor/CategoryCard';
 import useVendorStore from '../../../store/useVendorStore';
 import useAccountStore from '../../../store/useAccountStore';
-import { getCategories, getNearbyProducts, getDeals } from '../services/catalogApi';
+import { getCategories, getNearbyProducts, getDeals, getProducts } from '../services/catalogApi';
 import { mapCategorySections, extractList, mapProductForCard } from '../utils/mappers';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { getImageUrl, handleImageError } from '../../../shared/utils/imageUtils';
@@ -159,6 +159,54 @@ const quickShopDataCache = {
   nearbyProducts: {},
 };
 
+const CountdownTimer = React.memo(({ endsAt }) => {
+  const [timeLeft, setTimeLeft] = React.useState({ h: '02', m: '45', s: '12' });
+  React.useEffect(() => {
+    const updateTimer = () => {
+      if (endsAt) {
+        const diff = new Date(endsAt).getTime() - Date.now();
+        if (diff <= 0) {
+          setTimeLeft({ h: '00', m: '00', s: '00' });
+          return;
+        }
+        const totalSec = Math.floor(diff / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        setTimeLeft({
+          h: String(h).padStart(2, '0'),
+          m: String(m).padStart(2, '0'),
+          s: String(s).padStart(2, '0'),
+        });
+      } else {
+        setTimeLeft((prev) => {
+          const s = parseInt(prev.s, 10) - 1;
+          if (s >= 0) return { ...prev, s: String(s).padStart(2, '0') };
+          const m = parseInt(prev.m, 10) - 1;
+          if (m >= 0) return { ...prev, m: String(m).padStart(2, '0'), s: '59' };
+          const h = parseInt(prev.h, 10) - 1;
+          if (h >= 0) return { h: String(h).padStart(2, '0'), m: '59', s: '59' };
+          return { h: '02', m: '45', s: '12' };
+        });
+      }
+    };
+
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [endsAt]);
+
+  return (
+    <div className="text-slate-850 text-[11px] font-black flex items-center gap-1">
+      <span>Ends in</span>
+      <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.h}</span>
+      <span>:</span>
+      <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.m}</span>
+      <span>:</span>
+      <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.s}</span>
+    </div>
+  );
+});
+
 const QuickShop = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -173,13 +221,16 @@ const QuickShop = () => {
   const effectiveLat = liveLocation?.latitude ?? selectedAddr?.latitude ?? 28.5385859;
   const effectiveLng = liveLocation?.longitude ?? selectedAddr?.longitude ?? 77.1182734;
 
+  const roundedLat = effectiveLat ? Number(Number(effectiveLat).toFixed(2)) : 28.54;
+  const roundedLng = effectiveLng ? Number(Number(effectiveLng).toFixed(2)) : 77.12;
+
   const cachedCatTree = quickShopDataCache[marketplaceTab]?.categoryTree;
   const cachedCatSections = quickShopDataCache[marketplaceTab]?.categorySections;
   const [categorySections, setCategorySections] = React.useState(() => cachedCatSections || []);
   const [categoryTree, setCategoryTree] = React.useState(() => cachedCatTree || []);
   const [categoriesLoading, setCategoriesLoading] = React.useState(() => !cachedCatSections);
 
-  const locKey = `${effectiveLat}_${effectiveLng}_${isFreshGrocery ? 'fresh' : 'quick'}`;
+  const locKey = `${roundedLat}_${roundedLng}_${isFreshGrocery ? 'fresh' : 'quick'}`;
   const cachedNearby = quickShopDataCache.nearbyProducts[locKey];
   const [nearbyProducts, setNearbyProducts] = React.useState(() => cachedNearby || []);
   const [nearbyLoading, setNearbyLoading] = React.useState(() => !cachedNearby);
@@ -224,19 +275,21 @@ const QuickShop = () => {
   useEffect(() => {
     let cancelled = false;
 
-    if (!quickShopDataCache.nearbyProducts[locKey]) {
+    // Only set loading if no cached data yet
+    if (!quickShopDataCache.nearbyProducts[locKey] && nearbyProducts.length === 0) {
       setNearbyLoading(true);
     }
 
-    getNearbyProducts({
-      lat: effectiveLat,
-      lng: effectiveLng,
-      commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
-      limit: 12,
-    })
-      .then((response) => {
+    const fetchProducts = async () => {
+      try {
+        const response = await getNearbyProducts({
+          lat: roundedLat,
+          lng: roundedLng,
+          commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
+          limit: 12,
+        });
         const payload = response?.data ?? response;
-        const items = extractList(payload).map((p) => {
+        let items = extractList(payload).map((p) => {
           const card = mapProductForCard(p);
           return {
             id: card.id,
@@ -245,31 +298,94 @@ const QuickShop = () => {
             oldPrice: parseQuickShopPrice(card.oldPrice || card.mrp),
             image: card.image,
             distanceKm: p.distanceKm,
+            deliveryEtaText: p.deliveryEtaText || (p.deliveryPromiseMinutes ? `${p.deliveryPromiseMinutes} mins` : '15-25 mins'),
           };
         });
-        if (!cancelled) {
+
+        // If hyper-local seller has no items in this radius, seamlessly fallback to quick commerce catalog
+        if (items.length === 0) {
+          const fallbackRes = await getProducts({
+            commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
+            limit: 12,
+          });
+          const fallbackList = extractList(fallbackRes?.data ?? fallbackRes);
+          if (fallbackList.length > 0) {
+            items = fallbackList.map((p) => {
+              const card = mapProductForCard(p);
+              return {
+                id: card.id,
+                name: card.name || card.title,
+                price: parseQuickShopPrice(card.price),
+                oldPrice: parseQuickShopPrice(card.oldPrice || card.mrp),
+                image: card.image,
+                distanceKm: null,
+                deliveryEtaText: '15-30 mins',
+              };
+            });
+          }
+        }
+
+        if (!cancelled && items.length > 0) {
           quickShopDataCache.nearbyProducts[locKey] = items;
           setNearbyProducts(items);
-          setNotDeliverable(payload?.deliverable === false && items.length === 0);
-        }
-      })
-      .catch(() => {
-        if (!cancelled && !quickShopDataCache.nearbyProducts[locKey]) {
-          setNearbyProducts([]);
           setNotDeliverable(false);
         }
-      })
-      .finally(() => {
+      } catch {
+        if (!cancelled && nearbyProducts.length === 0) {
+          try {
+            const fallbackRes = await getProducts({
+              commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
+              limit: 12,
+            });
+            const fallbackList = extractList(fallbackRes?.data ?? fallbackRes);
+            const fallbackItems = fallbackList.map((p) => {
+              const card = mapProductForCard(p);
+              return {
+                id: card.id,
+                name: card.name || card.title,
+                price: parseQuickShopPrice(card.price),
+                oldPrice: parseQuickShopPrice(card.oldPrice || card.mrp),
+                image: card.image,
+                distanceKm: null,
+                deliveryEtaText: '15-30 mins',
+              };
+            });
+            if (!cancelled && fallbackItems.length > 0) {
+              setNearbyProducts(fallbackItems);
+            }
+          } catch {
+            // Keep graceful fallback
+          }
+        }
+      } finally {
         if (!cancelled) setNearbyLoading(false);
-      });
+      }
+    };
+
+    fetchProducts();
 
     return () => {
       cancelled = true;
     };
-  }, [effectiveLat, effectiveLng, isFreshGrocery, locKey]);
+  }, [roundedLat, roundedLng, isFreshGrocery, locKey]);
 
-  // Simulated active tab for the filters
+  // Active filter tab
   const [activeFilter, setActiveFilter] = React.useState('All');
+  const filterTabs = React.useMemo(() => {
+    const catNames = categoryTree.slice(0, 6).map((c) => c.name);
+    return ['All', ...catNames];
+  }, [categoryTree]);
+
+  const displayedNearby = React.useMemo(() => {
+    if (!activeFilter || activeFilter === 'All') return nearbyProducts;
+    return nearbyProducts.filter((p) => {
+      const matchCat = categoryTree.find((c) => c.name === activeFilter);
+      if (matchCat && p.categoryId) {
+        return String(p.categoryId) === String(matchCat.id);
+      }
+      return (p.name || '').toLowerCase().includes(activeFilter.toLowerCase());
+    });
+  }, [nearbyProducts, activeFilter, categoryTree]);
 
   // Real Flash Deals from backend
   const [activeFlashSale, setActiveFlashSale] = React.useState(null);
@@ -309,42 +425,6 @@ const QuickShop = () => {
     };
   }, []);
 
-  // Timer: real endsAt countdown with smooth fallback
-  const [timeLeft, setTimeLeft] = React.useState({ h: '02', m: '45', s: '12' });
-  React.useEffect(() => {
-    const updateTimer = () => {
-      if (activeFlashSale?.endsAt) {
-        const diff = new Date(activeFlashSale.endsAt).getTime() - Date.now();
-        if (diff <= 0) {
-          setTimeLeft({ h: '00', m: '00', s: '00' });
-          return;
-        }
-        const totalSec = Math.floor(diff / 1000);
-        const h = Math.floor(totalSec / 3600);
-        const m = Math.floor((totalSec % 3600) / 60);
-        const s = totalSec % 60;
-        setTimeLeft({
-          h: String(h).padStart(2, '0'),
-          m: String(m).padStart(2, '0'),
-          s: String(s).padStart(2, '0'),
-        });
-      } else {
-        setTimeLeft((prev) => {
-          const s = parseInt(prev.s, 10) - 1;
-          if (s >= 0) return { ...prev, s: String(s).padStart(2, '0') };
-          const m = parseInt(prev.m, 10) - 1;
-          if (m >= 0) return { ...prev, m: String(m).padStart(2, '0'), s: '59' };
-          const h = parseInt(prev.h, 10) - 1;
-          if (h >= 0) return { h: String(h).padStart(2, '0'), m: '59', s: '59' };
-          return { h: '02', m: '45', s: '12' };
-        });
-      }
-    };
-
-    const timer = setInterval(updateTimer, 1000);
-    return () => clearInterval(timer);
-  }, [activeFlashSale?.endsAt]);
-
   if (isFreshGrocery) {
     return (
       <div className="min-h-screen pb-24 bg-[#FFF8EE] flex flex-col font-sans text-[#3F2A20] relative overflow-x-hidden">
@@ -373,8 +453,23 @@ const QuickShop = () => {
             </div>
           </div>
 
-          {/* Categories Grid — the Groceries & Fresh tab's top-level categories from admin */}
+          {/* Categories Grid — the Fresh & Groceries tab's top-level categories from admin */}
           <div className="px-4 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">Browse by Category</h2>
+              <span
+                onClick={() => {
+                  localStorage.setItem('isFreshGroceryFlow', 'true');
+                  localStorage.setItem('isQuickShopFlow', 'false');
+                  localStorage.setItem('isMithilakFlow', 'false');
+                  navigate('/categories?flow=freshgrocery', { state: { flow: 'freshgrocery' } });
+                }}
+                className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline"
+              >
+                View All
+              </span>
+            </div>
+
             <div className="grid grid-cols-4 gap-2.5">
               {categoriesLoading && Array.from({ length: 8 }).map((_, idx) => (
                 <div key={idx} className="h-[92px] bg-white/70 border border-[#EADCC9]/40 rounded-2xl animate-pulse" />
@@ -459,7 +554,7 @@ const QuickShop = () => {
 
           {/* ── HORIZONTAL FILTER TABS BAR ── */}
           <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-3.5 px-4 mb-4">
-            {['All', 'Title Sponsors', 'Intel Core', 'AI Nova', 'Boat'].map((tab) => {
+            {filterTabs.map((tab) => {
               const isActive = activeFilter === tab;
               return (
                 <button
@@ -481,14 +576,7 @@ const QuickShop = () => {
           <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(217,162,27,0.015)]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{activeFlashSale?.title || 'Flash Deals'}</h2>
-              <div className="text-slate-850 text-[12.5px] font-black flex items-center gap-1.5">
-                <span>Ends in</span>
-                <span className="font-mono bg-[#3F2A20] text-white px-1.5 py-0.5 rounded text-[11px]">{timeLeft.h}</span>
-                <span>:</span>
-                <span className="font-mono bg-[#3F2A20] text-white px-1.5 py-0.5 rounded text-[11px]">{timeLeft.m}</span>
-                <span>:</span>
-                <span className="font-mono bg-[#3F2A20] text-white px-1.5 py-0.5 rounded text-[11px]">{timeLeft.s}</span>
-              </div>
+              <CountdownTimer endsAt={activeFlashSale?.endsAt} />
             </div>
 
             {/* Flash Deals Cards grid */}
@@ -704,16 +792,168 @@ const QuickShop = () => {
       />
 
       <div className="relative z-10 flex flex-col">
+        {/* ── HERO BANNER SECTION ── */}
+        <div
+          className="mx-4 my-4 p-5 rounded-3xl border border-[#FFD9C7] flex items-center justify-between shadow-xs overflow-hidden relative"
+          style={{ backgroundImage: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)' }}
+        >
+          <div className="flex-1 z-10 pr-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F26522]/10 text-[#F26522] text-[10px] font-black uppercase tracking-wider mb-1.5">
+              <Zap size={11} className="fill-[#F26522]" /> Delivery in 15-30 Mins
+            </div>
+            <h1 className="text-[19px] md:text-[22px] font-black text-slate-900 leading-tight mb-1">
+              Quick Shop Essentials
+            </h1>
+            <p className="text-[11.5px] md:text-[12.5px] font-bold text-slate-600 mb-3">
+              Groceries, Snacks & Daily Needs At Lightning Speed
+            </p>
+            <button
+              onClick={() => {
+                const el = document.getElementById('quick-categories-grid');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="bg-[#F26522] text-white text-[12px] font-black px-6 py-2.5 rounded-full shadow-md active:scale-95 transition-transform hover:brightness-105"
+            >
+              Explore Categories
+            </button>
+          </div>
+          <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] flex items-center justify-center flex-shrink-0 relative">
+            <svg viewBox="0 0 120 120" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="60" cy="60" r="50" fill="#FFEDD5" />
+              <circle cx="60" cy="60" r="42" fill="#FED7AA" fillOpacity="0.4" />
+              <path d="M40 70 L55 35 L70 35 L58 55 L75 55 L48 90 L54 68 Z" fill="#F26522" />
+            </svg>
+          </div>
+        </div>
+
+        {/* ── BROWSE BY CATEGORY GRID ── */}
+        <div id="quick-categories-grid" className="px-4 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">Browse by Category</h2>
+            <span
+              onClick={() => {
+                localStorage.setItem('isQuickShopFlow', 'true');
+                navigate('/quick-shop/category');
+              }}
+              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
+            >
+              View All
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2.5">
+            {categoriesLoading && Array.from({ length: 8 }).map((_, idx) => (
+              <div key={idx} className="h-[92px] bg-white border border-slate-100 rounded-2xl animate-pulse" />
+            ))}
+            {!categoriesLoading && categoryTree.map((cat) => (
+              <div
+                key={cat.id}
+                onClick={() => {
+                  localStorage.setItem('isQuickShopFlow', 'true');
+                  navigate('/quick-shop/category', { state: { category: cat.name, categoryId: cat.id } });
+                }}
+                className="bg-white border border-[#FFD9C7]/60 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#F26522]"
+              >
+                <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[#FFF7ED] rounded-xl overflow-hidden p-1">
+                  {cat.imageUrl || cat.iconUrl ? (
+                    <img src={getImageUrl(cat.imageUrl || cat.iconUrl)} alt={cat.name} className="w-full h-full object-contain" onError={handleImageError} />
+                  ) : (
+                    <GroceryCategoryIcon category={cat} />
+                  )}
+                </div>
+                <span className="text-[10px] md:text-[11px] font-black text-slate-800 leading-tight line-clamp-2">{cat.name}</span>
+              </div>
+            ))}
+            {!categoriesLoading && categoryTree.length === 0 && (
+              <div className="col-span-4 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#FFD9C7]">
+                <p className="text-[11.5px] font-bold text-slate-600">Categories coming soon</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── TODAY'S BEST OFFERS ── */}
+        <div className="px-4 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">Today's Best Offers</h2>
+            <span
+              onClick={() => {
+                localStorage.setItem('isQuickShopFlow', 'true');
+                navigate('/quick-shop/category');
+              }}
+              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
+            >
+              View All
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            {nearbyLoading && nearbyProducts.length === 0 && Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="h-36 bg-slate-100 rounded-2xl animate-pulse" />
+            ))}
+            {nearbyProducts.slice(0, 3).map((prod) => {
+              const discount = prod.oldPrice > prod.price
+                ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
+                : null;
+              return (
+                <div
+                  key={prod.id}
+                  onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
+                  className="bg-white rounded-2xl border border-[#FFD9C7]/30 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform shadow-xs"
+                >
+                  {discount && (
+                    <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
+                      {discount}
+                    </div>
+                  )}
+
+                  <div className="h-20 flex items-center justify-center my-3">
+                    <img
+                      src={getImageUrl(prod.image)}
+                      alt={prod.name}
+                      className="max-h-full max-w-full object-contain mix-blend-multiply"
+                      onError={handleImageError}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <span className="text-[#F26522] text-[8px] font-black">{prod.deliveryEtaText || '⚡ 15-25m'}</span>
+                      {prod.distanceKm != null && (
+                        <span className="text-slate-400 text-[8px] font-bold">• {prod.distanceKm.toFixed(1)} km</span>
+                      )}
+                    </div>
+                    <h3 className="text-[11.5px] font-black text-slate-850 leading-tight truncate">{prod.name}</h3>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      {prod.oldPrice > prod.price && (
+                        <span className="text-[9.5px] text-slate-400 line-through">₹{prod.oldPrice}</span>
+                      )}
+                      <span className="text-[12.5px] font-black text-slate-900">₹{prod.price}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {!nearbyLoading && nearbyProducts.length === 0 && (
+              <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
+                <p className="text-[11.5px] font-bold text-slate-700">
+                  {notDeliverable ? 'Share location to see offers from nearby stores' : 'Loading best offers...'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── HORIZONTAL FILTER TABS BAR ── */}
-        <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-3.5 px-4">
-          {['All', 'Title Sponsors', 'Intel Core', 'AI Nova', 'Boat'].map((tab) => {
+        <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-3.5 px-4 mb-4">
+          {filterTabs.map((tab) => {
             const isActive = activeFilter === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveFilter(tab)}
                 className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-[12px] font-black tracking-tight transition-all duration-200 border ${
-              isActive
+                  isActive
                     ? 'bg-[#F26522] border-[#F26522] text-white shadow-xs'
                     : 'bg-white border-[#EADCC9]/55 text-slate-700 hover:bg-slate-50'
                 }`}
@@ -724,156 +964,169 @@ const QuickShop = () => {
           })}
         </div>
 
-      {/* ── FLASH DEALS SECTION ── */}
-      <div className="bg-white rounded-2xl p-3 mx-3 mb-3 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
-        <div className="flex justify-between items-center mb-2.5">
-          <h2 className="text-[14.5px] font-black text-slate-800 tracking-tight">Flash Deals</h2>
-          <div className="text-slate-850 text-[11px] font-black flex items-center gap-1">
-            <span>Ends in</span>
-            <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.h}</span>
-            <span>:</span>
-            <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.m}</span>
-            <span>:</span>
-            <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.s}</span>
+        {/* ── FLASH DEALS SECTION ── */}
+        <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{activeFlashSale?.title || 'Flash Deals'}</h2>
+            <CountdownTimer endsAt={activeFlashSale?.endsAt} />
           </div>
-        </div>
 
-        {/* Flash Deals Cards grid — nearby Quick Commerce products */}
-        {notDeliverable && (
-          <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
-            <p className="text-[11px] font-bold text-amber-900">
-              {liveLocation?.latitude == null
-                ? 'Share your location to see products from nearby sellers.'
-                : 'Quick Commerce is not available at this address yet.'}
-            </p>
-            {liveLocation?.latitude == null && (
-              <button
-                type="button"
-                onClick={() => setPromptOpen(true)}
-                className="mt-2 px-3 py-1.5 rounded-lg bg-[#FF5C00] text-white text-[10px] font-black"
-              >
-                Share Location
-              </button>
-            )}
-          </div>
-        )}
-        <div className="grid grid-cols-3 gap-2">
-          {nearbyLoading && Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="h-32 bg-slate-100 rounded-xl animate-pulse" />
-          ))}
-          {!nearbyLoading && nearbyProducts.slice(0, 3).map((product) => {
-            const discount = product.oldPrice > product.price
-              ? `${Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}% OFF`
-              : null;
-            return (
-              <div
-                key={product.id}
-                onClick={() => navigate(`/product-detail/${product.id}`, { state: { product } })}
-                className="bg-white rounded-xl border border-slate-100 p-1.5 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-              >
-                {discount && (
-                  <div className="absolute top-1 left-1 bg-[#FF5C00] text-white text-[7.5px] font-black px-1.2 py-0.3 rounded-xs shadow-2xs leading-none z-10">
-                    {discount}
-                  </div>
-                )}
-                <div className="h-14 flex items-center justify-center my-1.5">
-                  <img src={getImageUrl(product.image)} alt={product.name} className="max-h-full object-contain mix-blend-multiply" onError={handleImageError} />
-                </div>
-                <div>
-                  {product.distanceKm != null && (
-                    <span className="text-slate-400 text-[8px] font-bold">{product.distanceKm.toFixed(1)} km</span>
-                  )}
-                  <h3 className="text-[10px] font-black text-slate-850 leading-tight mt-0.5 line-clamp-2">{product.name}</h3>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    {product.oldPrice > product.price && (
-                      <span className="text-[9px] text-slate-400 line-through">₹{product.oldPrice}</span>
-                    )}
-                    <span className="text-[11px] font-black text-slate-900">₹{product.price}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+          {/* Flash Deals Cards grid */}
+          {dealsLoading && (
+            <p className="text-center text-[11px] text-slate-500 py-6">Loading flash deals...</p>
+          )}
 
-      {/* ── SHARE LOCATION BANNER (only while we have no location) ── */}
-      {liveLocation?.latitude == null && (
-      <div className="bg-[#FFF5EE] border border-[#FFD9C7]/40 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
-        <div className="flex flex-col gap-3 flex-1 pr-2">
-          <span className="text-[12.5px] font-extrabold text-slate-800 leading-snug">
-            Share your location to access QuickShop & explore offers
-          </span>
-          <button
-            type="button"
-            onClick={() => setPromptOpen(true)}
-            className="bg-[#FF5C00] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs"
-          >
-            Share Location
-          </button>
-        </div>
-        <ChevronDown size={20} className="text-slate-500 flex-shrink-0 cursor-pointer" />
-      </div>
-      )}
-
-      {/* ── TODAY'S SPECIAL DEALS ── */}
-      <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-[16px] font-black text-slate-800 tracking-tight">Today's Special Deals</h2>
-          <span className="text-[#A63A00] text-[12.5px] font-black cursor-pointer hover:underline">View All</span>
-        </div>
-
-        {/* Deals grid */}
-        <div className="grid grid-cols-3 gap-2.5">
-          {nearbyLoading && Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="h-36 bg-slate-100 rounded-2xl animate-pulse" />
-          ))}
-          {!nearbyLoading && (nearbyProducts.length > 3 ? nearbyProducts.slice(3, 6) : nearbyProducts.slice(0, 3)).map((prod) => {
-            const discount = prod.oldPrice > prod.price
-              ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
-              : null;
-            return (
-              <div 
-                key={prod.id}
-                onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
-                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-              >
-                {discount && (
-                  <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                    {discount}
-                  </div>
-                )}
-                
-                <div className="h-20 flex items-center justify-center my-3">
-                  <img 
-                    src={getImageUrl(prod.image)} 
-                    alt={prod.name} 
-                    className="max-h-full object-contain mix-blend-multiply" 
-                    onError={handleImageError}
-                  />
-                </div>
-
-                <div>
-                  <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5 truncate">{prod.name}</h3>
-                  <div className="flex items-baseline gap-1 mt-1.5">
-                    {prod.oldPrice > prod.price && (
-                      <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
-                    )}
-                    <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          {!nearbyLoading && nearbyProducts.length === 0 && (
-            <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
-              <p className="text-[11.5px] font-bold text-slate-700">
-                {notDeliverable ? 'Share location to explore special deals in your area' : 'No deals available right now'}
+          {!dealsLoading && ((activeFilter !== 'All' && displayedNearby.length === 0) || (activeFilter === 'All' && flashDeals.length === 0 && displayedNearby.length === 0 && nearbyProducts.length === 0)) && (
+            <div className="text-center py-6 px-4 bg-[#FFF5EE]/60 rounded-xl border border-dashed border-[#FFD9C7]">
+              <p className="text-[12px] font-bold text-slate-700">
+                {activeFilter !== 'All' ? `No products found under "${activeFilter}"` : 'No active flash deals at the moment.'}
+              </p>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {activeFilter !== 'All' ? 'Try switching to another category or "All"' : 'Check back soon for exclusive limited-time discounts!'}
               </p>
             </div>
           )}
+
+          {!dealsLoading && (activeFilter !== 'All' ? displayedNearby.length > 0 : (flashDeals.length > 0 || displayedNearby.length > 0 || nearbyProducts.length > 0)) && (
+            <div className="grid grid-cols-3 gap-2.5">
+              {(activeFilter !== 'All' ? displayedNearby : (flashDeals.length > 0 ? flashDeals : (displayedNearby.length > 0 ? displayedNearby : nearbyProducts))).slice(0, 3).map((prod) => {
+                const discount = prod.discount || (prod.oldPrice > prod.price ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF` : null);
+                const prodId = prod.productId || prod.id;
+                return (
+                  <div
+                    key={prodId}
+                    onClick={() => navigate(`/product-detail/${prodId}`, {
+                      state: {
+                        product: {
+                          ...prod,
+                          id: prodId,
+                          productId: prodId,
+                          marketplaceTab: 'quick_shop',
+                        }
+                      }
+                    })}
+                    className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
+                  >
+                    {discount && (
+                      <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
+                        {discount}
+                      </div>
+                    )}
+
+                    <div className="h-20 flex items-center justify-center my-3">
+                      <img
+                        src={getImageUrl(prod.image)}
+                        alt={prod.title || prod.name}
+                        className="max-h-full object-contain mix-blend-multiply"
+                        onError={handleImageError}
+                      />
+                    </div>
+
+                    <div>
+                      <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5 truncate">{prod.title || prod.name}</h3>
+                      <div className="flex items-baseline gap-1 mt-1.5">
+                        {prod.oldPrice > prod.price && (
+                          <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
+                        )}
+                        <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
+
+        {/* ── SHARE LOCATION BANNER ── */}
+        <div className="bg-[#FFF5EE] border border-[#FFD9C7]/55 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
+          <div className="flex flex-col gap-3 flex-1 pr-2">
+            <span className="text-[12.5px] font-extrabold text-slate-800 leading-snug">
+              Share your location to access Quick Shop & explore offers
+            </span>
+            <button
+              type="button"
+              onClick={() => setPromptOpen(true)}
+              className="bg-[#F26522] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs"
+            >
+              Share Location
+            </button>
+          </div>
+          <ChevronDown size={20} className="text-slate-500 flex-shrink-0 cursor-pointer" />
+        </div>
+
+        {/* ── TODAY'S SPECIAL DEALS ── */}
+        <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">Today's Special Deals</h2>
+            <span
+              onClick={() => {
+                localStorage.setItem('isQuickShopFlow', 'true');
+                navigate('/quick-shop/category');
+              }}
+              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
+            >
+              View All
+            </span>
+          </div>
+
+          {/* Deals grid */}
+          <div className="grid grid-cols-3 gap-2.5">
+            {nearbyLoading && nearbyProducts.length === 0 && Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="h-36 bg-slate-100 rounded-2xl animate-pulse" />
+            ))}
+            {(displayedNearby.length > 3 ? displayedNearby.slice(3, 6) : (displayedNearby.length > 0 ? displayedNearby.slice(0, 3) : (nearbyProducts.length > 3 ? nearbyProducts.slice(3, 6) : nearbyProducts.slice(0, 3)))).map((prod) => {
+              const discount = prod.oldPrice > prod.price
+                ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
+                : null;
+              return (
+                <div
+                  key={prod.id}
+                  onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
+                  className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
+                >
+                  {discount && (
+                    <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
+                      {discount}
+                    </div>
+                  )}
+
+                  <div className="h-20 flex items-center justify-center my-3">
+                    <img
+                      src={getImageUrl(prod.image)}
+                      alt={prod.name}
+                      className="max-h-full object-contain mix-blend-multiply"
+                      onError={handleImageError}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[#F26522] text-[8px] font-black">{prod.deliveryEtaText || '⚡ 15-25m'}</span>
+                      {prod.distanceKm != null && (
+                        <span className="text-slate-400 text-[8px] font-bold">• {prod.distanceKm.toFixed(1)} km</span>
+                      )}
+                    </div>
+                    <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5 truncate">{prod.name}</h3>
+                    <div className="flex items-baseline gap-1 mt-1">
+                      {prod.oldPrice > prod.price && (
+                        <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
+                      )}
+                      <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {!nearbyLoading && nearbyProducts.length === 0 && (
+              <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
+                <p className="text-[11.5px] font-bold text-slate-700">
+                  Share location to explore special deals in your area
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
 
       {/* ── RESTORED CATEGORY SECTIONS (Mobile View) ── */}
       <div className="md:hidden px-4 space-y-8">
