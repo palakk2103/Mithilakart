@@ -11,6 +11,16 @@ const {
   productRejectSchema,
   listProductsQuerySchema,
 } = require('../../validators/catalog/catalog.validator');
+const {
+  bannerSchema,
+  bannerUpdateSchema,
+  chipSchema,
+  chipUpdateSchema,
+  sectionUpdateSchema,
+  sectionReorderSchema,
+  cmsPageSchema,
+  legalPageSchema,
+} = require('../../validators/cms/cms.validator');
 const { HOME_SECTION_KEYS } = require('../../constants/catalog');
 
 function createAdminCatalogRoutes(controllers, middleware) {
@@ -49,30 +59,30 @@ function createAdminCmsRoutes(controller, middleware) {
   router.use(middleware.authenticateAdmin());
 
   router.get('/banners', requirePermission('banners.view'), controller.listBanners);
-  router.post('/banners', requirePermission('banners.edit'), validateBody(require('../../validators/cms/cms.validator').bannerSchema), controller.createBanner);
-  router.put('/banners/:id', requirePermission('banners.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(require('../../validators/cms/cms.validator').bannerSchema), controller.updateBanner);
+  router.post('/banners', requirePermission('banners.edit'), validateBody(bannerSchema), controller.createBanner);
+  router.put('/banners/:id', requirePermission('banners.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(bannerUpdateSchema), controller.updateBanner);
   router.delete('/banners/:id', requirePermission('banners.delete'), validateParams(Joi.object({ id: objectIdSchema })), controller.deleteBanner);
 
   router.get('/chips', requirePermission('banners.view'), controller.listChips);
-  router.post('/chips', requirePermission('banners.edit'), validateBody(require('../../validators/cms/cms.validator').chipSchema), controller.createChip);
-  router.put('/chips/:id', requirePermission('banners.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(require('../../validators/cms/cms.validator').chipSchema), controller.updateChip);
+  router.post('/chips', requirePermission('banners.edit'), validateBody(chipSchema), controller.createChip);
+  router.put('/chips/:id', requirePermission('banners.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(chipUpdateSchema), controller.updateChip);
   router.delete('/chips/:id', requirePermission('banners.delete'), validateParams(Joi.object({ id: objectIdSchema })), controller.deleteChip);
 
   router.get('/sections', requirePermission('banners.view'), controller.listSections);
   router.put('/sections/:sectionKey', requirePermission('banners.edit'), validateParams(Joi.object({
     sectionKey: Joi.string().valid(...HOME_SECTION_KEYS).required(),
-  })), validateBody(require('../../validators/cms/cms.validator').sectionUpdateSchema), controller.updateSection);
-  router.patch('/sections/reorder', requirePermission('banners.edit'), validateBody(require('../../validators/cms/cms.validator').sectionReorderSchema), controller.reorderSections);
+  })), validateBody(sectionUpdateSchema), controller.updateSection);
+  router.patch('/sections/reorder', requirePermission('banners.edit'), validateBody(sectionReorderSchema), controller.reorderSections);
 
   router.get('/cms/legal/:type', requirePermission('settings.view'), validateParams(Joi.object({
     type: Joi.string().valid(...require('../../constants/catalog').LEGAL_PAGE_TYPE_VALUES).required(),
   })), controller.getLegalPage);
   router.put('/cms/legal/:type', requirePermission('settings.edit'), validateParams(Joi.object({
     type: Joi.string().valid(...require('../../constants/catalog').LEGAL_PAGE_TYPE_VALUES).required(),
-  })), validateBody(require('../../validators/cms/cms.validator').legalPageSchema), controller.upsertLegalPage);
+  })), validateBody(legalPageSchema), controller.upsertLegalPage);
 
   router.get('/cms/:slug', requirePermission('settings.view'), controller.getAdminPage);
-  router.put('/cms/:slug', requirePermission('settings.edit'), validateBody(require('../../validators/cms/cms.validator').cmsPageSchema), controller.upsertAdminPage);
+  router.put('/cms/:slug', requirePermission('settings.edit'), validateBody(cmsPageSchema), controller.upsertAdminPage);
 
   return router;
 }

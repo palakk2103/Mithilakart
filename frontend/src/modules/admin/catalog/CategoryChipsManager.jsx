@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { chipsApi, categoriesApi } from '../services/api';
-import { extractList, mapChip } from '../utils/mappers';
+import { extractList, mapChip, mapCategory } from '../utils/mappers';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { uploadCmsImage } from '../../../shared/services/uploadService';
@@ -33,7 +33,7 @@ const CategoryChipsManager = () => {
     const [chipsRes, catsRes] = await Promise.all([chipsApi.getAll(), categoriesApi.getAll()]);
     if (chipsRes.error) toast.error(chipsRes.error);
     else setChips(extractList(chipsRes.data).map(mapChip));
-    if (!catsRes.error) setCategories(extractList(catsRes.data));
+    if (!catsRes.error) setCategories(extractList(catsRes.data).map(mapCategory));
     setLoading(false);
   }, []);
 
@@ -54,7 +54,7 @@ const CategoryChipsManager = () => {
     setForm({
       label: chip.label,
       imageUrl: chip.imageUrl || '',
-      categoryId: chip.categoryId || '',
+      categoryId: chip.categoryId?._id || chip.categoryId || '',
       commerceFlow: chip.commerceFlow || activeFlow,
       sortOrder: chip.order ?? 0,
       isActive: chip.active !== false,
@@ -85,10 +85,10 @@ const CategoryChipsManager = () => {
     const payload = {
       label: form.label.trim(),
       imageUrl: form.imageUrl || null,
-      categoryId: form.categoryId || null,
+      categoryId: form.categoryId && String(form.categoryId).trim() !== '' ? String(form.categoryId).trim() : null,
       commerceFlow: form.commerceFlow,
       sortOrder: Number(form.sortOrder) || 0,
-      isActive: form.isActive,
+      isActive: Boolean(form.isActive),
     };
     const result = editing
       ? await chipsApi.update(editing.id, payload)
@@ -104,7 +104,14 @@ const CategoryChipsManager = () => {
   };
 
   const toggleActive = async (chip) => {
-    const { error } = await chipsApi.update(chip.id, { isActive: !chip.active });
+    const { error } = await chipsApi.update(chip.id, {
+      label: chip.label,
+      imageUrl: chip.imageUrl || null,
+      categoryId: chip.categoryId || null,
+      commerceFlow: chip.commerceFlow || 'standard',
+      sortOrder: Number(chip.order) || 0,
+      isActive: !chip.active,
+    });
     if (error) toast.error(error);
     else load();
   };
@@ -122,19 +129,25 @@ const CategoryChipsManager = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 uppercase">Category Chips</h1>
+          <h1 className="text-xl font-black tracking-tight text-slate-800">Category Chips</h1>
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Top navigation chips on user home</p>
         </div>
-        <button onClick={openCreate} className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 text-white rounded-xl text-[10px] font-black uppercase">
-          <Plus size={14} /> Add Chip
+        <button onClick={openCreate} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 hover:bg-blue-700 transition">
+          <Plus size={16} /> Add Chip
         </button>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 border-b border-slate-100 pb-3">
         {COMMERCE_FLOWS.map((flow) => (
-          <button key={flow.id} onClick={() => setActiveFlow(flow.id)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border ${activeFlow === flow.id ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-500 border-slate-200'}`}>
+          <button
+            key={flow.id}
+            onClick={() => setActiveFlow(flow.id)}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition ${
+              activeFlow === flow.id ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
             {flow.label}
           </button>
         ))}
@@ -169,7 +182,11 @@ const CategoryChipsManager = () => {
           <input value={form.label} onChange={(e) => setForm((p) => ({ ...p, label: e.target.value }))} placeholder="Label e.g. Beauty" className="w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none" />
           <select value={form.categoryId} onChange={(e) => setForm((p) => ({ ...p, categoryId: e.target.value }))} className="w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none">
             <option value="">Link to category (optional)</option>
-            {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+            {categories.map((cat) => (
+              <option key={cat.id || cat._id} value={cat.id || cat._id}>
+                {cat.name}
+              </option>
+            ))}
           </select>
           <div className="flex gap-2">
             <input value={form.imageUrl} onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))} placeholder="Icon/image URL" className="flex-1 border rounded-xl px-4 py-3 text-sm font-bold outline-none" />

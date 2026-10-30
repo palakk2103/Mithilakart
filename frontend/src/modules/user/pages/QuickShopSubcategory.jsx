@@ -9,7 +9,6 @@ import { formatLocationLabel } from '../../../shared/services/locationService';
 import { extractList, mapProductForCard } from '../utils/mappers';
 import { getImageUrl } from '../../../shared/utils/imageUtils';
 import { addProductToCart } from '../utils/cartUtils';
-import toast from 'react-hot-toast';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
 import useAccountStore from '../../../store/useAccountStore';
 
@@ -68,10 +67,15 @@ const resolveSidebarSubcategories = (root) => {
     list = list[0].children;
   }
 
+  // If every child in the list has children (e.g. grouping folders), flatten to subcategories
+  if (list.length > 0 && list.every((c) => (c.children || []).length > 0)) {
+    list = list.flatMap((c) => (c.children && c.children.length > 0 ? c.children : [c]));
+  }
+
   return list;
 };
 
-/** categoryId → id of the sidebar subcategory it belongs to (any depth). */
+/** categoryId ΓåÆ id of the sidebar subcategory it belongs to (any depth). */
 const mapToSidebarIds = (root, sidebarSubcategories = []) => {
   const owner = new Map();
   const walk = (node, sidebarId) => {
@@ -123,41 +127,6 @@ const getDescendantIdSet = (node) => {
   walk(node);
   return ids;
 };
-
-/** Time left until the quick shop reopens at 6:00 AM. */
-function ReopenCountdown() {
-  const compute = () => {
-    const now = new Date();
-    const target = new Date();
-    target.setHours(6, 0, 0, 0);
-    if (now.getHours() >= 6) target.setDate(target.getDate() + 1);
-    const diff = Math.max(0, target.getTime() - now.getTime());
-    const pad = (n) => String(n).padStart(2, '0');
-    return {
-      h: pad(Math.floor(diff / (1000 * 60 * 60))),
-      m: pad(Math.floor((diff / (1000 * 60)) % 60)),
-      s: pad(Math.floor((diff / 1000) % 60)),
-    };
-  };
-  const [timeLeft, setTimeLeft] = useState(compute);
-  useEffect(() => {
-    const timer = setInterval(() => setTimeLeft(compute()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="flex flex-col items-start">
-      <div className="font-mono text-xl font-black text-white tracking-wide">
-        {timeLeft.h} : {timeLeft.m} : {timeLeft.s}
-      </div>
-      <div className="flex items-center gap-2 text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-        <span>Hours</span>
-        <span>Minutes</span>
-        <span>Seconds</span>
-      </div>
-    </div>
-  );
-}
 
 const QuickShopSubcategory = () => {
   const navigate = useNavigate();
@@ -215,6 +184,45 @@ const QuickShopSubcategory = () => {
   const commerceFlow = isFreshGroceryFlow ? 'fresh_grocery' : isMithilakFlow ? 'mithilak' : 'quick_shop';
   const [activeSub, setActiveSub] = useState('all');
   const rightGridRef = useRef(null);
+  const [visibleCount, setVisibleCount] = useState(16);
+  const loadMoreRef = useRef(null);
+
+  // Reset visible products and scroll to top on subcategory/category change
+  useEffect(() => {
+    setVisibleCount(16);
+    if (rightGridRef.current) {
+      rightGridRef.current.scrollTop = 0;
+    }
+  }, [activeSub, categoryName]);
+
+  // Infinite lazy loaded scroll observer
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0] && entries[0].isIntersecting) {
+          setVisibleCount((prev) => {
+            if (prev < filteredProducts.length) {
+              return Math.min(prev + 16, filteredProducts.length);
+            }
+            return prev;
+          });
+        }
+      },
+      {
+        root: rightGridRef.current,
+        rootMargin: '250px',
+        threshold: 0.1,
+      }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [filteredProducts.length]);
+
+  const visibleProducts = React.useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
 
   useEffect(() => {
     if (rightGridRef.current) {
@@ -222,7 +230,7 @@ const QuickShopSubcategory = () => {
     }
   }, [activeSub, categoryName]);
 
-  // The tab's category tree doesn't depend on location — fetch it once per tab.
+  // The tab's category tree doesn't depend on location ΓÇö fetch it once per tab.
   const treeCacheRef = useRef({ tab: null, tree: null });
   // Category whose products are on screen; when only the live location
   // changes we refresh products in place instead of blanking the page.
@@ -238,8 +246,6 @@ const QuickShopSubcategory = () => {
       const categoryId = String(p.categoryId ?? p.product?.categoryId ?? '');
       return {
         id: card.id,
-        listingId: card.listingId,
-        marketplaceTab,
         name: card.name,
         img: card.image,
         brand: card.brand || (fromNearby ? 'Nearby Seller' : 'Mithila Brand'),
@@ -278,17 +284,15 @@ const QuickShopSubcategory = () => {
 
         // The user clicked this specific category (e.g. Fresh Vegetables).
         // That category is the root of this screen. Its children are its subcategories in the sidebar.
-        const root = (parent && (location.state?.isSubcategory || !parent.parentId || !(node.children || []).length)) ? parent : node;
+        const root = (location.state?.isSubcategory && parent) ? parent : node;
         const sidebarSubcategories = resolveSidebarSubcategories(root);
         const sidebarIdOf = mapToSidebarIds(root, sidebarSubcategories);
 
         let initialActive = 'all';
         if (location.state?.subCategoryId && sidebarSubcategories.some((s) => String(s.id) === String(location.state.subCategoryId))) {
           initialActive = String(location.state.subCategoryId);
-        } else if (sidebarSubcategories.some((s) => String(s.id) === String(node.id))) {
-          initialActive = root === node ? 'all' : String(node.id);
-        } else if (sidebarIdOf.has(String(node.id))) {
-          initialActive = sidebarIdOf.get(String(node.id));
+        } else if (location.state?.isSubcategory && sidebarSubcategories.some((s) => String(s.id) === String(node.id))) {
+          initialActive = String(node.id);
         }
 
         if (!cancelled && !isRefresh) {
@@ -369,16 +373,15 @@ const QuickShopSubcategory = () => {
   };
 
   const handleProductClick = (product) => {
-    const discountPct = product.oldPrice > product.price
-      ? `${Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}% OFF`
-      : undefined;
+    const discountPct = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) + '% OFF';
     navigate('/vendor/product-detail', {
       state: {
-        productId: product.id,
         product: {
           ...product,
           image: product.img,
           discount: discountPct,
+          rating: 4.5,
+          ratingCount: 42,
           category: categoryName
         }
       }
@@ -419,6 +422,11 @@ const QuickShopSubcategory = () => {
     const descendantIds = getDescendantIdSet(sub);
     return descendantIds.has(String(activeSub));
   };
+
+  const isAllItems = Boolean(
+    activeSub === 'all' ||
+    (siblingPills && String(activeSub) === String(siblingPills.parent.id))
+  );
 
   const currentSubcategoriesToShow = React.useMemo(() => {
     if (activeSub === 'all') {
@@ -634,13 +642,54 @@ const QuickShopSubcategory = () => {
               {/* Digital countdown timer on the right */}
               <div className="flex flex-col items-start gap-0.5">
                 <div className="text-[10px] font-bold text-slate-400 tracking-wide">We open in</div>
-                <ReopenCountdown />
+                {(() => {
+                  const [timeLeft, setTimeLeft] = React.useState({ h: '00', m: '00', s: '00' });
+                  React.useEffect(() => {
+                    const calculateTimeLeft = () => {
+                      const now = new Date();
+                      let target = new Date();
+                      target.setHours(6, 0, 0, 0);
+                      if (now.getHours() >= 6) {
+                        target.setDate(target.getDate() + 1);
+                      }
+                      const diff = target.getTime() - now.getTime();
+                      if (diff <= 0) {
+                        return { h: '00', m: '00', s: '00' };
+                      }
+                      const hrs = Math.floor(diff / (1000 * 60 * 60));
+                      const mins = Math.floor((diff / (1000 * 60)) % 60);
+                      const secs = Math.floor((diff / 1000) % 60);
+                      return {
+                        h: String(hrs).padStart(2, '0'),
+                        m: String(mins).padStart(2, '0'),
+                        s: String(secs).padStart(2, '0')
+                      };
+                    };
+                    setTimeLeft(calculateTimeLeft());
+                    const timer = setInterval(() => {
+                      setTimeLeft(calculateTimeLeft());
+                    }, 1000);
+                    return () => clearInterval(timer);
+                  }, []);
+                  return (
+                    <div className="flex flex-col items-start">
+                      <div className="font-mono text-xl font-black text-white tracking-wide">
+                        {timeLeft.h} : {timeLeft.m} : {timeLeft.s}
+                      </div>
+                      <div className="flex items-center gap-2 text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
+                        <span>Hours</span>
+                        <span>Minutes</span>
+                        <span>Seconds</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
             {/* Thanks for your patience tagline */}
             <div className="w-full border-t border-white/5 pt-2 flex items-center justify-center gap-1 text-[10px] font-semibold text-slate-400/90">
-              <span className="text-yellow-400">✦</span>
+              <span className="text-yellow-400">Γ£ª</span>
               <span>Thanks for your patience!</span>
             </div>
           </div>
@@ -756,7 +805,7 @@ const QuickShopSubcategory = () => {
                         : 'bg-white text-gray-700 border-gray-200/80 hover:bg-gray-50'
                     }`}
                   >
-                    All {siblingPills.parent.name}
+                    All Items
                   </button>
                   {siblingPills.items.map((sibling) => {
                     const isSiblingActive = activeSub === sibling.id;
@@ -794,7 +843,7 @@ const QuickShopSubcategory = () => {
                   )}
 
                   <span className="text-[10px] md:text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-white border border-gray-200/80 text-gray-500 shadow-3xs flex-shrink-0">
-                    {currentSubcategoriesToShow.length > 0
+                    {!isAllItems && currentSubcategoriesToShow.length > 0
                       ? `${currentSubcategoriesToShow.length} items`
                       : `${filteredProducts.length} items`}
                   </span>
@@ -805,7 +854,7 @@ const QuickShopSubcategory = () => {
                     <h2 className="text-[14px] md:text-[15px] font-black text-gray-900 tracking-tight leading-tight">
                       {parentNode ? `${parentNode.name} > ${activeNode ? activeNode.name : ''}` : (activeNode ? activeNode.name : categoryName)}
                     </h2>
-                    {currentSubcategoriesToShow.length > 0 && (
+                    {!isAllItems && currentSubcategoriesToShow.length > 0 && (
                       <p className="text-[9.5px] text-gray-500 font-medium mt-0.5">
                         Select a subcategory to browse products
                       </p>
@@ -815,7 +864,7 @@ const QuickShopSubcategory = () => {
               </div>
 
               {/* Case 1: Subcategories exist to show (e.g. Milk -> Cow Milk, Toned Milk, Full Cream Milk cards) */}
-              {currentSubcategoriesToShow.length > 0 ? (
+              {(!isAllItems && currentSubcategoriesToShow.length > 0) ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
                   {currentSubcategoriesToShow.map((sub) => {
                     const count = getCategoryProductCount(sub);
@@ -849,7 +898,7 @@ const QuickShopSubcategory = () => {
 
                   {filteredProducts.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {filteredProducts.map((product) => {
+                      {visibleProducts.map((product) => {
                         const isFav = favorites.includes(product.id);
                         return (
                           <div 
@@ -949,7 +998,7 @@ const QuickShopSubcategory = () => {
                             {/* ETA & Stock status strip */}
                             <div className="flex items-center gap-1.5 mt-1.5 pt-0.5 border-t border-dashed border-gray-100 text-[8px] md:text-[8.5px] text-gray-400 font-semibold">
                               <span className={`flex items-center gap-0.5 ${primaryText}`}>
-                                ⏱ {product.eta}
+                                ΓÅ▒ {product.eta}
                               </span>
                               {product.stock && (
                                 <span className="text-rose-500 font-bold bg-rose-50/50 px-1 rounded-sm">
@@ -960,6 +1009,12 @@ const QuickShopSubcategory = () => {
                           </div>
                         );
                       })}
+                      {visibleCount < filteredProducts.length && (
+                        <div ref={loadMoreRef} className="col-span-2 md:col-span-3 lg:col-span-4 py-4 flex items-center justify-center gap-2 text-xs font-bold text-gray-400">
+                          <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                          <span>Loading more products...</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-10 px-4 bg-white/60 rounded-2xl border border-dashed border-gray-200 my-2">
@@ -982,7 +1037,7 @@ const QuickShopSubcategory = () => {
           )}
 
           {!notDeliverable && loading && (
-            <p className="text-center text-[12px] font-bold text-gray-400 py-10">Loading products…</p>
+            <p className="text-center text-[12px] font-bold text-gray-400 py-10">Loading productsΓÇª</p>
           )}
         </div>
 

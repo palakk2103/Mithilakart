@@ -21,14 +21,18 @@ const bannerSchema = Joi.object({
   isActive: Joi.boolean().optional(),
 });
 
+const bannerUpdateSchema = bannerSchema.fork(['title', 'imageUrl'], (field) => field.optional());
+
 const chipSchema = Joi.object({
   label: Joi.string().trim().min(1).max(50).required(),
   imageUrl: mediaUrlSchema.optional().allow(null, ''),
-  categoryId: objectIdSchema.optional().allow(null),
+  categoryId: objectIdSchema.optional().allow(null, ''),
   commerceFlow: Joi.string().valid(...COMMERCE_FLOW_VALUES).optional(),
   sortOrder: Joi.number().integer().min(0).optional(),
   isActive: Joi.boolean().optional(),
 });
+
+const chipUpdateSchema = chipSchema.fork(['label'], (field) => field.optional());
 
 const sectionUpdateSchema = Joi.object({
   title: Joi.string().trim().min(2).max(120).required(),
@@ -67,7 +71,9 @@ const confirmUploadSchema = Joi.object({
 
 module.exports = {
   bannerSchema,
+  bannerUpdateSchema,
   chipSchema,
+  chipUpdateSchema,
   sectionUpdateSchema,
   sectionReorderSchema,
   cmsPageSchema,

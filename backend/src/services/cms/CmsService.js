@@ -66,13 +66,21 @@ class CmsService extends BaseService {
   }
 
   async createChip(data) {
-    const chip = await this.categoryChipRepository.create(data);
-    await this._invalidateStorefrontCache(data.commerceFlow);
+    const payload = {
+      ...data,
+      categoryId: (data.categoryId && String(data.categoryId).trim() !== '') ? data.categoryId : null,
+    };
+    const chip = await this.categoryChipRepository.create(payload);
+    await this._invalidateStorefrontCache(payload.commerceFlow);
     return chip;
   }
 
   async updateChip(id, data) {
-    const chip = await this.categoryChipRepository.updateById(id, data);
+    const payload = { ...data };
+    if ('categoryId' in data) {
+      payload.categoryId = (data.categoryId && String(data.categoryId).trim() !== '') ? data.categoryId : null;
+    }
+    const chip = await this.categoryChipRepository.updateById(id, payload);
     await this._invalidateStorefrontCache(chip.commerceFlow);
     return chip;
   }

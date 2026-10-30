@@ -36,6 +36,15 @@ function errorHandler(err, req, res, _next) {
     );
   }
 
+  if (err.name === 'CastError') {
+    return ApiResponse.error(
+      res,
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      `Invalid identifier "${err.value}" for ${err.path || 'field'}`
+    );
+  }
+
   if (err.code === 11000) {
     const keys = Object.keys(err.keyValue || {});
     let friendlyMessage = 'Duplicate key conflict';
