@@ -1,8 +1,13 @@
 const express = require('express');
 const Joi = require('joi');
-const { validateBody, validateParams } = require('../../middleware/validate');
+const { validateBody, validateParams, validateQuery } = require('../../middleware/validate');
 const { objectIdSchema } = require('../../validators/common.validator');
 const { profileUpdateSchema, addressSchema, paymentMethodSchema } = require('../../validators/user/user.validator');
+
+const alreadyBoughtQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).max(1000).default(1),
+  limit: Joi.number().integer().min(1).max(24).default(12),
+});
 
 function createUsersRoutes(controllers, middleware) {
   const router = express.Router();
@@ -18,6 +23,7 @@ function createUsersRoutes(controllers, middleware) {
     couponController,
     notificationController,
     returnController,
+    alreadyBoughtController,
   } = controllers;
 
   router.get('/me', authCustomer, userProfileController.getMe);
@@ -54,6 +60,9 @@ function createUsersRoutes(controllers, middleware) {
     smsEnabled: Joi.boolean().optional(),
     emailEnabled: Joi.boolean().optional(),
   })), notificationController.updatePreferences);
+
+  // MithilaKart - You Buy - Already Bought Products (the customer's own purchases only).
+  router.get('/me/you-buy/already-bought', authCustomer, validateQuery(alreadyBoughtQuerySchema), alreadyBoughtController.list);
 
   return router;
 }

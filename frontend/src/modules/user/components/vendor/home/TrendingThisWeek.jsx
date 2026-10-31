@@ -54,7 +54,7 @@ const ViewStoreDivider = ({ isMithilak }) => (
   </svg>
 );
 
-const TrendingThisWeek = ({ theme }) => {
+const TrendingThisWeek = ({ theme, maxItems }) => {
   const { t } = useTranslation();
   const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
@@ -69,7 +69,7 @@ const TrendingThisWeek = ({ theme }) => {
     ? homeSections.stillLooking
     : homeSections.topSelection || [];
 
-  const trendingItems = rawList.map((item, index) => {
+  const trendingItems = (maxItems ? rawList.slice(0, maxItems) : rawList).map((item, index) => {
     const prod = item.product || {};
     const name = (currentLanguage !== 'en' && (prod.translations?.[currentLanguage]?.title || item.translations?.[currentLanguage]?.title)) 
       || item.title 

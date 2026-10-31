@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Sparkles, Gift, Monitor, Gem, Shirt, Gamepad2, BookOpen, Zap, ChevronRight, MoreHorizontal, Heart, Star } from 'lucide-react';
 import SEO from '../../../shared/components/SEO';
@@ -14,6 +14,7 @@ import KeepShopping from '../components/vendor/home/KeepShopping';
 import RatingSection from '../components/vendor/home/RatingSection';
 import SubCategoryGrid from '../components/vendor/home/SubCategoryGrid';
 import TrendingThisWeek from '../components/vendor/home/TrendingThisWeek';
+import AlreadyBoughtSection from '../components/vendor/home/AlreadyBoughtSection';
 
 // Import Existing Shared Components
 import CategoryProductsSection from '../components/vendor/CategoryProductsSection';
@@ -107,7 +108,7 @@ const CardBottomDivider = () => (
 );
 
 // Styled Product Card matching the reference image layout and structure
-const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart }) => {
+const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel = 'Add to Cart', ctaDisabled = false }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const title = deal.title || deal.name;
   const brand = deal.product?.brand || 'MITHILAKART';
@@ -189,10 +190,11 @@ const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart }) => {
         <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[#EADCC9]/40">
           <button
             onClick={(e) => onAddToCart(deal, e)}
-            className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs"
+            disabled={ctaDisabled}
+            className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#FFF8EE] disabled:hover:text-[#3E5A44]"
           >
             <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>Add to Cart</span>
+            <span>{ctaLabel}</span>
           </button>
         </div>
 
@@ -201,6 +203,9 @@ const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart }) => {
     </div>
   );
 });
+
+// You Buy product sections show at most this many products (client request: 10-12).
+const MAX_SECTION_PRODUCTS = 12;
 
 const Home = () => {
   const { t } = useTranslation();
@@ -330,108 +335,13 @@ const Home = () => {
     }
   }, [setSelectedCategory, setSearchParams]);
 
-  // ── "More" overflow handling for the top category chip row ──
-  // Measures real chip widths in a hidden unconstrained row and dynamically
-  // shows as many visible chips as can comfortably fit within the available width.
-  const chipRowRef = useRef(null);
-  const chipsMeasureContainerRef = useRef(null);
-  const moreChipMeasureRef = useRef(null);
+  // ── "More" button: last item of the horizontally scrolling chip track ──
+  // All categories render in the scroll track; "More" sits after them and opens a
+  // popup listing every category.
   const moreButtonRef = useRef(null);
   const moreMenuRef = useRef(null);
-  const [visibleChipCount, setVisibleChipCount] = useState(mainCategoriesList.length);
   const [moreOpen, setMoreOpen] = useState(false);
   const [moreMenuPos, setMoreMenuPos] = useState({ top: 0, left: 0 });
-
-  useLayoutEffect(() => {
-    const recomputeVisibleChips = () => {
-      const wrapper = chipRowRef.current;
-      const measureContainer = chipsMeasureContainerRef.current;
-      const totalChips = mainCategoriesList.length;
-
-      if (!wrapper || !measureContainer || totalChips === 0) return;
-
-      const chipElements = Array.from(measureContainer.children);
-      if (chipElements.length === 0) return;
-
-      const wrapperStyle = window.getComputedStyle(wrapper);
-      const paddingLeft = parseFloat(wrapperStyle.paddingLeft) || 0;
-      const paddingRight = parseFloat(wrapperStyle.paddingRight) || 0;
-      const availableWidth = Math.floor(wrapper.clientWidth - paddingLeft - paddingRight);
-
-      if (availableWidth <= 0) return;
-
-      const gap = parseFloat(wrapperStyle.columnGap || wrapperStyle.gap) || 12;
-      const moreBtn = moreChipMeasureRef.current;
-      const moreWidth = moreBtn ? Math.ceil(moreBtn.getBoundingClientRect().width) : 56;
-
-      // Measure real rendered width of each category chip
-      const chipWidths = chipElements.map((el) => Math.ceil(el.getBoundingClientRect().width));
-
-      // 1. Check if ALL category chips can fit comfortably without the "More" button
-      let totalAllWidth = 0;
-      for (let i = 0; i < totalChips; i++) {
-        totalAllWidth += chipWidths[i] + (i > 0 ? gap : 0);
-      }
-
-      if (totalAllWidth <= availableWidth) {
-        // All categories fit! No need for the "More" button; 0 space reserved for More.
-        setVisibleChipCount((prev) => (prev === totalChips ? prev : totalChips));
-        return;
-      }
-
-      // 2. Not all categories fit. Reserve space for the "More" button and
-      // find the maximum number of chips that can comfortably fit.
-      let accumulatedWidth = 0;
-      let count = 0;
-
-      for (let i = 0; i < totalChips; i++) {
-        const nextAccumulated = accumulatedWidth + chipWidths[i] + (i > 0 ? gap : 0);
-        // Space needed if we display (i + 1) chips PLUS the "More" button:
-        const requiredWithMore = nextAccumulated + gap + moreWidth;
-
-        if (requiredWithMore <= availableWidth) {
-          count = i + 1;
-          accumulatedWidth = nextAccumulated;
-        } else {
-          break;
-        }
-      }
-
-      // When total categories > 4, ensure at least 4 are visible before More
-      // as explicitly requested: "agar 4 se jada h header category to is tareeke ka dikhna chahiye na kam se kam"
-      const minVisible = totalChips > 4 ? 4 : 1;
-      const finalCount = Math.min(totalChips - 1, Math.max(minVisible, count));
-      setVisibleChipCount((prev) => (prev === finalCount ? prev : finalCount));
-    };
-
-    recomputeVisibleChips();
-
-    // Double-check on next animation frame to guarantee dimensions after fonts/styles apply
-    const frameId = requestAnimationFrame(recomputeVisibleChips);
-
-    let ro;
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(() => {
-        recomputeVisibleChips();
-      });
-      if (chipRowRef.current) ro.observe(chipRowRef.current);
-      if (chipsMeasureContainerRef.current) ro.observe(chipsMeasureContainerRef.current);
-    }
-
-    if (document.fonts?.ready) {
-      document.fonts.ready.then(recomputeVisibleChips);
-    }
-
-    window.addEventListener('resize', recomputeVisibleChips);
-    window.addEventListener('orientationchange', recomputeVisibleChips);
-
-    return () => {
-      cancelAnimationFrame(frameId);
-      if (ro) ro.disconnect();
-      window.removeEventListener('resize', recomputeVisibleChips);
-      window.removeEventListener('orientationchange', recomputeVisibleChips);
-    };
-  }, [mainCategoriesList, selectedCategory, currentLanguage]);
 
   // Close the "More" dropdown on outside click, Escape, or page scroll (ignoring scroll inside the menu itself)
   useEffect(() => {
@@ -484,7 +394,7 @@ const Home = () => {
     setMoreOpen((prev) => !prev);
   }, [moreOpen]);
 
-  const hiddenChipsList = mainCategoriesList.slice(visibleChipCount);
+  const hiddenChipsList = mainCategoriesList;
 
   return (
     <>
@@ -496,12 +406,12 @@ const Home = () => {
     <div className="pb-2 bg-transparent text-primary-dark">
       {/* 1. TOP HORIZONTAL CATEGORY ROW (Sticky Header Categories on Scroll) */}
       <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F6F8F3]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(63,42,32,0.04)] border-b border-[#EADCC9]/40 py-2 mb-3 transition-all duration-200">
-        <div ref={chipRowRef} className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar px-2 sm:px-3">
-          {mainCategoriesList.slice(0, visibleChipCount).map((cat, idx) => (
+        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar px-2 sm:px-3 touch-pan-x overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {mainCategoriesList.map((cat, idx) => (
             <CategoryChip key={cat.id ?? idx} cat={cat} active={isCategoryActive(cat)} onClick={() => handleCategoryClick(cat)} />
           ))}
 
-          {hiddenChipsList.length > 0 && (
+          {mainCategoriesList.length > 4 && (
             <button
               ref={moreButtonRef}
               type="button"
@@ -519,39 +429,6 @@ const Home = () => {
               </span>
             </button>
           )}
-        </div>
-
-        {/* Hidden measuring row: renders every chip (+ a ghost "More" chip) off-screen
-            so we can read their real widths and decide how many actually fit above. */}
-        <div
-          aria-hidden="true"
-          className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3"
-          style={{
-            position: 'absolute',
-            top: '-9999px',
-            left: '-9999px',
-            visibility: 'hidden',
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap',
-            width: 'max-content',
-            contain: 'paint layout',
-            opacity: 0,
-            zIndex: -9999,
-          }}
-        >
-          <div ref={chipsMeasureContainerRef} className="flex items-center gap-2 sm:gap-3">
-            {mainCategoriesList.map((cat, idx) => (
-              <CategoryChip key={cat.id ?? idx} cat={cat} active={isCategoryActive(cat)} onClick={() => {}} />
-            ))}
-          </div>
-          <button ref={moreChipMeasureRef} type="button" tabIndex={-1} className="flex flex-col items-center flex-shrink-0">
-            <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full bg-[#3E5A44] border border-[#3E5A44] text-white flex items-center justify-center shadow-xs">
-              <MoreHorizontal size={18} />
-            </div>
-            <span className="text-[9.5px] sm:text-[10px] font-bold mt-1.5 leading-none">
-              {t('common.more', { defaultValue: 'More' })}
-            </span>
-          </button>
         </div>
       </div>
 
@@ -614,10 +491,17 @@ const Home = () => {
         </div>
       )}
 
+      {/* 3b. ALREADY BOUGHT PRODUCTS (authenticated customers with purchases only) */}
+      {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
+        <div className="mb-5 md:mb-8 empty:hidden">
+          <AlreadyBoughtSection CardComponent={TodaysDealCard} />
+        </div>
+      )}
+
       {/* 4. TRENDING THIS WEEK SECTION */}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
         <div className="mb-5 md:mb-8">
-          <TrendingThisWeek />
+          <TrendingThisWeek maxItems={MAX_SECTION_PRODUCTS} />
         </div>
       )}
 
@@ -642,7 +526,7 @@ const Home = () => {
           </div>
 
           <div className="flex items-stretch gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x pb-2 pt-1 -mx-1 px-1">
-            {(homeSections.todaysSpecialDeals?.length ? homeSections.todaysSpecialDeals : homeSections.brandsSpotlight || []).map((deal) => (
+            {(homeSections.todaysSpecialDeals?.length ? homeSections.todaysSpecialDeals : homeSections.brandsSpotlight || []).slice(0, MAX_SECTION_PRODUCTS).map((deal) => (
               <div key={deal.id} className="w-[165px] sm:w-[195px] md:w-[220px] flex-shrink-0 snap-start flex flex-col">
                 <TodaysDealCard
                   deal={deal}
@@ -683,7 +567,7 @@ const Home = () => {
 
           <div className="mb-5 md:mb-8">
             <LazySection height="350px">
-              <BrandsSpotlight items={homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection} />
+              <BrandsSpotlight items={(homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection || []).slice(0, MAX_SECTION_PRODUCTS)} />
             </LazySection>
           </div>
 

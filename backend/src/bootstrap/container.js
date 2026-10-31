@@ -124,6 +124,7 @@ const { AdminFinanceService } = require('../services/admin/AdminFinanceService')
 const { AdminReportService } = require('../services/admin/AdminReportService');
 const { AdminPromotionService, AdminSubAdminService } = require('../services/admin/AdminPromotionService');
 const { UserProfileService } = require('../services/users/UserProfileService');
+const { AlreadyBoughtService } = require('../services/users/AlreadyBoughtService');
 const { AddressService } = require('../services/address/AddressService');
 const { PaymentMethodService } = require('../services/payment-method/PaymentMethodService');
 const { NotificationService } = require('../services/notifications/NotificationService');
@@ -201,6 +202,7 @@ const { CouponController } = require('../controllers/engagement/CouponController
 const { CustomerNotificationController } = require('../controllers/notifications/CustomerNotificationController');
 const { SearchController } = require('../controllers/search/SearchController');
 const { UserProfileController } = require('../controllers/users/UserProfileController');
+const { AlreadyBoughtController } = require('../controllers/users/AlreadyBoughtController');
 const { AddressController } = require('../controllers/address/AddressController');
 const { PaymentMethodController } = require('../controllers/payment-method/PaymentMethodController');
 
@@ -770,6 +772,12 @@ function buildContainer() {
   const customerNotificationController = new CustomerNotificationController(notificationService, adminSupportService);
   const searchController = new SearchController(searchService);
   const userProfileController = new UserProfileController(userProfileService);
+  const alreadyBoughtController = new AlreadyBoughtController(new AlreadyBoughtService({
+    orderItemModel: require('../models/OrderItem'),
+    productModel: require('../models/Product'),
+    listingModel: require('../models/MarketplaceListing'),
+    variantModel: require('../models/ProductVariant'),
+  }));
   const addressController = new AddressController(addressService);
   const paymentMethodController = new PaymentMethodController(paymentMethodService);
 
@@ -1008,6 +1016,7 @@ function buildContainer() {
       adminPromotions: createAdminPromotionRoutes(adminServices, middleware),
       users: createUsersRoutes({
         userProfileController,
+        alreadyBoughtController,
         addressController,
         paymentMethodController,
         walletController,

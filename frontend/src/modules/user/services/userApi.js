@@ -60,3 +60,6 @@ export const getNotifications = (params) =>
 export const createSupportTicket = (data) => customerApi.post('/support/tickets', data);
 
 export const getSupportTickets = (params) => customerApi.get('/support/tickets', { params });
+
+export const getAlreadyBought = (params = {}) =>
+  customerApi.get('/users/me/you-buy/already-bought', { params });

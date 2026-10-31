@@ -51,28 +51,23 @@ const locateCategory = (tree, id, name) => {
 };
 
 /**
- * Resolves the list of subcategories to show in the sidebar for a given root category.
- * If the category only has a single wrapper/pass-through child (e.g. Dairy & Breads -> Dairy Products),
- * it unwraps that child so the actual user-created subcategories (Milk, Butter, Paneer, etc.) are visible.
- * If all children are wrapper categories with their own children, it flattens them so all subcategories render properly.
+ * Sidebar = the root's direct children (level 2), always. Level 3 children are
+ * never promoted into the sidebar: they render as tabs on the right once their
+ * level-2 parent is selected. Do NOT unwrap/flatten the tree here - that is what
+ * used to replace level 2 with level 3 whenever a category had one child or all
+ * of its children had children.
  */
-const resolveSidebarSubcategories = (root) => {
-  if (!root || !root.children || root.children.length === 0) return [];
+const resolveSidebarSubcategories = (root) => (root?.children || []);
 
-  let list = root.children;
-  // If there's a single intermediate container child with its own subcategories
-  // (e.g., Dairy & Breads -> Dairy Products -> [Milk, Butter, Paneer, Cheese...]),
-  // unwrap that single child so all actual subcategories are rendered in the sidebar.
-  while (list.length === 1 && (list[0].children || []).length > 0) {
-    list = list[0].children;
+/** Path of nodes from a top-level root down to the node with `id`. */
+const findPath = (nodes, id, trail = []) => {
+  for (const n of nodes || []) {
+    const next = [...trail, n];
+    if (String(n.id) === String(id)) return next;
+    const found = findPath(n.children, id, next);
+    if (found) return found;
   }
-
-  // If every child in the list has children (e.g. grouping folders), flatten to subcategories
-  if (list.length > 0 && list.every((c) => (c.children || []).length > 0)) {
-    list = list.flatMap((c) => (c.children && c.children.length > 0 ? c.children : [c]));
-  }
-
-  return list;
+  return null;
 };
 
 /** categoryId ΓåÆ id of the sidebar subcategory it belongs to (any depth). */
@@ -323,14 +318,18 @@ const QuickShopSubcategory = () => {
 
         // The user clicked this specific category (e.g. Fresh Vegetables).
         // That category is the root of this screen. Its children are its subcategories in the sidebar.
-        const root = (location.state?.isSubcategory && parent) ? parent : node;
+        // Hierarchy is fixed: root (level 1) -> sidebar (level 2) -> tabs (level 3).
+        // Resolve the level-1 ancestor of whatever was clicked so a level-2/3 link
+        // can never turn a deeper level into the sidebar.
+        const pathToNode = findPath(tree, node.id) || [node];
+        const root = (location.state?.isSubcategory && pathToNode.length > 1) ? pathToNode[0] : node;
         const sidebarSubcategories = resolveSidebarSubcategories(root);
         const sidebarIdOf = mapToSidebarIds(root, sidebarSubcategories);
 
         let initialActive = 'all';
-        if (location.state?.subCategoryId && sidebarSubcategories.some((s) => String(s.id) === String(location.state.subCategoryId))) {
+        if (location.state?.subCategoryId && findNodeById(sidebarSubcategories, location.state.subCategoryId)) {
           initialActive = String(location.state.subCategoryId);
-        } else if (location.state?.isSubcategory && sidebarSubcategories.some((s) => String(s.id) === String(node.id))) {
+        } else if (location.state?.isSubcategory && root !== node && findNodeById(sidebarSubcategories, node.id)) {
           initialActive = String(node.id);
         }
 

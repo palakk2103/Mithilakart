@@ -194,6 +194,7 @@ async function seedCatalog() {
     await HomeSection.findOneAndUpdate(
       { sectionKey, commerceFlow: COMMERCE_FLOWS.MITHILAK },
       {
+        
         sectionKey,
         title: sectionKey.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
         productIds: createdProducts.filter((item) => item.commerceFlows.includes(COMMERCE_FLOWS.MITHILAK)).map((item) => item._id),
