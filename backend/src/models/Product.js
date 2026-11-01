@@ -87,6 +87,8 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ sellerId: 1, status: 1, createdAt: -1 });
 productSchema.index({ categoryId: 1, status: 1, commerceFlows: 1 });
 productSchema.index({ status: 1, createdAt: -1 });
+// Public listing / category infinite scroll: filter + createdAt/_id order
+productSchema.index({ status: 1, deletedAt: 1, categoryId: 1, createdAt: -1, _id: -1 });
 productSchema.index({ sellerId: 1, sku: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
 // CR-002 — candidate lookup: "which sellers stock this catalog item?".
 // Partial, so the null-keyed majority costs nothing.

@@ -15,6 +15,15 @@ const nearbyProductsQuerySchema = coordsQuerySchema.keys({
   limit: Joi.number().integer().min(1).max(100).optional(),
   commerceFlow: Joi.string().valid('standard', 'quick_shop', 'fresh_grocery', 'mithilak').optional(),
   categoryId: Joi.string().optional(),
+  marketplaceTab: Joi.string().allow('').optional(),
+  tab: Joi.string().allow('').optional(),
+  sort: Joi.string().allow('').optional(),
+  minPrice: Joi.number().min(0).optional(),
+  maxPrice: Joi.number().min(0).optional(),
+  minRating: Joi.number().min(0).max(5).optional(),
+  quickDelivery: Joi.boolean().optional(),
+  discountOnly: Joi.boolean().optional(),
+  productType: Joi.string().valid('veg', 'organic', 'fresh').optional(),
 });
 
 const geocodeBodySchema = Joi.object({

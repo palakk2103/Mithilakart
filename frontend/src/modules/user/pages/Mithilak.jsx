@@ -12,8 +12,11 @@ import TopSelection from '../components/vendor/home/TopSelection';
 import BrandsSpotlight from '../components/vendor/home/BrandsSpotlight';
 import BestQuality from '../components/vendor/home/BestQuality';
 import TrendingThisWeek from '../components/vendor/home/TrendingThisWeek';
+import AlreadyBoughtSection from '../components/vendor/home/AlreadyBoughtSection';
 
 import bannerIllustration from '../../../assets/banner_illustration.png';
+import { handleImageError } from '../../../shared/utils/imageUtils';
+import ScrollRow from '../components/vendor/home/ScrollRow';
 
 const getDisplayName = (name) => {
   if (name === 'Mithila Festival & Cultural') return 'Festival & Cultural';
@@ -62,7 +65,7 @@ const MithilaCardBottomDivider = () => (
 );
 
 // Styled Product Card matching the reference image layout and structure
-const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart }) => {
+const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel = 'Add to Cart', ctaDisabled = false }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const name = prod.title || prod.name || prod.label || 'Product';
   const price = prod.product?.price ?? prod.price ?? 0;
@@ -92,8 +95,7 @@ const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart }) => {
           src={image}
           alt={name}
           className="w-full h-full object-cover rounded-[11px] md:rounded-[15px] group-hover:scale-[1.04] transition-transform duration-500"
-          loading="lazy"
-        />
+          loading="lazy" onError={handleImageError} />
 
         {/* Wishlist Heart Button */}
         <button
@@ -145,10 +147,11 @@ const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart }) => {
         <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[#207C8A]/20">
           <button
             onClick={(e) => onAddToCart(prod, e)}
-            className="w-full py-1.5 px-2 bg-[#F0F9FA] hover:bg-[#207C8A] text-[#207C8A] hover:text-white border border-[#207C8A]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs"
+            disabled={ctaDisabled}
+            className="w-full py-1.5 px-2 bg-[#F0F9FA] hover:bg-[#207C8A] text-[#207C8A] hover:text-white border border-[#207C8A]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#F0F9FA] disabled:hover:text-[#207C8A]"
           >
             <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>Add to Cart</span>
+            <span>{ctaLabel}</span>
           </button>
         </div>
 
@@ -158,12 +161,30 @@ const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart }) => {
   );
 });
 
+// Adapter so shared sections (AlreadyBoughtSection) can render the teal Mithila card
+const MithilaBoughtCard = ({ deal, ...rest }) => <MithilaDealCard prod={deal} {...rest} />;
+
 const Mithilak = () => {
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [mithilaCategories, setMithilaCategories] = useState([]);
-  const { fetchHomeSections, homeSections } = useVendorStore();
+  const { fetchHomeSections, homeSections, homeBanners } = useVendorStore();
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const adminBanners = (Array.isArray(homeBanners) ? homeBanners : [])
+    .filter((b) => b?.imageUrl || b?.image)
+    .map((b, idx) => ({
+      id: b.id || b._id || `banner-${idx}`,
+      image: b.imageUrl || b.image,
+      title: b.title || 'Mithila Banner',
+      link: b.linkUrl || b.link || '',
+    }));
+
+  useEffect(() => {
+    if (adminBanners.length <= 1) return undefined;
+    const timer = setInterval(() => setBannerIndex((i) => (i + 1) % adminBanners.length), 3500);
+    return () => clearInterval(timer);
+  }, [adminBanners.length]);
 
   useEffect(() => {
     localStorage.setItem('isMithilakFlow', 'true');
@@ -209,6 +230,31 @@ const Mithilak = () => {
       </div>
 
       {/* 2. Hero Promotional Banner */}
+      {adminBanners.length > 0 ? (
+        <div className="mb-6 relative rounded-2xl overflow-hidden shadow-sm h-[165px] md:h-[300px] bg-[#EAF4F6]">
+          {adminBanners.map((banner, idx) => (
+            <div
+              key={banner.id}
+              onClick={() => banner.link && navigate(banner.link)}
+              className={`absolute inset-0 transition-opacity duration-500 ${idx === bannerIndex ? 'opacity-100' : 'opacity-0 pointer-events-none'} ${banner.link ? 'cursor-pointer' : ''}`}
+            >
+              <img src={banner.image} alt={banner.title} className="w-full h-full object-cover" loading="lazy" decoding="async" onError={handleImageError} />
+            </div>
+          ))}
+          {adminBanners.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+              {adminBanners.map((banner, idx) => (
+                <button
+                  key={banner.id}
+                  onClick={() => setBannerIndex(idx)}
+                  aria-label={`Banner ${idx + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${idx === bannerIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="mb-6 bg-gradient-to-r from-[#207C8A] to-[#5DB6C3] rounded-2xl p-4 text-white relative overflow-hidden shadow-sm flex items-center justify-between h-[165px]">
         <div className="z-10 flex-1 max-w-[65%] flex flex-col justify-center h-full">
           <span className="bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full w-max uppercase tracking-wider">
@@ -225,47 +271,40 @@ const Mithilak = () => {
           <img
             src={bannerIllustration}
             alt="Mithila Artistry Illustration"
-            className="h-[95%] object-contain object-bottom select-none pr-2"
-          />
+            className="h-[95%] object-contain object-bottom select-none pr-2" loading="lazy" decoding="async" onError={handleImageError} />
         </div>
       </div>
+      )}
 
-      {/* 3. Shop by Category Grid (Mobile View) */}
-      <div className="grid grid-cols-4 gap-y-5 gap-x-2.5 mb-8 md:hidden">
-        {mithilaCategories.map((item, idx) => (
-          <div
-            key={item.id || idx}
-            onClick={() => {
-              localStorage.setItem('isMithilakFlow', 'true');
-              localStorage.setItem('isQuickShopFlow', 'false');
-              navigate('/mithilak/category', { state: { category: item.name, categoryId: item.id } });
-            }}
-            className="flex flex-col items-center cursor-pointer active:scale-95 transition-transform"
-          >
-            {/* Category Image Wrapper - White circle with light thin border */}
-            <div className="w-[66px] h-[66px] rounded-full bg-white border border-[#EADCC9]/55 flex items-center justify-center shadow-[0_2px_6px_rgba(0,0,0,0.03)] overflow-hidden relative">
-              <img
-                src={item.img}
-                alt={item.name}
-                className="w-[82%] h-[82%] object-contain z-10"
-                loading="lazy"
-              />
-              {/* White overlay ring to mask the black border line in the image */}
-              <div className="absolute inset-0 rounded-full border-[5.5px] border-white z-20 pointer-events-none" />
-            </div>
-            
-            {/* Category label text */}
-            <span className="text-[11.5px] font-semibold text-center text-gray-800 mt-2 leading-snug tracking-tight line-clamp-2 h-[34px] w-full flex items-start justify-center">
-              {getDisplayName(item.name)}
+      {/* 3. Shop by Categories (same pattern as Mithilakart, teal theme) */}
+      {mithilaCategories.length > 0 && (
+        <div className="py-4 w-full max-w-[1600px] mx-auto mb-5 md:mb-8">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-[16px] md:text-[18px] font-black text-[#3F2A20] tracking-tight">
+              Shop by Categories
+            </h2>
+            <span
+              onClick={() => {
+                localStorage.setItem('isMithilakFlow', 'true');
+                localStorage.setItem('isQuickShopFlow', 'false');
+                navigate('/categories');
+              }}
+              className="text-[13px] font-bold text-[#207C8A] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
+            >
+              View All
             </span>
           </div>
-        ))}
-      </div>
 
-      {/* 3. Shop by Category Grid (Desktop View) */}
-      <div className="hidden md:block md:max-w-[800px] md:mx-auto md:w-full md:mb-8">
-        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-md">
-          <div className="grid grid-cols-4 gap-x-8 gap-y-6 justify-items-center">
+          <div className="flex items-center gap-2 mb-3.5 overflow-x-auto no-scrollbar pb-0.5">
+            <button
+              type="button"
+              className="px-3.5 py-1.5 rounded-full text-[12px] md:text-[13px] font-black whitespace-nowrap border bg-[#207C8A] text-white border-[#207C8A] shadow-xs"
+            >
+              All Categories
+            </button>
+          </div>
+
+          <ScrollRow className="flex items-center gap-3 md:gap-5 pb-2 pt-1 -mx-1 px-1">
             {mithilaCategories.map((item, idx) => (
               <div
                 key={item.id || idx}
@@ -274,25 +313,35 @@ const Mithilak = () => {
                   localStorage.setItem('isQuickShopFlow', 'false');
                   navigate('/mithilak/category', { state: { category: item.name, categoryId: item.id } });
                 }}
-                className="flex flex-col items-center gap-2 cursor-pointer group active:scale-95 transition-transform w-full max-w-[120px] mx-auto"
+                className="flex-shrink-0 w-[104px] sm:w-[120px] md:w-[140px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
               >
-                <div className="relative w-[76px] h-[76px] rounded-full overflow-hidden bg-white border border-[#EADCC9]/55 flex items-center justify-center group-hover:bg-slate-50 transition-colors duration-300 shadow-sm">
-                  <img
-                    src={item.img}
-                    alt={item.name}
-                    className="w-[82%] h-[82%] object-contain z-10 group-hover:scale-[1.08] transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  {/* White overlay ring to mask the black border line in the image */}
-                  <div className="absolute inset-0 rounded-full border-[6.5px] border-white z-20 pointer-events-none" />
+                <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[#207C8A]/40 transition-all duration-300 transform">
+                  <div className="w-full h-[32px] sm:h-[34px] md:h-[38px] flex items-center justify-center px-0.5">
+                    <span className="text-[11px] sm:text-[12px] md:text-[13px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
+                      {getDisplayName(item.name)}
+                    </span>
+                  </div>
+                  <div className="w-[84%] aspect-square rounded-[14px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/40 flex items-center justify-center p-0.5 mb-0.5 relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
+                    {item.img ? (
+                      <img
+                        src={item.img}
+                        alt={item.name}
+                        onError={handleImageError}
+                        className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500" loading="lazy" decoding="async" />
+                    ) : (
+                      <span className="text-[12px] font-black text-[#207C8A]">{item.name.charAt(0)}</span>
+                    )}
+                  </div>
                 </div>
-                <span className="text-[13px] font-bold text-center text-slate-800 leading-tight tracking-tight mt-1 group-hover:text-[#207C8A] transition-colors">
-                  {getDisplayName(item.name)}
-                </span>
               </div>
             ))}
-          </div>
+          </ScrollRow>
         </div>
+      )}
+
+      {/* 3b. Already Bought Products (authenticated customers with purchases only) */}
+      <div className="mb-6 md:mb-8 empty:hidden">
+        <AlreadyBoughtSection CardComponent={MithilaBoughtCard} />
       </div>
 
       {/* 4. Trending This Week Section */}
@@ -317,7 +366,7 @@ const Mithilak = () => {
         </div>
 
         {/* Horizontal Scrolling Single Row */}
-        <div className="flex items-stretch gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x pb-2 pt-1 -mx-1 px-1">
+        <ScrollRow className="flex items-stretch gap-3 md:gap-4 snap-x pb-2 pt-1 -mx-1 px-1">
           {(homeSections.todaysSpecialDeals?.length ? homeSections.todaysSpecialDeals : (homeSections.topSelection?.length ? homeSections.topSelection : homeSections.brandsSpotlight || [])).map((prod) => (
             <div key={prod.id} className="w-[165px] sm:w-[195px] md:w-[220px] flex-shrink-0 snap-start flex flex-col">
               <MithilaDealCard
@@ -350,7 +399,7 @@ const Mithilak = () => {
               />
             </div>
           ))}
-        </div>
+        </ScrollRow>
       </div>
 
       {/* 6. Top Selection Section */}

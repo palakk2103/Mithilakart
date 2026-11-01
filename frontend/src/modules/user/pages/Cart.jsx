@@ -17,6 +17,7 @@ import { getWishlist, addToWishlist as addToWishlistApi, removeFromWishlist as r
 import { extractList, mapWishlistItem } from '../utils/mappers';
 import { addProductToCart } from '../utils/cartUtils';
 import { getStorefrontConfig } from '../services/storefrontApi';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 const Cart = () => {
   const { t } = useTranslation();
@@ -363,7 +364,7 @@ const Cart = () => {
                     <div className="flex gap-4 items-center relative">
                       {/* Item Image Box */}
                       <div className="w-[84px] h-[84px] rounded-[18px] bg-slate-50 border border-slate-100 flex items-center justify-center p-2 flex-shrink-0">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
+                        <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" loading="lazy" decoding="async" onError={handleImageError} />
                       </div>
 
                       {/* Item Details */}
@@ -423,7 +424,7 @@ const Cart = () => {
                     {localWishlist.slice(0, 6).map((item) => (
                       <div key={item.id} className="border border-slate-100 rounded-2xl p-3 flex flex-col justify-between items-center bg-slate-50/50 hover:bg-slate-50 transition-colors">
                         <div className="w-16 h-16 rounded-xl bg-white p-1 flex items-center justify-center mb-2 border border-slate-100">
-                          <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
+                          <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" loading="lazy" decoding="async" onError={handleImageError} />
                         </div>
                         <h4 className="text-[12px] font-bold text-slate-800 text-center truncate w-full">{item.name}</h4>
                         <p className="text-[12px] font-black text-slate-900 mt-0.5">{formatPrice(item.price)}</p>
@@ -600,7 +601,7 @@ const Cart = () => {
 
             {/* Product Image preview */}
             <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-100 mx-auto p-2 flex items-center justify-center mb-4">
-              <img src={itemToRemove.image} alt={itemToRemove.name} className="w-full h-full object-contain mix-blend-multiply" />
+              <img src={itemToRemove.image} alt={itemToRemove.name} className="w-full h-full object-contain mix-blend-multiply" loading="lazy" decoding="async" onError={handleImageError} />
             </div>
 
             <h3 className="text-[18px] font-black text-slate-800 tracking-tight leading-snug">

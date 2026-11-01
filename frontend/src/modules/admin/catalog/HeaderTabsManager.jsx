@@ -20,6 +20,7 @@ const ICON_OPTIONS = [
   { value: 'bag', label: 'Shopping Bag' },
   { value: 'tag', label: 'Offer Tag' },
   { value: 'sparkles', label: 'Sparkles / Featured' },
+  { value: 'basket', label: 'Basket (Groceries)' },
 ];
 
 const ROUTE_SUGGESTIONS = [

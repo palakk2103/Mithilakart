@@ -6,6 +6,7 @@ import KitchenImg from '../../../../assets/Carousel/kitchen-removebg-preview.png
 import MakeupImg from '../../../../assets/Carousel/mkup-removebg-preview.png';
 import ElectronicsImg from '../../../../assets/Carousel/elctrncs-removebg-preview.png';
 import ClothesImg from '../../../../assets/Carousel/clths-removebg-preview.png';
+import { handleImageError } from '../../../../shared/utils/imageUtils';
 
 const slides = [
   {
@@ -93,7 +94,7 @@ const Carousel = () => {
 
             {/* Promo Tag */}
             <div className="bg-white p-3 shadow-sm rounded-sm flex items-center gap-3 w-fit border border-gray-100">
-              <img src="https://m.media-amazon.com/images/G/31/marketing/fba/fba-badge_18._CB485935210_.png" alt="Amazon Pay" className="h-6" />
+              <img src="https://m.media-amazon.com/images/G/31/marketing/fba/fba-badge_18._CB485935210_.png" alt="Amazon Pay" className="h-6" onError={handleImageError} />
               <div className="text-[12px] leading-tight font-bold">
                 Unlimited 5% cashback
                 <div className="text-gray-500 font-normal">with Amazon Pay ICICI Bank credit card</div>
@@ -107,8 +108,7 @@ const Carousel = () => {
               key={currentIndex}
               src={slides[currentIndex].image}
               alt={slides[currentIndex].title}
-              className="w-full h-full object-contain object-left animate-in fade-in zoom-in duration-700"
-            />
+              className="w-full h-full object-contain object-left animate-in fade-in zoom-in duration-700" onError={handleImageError} />
           </div>
         </div>
       </div>

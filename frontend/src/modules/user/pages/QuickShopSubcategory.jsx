@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Share2, ChevronDown, Heart, Check, X, Sparkles, Clock, Star, Zap } from 'lucide-react';
 import { formatPrice, parsePrice } from '../../../shared/utils/priceFormatter';
@@ -10,6 +10,7 @@ import { extractList, mapProductForCard } from '../utils/mappers';
 import { getImageUrl } from '../../../shared/utils/imageUtils';
 import { addProductToCart } from '../utils/cartUtils';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
+import useInfiniteProducts from '../../../shared/hooks/useInfiniteProducts';
 import useAccountStore from '../../../store/useAccountStore';
 
 const FALLBACK_IMAGE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="%23fdfbf7" rx="12"/><text x="75" y="80" font-size="12" font-family="sans-serif" font-weight="bold" fill="%23d3a075" text-anchor="middle">Mithilakart</text></svg>`;
@@ -166,6 +167,11 @@ const QuickShopSubcategory = () => {
   const [productsList, setProductsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notDeliverable, setNotDeliverable] = useState(false);
+  // Set by the overview load below; the product list itself is fetched (sorted/filtered/paged) by the API.
+  const [rootId, setRootId] = useState(null);
+  const [sourceMode, setSourceMode] = useState(null); // 'nearby' | 'catalog'
+  const [listTotal, setListTotal] = useState(null);
+  const sidebarIdOfRef = useRef(new Map());
 
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   const { savedAddresses, selectedAddressId } = useAccountStore();
@@ -260,37 +266,38 @@ const QuickShopSubcategory = () => {
   // changes we refresh products in place instead of blanking the page.
   const loadedKeyRef = useRef(null);
 
+  const toCard = (p, sidebarIdOf, fromNearby) => {
+    const card = mapProductForCard(p);
+    const categoryId = String(p.categoryId ?? p.product?.categoryId ?? '');
+    return {
+      id: card.id,
+      name: card.name,
+      img: card.image,
+      brand: card.brand || (fromNearby ? 'Nearby Seller' : 'Mithila Brand'),
+      weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
+      price: card.rawPrice != null ? card.rawPrice : parsePrice(card.price),
+      oldPrice: card.rawMrp != null ? card.rawMrp : (card.oldPrice || card.mrp ? parsePrice(card.oldPrice || card.mrp) : undefined),
+      eta: p.deliveryPromiseMinutes
+        ? `${p.deliveryPromiseMinutes} mins`
+        : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
+      tags: Array.isArray(p.tags) && p.tags.length > 0 ? p.tags : [fromNearby ? 'Nearby' : 'Fresh'],
+      // Sidebar id this product falls under; 'all' when it sits on the parent itself.
+      category: sidebarIdOf.get(categoryId) || 'all',
+      categoryId,
+      rating: Number(card.rating) || Number(p.rating) || 0,
+      reviewCount: card.reviewCount || p.reviewCount || 0,
+      stock: p.stock ?? card.stock,
+      deliveryPromiseMinutes: p.deliveryPromiseMinutes || (p.distanceKm != null ? Math.max(10, Math.round(p.distanceKm * 4)) : 20),
+      isOrganic: Boolean(p.isOrganic || (p.tags && p.tags.includes('organic')) || (card.name && /organic/i.test(card.name))),
+      isVeg: Boolean(p.isVeg || p.veg || (p.tags && p.tags.some(t => /veg/i.test(t))) || (card.name && /veg/i.test(card.name))),
+    };
+  };
+
+
   useEffect(() => {
     let cancelled = false;
     const loadKey = `${marketplaceTab}|${requestedId || requestedName}`;
     const isRefresh = loadedKeyRef.current === loadKey;
-
-    const toCard = (p, sidebarIdOf, fromNearby) => {
-      const card = mapProductForCard(p);
-      const categoryId = String(p.categoryId ?? p.product?.categoryId ?? '');
-      return {
-        id: card.id,
-        name: card.name,
-        img: card.image,
-        brand: card.brand || (fromNearby ? 'Nearby Seller' : 'Mithila Brand'),
-        weight: p.distanceKm != null ? `${p.distanceKm.toFixed(1)} km away` : '1 Unit',
-        price: card.rawPrice != null ? card.rawPrice : parsePrice(card.price),
-        oldPrice: card.rawMrp != null ? card.rawMrp : (card.oldPrice || card.mrp ? parsePrice(card.oldPrice || card.mrp) : undefined),
-        eta: p.deliveryPromiseMinutes
-          ? `${p.deliveryPromiseMinutes} mins`
-          : (p.distanceKm != null ? `${Math.max(10, Math.round(p.distanceKm * 4))} mins` : 'Same day'),
-        tags: Array.isArray(p.tags) && p.tags.length > 0 ? p.tags : [fromNearby ? 'Nearby' : 'Fresh'],
-        // Sidebar id this product falls under; 'all' when it sits on the parent itself.
-        category: sidebarIdOf.get(categoryId) || 'all',
-        categoryId,
-        rating: Number(card.rating) || Number(p.rating) || 0,
-        reviewCount: card.reviewCount || p.reviewCount || 0,
-        stock: p.stock ?? card.stock,
-        deliveryPromiseMinutes: p.deliveryPromiseMinutes || (p.distanceKm != null ? Math.max(10, Math.round(p.distanceKm * 4)) : 20),
-        isOrganic: Boolean(p.isOrganic || (p.tags && p.tags.includes('organic')) || (card.name && /organic/i.test(card.name))),
-        isVeg: Boolean(p.isVeg || p.veg || (p.tags && p.tags.some(t => /veg/i.test(t))) || (card.name && /veg/i.test(card.name))),
-      };
-    };
 
     const load = async () => {
       if (!isRefresh) {
@@ -325,6 +332,7 @@ const QuickShopSubcategory = () => {
         const root = (location.state?.isSubcategory && pathToNode.length > 1) ? pathToNode[0] : node;
         const sidebarSubcategories = resolveSidebarSubcategories(root);
         const sidebarIdOf = mapToSidebarIds(root, sidebarSubcategories);
+        sidebarIdOfRef.current = sidebarIdOf;
 
         let initialActive = 'all';
         if (location.state?.subCategoryId && findNodeById(sidebarSubcategories, location.state.subCategoryId)) {
@@ -371,6 +379,8 @@ const QuickShopSubcategory = () => {
         if (!cancelled) {
           const cards = items.map((p) => toCard(p, sidebarIdOf, fromNearby));
           setProductsList(cards);
+          setRootId(String(root.id));
+          setSourceMode(fromNearby ? 'nearby' : 'catalog');
           setNotDeliverable(undeliverable && items.length === 0);
           loadedKeyRef.current = loadKey;
 
@@ -476,146 +486,66 @@ const QuickShopSubcategory = () => {
     return [];
   }, [activeSub, subCategories, isAnyFilterOrSortActive]);
 
-  const filteredProducts = React.useMemo(() => {
-    let list = [...productsList];
+  // ---- Server-driven product list -------------------------------------
+  // Category scope, price, quick delivery, type, discount and sort are applied
+  // by the API over the whole matching set and paged (infinite scroll).
+  const TYPE_CHIPS = ['all', 'veg', 'organic', 'fresh', 'deals'];
+  const listParams = useMemo(() => {
+    const params = {};
+    const sort = { price_asc: 'price', price_desc: '-price', delivery: 'delivery', rating: '-rating' }[sortBy];
+    if (sort) params.sort = sort;
+    if (filterPriceMin !== '' && Number.isFinite(Number(filterPriceMin))) params.minPrice = Number(filterPriceMin);
+    if (filterPriceMax !== '' && Number.isFinite(Number(filterPriceMax))) params.maxPrice = Number(filterPriceMax);
+    if (filterFastDelivery) params.quickDelivery = true;
+    if (filterDiscountOnly || filterType === 'deals') params.discountOnly = true;
+    if (['veg', 'organic', 'fresh'].includes(filterType)) params.productType = filterType;
 
-    // 1. Subcategory filter
-    if (activeSub !== 'all') {
-      const node = activeNode || findNodeById(subCategories, activeSub);
-      const subName = (node?.name || subCategories.find((s) => String(s.id) === String(activeSub))?.name || '').toLowerCase();
-      const keywords = subName
-        ? subName.split(/[,&\s]+/).map((w) => w.trim().toLowerCase()).filter((w) => w.length > 2)
-        : [];
-
-      if (!node) {
-        list = list.filter((p) => {
-          if (String(p.category) === String(activeSub) || String(p.categoryId) === String(activeSub)) return true;
-          if (keywords.length > 0) {
-            const title = (p.name || '').toLowerCase();
-            return keywords.some((k) => title.includes(k));
-          }
-          return false;
-        });
-      } else {
-        const descendantIds = getDescendantIdSet(node);
-        const parentId = parentNode ? String(parentNode.id) : null;
-        list = list.filter((p) => {
-          if (descendantIds.has(String(p.categoryId)) || descendantIds.has(String(p.category))) return true;
-          if (keywords.length > 0 && (p.category === 'all' || (parentId && String(p.category) === parentId) || !descendantIds.size)) {
-            const title = (p.name || '').toLowerCase();
-            return keywords.some((k) => title.includes(k));
-          }
-          return false;
-        });
-      }
+    let categoryId = rootId;
+    if (activeSub !== 'all') categoryId = String((activeNode && activeNode.id) || activeSub);
+    if (!TYPE_CHIPS.includes(filterType)) {
+      const matchSub = subCategories.find((sc) => String(sc.id) === String(filterType) || (sc.name || '').toLowerCase() === String(filterType).toLowerCase());
+      if (matchSub) categoryId = String(matchSub.id);
     }
+    return { params, categoryId };
+  }, [sortBy, filterPriceMin, filterPriceMax, filterFastDelivery, filterDiscountOnly, filterType, activeSub, activeNode, subCategories, rootId]);
+  const listKey = JSON.stringify([listParams, sourceMode, effectiveLat.toFixed(3), effectiveLng.toFixed(3)]);
 
-    // 2. Type filter
-    if (filterType !== 'all') {
-      if (filterType === 'veg') {
-        list = list.filter((p) => p.isVeg);
-      } else if (filterType === 'organic') {
-        list = list.filter((p) => p.isOrganic || /organic/i.test(p.name || ''));
-      } else if (filterType === 'fresh') {
-        list = list.filter((p) => (p.tags && p.tags.includes('Fresh')) || /fresh/i.test(p.name || ''));
-      } else if (filterType === 'deals') {
-        list = list.filter((p) => p.oldPrice && p.oldPrice > p.price);
-      } else {
-        // match specific subcategory selected in Type dropdown
-        const matchSub = subCategories.find((s) => s.id === filterType || s.name.toLowerCase() === filterType.toLowerCase());
-        if (matchSub) {
-          const subId = matchSub.id;
-          const subKeywords = matchSub.name.toLowerCase().split(/[,&\s]+/).filter(w => w.length > 2);
-          list = list.filter((p) => {
-            if (String(p.category) === String(subId) || String(p.categoryId) === String(subId)) return true;
-            return subKeywords.some((k) => (p.name || '').toLowerCase().includes(k));
-          });
-        }
-      }
-    }
+  const fetchList = useCallback(async (page, limit) => {
+    const { params, categoryId } = listParams;
+    if (!categoryId || !sourceMode) return { items: [], hasMore: false };
+    const fromNearby = sourceMode === 'nearby';
+    const res = fromNearby
+      ? await getNearbyProducts({ lat: effectiveLat, lng: effectiveLng, commerceFlow, categoryId, page, limit, ...params })
+      : await getCategoryProducts(categoryId, { marketplaceTab, page, limit, ...params });
+    const list = extractList(res?.data ?? res);
+    const meta = res?.meta ?? res?.data?.meta;
+    if (page === 1) setListTotal(meta?.total ?? list.length);
+    return {
+      items: list.map((p) => toCard(p, sidebarIdOfRef.current, fromNearby)),
+      hasMore: meta ? Boolean(meta.hasMore ?? (meta.page < meta.totalPages)) : list.length >= limit,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listKey]);
 
-    // 3. Price Filter
-    if (filterPriceMin !== '' && !isNaN(Number(filterPriceMin))) {
-      list = list.filter((p) => p.price >= Number(filterPriceMin));
-    }
-    if (filterPriceMax !== '' && !isNaN(Number(filterPriceMax))) {
-      list = list.filter((p) => p.price <= Number(filterPriceMax));
-    }
+  const { items: filteredProducts, loading: listLoading, loadingMore, hasMore, loadMore } = useInfiniteProducts(
+    fetchList,
+    [listKey],
+    { limit: 24 }
+  );
+  const visibleProducts = filteredProducts;
 
-    // 4. Fast Delivery filter
-    if (filterFastDelivery) {
-      list = list.filter((p) => (p.deliveryPromiseMinutes || 999) <= 30);
-    }
-
-    // 5. In Stock filter
-    if (filterInStock) {
-      list = list.filter((p) => p.stock === undefined || p.stock > 0);
-    }
-
-    // 6. Discount only filter
-    if (filterDiscountOnly) {
-      list = list.filter((p) => p.oldPrice && p.oldPrice > p.price);
-    }
-
-    // 7. Sorting
-    if (sortBy === 'price_asc') {
-      list.sort((a, b) => a.price - b.price);
-    } else if (sortBy === 'price_desc') {
-      list.sort((a, b) => b.price - a.price);
-    } else if (sortBy === 'delivery') {
-      list.sort((a, b) => (a.deliveryPromiseMinutes || 99) - (b.deliveryPromiseMinutes || 99));
-    } else if (sortBy === 'rating') {
-      list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    }
-
-    return list;
-  }, [
-    activeSub, activeNode, subCategories, productsList,
-    sortBy, filterType, filterPriceMin, filterPriceMax,
-    filterFastDelivery, filterInStock, filterDiscountOnly
-  ]);
-
-  const visibleProducts = React.useMemo(() => {
-    return filteredProducts.slice(0, visibleCount);
-  }, [filteredProducts, visibleCount]);
-
-  const handleGridScroll = (e) => {
-    const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
-    if (scrollTop + clientHeight >= scrollHeight - 300) {
-      setVisibleCount((prev) => {
-        if (prev < filteredProducts.length) {
-          return Math.min(prev + 12, filteredProducts.length);
-        }
-        return prev;
-      });
-    }
-  };
-
+  const loadMoreRef = useRef(loadMore);
+  loadMoreRef.current = loadMore;
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
-
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => {
-            if (prev < filteredProducts.length) {
-              return Math.min(prev + 12, filteredProducts.length);
-            }
-            return prev;
-          });
-        }
-      },
-      {
-        root: rightGridRef.current,
-        rootMargin: '200px',
-        threshold: 0.1,
-      }
+      (entries) => { if (entries[0].isIntersecting) loadMoreRef.current(); },
+      { root: rightGridRef.current, rootMargin: '200px', threshold: 0.1 }
     );
-
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [filteredProducts.length, visibleCount]);
+  }, [hasMore, filteredProducts.length]);
 
   const getCategoryProductCount = (node) => {
     if (!node) return 0;
@@ -932,7 +862,7 @@ const QuickShopSubcategory = () => {
                 )}
                 <div className={`w-11 h-11 rounded-full overflow-hidden flex items-center justify-center border transition-all ${
                   isActive ? `${primaryBorderLight} ${primaryLightBg}` : 'border-gray-200/50 bg-white'
-                }`}>                  <img src={sub.icon} alt={sub.name} className="w-8 h-8 object-contain mix-blend-multiply" onError={handleImageError} />
+                }`}>                  <img src={sub.icon} alt={sub.name} className="w-8 h-8 object-contain mix-blend-multiply" onError={handleImageError} loading="lazy" decoding="async" />
                 </div>
                 <span className={`text-[9.5px] text-center leading-tight font-semibold tracking-tight ${
                   isActive ? `${primaryText} font-bold` : 'text-gray-500'
@@ -945,7 +875,7 @@ const QuickShopSubcategory = () => {
         </div>
 
         {/* Right Product Grid Area - Scrolls Separately */}
-        <div ref={rightGridRef} onScroll={handleGridScroll} className={`flex-1 min-w-0 ${rightGridBg} overflow-y-auto overscroll-contain h-full p-3 pb-24`}>
+        <div ref={rightGridRef} className={`flex-1 min-w-0 ${rightGridBg} overflow-y-auto overscroll-contain h-full p-3 pb-24`}>
           
           {/* Promo banner */}
           <div className={`${promoBg} rounded-xl p-3 flex justify-between items-center mb-4 relative overflow-hidden`}>
@@ -961,8 +891,7 @@ const QuickShopSubcategory = () => {
               src={productsList[0]?.img || "https://images.unsplash.com/photo-1610832958506-ee5633619144?w=150&auto=format&fit=crop&q=60"} 
               alt="Promo Basket" 
               className="w-16 h-12 object-contain mix-blend-multiply absolute right-2 bottom-1"
-              onError={handleImageError}
-            />
+              onError={handleImageError} loading="lazy" decoding="async" />
           </div>
 
           {/* Undeliverable / location banner */}
@@ -1041,7 +970,7 @@ const QuickShopSubcategory = () => {
                   <span className="text-[10px] md:text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-white border border-gray-200/80 text-gray-500 shadow-3xs flex-shrink-0">
                     {!isAllItems && currentSubcategoriesToShow.length > 0
                       ? `${currentSubcategoriesToShow.length} categories`
-                      : `${filteredProducts.length} items`}
+                      : `${listTotal ?? filteredProducts.length} items`}
                   </span>
                 </div>
 
@@ -1075,8 +1004,7 @@ const QuickShopSubcategory = () => {
                             src={sub.icon}
                             alt={sub.name}
                             className="w-full h-full object-contain mix-blend-multiply"
-                            onError={handleImageError}
-                          />
+                            onError={handleImageError} loading="lazy" decoding="async" />
                         </div>
                         <span className={`text-[10.5px] md:text-[12px] font-bold text-gray-900 leading-tight line-clamp-2 min-h-[26px] flex items-center justify-center group-hover:${primaryText} transition-colors`}>
                           {sub.name}
@@ -1092,7 +1020,7 @@ const QuickShopSubcategory = () => {
                 /* Case 2: Specific Leaf Subcategory selected (No children) -> Show Products Grid */
                 <div>
 
-                  {filteredProducts.length > 0 ? (
+                  {filteredProducts.length > 0 || listLoading ? (
                     <>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {visibleProducts.map((product) => {
@@ -1210,13 +1138,13 @@ const QuickShopSubcategory = () => {
                       </div>
 
                       {/* Lazy Loaded Scroll Sentinel & Loading Indicator */}
-                      {visibleCount < filteredProducts.length && (
+                      {hasMore && (
                         <div ref={sentinelRef} className="py-4 flex items-center justify-center gap-2 text-gray-400">
                           <div className={`w-4 h-4 border-2 ${primaryBorder} border-t-transparent rounded-full animate-spin`} />
                           <span className="text-[11px] font-semibold text-gray-500">Loading more products...</span>
                         </div>
                       )}
-                      {visibleCount >= filteredProducts.length && filteredProducts.length > 12 && (
+                      {!hasMore && !listLoading && filteredProducts.length > 12 && (
                         <div className="py-4 text-center text-[10.5px] font-semibold text-gray-400">
                           Showing all {filteredProducts.length} items
                         </div>
@@ -1242,7 +1170,7 @@ const QuickShopSubcategory = () => {
             </>
           )}
 
-          {!notDeliverable && loading && (
+          {!notDeliverable && (loading || listLoading) && (
             <p className="text-center text-[12px] font-bold text-gray-400 py-10">Loading productsΓÇª</p>
           )}
         </div>

@@ -30,6 +30,7 @@ import BeautyTab from '../../../assets/products/product12.jpg';
 import ToysTab from '../../../assets/products/product13.jpg';
 import StationeryTab from '../../../assets/products/product14.jpg';
 import ClothesImg from '../../../assets/products/product15.webp';
+import ScrollRow from '../components/vendor/home/ScrollRow';
 
 
 // Custom SVG Icons for Grocery Redesign
@@ -139,7 +140,7 @@ const GroceryCategoryIcon = ({ category }) => {
   const [failed, setFailed] = React.useState(false);
   const src = category.iconUrl || category.imageUrl;
   if (src && !failed) {
-    return <img src={getImageUrl(src)} alt="" className="w-10 h-10 object-contain" onError={() => setFailed(true)} />;
+    return <img src={getImageUrl(src)} alt="" className="w-10 h-10 object-contain" onError={() => setFailed(true)} loading="lazy" decoding="async" />;
   }
   const Icon = GROCERY_ICON_RULES.find(([pattern]) => pattern.test(category.name))?.[1];
   if (Icon) return <Icon />;
@@ -526,8 +527,7 @@ const QuickShop = () => {
                         src={getImageUrl(prod.image)} 
                         alt={prod.name} 
                         className="max-h-full max-w-full object-contain rounded-lg" 
-                        onError={handleImageError}
-                      />
+                        onError={handleImageError} loading="lazy" decoding="async" />
                     </div>
 
                     <div>
@@ -553,7 +553,7 @@ const QuickShop = () => {
           </div>
 
           {/* ── HORIZONTAL FILTER TABS BAR ── */}
-          <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-3.5 px-4 mb-4">
+          <ScrollRow className="flex gap-2.5 py-3.5 px-4 mb-4">
             {filterTabs.map((tab) => {
               const isActive = activeFilter === tab;
               return (
@@ -570,7 +570,7 @@ const QuickShop = () => {
                 </button>
               );
             })}
-          </div>
+          </ScrollRow>
 
           {/* ── FLASH DEALS SECTION ── */}
           <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(217,162,27,0.015)]">
@@ -619,8 +619,7 @@ const QuickShop = () => {
                         src={getImageUrl(prod.image)} 
                         alt={prod.title || prod.name} 
                         className="max-h-full object-contain mix-blend-multiply" 
-                        onError={handleImageError}
-                      />
+                        onError={handleImageError} loading="lazy" decoding="async" />
                     </div>
 
                     <div>
@@ -681,8 +680,7 @@ const QuickShop = () => {
                         src={getImageUrl(prod.image)} 
                         alt={prod.name} 
                         className="max-h-full object-contain mix-blend-multiply" 
-                        onError={handleImageError}
-                      />
+                        onError={handleImageError} loading="lazy" decoding="async" />
                     </div>
 
                     <div>
@@ -856,7 +854,7 @@ const QuickShop = () => {
               >
                 <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[#FFF7ED] rounded-xl overflow-hidden p-1">
                   {cat.imageUrl || cat.iconUrl ? (
-                    <img src={getImageUrl(cat.imageUrl || cat.iconUrl)} alt={cat.name} className="w-full h-full object-contain" onError={handleImageError} />
+                    <img src={getImageUrl(cat.imageUrl || cat.iconUrl)} alt={cat.name} className="w-full h-full object-contain" onError={handleImageError} loading="lazy" decoding="async" />
                   ) : (
                     <GroceryCategoryIcon category={cat} />
                   )}
@@ -912,8 +910,7 @@ const QuickShop = () => {
                       src={getImageUrl(prod.image)}
                       alt={prod.name}
                       className="max-h-full max-w-full object-contain mix-blend-multiply"
-                      onError={handleImageError}
-                    />
+                      onError={handleImageError} loading="lazy" decoding="async" />
                   </div>
 
                   <div>
@@ -945,7 +942,7 @@ const QuickShop = () => {
         </div>
 
         {/* ── HORIZONTAL FILTER TABS BAR ── */}
-        <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-3.5 px-4 mb-4">
+        <ScrollRow className="flex gap-2.5 py-3.5 px-4 mb-4">
           {filterTabs.map((tab) => {
             const isActive = activeFilter === tab;
             return (
@@ -962,7 +959,7 @@ const QuickShop = () => {
               </button>
             );
           })}
-        </div>
+        </ScrollRow>
 
         {/* ── FLASH DEALS SECTION ── */}
         <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
@@ -1018,8 +1015,7 @@ const QuickShop = () => {
                         src={getImageUrl(prod.image)}
                         alt={prod.title || prod.name}
                         className="max-h-full object-contain mix-blend-multiply"
-                        onError={handleImageError}
-                      />
+                        onError={handleImageError} loading="lazy" decoding="async" />
                     </div>
 
                     <div>
@@ -1096,8 +1092,7 @@ const QuickShop = () => {
                       src={getImageUrl(prod.image)}
                       alt={prod.name}
                       className="max-h-full object-contain mix-blend-multiply"
-                      onError={handleImageError}
-                    />
+                      onError={handleImageError} loading="lazy" decoding="async" />
                   </div>
 
                   <div>

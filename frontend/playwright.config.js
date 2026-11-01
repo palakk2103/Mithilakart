@@ -57,7 +57,7 @@ export default defineConfig({
   reporter: [['list'], ['json', { outputFile: 'e2e-results.json' }]],
 
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: 'http://localhost:3000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

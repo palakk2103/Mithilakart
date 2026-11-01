@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import useTabTheme from '../../../../shared/hooks/useTabTheme';
 import { useLanguage } from '../../../../shared/context/LanguageContext';
+import { handleImageError } from '../../../../shared/utils/imageUtils';
 
 const ProductCard = ({ product, onClick }) => {
   const { t } = useTranslation();
@@ -66,8 +67,7 @@ const ProductCard = ({ product, onClick }) => {
         <img
           src={imageSrc}
           alt={title}
-          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-        />
+          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" onError={handleImageError} />
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}

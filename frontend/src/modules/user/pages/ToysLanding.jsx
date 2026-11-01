@@ -11,6 +11,7 @@ import { fetchCartCount, addProductToCart } from '../utils/cartUtils';
 import { getCategories, getCategoryProducts } from '../services/catalogApi';
 import { getFlowHome } from '../services/storefrontApi';
 import { extractList, findCategoryByName, mapProductForCard, mapHomeBanners } from '../utils/mappers';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 
 
@@ -117,7 +118,7 @@ const ToysLanding = () => {
                  className="flex flex-col gap-2 group cursor-pointer border border-gray-100 rounded-2xl p-3 shadow-xs hover:shadow-md transition-all"
                >
                  <div className="aspect-square bg-gray-50 rounded-xl overflow-hidden relative flex items-center justify-center p-2">
-                   <img src={product.image || product.img} className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform" alt={product.name || product.title} />
+                   <img src={product.image || product.img} className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform" alt={product.name || product.title} loading="lazy" decoding="async" onError={handleImageError} />
                  </div>
                  <div className="flex flex-col gap-1">
                    <p className="text-[13px] font-bold text-slate-800 line-clamp-1">{product.name || product.title}</p>

@@ -1,56 +1,64 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import lazyWithRetry from '../../../shared/utils/lazyWithRetry';
+import PageLoader from '../../../shared/components/PageLoader';
+
+// Eager: shell + landing/auth entry points that every first visit needs.
 import VendorLayout from '../layouts/VendorLayout';
 import Home from '../pages/Home';
 import Login from '../pages/Login';
 import Signup from '../pages/Signup';
-import Products from '../pages/Products';
-import ProductDetail from '../pages/ProductDetail';
-import Cart from '../pages/Cart';
-import Bag from '../pages/Bag';
-import Profile from '../pages/Profile';
-import Wallet from '../pages/Wallet';
-import Menu from '../pages/Menu';
-import Categories from '../pages/Categories';
-import CategoryProducts from '../pages/CategoryProducts';
-import ToysLanding from '../pages/ToysLanding';
-import BeautyLanding from '../pages/BeautyLanding';
-import Checkout from '../pages/Checkout';
-import OrderConfirmation from '../pages/OrderConfirmation';
-import AllOffers from '../pages/AllOffers';
-import DealsPage from '../pages/DealsPage';
-import Search from '../pages/Search';
-import ContinueShopping from '../pages/ContinueShopping';
-import TermsOfUse from '../pages/TermsOfUse';
-import LegalPrivacy from '../pages/LegalPrivacy';
-import CancellationReturns from '../pages/CancellationReturns';
-import ShippingPolicy from '../pages/ShippingPolicy';
-import QuickShop from '../pages/QuickShop';
-import QuickShopSubcategory from '../pages/QuickShopSubcategory';
-import Mithilak from '../pages/Mithilak';
+import NotFound from '../pages/NotFound';
 
+// Lazy: loaded when the route is visited.
+const Products = lazyWithRetry(() => import('../pages/Products'));
+const ProductDetail = lazyWithRetry(() => import('../pages/ProductDetail'));
+const Cart = lazyWithRetry(() => import('../pages/Cart'));
+const Bag = lazyWithRetry(() => import('../pages/Bag'));
+const Profile = lazyWithRetry(() => import('../pages/Profile'));
+const Wallet = lazyWithRetry(() => import('../pages/Wallet'));
+const Menu = lazyWithRetry(() => import('../pages/Menu'));
+const Categories = lazyWithRetry(() => import('../pages/Categories'));
+const CategoryProducts = lazyWithRetry(() => import('../pages/CategoryProducts'));
+const ToysLanding = lazyWithRetry(() => import('../pages/ToysLanding'));
+const BeautyLanding = lazyWithRetry(() => import('../pages/BeautyLanding'));
+const Checkout = lazyWithRetry(() => import('../pages/Checkout'));
+const OrderConfirmation = lazyWithRetry(() => import('../pages/OrderConfirmation'));
+const AllOffers = lazyWithRetry(() => import('../pages/AllOffers'));
+const DealsPage = lazyWithRetry(() => import('../pages/DealsPage'));
+const Search = lazyWithRetry(() => import('../pages/Search'));
+const ContinueShopping = lazyWithRetry(() => import('../pages/ContinueShopping'));
+const TermsOfUse = lazyWithRetry(() => import('../pages/TermsOfUse'));
+const LegalPrivacy = lazyWithRetry(() => import('../pages/LegalPrivacy'));
+const CancellationReturns = lazyWithRetry(() => import('../pages/CancellationReturns'));
+const ShippingPolicy = lazyWithRetry(() => import('../pages/ShippingPolicy'));
+const QuickShop = lazyWithRetry(() => import('../pages/QuickShop'));
+const QuickShopSubcategory = lazyWithRetry(() => import('../pages/QuickShopSubcategory'));
+const Mithilak = lazyWithRetry(() => import('../pages/Mithilak'));
 
 // Profile Sub-pages
-import EditProfile from '../pages/profile/EditProfile';
-import MyOrders from '../pages/profile/MyOrders';
-import Wishlist from '../pages/profile/Wishlist';
-import Coupons from '../pages/profile/Coupons';
-import HelpCenter from '../pages/profile/HelpCenter';
-import SavedAddresses from '../pages/profile/SavedAddresses';
-import SavedCards from '../pages/profile/SavedCards';
-import NotificationSettings from '../pages/profile/NotificationSettings';
-import MyReviews from '../pages/profile/MyReviews';
-import QuestionsAnswers from '../pages/profile/QuestionsAnswers';
-import OrderDetail from '../pages/profile/OrderDetail';
+const EditProfile = lazyWithRetry(() => import('../pages/profile/EditProfile'));
+const MyOrders = lazyWithRetry(() => import('../pages/profile/MyOrders'));
+const Wishlist = lazyWithRetry(() => import('../pages/profile/Wishlist'));
+const Coupons = lazyWithRetry(() => import('../pages/profile/Coupons'));
+const HelpCenter = lazyWithRetry(() => import('../pages/profile/HelpCenter'));
+const SavedAddresses = lazyWithRetry(() => import('../pages/profile/SavedAddresses'));
+const SavedCards = lazyWithRetry(() => import('../pages/profile/SavedCards'));
+const NotificationSettings = lazyWithRetry(() => import('../pages/profile/NotificationSettings'));
+const MyReviews = lazyWithRetry(() => import('../pages/profile/MyReviews'));
+const QuestionsAnswers = lazyWithRetry(() => import('../pages/profile/QuestionsAnswers'));
+const OrderDetail = lazyWithRetry(() => import('../pages/profile/OrderDetail'));
 
-import ForgotPassword from '../pages/ForgotPassword';
-import NotFound from '../pages/NotFound';
-import Maintenance from '../pages/Maintenance';
-import ErrorPage from '../pages/ErrorPage';
+const ForgotPassword = lazyWithRetry(() => import('../pages/ForgotPassword'));
+const Maintenance = lazyWithRetry(() => import('../pages/Maintenance'));
+const ErrorPage = lazyWithRetry(() => import('../pages/ErrorPage'));
 
 
 const MarketRoutes = () => {
   return (
+    // Routes outside VendorLayout suspend here; layout routes suspend inside
+    // VendorLayout's <Outlet /> so the header/nav stay on screen.
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* Auth routes without layout */}
       <Route path="/login" element={<Login />} />
@@ -79,7 +87,7 @@ const MarketRoutes = () => {
         <Route path="/bag" element={<Bag />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/profile" element={<Profile />} />
-        
+
         {/* Profile Sub-routes */}
         <Route path="/profile/edit" element={<EditProfile />} />
         <Route path="/profile/orders" element={<MyOrders />} />
@@ -118,10 +126,11 @@ const MarketRoutes = () => {
 
       {/* Redirects */}
       <Route path="/" element={<Navigate to="home" replace />} />
-      
+
       {/* Catch-all 404 Route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
   );
 };
 

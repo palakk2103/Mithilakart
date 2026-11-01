@@ -447,8 +447,7 @@ const Categories = () => {
                       src={sectionImg || DEFAULT_PRODUCT_IMAGE} 
                       alt={section.title} 
                       onError={handleImageError}
-                      className="w-full h-full object-cover rounded-full" 
-                    />
+                      className="w-full h-full object-cover rounded-full" loading="lazy" decoding="async" />
                   </div>
                 )}
                 
@@ -545,8 +544,7 @@ const Categories = () => {
                           src={item.img || DEFAULT_PRODUCT_IMAGE} 
                           alt={item.name} 
                           onError={handleImageError}
-                          className="w-full h-full object-cover rounded-xl" 
-                        />
+                          className="w-full h-full object-cover rounded-xl" loading="lazy" decoding="async" />
                         {item.children && item.children.length > 0 && (
                           <div className="absolute -bottom-1 -right-1 bg-[#6FAE4A] text-white text-[7.5px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
                             {item.children.length}

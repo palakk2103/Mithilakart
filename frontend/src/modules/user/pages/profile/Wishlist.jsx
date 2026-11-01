@@ -6,6 +6,7 @@ import useAccountStore from '../../../../store/useAccountStore';
 import { getWishlist, removeFromWishlist as removeWishlistApi } from '../../services/userApi';
 import { extractList, mapWishlistItem } from '../../utils/mappers';
 import { addProductToCart, fetchCartCount } from '../../utils/cartUtils';
+import { handleImageError } from '../../../../shared/utils/imageUtils';
 
 const Wishlist = () => {
   const navigate = useNavigate();
@@ -132,7 +133,7 @@ const Wishlist = () => {
               >
                 {/* Product Image Area */}
                 <div className="relative aspect-square p-4 bg-white group">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+                  <img src={item.image} alt={item.name} className="w-full h-full object-contain" loading="lazy" decoding="async" onError={handleImageError} />
                   <button 
                     onClick={async (e) => {
                       e.stopPropagation();

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, Truck, ArrowLeft } from 'lucide-react';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
 import ElectronicsImg from '../../../assets/products/product04.jpg';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 const OrderConfirmation = () => {
   const location = useLocation();
@@ -96,7 +97,7 @@ const OrderConfirmation = () => {
         <div className="bg-slate-50/80 rounded-2xl p-4 border border-slate-100 text-left space-y-4">
           <div className="flex gap-4 items-center">
             <div className="w-16 h-16 bg-white border border-slate-100 rounded-xl p-1.5 flex-shrink-0 flex items-center justify-center">
-              <img src={firstItem.image || firstItem.img} className="w-full h-full object-contain mix-blend-multiply" alt="product" />
+              <img src={firstItem.image || firstItem.img} className="w-full h-full object-contain mix-blend-multiply" alt="product" loading="lazy" decoding="async" onError={handleImageError} />
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-[13.5px] font-black text-slate-800 line-clamp-2 leading-snug">{firstItem.name}</h4>

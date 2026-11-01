@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import MarketRoutes from './modules/user/routes/MarketRoutes';
-import SellerRoutes from './modules/seller/routes/SellerRoutes';
-import AdminRoutes from './modules/admin/routes/AdminRoutes';
-import DeliveryRoutes from './modules/delivery/routes/DeliveryRoutes';
+const SellerRoutes = lazyWithRetry(() => import('./modules/seller/routes/SellerRoutes'));
+const AdminRoutes = lazyWithRetry(() => import('./modules/admin/routes/AdminRoutes'));
+const DeliveryRoutes = lazyWithRetry(() => import('./modules/delivery/routes/DeliveryRoutes'));
 import SplashScreen from './shared/components/SplashScreen';
 import ErrorBoundary from './shared/components/ErrorBoundary';
 import { initPushNotifications } from './shared/services/pushNotifications';
@@ -14,6 +14,8 @@ import { LocationProvider } from './shared/context/LocationContext';
 import { LanguageProvider } from './shared/context/LanguageContext';
 import LocationPrompt from './shared/components/LocationPrompt';
 import ScrollToTop from './shared/components/ScrollToTop';
+import PageLoader from './shared/components/PageLoader';
+import lazyWithRetry from './shared/utils/lazyWithRetry';
 
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
@@ -74,6 +76,7 @@ function App() {
               letterSpacing: '1px'
             }
           }} />
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Delivery Agent Portal */}
             <Route path="/delivery/*" element={<DeliveryRoutes />} />
@@ -88,6 +91,7 @@ function App() {
             <Route path="/vendor/*" element={<MarketRoutes />} />
             <Route path="/*" element={<MarketRoutes />} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
       </LocationProvider>
     </LanguageProvider>

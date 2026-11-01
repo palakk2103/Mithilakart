@@ -1,0 +1,145 @@
+- generic [ref=f1e3]:
+  - generic [ref=f1e5]:
+    - link "Mithilakart" [ref=f1e6] [cursor=pointer]:
+      - /url: /home
+    - generic [ref=f1e9]:
+      - generic [ref=f1e10] [cursor=pointer]:
+        - img "Mithilakart" [ref=f1e12]
+        - generic [ref=f1e13]: Mithilakart
+      - generic [ref=f1e14] [cursor=pointer]: Quick Shop
+      - generic [ref=f1e20] [cursor=pointer]: Mithilak
+      - generic [ref=f1e26] [cursor=pointer]: Fresh & Groceries
+    - navigation [ref=f1e33]:
+      - link "Home" [ref=f1e34] [cursor=pointer]:
+        - /url: /home
+      - link "Categories" [ref=f1e35] [cursor=pointer]:
+        - /url: /categories?flow=mithilak
+      - link "Cart 0" [ref=f1e36] [cursor=pointer]:
+        - /url: /cart
+        - generic [ref=f1e37]: Cart
+        - generic [ref=f1e38]: "0"
+      - link "Profile" [ref=f1e39] [cursor=pointer]:
+        - /url: /profile
+    - generic [ref=f1e40]:
+      - button "English English" [ref=f1e42] [cursor=pointer]:
+        - img "English" [ref=f1e43]
+        - generic [ref=f1e44]: English
+      - generic [ref=f1e45]:
+        - generic [ref=f1e46]: 📍 Deliver to
+        - button "Tap to set delivery location" [ref=f1e47]
+  - generic [ref=f1e48]:
+    - main [ref=f1e51]:
+      - generic [ref=f1e113]:
+        - complementary [ref=f1e114]:
+          - heading "Filters" [level=2] [ref=f1e116]
+          - generic [ref=f1e119]:
+            - heading "Category" [level=3] [ref=f1e120]
+            - list [ref=f1e121]:
+              - listitem [ref=f1e122]:
+                - generic [ref=f1e123] [cursor=pointer]:
+                  - checkbox "Electronics" [ref=f1e124]
+                  - generic [ref=f1e125]: Electronics
+              - listitem [ref=f1e126]:
+                - generic [ref=f1e127] [cursor=pointer]:
+                  - checkbox "Fashion" [ref=f1e128]
+                  - generic [ref=f1e129]: Fashion
+              - listitem [ref=f1e130]:
+                - generic [ref=f1e131] [cursor=pointer]:
+                  - checkbox "Home & Kitchen" [ref=f1e132]
+                  - generic [ref=f1e133]: Home & Kitchen
+              - listitem [ref=f1e134]:
+                - generic [ref=f1e135] [cursor=pointer]:
+                  - checkbox "Beauty" [ref=f1e136]
+                  - generic [ref=f1e137]: Beauty
+          - generic [ref=f1e138]:
+            - heading "Price Range" [level=3] [ref=f1e139]
+            - generic [ref=f1e140]:
+              - spinbutton "Min" [ref=f1e141]
+              - generic [ref=f1e142]: "-"
+              - spinbutton "Max" [ref=f1e143]
+            - generic [ref=f1e144]:
+              - button "Under ₹500" [ref=f1e145] [cursor=pointer]
+              - button "₹500-₹2k" [ref=f1e146] [cursor=pointer]
+              - button "₹2k+" [ref=f1e147] [cursor=pointer]
+          - generic [ref=f1e148]:
+            - heading "Customer Ratings" [level=3] [ref=f1e149]
+            - generic [ref=f1e150]:
+              - generic [ref=f1e151] [cursor=pointer]: Any Rating
+              - generic [ref=f1e153] [cursor=pointer]: 4★ & above
+              - generic [ref=f1e157] [cursor=pointer]: 3★ & above
+        - generic [ref=f1e161]:
+          - generic [ref=f1e162]:
+            - heading "Loading products..." [level=1] [ref=f1e164]
+            - generic [ref=f1e165]:
+              - generic [ref=f1e166]: "Sort:"
+              - combobox [ref=f1e167] [cursor=pointer]:
+                - 'option "Sort by: Relevance"'
+                - 'option "Price: Low to High"'
+                - 'option "Price: High to Low" [selected]'
+                - option "Customer Rating"
+                - option "Newest First"
+          - paragraph [ref=f1e169]: Loading...
+    - contentinfo [ref=f1e54]:
+      - img "Mithila Art Footer Border" [ref=f1e56]
+      - generic [ref=f1e57]:
+        - generic [ref=f1e58]:
+          - heading "About Mithilakart" [level=3] [ref=f1e59]
+          - paragraph [ref=f1e60]: Discover unique, high-quality handcrafted items and fresh goods directly from local artisans. We bridge the gap between traditional craftsmanship and modern convenience.
+        - generic [ref=f1e61]:
+          - heading "Customer Care" [level=3] [ref=f1e62]
+          - list [ref=f1e63]:
+            - listitem [ref=f1e64]:
+              - link "Help Center" [ref=f1e65] [cursor=pointer]:
+                - /url: /profile/help-center
+            - listitem [ref=f1e66]:
+              - link "Track Order" [ref=f1e67] [cursor=pointer]:
+                - /url: /profile/orders
+            - listitem [ref=f1e68]:
+              - link "Cancellations & Returns" [ref=f1e69] [cursor=pointer]:
+                - /url: /cancellation-returns
+            - listitem [ref=f1e70]:
+              - link "Shipping Policy" [ref=f1e71] [cursor=pointer]:
+                - /url: /shipping
+        - generic [ref=f1e72]:
+          - heading "Useful Links" [level=3] [ref=f1e73]
+          - list [ref=f1e74]:
+            - listitem [ref=f1e75]:
+              - link "Terms of Use" [ref=f1e76] [cursor=pointer]:
+                - /url: /terms
+            - listitem [ref=f1e77]:
+              - link "Privacy Policy" [ref=f1e78] [cursor=pointer]:
+                - /url: /privacy
+            - listitem [ref=f1e79]:
+              - link "Home Page" [ref=f1e80] [cursor=pointer]:
+                - /url: /home
+            - listitem [ref=f1e81]:
+              - link "Shop by Categories" [ref=f1e82] [cursor=pointer]:
+                - /url: /categories
+        - generic [ref=f1e83]:
+          - heading "Contact Us" [level=3] [ref=f1e84]
+          - list [ref=f1e85]:
+            - listitem [ref=f1e86]:
+              - strong [ref=f1e87]: "Email:"
+              - text: support@mithilakart.com
+            - listitem [ref=f1e88]:
+              - strong [ref=f1e89]: "Phone:"
+              - text: +91 1800-123-4567
+            - listitem [ref=f1e90]:
+              - strong [ref=f1e91]: "Address:"
+              - text: Mithilakart Pvt Ltd, Mumbai, India
+      - generic [ref=f1e92]:
+        - link [ref=f1e93] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=f1e96] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=f1e99] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=f1e103] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=f1e106] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=f1e109]:
+        - img "Mithilakart Logo" [ref=f1e110]
+        - generic [ref=f1e111]:
+          - text: Mithilakart
+          - generic [ref=f1e112]: ™

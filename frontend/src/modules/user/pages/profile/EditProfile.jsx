@@ -273,8 +273,7 @@ const EditProfile = () => {
                   }}
                   onLoad={(e) => {
                     e.currentTarget.style.display = 'block';
-                  }}
-                />
+                  }} loading="lazy" decoding="async" />
               ) : (
                 formData.name ? formData.name.charAt(0).toUpperCase() : 'H'
               )}

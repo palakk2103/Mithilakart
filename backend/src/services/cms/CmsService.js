@@ -214,7 +214,8 @@ class CmsService extends BaseService {
       ? [commerceFlow]
       : ['standard', 'mithilak', 'quick_shop', 'fresh_grocery'];
     await Promise.all(
-      flows.map((flow) => this.cacheService.del(`cache:storefront:home:${flow}`))
+      // Cache keys carry a language suffix (cache:storefront:home:<flow>:<lang>)
+      flows.map((flow) => this.cacheService.delByPattern(`cache:storefront:home:${flow}:*`))
     );
   }
 }

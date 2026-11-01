@@ -5,6 +5,7 @@ import SearchInput from '../../../shared/components/SearchInput';
 import { getOffers } from '../services/userApi';
 import { mapOffers } from '../utils/mappers';
 import { fetchCartCount } from '../utils/cartUtils';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 const AllOffers = () => {
   const navigate = useNavigate();
@@ -139,8 +140,7 @@ const AllOffers = () => {
               <img 
                 src={offer.image || offer.img} 
                 alt={offer.title || offer.name} 
-                className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500" 
-              />
+                className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" onError={handleImageError} />
             </div>
             <div className="text-center w-full space-y-1">
               <h3 className="text-[11.5px] font-black text-slate-800 line-clamp-1 leading-tight uppercase tracking-tight">{offer.title || offer.name}</h3>

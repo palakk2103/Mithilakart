@@ -51,7 +51,7 @@ export const DEFAULT_USER_APP_TABS = [
     route: '/fresh-grocery',
     flow: 'freshgrocery',
     enabled: true,
-    iconType: 'none',
+    iconType: 'basket',
     activeBgClass: 'bg-white text-[#7A3E17] border-white',
     activeTextColor: '#7A3E17',
     activeTextClass: 'text-[#7A3E17]',

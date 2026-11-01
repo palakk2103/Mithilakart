@@ -1,0 +1,169 @@
+- generic [ref=e2]:
+  - img "Mithilakart Splash" [ref=e6]
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e15]:
+        - paragraph [ref=e16]: Use live location
+        - paragraph [ref=e17]: Nearby sellers & faster delivery
+      - button "Close" [ref=e18]
+    - generic [ref=e22]:
+      - paragraph [ref=e23]: Allow Mithilakart to access your current location so we can show nearby seller products, accurate delivery address, and local offers.
+      - button "Allow live location" [ref=e24]
+      - button "Not now" [ref=e27]
+  - generic [ref=e28]:
+    - generic [ref=e30]:
+      - link "Mithilakart" [ref=e31] [cursor=pointer]:
+        - /url: /home
+      - generic [ref=e34]:
+        - generic [ref=e35] [cursor=pointer]:
+          - img "Mithilakart" [ref=e37]
+          - generic [ref=e38]: Mithilakart
+        - generic [ref=e39] [cursor=pointer]: Quick Shop
+        - generic [ref=e45] [cursor=pointer]: Mithilak
+        - generic [ref=e50] [cursor=pointer]: Fresh & Groceries
+      - navigation [ref=e52]:
+        - link "Home" [ref=e53] [cursor=pointer]:
+          - /url: /home
+        - link "Categories" [ref=e54] [cursor=pointer]:
+          - /url: /categories?flow=mithilakart
+        - link "Cart 0" [ref=e55] [cursor=pointer]:
+          - /url: /cart
+          - generic [ref=e56]: Cart
+          - generic [ref=e57]: "0"
+        - link "Profile" [ref=e58] [cursor=pointer]:
+          - /url: /profile
+      - generic [ref=e59]:
+        - button "English English" [ref=e61] [cursor=pointer]:
+          - img "English" [ref=e62]
+          - generic [ref=e63]: English
+        - generic [ref=e64]:
+          - generic [ref=e65]: 📍 Deliver to
+          - button "Tap to set delivery location" [ref=e66]
+    - generic [ref=e67]:
+      - main [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e73]:
+            - button "You Buy" [ref=e74] [cursor=pointer]
+            - button "Fashion" [ref=e82] [cursor=pointer]
+            - button "Beauty" [ref=e87] [cursor=pointer]
+            - button "Electronics" [ref=e93] [cursor=pointer]
+            - button "Jewellery" [ref=e98] [cursor=pointer]
+            - button "Toys" [ref=e104] [cursor=pointer]
+            - button "Stationery" [ref=e109] [cursor=pointer]
+            - button "Gifting" [ref=e114] [cursor=pointer]
+            - button "Electrical" [ref=e121] [cursor=pointer]
+            - button "More categories" [ref=e126] [cursor=pointer]:
+              - generic [ref=e132]: More
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - generic [ref=e137]:
+                - img "Shop More Save More" [ref=e138]
+                - generic [ref=e139]:
+                  - generic [ref=e140]: Exclusive Collection
+                  - heading "Shop More Save More" [level=3] [ref=e141]
+                  - paragraph [ref=e142]: Discover authentic handcrafted treasures and deals directly from finest artisans.
+              - generic [aria-hidden]:
+                - generic:
+                  - generic: Exclusive Collection
+                  - heading [level=3]: Authentic Mithila Artistry
+                  - paragraph: Discover authentic handcrafted treasures and deals directly from finest artisans.
+              - generic [aria-hidden]:
+                - generic:
+                  - generic: Exclusive Collection
+                  - heading [level=3]: Cultural Heritage Collection
+                  - paragraph: Discover authentic handcrafted treasures and deals directly from finest artisans.
+              - generic [aria-hidden]:
+                - generic:
+                  - generic: Exclusive Collection
+                  - heading [level=3]: Special Festival Handicrafts
+                  - paragraph: Discover authentic handcrafted treasures and deals directly from finest artisans.
+              - generic [ref=e143]:
+                - button [ref=e144] [cursor=pointer]
+                - button [ref=e145] [cursor=pointer]
+                - button [ref=e146] [cursor=pointer]
+                - button [ref=e147] [cursor=pointer]
+            - generic [ref=e148]:
+              - generic [ref=e149] [cursor=pointer]:
+                - img "Authentic Mithila Artistry" [ref=e150]
+                - generic [ref=e151]:
+                  - heading "Authentic Mithila Artistry" [level=4] [ref=e152]
+                  - generic [ref=e153]:
+                    - text: Explore Now
+                    - generic [ref=e154]: →
+              - generic [ref=e155] [cursor=pointer]:
+                - img "Cultural Heritage Collection" [ref=e156]
+                - generic [ref=e157]:
+                  - heading "Cultural Heritage Collection" [level=4] [ref=e158]
+                  - generic [ref=e159]:
+                    - text: Explore Now
+                    - generic [ref=e160]: →
+          - generic [ref=e162]:
+            - heading "Today's Special Deals" [level=2] [ref=e163]
+            - generic [ref=e164] [cursor=pointer]: View All
+          - generic [ref=e171]:
+            - heading "Top Selection" [level=2] [ref=e184]
+            - button [ref=e196]
+      - contentinfo [ref=e203]:
+        - img "Mithila Art Footer Border" [ref=e205]
+        - generic [ref=e206]:
+          - generic [ref=e207]:
+            - heading "About Mithilakart" [level=3] [ref=e208]
+            - paragraph [ref=e209]: Discover unique, high-quality handcrafted items and fresh goods directly from local artisans. We bridge the gap between traditional craftsmanship and modern convenience.
+          - generic [ref=e210]:
+            - heading "Customer Care" [level=3] [ref=e211]
+            - list [ref=e212]:
+              - listitem [ref=e213]:
+                - link "Help Center" [ref=e214] [cursor=pointer]:
+                  - /url: /profile/help-center
+              - listitem [ref=e215]:
+                - link "Track Order" [ref=e216] [cursor=pointer]:
+                  - /url: /profile/orders
+              - listitem [ref=e217]:
+                - link "Cancellations & Returns" [ref=e218] [cursor=pointer]:
+                  - /url: /cancellation-returns
+              - listitem [ref=e219]:
+                - link "Shipping Policy" [ref=e220] [cursor=pointer]:
+                  - /url: /shipping
+          - generic [ref=e221]:
+            - heading "Useful Links" [level=3] [ref=e222]
+            - list [ref=e223]:
+              - listitem [ref=e224]:
+                - link "Terms of Use" [ref=e225] [cursor=pointer]:
+                  - /url: /terms
+              - listitem [ref=e226]:
+                - link "Privacy Policy" [ref=e227] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e228]:
+                - link "Home Page" [ref=e229] [cursor=pointer]:
+                  - /url: /home
+              - listitem [ref=e230]:
+                - link "Shop by Categories" [ref=e231] [cursor=pointer]:
+                  - /url: /categories
+          - generic [ref=e232]:
+            - heading "Contact Us" [level=3] [ref=e233]
+            - list [ref=e234]:
+              - listitem [ref=e235]:
+                - strong [ref=e236]: "Email:"
+                - text: support@mithilakart.com
+              - listitem [ref=e237]:
+                - strong [ref=e238]: "Phone:"
+                - text: +91 1800-123-4567
+              - listitem [ref=e239]:
+                - strong [ref=e240]: "Address:"
+                - text: Mithilakart Pvt Ltd, Mumbai, India
+        - generic [ref=e241]:
+          - link [ref=e242] [cursor=pointer]:
+            - /url: https://www.facebook.com/mithilakart
+          - link [ref=e245] [cursor=pointer]:
+            - /url: https://www.youtube.com/@mithilakart
+          - link [ref=e248] [cursor=pointer]:
+            - /url: https://www.instagram.com/mithilakart
+          - link [ref=e252] [cursor=pointer]:
+            - /url: https://x.com
+          - link [ref=e255] [cursor=pointer]:
+            - /url: https://wa.me/918076109547
+        - generic [ref=e258]:
+          - img "Mithilakart Logo" [ref=e259]
+          - generic [ref=e260]:
+            - text: Mithilakart
+            - generic [ref=e261]: ™

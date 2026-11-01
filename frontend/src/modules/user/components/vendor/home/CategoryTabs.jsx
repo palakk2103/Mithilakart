@@ -1,11 +1,13 @@
 import React from 'react';
+import { handleImageError } from '../../../../../shared/utils/imageUtils';
+import ScrollRow from './ScrollRow';
 
 const CategoryTabs = ({ tabs, activeTab, onTabClick }) => {
   return (
-    <div className="mt-6 pb-2 md:max-w-[1600px] md:mx-auto">
-      <div 
-        className="flex overflow-x-auto gap-3.5 px-4 no-scrollbar pt-2 pb-4 md:justify-center md:gap-6 md:overflow-x-visible md:px-0" 
-        style={{ WebkitOverflowScrolling: 'touch' }}
+    <div className="mt-6 pb-2 md:max-w-[1600px] md:mx-auto md:px-4">
+      <ScrollRow
+        center
+        className="flex gap-3.5 px-4 pt-2 pb-4 md:gap-5 md:px-1"
       >
         {tabs.map((tab, idx) => {
           const isActive = activeTab === tab.label;
@@ -15,11 +17,11 @@ const CategoryTabs = ({ tabs, activeTab, onTabClick }) => {
               <div 
                 key={idx} 
                 onClick={() => onTabClick(tab.label)}
-                className="flex-shrink-0 w-[80px] sm:w-[95px] flex flex-col items-center cursor-pointer group"
+                className="flex-shrink-0 w-[96px] sm:w-[110px] md:w-[124px] flex flex-col items-center cursor-pointer group"
               >
                 {/* Rounded Square Card exactly like the mockup image */}
-                <div 
-                  className={`w-full h-[96px] sm:h-[112px] rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-1.5 transition-all duration-300 border relative ${
+                <div
+                  className={`w-full h-[130px] sm:h-[144px] md:h-[156px] rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-1.5 transition-all duration-300 border relative ${
                     isActive 
                       ? 'bg-[#FFF8EE] border-2 border-[#6FAE4A] shadow-[0_4px_12px_rgba(62,90,68,0.15)] scale-[1.01]' 
                       : 'bg-[#FFFBF7]/90 border border-[#EADCC9]/60 shadow-[0_3px_8px_rgba(61,35,20,0.015)] hover:border-[#6FAE4A]/40 hover:shadow-[0_6px_15px_rgba(61,35,20,0.04)]'
@@ -70,7 +72,7 @@ const CategoryTabs = ({ tabs, activeTab, onTabClick }) => {
                   {/* Category Label at bottom */}
                   <div className="flex flex-col items-center mt-2.5 mb-1.5 w-full">
                     <span 
-                      className={`text-[9.5px] sm:text-[10.5px] font-black text-center px-0.5 leading-tight tracking-tight flex items-center justify-center transition-colors ${
+                      className={`text-[13px] sm:text-[14px] md:text-[15px] font-extrabold text-center px-0.5 leading-tight flex items-center justify-center transition-colors ${
                         isActive ? 'text-[#6FAE4A]' : 'text-[#3F2A20]'
                       }`}
                     >
@@ -93,11 +95,11 @@ const CategoryTabs = ({ tabs, activeTab, onTabClick }) => {
             <div 
               key={idx} 
               onClick={() => onTabClick(tab.label)}
-              className="flex-shrink-0 w-[80px] sm:w-[95px] flex flex-col items-center cursor-pointer group"
+              className="flex-shrink-0 w-[96px] sm:w-[110px] md:w-[124px] flex flex-col items-center cursor-pointer group"
             >
               {/* Rounded Square Card containing both text (top) and image (bottom) */}
-              <div 
-                className={`w-full h-[96px] sm:h-[112px] rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-1.5 transition-all duration-300 ${
+              <div
+                className={`w-full h-[130px] sm:h-[144px] md:h-[156px] rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-1.5 transition-all duration-300 ${
                   isActive 
                     ? 'bg-white border-2 border-[#6FAE4A] shadow-[0_4px_12px_rgba(62,90,68,0.1)]' 
                     : 'bg-white border border-[#EADCC9]/60 shadow-[0_3px_8px_rgba(61,35,20,0.015)] hover:border-[#6FAE4A]/40 hover:shadow-[0_6px_15px_rgba(61,35,20,0.04)]'
@@ -105,7 +107,7 @@ const CategoryTabs = ({ tabs, activeTab, onTabClick }) => {
               >
                 {/* Category Label at top */}
                 <span 
-                  className={`text-[9.5px] sm:text-[10.5px] font-black text-center mt-2 px-0.5 leading-tight tracking-tight h-[20px] flex items-center justify-center transition-colors ${
+                  className={`text-[13px] sm:text-[14px] md:text-[15px] font-extrabold text-center mt-1 px-0.5 leading-tight h-[34px] flex items-center justify-center transition-colors ${
                     isActive ? 'text-[#6FAE4A]' : 'text-[#3F2A20]'
                   }`}
                 >
@@ -119,15 +121,14 @@ const CategoryTabs = ({ tabs, activeTab, onTabClick }) => {
                       src={tab.img}
                       alt={tab.label}
                       className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-300"
-                      loading="lazy"
-                    />
+                      loading="lazy" onError={handleImageError} />
                   </div>
                 )}
               </div>
             </div>
           );
         })}
-      </div>
+      </ScrollRow>
     </div>
   );
 };

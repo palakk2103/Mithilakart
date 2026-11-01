@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { getCategories, getCategoryProducts } from '../services/catalogApi';
 import { findCategoryByName, extractList, mapProductForCard } from '../utils/mappers';
 import { fetchCartCount } from '../utils/cartUtils';
 import SEO from '../../../shared/components/SEO';
+import useInfiniteProducts from '../../../shared/hooks/useInfiniteProducts';
+import InfiniteScrollSentinel from '../../../shared/components/InfiniteScrollSentinel';
 import { getCurrentMarketplaceTab } from '../../../shared/utils/marketplaceHelpers';
-import { parsePrice } from '../../../shared/utils/priceFormatter';
+import { buildListParams, listParamsKey } from '../utils/listQuery';
 import { 
   Heart, 
   Star, 
@@ -32,6 +34,7 @@ import BeautyJewel3 from '../../../assets/Beauty/BeautyJewel3.jpg';
 import BeautyJewel4 from '../../../assets/Beauty/BeautyJewel4.jpg';
 import BeautyJewel5 from '../../../assets/Beauty/BeautyJewel5.jpg';
 import BeautyJewel6 from '../../../assets/Beauty/BeautyJewel6.jpg';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 const CornerFlower = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px] opacity-85 select-none pointer-events-none">
@@ -96,8 +99,7 @@ const CategoryProductCard = React.memo(({ product }) => {
           src={product.image}
           alt={product.name}
           className="w-full h-full object-cover rounded-[11px] md:rounded-[15px] group-hover:scale-[1.03] transition-transform duration-500"
-          loading="lazy"
-        />
+          loading="lazy" onError={handleImageError} />
 
         {/* Wishlist Heart Button */}
         <button
@@ -180,11 +182,8 @@ const CategoryProducts = () => {
   const [showSortModal, setShowSortModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-  const [products, setProducts] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [activeSubcategory, setActiveSubcategory] = useState(subcategoryParam || 'All');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     const sub = searchParams.get('subcategory');
@@ -211,42 +210,6 @@ const CategoryProducts = () => {
     if (document.body) document.body.scrollTop = 0;
   }, [category]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const categories = await getCategories({ marketplaceTab });
-        const match = findCategoryByName(categories, category);
-        if (!match) {
-          if (!cancelled) {
-            setProducts([]);
-            setSubcategories([]);
-          }
-          return;
-        }
-        if (!cancelled) {
-          setSubcategories(Array.isArray(match.children) ? match.children : []);
-        }
-        const data = await getCategoryProducts(match.id, { limit: 40, marketplaceTab });
-        if (!cancelled) {
-          setProducts(extractList(data).map((p) => mapProductForCard(p)));
-        }
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load products');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [category, marketplaceTab]);
-
   const [filters, setFilters] = useState({
     minPrice: '',
     maxPrice: '',
@@ -262,6 +225,62 @@ const CategoryProducts = () => {
     inStockOnly: false,
   });
 
+  const listParams = useMemo(
+    () => ({
+      ...buildListParams({ sort: activeSort, minPrice: filters.minPrice, maxPrice: filters.maxPrice, minRating: filters.minRating }),
+      ...(filters.quickDelivery ? { quickDelivery: true } : {}),
+    }),
+    [activeSort, filters.minPrice, filters.maxPrice, filters.minRating, filters.quickDelivery]
+  );
+  const listKey = listParamsKey({ ...listParams, subcategory: activeSubcategory });
+
+  // Resolved category id, cached per (category, tab) so only batch 1 pays for the lookup.
+  const categoryIdRef = useRef({ key: '', id: null, children: [] });
+  const findSubcategory = (nodes, wanted) => {
+    const w = String(wanted).toLowerCase().trim();
+    for (const n of nodes || []) {
+      if ([n.name, n.slug, n.id, n._id].some((v) => v && String(v).toLowerCase().trim() === w)) return n;
+      const deep = findSubcategory(n.children, wanted);
+      if (deep) return deep;
+    }
+    return null;
+  };
+
+  const fetchBatch = useCallback(async (page, limit) => {
+    const key = `${category}|${marketplaceTab}`;
+    if (page === 1 || categoryIdRef.current.key !== key) {
+      const categories = await getCategories({ marketplaceTab });
+      const match = findCategoryByName(categories, category);
+      if (!match) {
+        categoryIdRef.current = { key, id: null };
+        setSubcategories([]);
+        return { items: [], hasMore: false };
+      }
+      categoryIdRef.current = { key, id: match.id, children: Array.isArray(match.children) ? match.children : [] };
+      setSubcategories(Array.isArray(match.children) ? match.children : []);
+    }
+    if (!categoryIdRef.current.id) return { items: [], hasMore: false };
+    // Subcategory is resolved to a category id; the API returns its whole subtree.
+    let scopeId = categoryIdRef.current.id;
+    if (activeSubcategory && activeSubcategory !== 'All') {
+      const sub = findSubcategory(categoryIdRef.current.children, activeSubcategory);
+      if (!sub) return { items: [], hasMore: false };
+      scopeId = sub.id || sub._id;
+    }
+    const data = await getCategoryProducts(scopeId, { page, limit, marketplaceTab, ...listParams });
+    const list = extractList(data);
+    const meta = data?.meta;
+    return {
+      items: list.map((p) => mapProductForCard(p)),
+      hasMore: meta ? Boolean(meta.hasMore ?? (meta.page < meta.totalPages)) : list.length >= limit,
+    };
+  }, [category, marketplaceTab, listKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { items: products, loading, loadingMore, error, hasMore, loadMore } = useInfiniteProducts(
+    fetchBatch,
+    [category, marketplaceTab, listKey]
+  );
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.minPrice !== '' || filters.maxPrice !== '') count++;
@@ -275,61 +294,11 @@ const CategoryProducts = () => {
   const sortedProducts = useMemo(() => {
     let list = [...products];
 
-    // Filter: Min Price
-    if (filters.minPrice !== '' && !isNaN(Number(filters.minPrice))) {
-      list = list.filter((p) => (p.rawPrice ?? parsePrice(p.price)) >= Number(filters.minPrice));
-    }
-    // Filter: Max Price
-    if (filters.maxPrice !== '' && !isNaN(Number(filters.maxPrice))) {
-      list = list.filter((p) => (p.rawPrice ?? parsePrice(p.price)) <= Number(filters.maxPrice));
-    }
-    // Filter: Quick Delivery
-    if (filters.quickDelivery) {
-      list = list.filter((p) => Boolean(p.deliveryPromiseMinutes || (p.commerceFlows && p.commerceFlows.includes('hyperlocal')) || p.deliveryEtaText));
-    }
-    // Filter: Min Rating
-    if (filters.minRating > 0) {
-      list = list.filter((p) => (Number(p.rating) || 0) >= filters.minRating);
-    }
-    // Filter: In Stock Only
-    if (filters.inStockOnly) {
-      list = list.filter((p) => p.stock === undefined || p.stock > 0);
-    }
-
-    // Filter: Subcategory
-    if (activeSubcategory && activeSubcategory !== 'All') {
-      const normSub = activeSubcategory.toLowerCase().trim();
-      list = list.filter((p) => {
-        const pSubName = (p.subcategoryName || p.subcategory || p.subCategory || '').toLowerCase();
-        const pTitle = (p.name || p.title || '').toLowerCase();
-        const pTags = Array.isArray(p.tags) ? p.tags.map(t => String(t).toLowerCase()) : [];
-        const pDesc = (p.description || '').toLowerCase();
-        return (
-          pSubName.includes(normSub) ||
-          normSub.includes(pSubName) ||
-          pTitle.includes(normSub) ||
-          pTags.some(t => t.includes(normSub)) ||
-          pDesc.includes(normSub)
-        );
-      });
-    }
-
-    // Sort
-    const getPrice = (p) => p.rawPrice ?? parsePrice(p.price) ?? 0;
-    const getRating = (p) => Number(p.rating) || 0;
-    const getPopularity = (p) => Number(p.popularity ?? p.reviewCount ?? 0);
-
-    if (activeSort === 'Price: Low to High') {
-      list.sort((a, b) => getPrice(a) - getPrice(b));
-    } else if (activeSort === 'Price: High to Low') {
-      list.sort((a, b) => getPrice(b) - getPrice(a));
-    } else if (activeSort === 'Customer Rating') {
-      list.sort((a, b) => getRating(b) - getRating(a));
-    } else if (activeSort === 'Popularity') {
-      list.sort((a, b) => getPopularity(b) - getPopularity(a));
-    }
+    // Price / rating / sort are applied server-side (listParams).
+    // Quick delivery, subcategory, price, rating and sort are applied by the API;
+    // in-stock is always enforced server-side.
     return list;
-  }, [products, filters, activeSort, activeSubcategory]);
+  }, [products]);
 
   const trendingItems = useMemo(
     () => sortedProducts.slice(0, 4).map((product) => ({
@@ -461,8 +430,7 @@ const CategoryProducts = () => {
                       src={sub.imageUrl || sub.iconUrl} 
                       alt="" 
                       className="w-4 h-4 rounded-full object-cover" 
-                      onError={(e) => { e.target.style.display = 'none'; }} 
-                    />
+                      onError={(e) => { e.target.style.display = 'none'; }} loading="lazy" decoding="async" />
                   )}
                   <span>{subName}</span>
                 </button>
@@ -506,7 +474,7 @@ const CategoryProducts = () => {
           {trendingItems.map((item) => (
             <Link to="/product-detail" state={{ product: item }} key={item.id} className="block w-[110px] flex-shrink-0 bg-white rounded-lg overflow-hidden border border-gray-100 p-1.5 group active:scale-95 transition-all shadow-sm">
               <div className="aspect-square rounded-md overflow-hidden mb-1.5">
-                <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 product-img-blend" />
+                <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 product-img-blend" loading="lazy" decoding="async" onError={handleImageError} />
               </div>
               <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-tight line-clamp-1">{item.name}</h3>
               <div className="flex items-center gap-1.5 mt-0.5">
@@ -527,6 +495,14 @@ const CategoryProducts = () => {
           <CategoryProductCard product={product} key={product.id} />
         ))}
       </div>
+      <InfiniteScrollSentinel
+        onVisible={loadMore}
+        disabled={loading || loadingMore || !hasMore || Boolean(error)}
+        loadingMore={loadingMore}
+        error={products.length > 0 ? error : null}
+        onRetry={loadMore}
+        watch={products.length}
+      />
 
       {/* 🔶 Sort Modal (Bottom Sheet) */}
       {showSortModal && (

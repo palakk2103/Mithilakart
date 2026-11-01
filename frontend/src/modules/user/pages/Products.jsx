@@ -1,10 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/common/ProductCard';
 import { getProducts, getCategories } from '../services/catalogApi';
 import { extractList, mapProductForCard } from '../utils/mappers';
 import { getCurrentMarketplaceTab } from '../../../shared/utils/marketplaceHelpers';
-import { parsePrice } from '../../../shared/utils/priceFormatter';
+import { buildListParams, listParamsKey } from '../utils/listQuery';
+import useInfiniteProducts from '../../../shared/hooks/useInfiniteProducts';
+import InfiniteScrollSentinel from '../../../shared/components/InfiniteScrollSentinel';
 import { Filter, X, SlidersHorizontal, Star, RotateCcw } from 'lucide-react';
 
 import SamsungImg from '../../../assets/products/product01.jpg';
@@ -13,10 +15,7 @@ const Products = () => {
   const [searchParams] = useSearchParams();
   const marketplaceTab = searchParams.get('tab') || getCurrentMarketplaceTab();
 
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [apiCategories, setApiCategories] = useState([]);
 
   // Filter States
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -26,42 +25,51 @@ const Products = () => {
   const [sortBy, setSortBy] = useState('Relevance');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
+  // Sort + price/rating filters are applied by the API (whole catalogue).
+  // Price inputs are debounced so typing doesn't refetch on every keystroke.
+  const [serverFilters, setServerFilters] = useState({ minPrice: '', maxPrice: '' });
+  useEffect(() => {
+    const t = setTimeout(() => setServerFilters({ minPrice, maxPrice }), 400);
+    return () => clearTimeout(t);
+  }, [minPrice, maxPrice]);
+  const listParams = useMemo(
+    () => buildListParams({ sort: sortBy, ...serverFilters, minRating }),
+    [sortBy, serverFilters, minRating]
+  );
+  const listKey = listParamsKey(listParams);
+
+  const [totalMatching, setTotalMatching] = useState(null);
+
+  const fetchBatch = useCallback(async (page, limit) => {
+    const data = await getProducts({ page, limit, marketplaceTab, ...listParams });
+    const list = extractList(data);
+    const meta = data?.meta;
+    if (meta && typeof meta.total === 'number') setTotalMatching(meta.total);
+    return {
+      items: list.map((p) => mapProductForCard(p, SamsungImg)),
+      hasMore: meta ? Boolean(meta.hasMore ?? (meta.page < meta.totalPages)) : list.length >= limit,
+    };
+  }, [marketplaceTab, listKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { items: products, loading, loadingMore, error, hasMore, loadMore } = useInfiniteProducts(fetchBatch, [marketplaceTab, listKey]);
+
+  const categories = useMemo(() => {
+    if (apiCategories.length > 0) return apiCategories;
+    const derived = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
+    return derived.length > 0 ? derived : ['Electronics', 'Fashion', 'Home & Kitchen', 'Beauty'];
+  }, [apiCategories, products]);
+
+  // Sidebar categories load once per tab, independent of product batches.
   useEffect(() => {
     let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [productsData, categoriesData] = await Promise.all([
-          getProducts({ limit: 48, marketplaceTab }),
-          getCategories({ marketplaceTab }).catch(() => [])
-        ]);
-
-        if (!cancelled) {
-          const mapped = extractList(productsData).map((p) => mapProductForCard(p, SamsungImg));
-          setProducts(mapped);
-
-          // Get categories from API or derive from products
-          const apiCats = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
-          if (apiCats.length > 0) {
-            setCategories(apiCats.map(c => c.name || c.title).filter(Boolean));
-          } else {
-            const derived = Array.from(new Set(mapped.map(p => p.category).filter(Boolean)));
-            setCategories(derived.length > 0 ? derived : ['Electronics', 'Fashion', 'Home & Kitchen', 'Beauty']);
-          }
-        }
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load products');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
+    getCategories({ marketplaceTab })
+      .catch(() => [])
+      .then((categoriesData) => {
+        if (cancelled) return;
+        const apiCats = Array.isArray(categoriesData) ? categoriesData : (categoriesData?.data || []);
+        setApiCategories(apiCats.map((c) => c.name || c.title).filter(Boolean));
+      });
+    return () => { cancelled = true; };
   }, [marketplaceTab]);
 
   const toggleCategory = (catName) => {
@@ -96,40 +104,10 @@ const Products = () => {
       });
     }
 
-    // Min Price
-    if (minPrice !== '' && !isNaN(Number(minPrice))) {
-      list = list.filter(p => (p.rawPrice ?? parsePrice(p.price)) >= Number(minPrice));
-    }
-
-    // Max Price
-    if (maxPrice !== '' && !isNaN(Number(maxPrice))) {
-      list = list.filter(p => (p.rawPrice ?? parsePrice(p.price)) <= Number(maxPrice));
-    }
-
-    // Rating
-    if (minRating > 0) {
-      list = list.filter(p => (Number(p.rating) || 0) >= minRating);
-    }
-
-    // Sorting
-    const getPrice = (p) => p.rawPrice ?? parsePrice(p.price) ?? 0;
-    const getRating = (p) => Number(p.rating) || 0;
-    const getPopularity = (p) => Number(p.popularity ?? p.reviewCount ?? 0);
-
-    if (sortBy === 'Price: Low to High') {
-      list.sort((a, b) => getPrice(a) - getPrice(b));
-    } else if (sortBy === 'Price: High to Low') {
-      list.sort((a, b) => getPrice(b) - getPrice(a));
-    } else if (sortBy === 'Customer Rating') {
-      list.sort((a, b) => getRating(b) - getRating(a));
-    } else if (sortBy === 'Newest First') {
-      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    } else if (sortBy === 'Relevance') {
-      list.sort((a, b) => getPopularity(b) - getPopularity(a));
-    }
+    // Price, rating and sort are applied server-side (see listParams above).
 
     return list;
-  }, [products, selectedCategories, minPrice, maxPrice, minRating, sortBy]);
+  }, [products, selectedCategories]);
 
   const FilterSidebarContent = () => (
     <>
@@ -285,7 +263,7 @@ const Products = () => {
                 ? 'Loading products...'
                 : error
                   ? 'Could not load products'
-                  : `Showing ${filteredAndSortedProducts.length} of ${products.length} products`}
+                  : `Showing ${filteredAndSortedProducts.length} of ${totalMatching ?? products.length} products`}
             </h1>
           </div>
 
@@ -332,6 +310,14 @@ const Products = () => {
             ))
           )}
         </div>
+        <InfiniteScrollSentinel
+          onVisible={loadMore}
+          disabled={loading || loadingMore || !hasMore || Boolean(error)}
+          loadingMore={loadingMore}
+          error={products.length > 0 ? error : null}
+          onRetry={loadMore}
+          watch={products.length}
+        />
       </div>
     </div>
   );

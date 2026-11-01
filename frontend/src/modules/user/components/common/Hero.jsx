@@ -1,5 +1,6 @@
 import React from 'react';
 import BannerImg from '../../../../assets/products/product06.jpg';
+import { handleImageError } from '../../../../shared/utils/imageUtils';
 
 const Hero = () => {
   return (
@@ -9,8 +10,7 @@ const Hero = () => {
         <img 
           src={BannerImg} 
           alt="Hero Banner" 
-          className="w-full h-full object-cover"
-        />
+          className="w-full h-full object-cover" onError={handleImageError} />
       </div>
     </div>
   );

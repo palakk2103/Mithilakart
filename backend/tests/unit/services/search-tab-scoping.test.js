@@ -76,8 +76,15 @@ describe('production-readiness — search marketplaceTab scoping', () => {
         findPublic: jest.fn(async () => []),
         countPublic: jest.fn(async () => 0),
       };
+      // The service resolves product-level scope (category / search / stock) to ids in
+      // one findPublic call; this fake honours the `_id: {$in}` restriction like the DB.
+      const catalogue = { rows: [] };
       const productRepository = {
-        findPublic: jest.fn(async () => []),
+        catalogue,
+        findPublic: jest.fn(async (filter = {}) => {
+          const restrict = filter._id?.$in;
+          return restrict ? catalogue.rows.filter((r) => restrict.includes(r._id)) : catalogue.rows;
+        }),
         searchPublic: jest.fn(async () => []),
         getAvailableStock: jest.fn(() => 5),
       };
@@ -100,6 +107,7 @@ describe('production-readiness — search marketplaceTab scoping', () => {
 
       // Product-level text search finds it (it exists, just on a different tab).
       productRepository.searchPublic.mockResolvedValue([{ _id: attaId }]);
+      productRepository.catalogue.rows = [{ _id: attaId }];
 
       await service.listPublicForTab({ q: 'Atta', marketplaceTab: 'mithilak' });
 
@@ -128,9 +136,9 @@ describe('production-readiness — search marketplaceTab scoping', () => {
     it('combines category AND search filters correctly (intersection of both, not either)', async () => {
       const { service, marketplaceListingRepository, productRepository } = buildService();
 
-      // Category branch finds these two products.
-      productRepository.findPublic.mockResolvedValueOnce([{ _id: 'in-category-1' }, { _id: 'in-category-2' }]);
-      // Search branch finds a different, overlapping set.
+      // Category scope finds these two products...
+      productRepository.catalogue.rows = [{ _id: 'in-category-1' }, { _id: 'in-category-2' }];
+      // ...search finds a different, overlapping set.
       productRepository.searchPublic.mockResolvedValue([{ _id: 'in-category-1' }, { _id: 'not-in-category' }]);
 
       await service.listPublicForTab({ q: 'Atta', categoryId: 'cat-1', marketplaceTab: 'quick_shop' });
