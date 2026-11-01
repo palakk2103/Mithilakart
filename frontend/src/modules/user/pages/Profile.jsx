@@ -174,8 +174,7 @@ const VendorProfile = () => {
                     if (e.currentTarget.nextElementSibling) {
                       e.currentTarget.nextElementSibling.style.display = 'flex';
                     }
-                  }}
-                />
+                  }} loading="lazy" decoding="async" />
               ) : null}
               <div className={`${userProfile.avatar ? 'hidden' : 'flex'} items-center justify-center w-full h-full`}>
                 <User size={28} className="text-white" />

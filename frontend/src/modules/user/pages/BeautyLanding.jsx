@@ -28,6 +28,7 @@ import ImageBanner1 from '../../../assets/TopBanner/ImageBanner1.jpg';
 import ImageBanner2 from '../../../assets/TopBanner/ImageBanner2.jpg';
 import ImageBanner3 from '../../../assets/TopBanner/ImageBanner3.webp';
 import ImageBanner4 from '../../../assets/TopBanner/ImageBanner4.jpg';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 // ── Sub-category config ──────────────────────────────────
 const SUB_CATS = [
@@ -72,7 +73,7 @@ const TRENDING = {
 const ProductCard = React.memo(({ product, onPress }) => (
   <div onClick={() => onPress(product)} className="flex flex-col cursor-pointer group active:scale-95 transition-transform">
     <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
-      <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+      <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onError={handleImageError} />
       <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded shadow-sm">
         <span className="text-[10px] font-bold text-slate-800">{product.rating}</span>
         <Star size={8} fill="currentColor" className="text-green-600" />
@@ -248,7 +249,7 @@ const BeautyLanding = () => {
               className="bg-gradient-to-br from-[#f0f5ff] to-white rounded-2xl p-3 border border-blue-50 shadow-sm flex flex-col gap-2 cursor-pointer"
             >
               <div className="aspect-square rounded-xl overflow-hidden bg-white flex items-center justify-center p-2">
-                <img src={d.img} alt={d.label} className="w-full h-full object-contain" loading="lazy" />
+                <img src={d.img} alt={d.label} className="w-full h-full object-contain" loading="lazy" onError={handleImageError} />
               </div>
               <div>
                 <p className="text-[12px] font-bold text-slate-800 truncate">{d.label}</p>
@@ -273,7 +274,7 @@ const BeautyLanding = () => {
               className="flex-shrink-0 w-[90px] flex flex-col items-center gap-1.5 cursor-pointer"
             >
               <div className="w-[80px] h-[80px] rounded-2xl overflow-hidden bg-[#f0f5ff] border border-blue-50 flex items-center justify-center p-2">
-                <img src={t.img} alt={t.label} className="w-full h-full object-contain" loading="lazy" />
+                <img src={t.img} alt={t.label} className="w-full h-full object-contain" loading="lazy" onError={handleImageError} />
               </div>
               <p className="text-[10px] font-bold text-slate-700 text-center leading-tight line-clamp-2">{t.label}</p>
             </motion.div>
@@ -297,7 +298,7 @@ const BeautyLanding = () => {
               Shop Now
             </button>
           </div>
-          <img src={active === '1g Gold' || active === 'Art. Jewellery' ? JewelleryImg : LipstickDeal} alt="promo" className="w-24 h-24 object-contain relative z-10 drop-shadow-lg" />
+          <img src={active === '1g Gold' || active === 'Art. Jewellery' ? JewelleryImg : LipstickDeal} alt="promo" className="w-24 h-24 object-contain relative z-10 drop-shadow-lg" loading="lazy" decoding="async" onError={handleImageError} />
         </div>
       </div>
 

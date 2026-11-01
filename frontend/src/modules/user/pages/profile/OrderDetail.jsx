@@ -21,6 +21,7 @@ import CatchYourDeliveryGame from '../../components/common/CatchYourDeliveryGame
 import OrderInvoiceModal from '../../../../shared/components/OrderInvoiceModal';
 import OrderRatingModal from '../../../../shared/components/OrderRatingModal';
 import { soundEffects } from '../../../../shared/utils/soundEffects';
+import { handleImageError } from '../../../../shared/utils/imageUtils';
 
 const STATUS_STEPS = [
   { key: 'pending', title: 'Checkout Started', desc: 'Payment pending.' },
@@ -710,7 +711,7 @@ const OrderDetail = () => {
               {order.items.map((item, idx) => (
                 <div key={idx} className="p-5 flex gap-4">
                   <div className="w-16 h-16 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 p-1.5 border border-slate-100/80">
-                    <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
+                    <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" loading="lazy" decoding="async" onError={handleImageError} />
                   </div>
                   <div className="flex-1 py-0.5">
                     <h4 className="text-[13px] font-black text-slate-850 leading-snug line-clamp-2">{item.name}</h4>

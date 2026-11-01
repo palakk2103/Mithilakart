@@ -25,6 +25,12 @@ describe('pagination utils', () => {
       limit: 20,
       total: 45,
       totalPages: 3,
+      hasMore: true,
     });
+  });
+
+  it('reports hasMore false on the last page', () => {
+    expect(buildPaginationMeta(3, 20, 45).hasMore).toBe(false);
+    expect(buildPaginationMeta(1, 20, 0).hasMore).toBe(false);
   });
 });

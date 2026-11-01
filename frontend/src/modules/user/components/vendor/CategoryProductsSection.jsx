@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Heart, Star, ShoppingBag, Tag, X, SlidersHorizontal, Layers, Check } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import ScrollRow from './home/ScrollRow';
 import { getCategories, getCategoryProducts } from '../../services/catalogApi';
 import { findCategoryByName, extractList, mapProductForCard } from '../../utils/mappers';
 import { addProductToCart } from '../../utils/cartUtils';
@@ -8,8 +9,8 @@ import useTabTheme from '../../../../shared/hooks/useTabTheme';
 import { getCurrentMarketplaceTab } from '../../../../shared/utils/marketplaceHelpers';
 import { allCategoryProducts } from '../../../../data/categoryData';
 import { getImageUrl, handleImageError } from '../../../../shared/utils/imageUtils';
-import { parsePrice } from '../../../../shared/utils/priceFormatter';
 import toast from 'react-hot-toast';
+import InfiniteScrollSentinel from '../../../../shared/components/InfiniteScrollSentinel';
 import { getFashionFallbackImage } from './home/SubCategoryGrid';
 
 // Fallback images for subcategories when admin hasn't set an image yet
@@ -23,6 +24,7 @@ import MakeupHero from '../../../../assets/products/product08.jpg';
 import PlumShampoo from '../../../../assets/products/product05.jpg';
 import SamsungS24 from '../../../../assets/products/product01.jpg';
 import AsusLaptop from '../../../../assets/products/product02.jpg';
+import { sortLabelToApi } from '../../utils/listQuery';
 import EarbudsDeal from '../../../../assets/products/product03.jpg';
 import JewelleryImg from '../../../../assets/products/product12.jpg';
 import ToysImg from '../../../../assets/products/product14.jpg';
@@ -151,6 +153,13 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
   );
 });
 
+const BATCH_SIZE = 36;
+
+const hasMoreFromMeta = (data, count, limit) => {
+  const meta = data?.meta;
+  return meta ? Boolean(meta.hasMore ?? (meta.page < meta.totalPages)) : count >= limit;
+};
+
 const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSubcategory = searchParams.get('subcategory');
@@ -162,7 +171,14 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
   const [loading, setLoading] = useState(false);
   const [subLoading, setSubLoading] = useState(false);
   const [activeSort, setActiveSort] = useState('Popularity');
-  const [displayCount, setDisplayCount] = useState(8);
+  // Sorting is done by the API so it covers the whole category, not just loaded batches.
+  const sortApi = sortLabelToApi(activeSort);
+  const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [moreError, setMoreError] = useState(null);
+  // Server paging cursors for the two product sources; `gen` invalidates in-flight loads on reset.
+  const allPaging = useRef({ catId: null, page: 1, hasMore: false, busy: false, gen: 0 });
+  const subPaging = useRef({ catId: null, page: 1, hasMore: false, busy: false, gen: 0 });
   const navigate = useNavigate();
 
   // Keep selectedSubcategory in sync when URL changes or category changes
@@ -176,6 +192,9 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     if (!selectedCategory) return;
 
     let cancelled = false;
+    allPaging.current = { catId: null, page: 1, hasMore: false, busy: false, gen: allPaging.current.gen + 1 };
+    setDisplayCount(BATCH_SIZE);
+    setMoreError(null);
 
     const loadCategoryData = async () => {
       setLoading(true);
@@ -208,16 +227,20 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
           }
 
           // Fetch products created in Database under this category
-          const queryParams = { limit: 50, marketplaceTab: tab };
+          const queryParams = { page: 1, limit: BATCH_SIZE, marketplaceTab: tab, ...(sortApi ? { sort: sortApi } : {}) };
           let apiProducts = [];
+          let apiHasMore = false;
           try {
             const data = await getCategoryProducts(match.id, queryParams);
-            apiProducts = extractList(data).map((p) => mapProductForCard(p));
+            const rawList = extractList(data);
+            apiProducts = rawList.map((p) => mapProductForCard(p));
+            apiHasMore = hasMoreFromMeta(data, rawList.length, BATCH_SIZE);
           } catch {
             apiProducts = [];
           }
 
           if (!cancelled) {
+            allPaging.current = { catId: match.id, page: 1, hasMore: apiHasMore, busy: false, gen: allPaging.current.gen };
             if (apiProducts.length > 0) {
               setAllProducts(apiProducts);
             } else {
@@ -247,7 +270,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     return () => {
       cancelled = true;
     };
-  }, [selectedCategory]);
+  }, [selectedCategory, sortApi]);
 
   // Fallback curated subcategories if Admin hasn't added subcategories to DB for this category yet
   const fallbackSubcategories = useMemo(() => {
@@ -337,13 +360,18 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     if (isMongoId) {
       let cancelled = false;
       setSubLoading(true);
+      subPaging.current = { catId: subId, page: 1, hasMore: false, busy: false, gen: subPaging.current.gen + 1 };
+      setDisplayCount(BATCH_SIZE);
+      setMoreError(null);
 
       const fetchSubProducts = async () => {
         try {
           const tab = getCurrentMarketplaceTab();
-          const data = await getCategoryProducts(subId, { limit: 50, marketplaceTab: tab });
-          const items = extractList(data).map((p) => mapProductForCard(p));
+          const data = await getCategoryProducts(subId, { page: 1, limit: BATCH_SIZE, marketplaceTab: tab, ...(sortApi ? { sort: sortApi } : {}) });
+          const rawList = extractList(data);
+          const items = rawList.map((p) => mapProductForCard(p));
           if (!cancelled) {
+            subPaging.current.hasMore = hasMoreFromMeta(data, rawList.length, BATCH_SIZE);
             setSubProducts(items);
           }
         } catch {
@@ -358,9 +386,10 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         cancelled = true;
       };
     } else {
+      subPaging.current = { catId: null, page: 1, hasMore: false, busy: false, gen: subPaging.current.gen + 1 };
       setSubProducts(null);
     }
-  }, [selectedSubcategory, activeChildSub, activeParentSub, subcategoriesToDisplay]);
+  }, [selectedSubcategory, activeChildSub, activeParentSub, subcategoriesToDisplay, sortApi]);
 
   // Click handler for top-level subcategory card (e.g. Men's Wear, Women's Wear)
   const handleSubcategoryClick = useCallback((sub) => {
@@ -496,31 +525,58 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       list = matched;
     }
 
-    // Sort
-    const getPrice = (p) => p.rawPrice ?? parsePrice(p.price) ?? 0;
-    const getRating = (p) => Number(p.rating) || 0;
-    const getPopularity = (p) => Number(p.popularity ?? p.reviewCount ?? 0);
-
-    const sorted = [...list];
-    if (activeSort === 'Price: Low to High') {
-      return sorted.sort((a, b) => getPrice(a) - getPrice(b));
-    }
-    if (activeSort === 'Price: High to Low') {
-      return sorted.sort((a, b) => getPrice(b) - getPrice(a));
-    }
-    if (activeSort === 'Customer Rating') {
-      return sorted.sort((a, b) => getRating(b) - getRating(a));
-    }
-    if (activeSort === 'Popularity') {
-      return sorted.sort((a, b) => getPopularity(b) - getPopularity(a));
-    }
-    return sorted;
-  }, [allProducts, subProducts, selectedSubcategory, subcategoriesToDisplay, activeSort]);
+    // Order comes from the API (sortApi).
+    return list;
+  }, [allProducts, subProducts, selectedSubcategory, subcategoriesToDisplay]);
 
   const displayedProducts = useMemo(
     () => filteredAndSortedProducts.slice(0, displayCount),
     [filteredAndSortedProducts, displayCount]
   );
+
+  // Scroll-driven loading: reveal more already-fetched products, and pull the next
+  // server batch once the fetched list is nearly exhausted.
+  const usingSubSource = subProducts !== null && subProducts.length > 0;
+  const activePaging = usingSubSource ? subPaging : allPaging;
+  const serverHasMore = Boolean(activePaging.current.hasMore) && !(selectedSubcategory && !usingSubSource);
+  const hasMoreToShow = displayCount < filteredAndSortedProducts.length || serverHasMore;
+
+  const handleLoadMore = useCallback(async () => {
+    setDisplayCount((prev) => prev + BATCH_SIZE);
+    const paging = activePaging.current;
+    const remaining = filteredAndSortedProducts.length - displayCount;
+    if (!paging.hasMore || paging.busy || !paging.catId || remaining > BATCH_SIZE) return;
+    paging.busy = true;
+    const gen = paging.gen;
+    const setter = usingSubSource ? setSubProducts : setAllProducts;
+    setMoreLoading(true);
+    setMoreError(null);
+    try {
+      const nextPage = paging.page + 1;
+      const data = await getCategoryProducts(paging.catId, {
+        page: nextPage,
+        limit: BATCH_SIZE,
+        marketplaceTab: getCurrentMarketplaceTab(),
+        ...(sortApi ? { sort: sortApi } : {}),
+      });
+      if (gen !== paging.gen) return; // category/subcategory changed meanwhile
+      const rawList = extractList(data);
+      paging.page = nextPage;
+      paging.hasMore = hasMoreFromMeta(data, rawList.length, BATCH_SIZE);
+      const incoming = rawList.map((p) => mapProductForCard(p));
+      setter((prev) => {
+        const seen = new Set((prev || []).map((x) => x.id));
+        return (prev || []).concat(incoming.filter((x) => !seen.has(x.id)));
+      });
+    } catch (err) {
+      if (gen === paging.gen) setMoreError(err?.message || 'Failed to load more products');
+    } finally {
+      if (gen === paging.gen) {
+        paging.busy = false;
+        setMoreLoading(false);
+      }
+    }
+  }, [activePaging, filteredAndSortedProducts.length, displayCount, usingSubSource, sortApi]);
 
   const handleAddToCart = useCallback(async (product, e) => {
     e.stopPropagation();
@@ -599,7 +655,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               <h3 className="text-[15px] font-black text-[#3F2A20] tracking-tight flex items-center gap-1.5">
                 <span>{selectedCategory} Subcategories</span>
               </h3>
-              <span className="text-[9px] font-semibold text-slate-500 bg-[#EADCC9]/40 px-2 py-0.5 rounded-md">
+              <span className="text-[10.5px] font-semibold text-slate-500 bg-[#EADCC9]/40 px-2 py-0.5 rounded-md">
                 Click to filter products
               </span>
             </div>
@@ -613,7 +669,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             )}
           </div>
 
-          <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-1 px-1">
+          <ScrollRow className="flex items-stretch gap-3 pb-2 pt-1 -mx-1 px-1">
             {/* "All" Subcategory Pill Card */}
             <button
               type="button"
@@ -629,8 +685,8 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               }`}>
                 <Layers size={17} />
               </div>
-              <span className="text-[11px] font-black leading-tight text-center">All Items</span>
-              <span className={`text-[9px] mt-0.5 ${!selectedSubcategory ? 'text-[#FDE68A]' : 'text-slate-400'}`}>
+              <span className="text-[12px] md:text-[13px] font-black leading-tight text-center">All Items</span>
+              <span className={`text-[10.5px] mt-0.5 ${!selectedSubcategory ? 'text-[#FDE68A]' : 'text-slate-400'}`}>
                 {allProducts.length} items
               </span>
             </button>
@@ -665,8 +721,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                       src={sub.img || FashionHero}
                       alt={sub.name}
                       onError={handleImageError}
-                      className="w-full h-full object-cover rounded-[10px] group-hover:scale-105 transition-transform duration-500"
-                    />
+                      className="w-full h-full object-cover rounded-[10px] group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" />
                     {isSelected && (
                       <div className="absolute top-1.5 right-1.5 bg-[#3E5A44] text-white w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
                         <Check size={12} strokeWidth={3} />
@@ -674,15 +729,15 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                     )}
                   </div>
                   <div className="mt-2 text-center w-full">
-                    <h4 className={`text-[11px] font-black leading-tight truncate px-0.5 ${isSelected ? 'text-white' : 'text-[#3F2A20]'}`}>
+                    <h4 className={`text-[12px] md:text-[13px] font-black leading-tight truncate px-0.5 ${isSelected ? 'text-white' : 'text-[#3F2A20]'}`}>
                       {sub.name}
                     </h4>
                     {sub.offer ? (
-                      <span className={`text-[9.5px] font-extrabold block mt-0.5 ${isSelected ? 'text-[#FDE68A]' : 'text-[#E26D22]'}`}>
+                      <span className={`text-[11px] font-extrabold block mt-0.5 ${isSelected ? 'text-[#FDE68A]' : 'text-[#E26D22]'}`}>
                         {sub.offer}
                       </span>
                     ) : (
-                      <span className={`text-[8.5px] font-semibold block mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
+                      <span className={`text-[10.5px] font-semibold block mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
                         {isSelected ? 'Selected' : 'Filter by this'}
                       </span>
                     )}
@@ -690,7 +745,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                 </button>
               );
             })}
-          </div>
+          </ScrollRow>
         </div>
       )}
 
@@ -715,7 +770,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             )}
           </div>
 
-          <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1 pt-0.5 -mx-0.5 px-0.5">
+          <ScrollRow className="flex items-center gap-2.5 pb-1 pt-0.5 -mx-0.5 px-0.5">
             {/* "All [Parent]" pill */}
             <button
               type="button"
@@ -757,14 +812,13 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                       src={child.img || fallbackImg}
                       alt={child.name}
                       onError={handleImageError}
-                      className="w-full h-full object-cover"
-                    />
+                      className="w-full h-full object-cover" loading="lazy" decoding="async" />
                   </div>
                   <span className="whitespace-nowrap">{child.name}</span>
                 </button>
               );
             })}
-          </div>
+          </ScrollRow>
         </div>
       )}
 
@@ -859,17 +913,15 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             ))}
           </div>
 
-          {/* Load More Button */}
-          {displayCount < filteredAndSortedProducts.length && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={() => setDisplayCount((prev) => prev + 8)}
-                className="px-6 py-2 bg-white border border-[#3E5A44]/40 text-[#3E5A44] hover:bg-[#3E5A44] hover:text-white rounded-2xl text-[12px] font-black transition-all shadow-sm active:scale-95 cursor-pointer"
-              >
-                Load More Products ({filteredAndSortedProducts.length - displayCount} remaining)
-              </button>
-            </div>
-          )}
+          {/* Infinite scroll: next batch loads automatically near the end of the list */}
+          <InfiniteScrollSentinel
+            onVisible={handleLoadMore}
+            disabled={!hasMoreToShow || moreLoading || Boolean(moreError)}
+            loadingMore={moreLoading}
+            error={moreError}
+            onRetry={handleLoadMore}
+            watch={`${displayCount}:${filteredAndSortedProducts.length}`}
+          />
         </>
       )}
     </div>

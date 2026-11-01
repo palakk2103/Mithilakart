@@ -745,8 +745,7 @@ const ProductDetail = () => {
                     transform: 'scale(2)',
                     transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
                   } : undefined}
-                  className="w-full h-full object-cover transition-transform duration-100 ease-out" 
-                />
+                  className="w-full h-full object-cover transition-transform duration-100 ease-out" fetchPriority="high" decoding="async" />
               )}
 
               {/* Lightbox Trigger */}
@@ -806,7 +805,7 @@ const ProductDetail = () => {
                       </div>
                     </div>
                   ) : (
-                    <img src={getImageUrl(item.url)} onError={handleImageError} className="w-full h-full object-cover" alt={`preview-${idx}`} />
+                    <img src={getImageUrl(item.url)} onError={handleImageError} className="w-full h-full object-cover" alt={`preview-${idx}`} loading="lazy" decoding="async" />
                   )}
                 </button>
               ))}
@@ -1364,7 +1363,7 @@ const ProductDetail = () => {
                         onClick={() => setPreviewReviewMedia({ type: 'image', url })}
                         className="w-16 h-16 bg-slate-100 rounded-xl overflow-hidden border border-slate-150 cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-2xs flex-shrink-0"
                       >
-                        <img src={url} className="w-full h-full object-cover" alt={`review-img-${imgIdx}`} />
+                        <img src={url} className="w-full h-full object-cover" alt={`review-img-${imgIdx}`} loading="lazy" decoding="async" onError={handleImageError} />
                       </div>
                     ))}
 
@@ -1453,7 +1452,7 @@ const ProductDetail = () => {
                             </div>
                           </div>
                         ) : (
-                          <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />
+                          <img src={previewUrl} className="w-full h-full object-cover" alt="preview" loading="lazy" decoding="async" onError={handleImageError} />
                         )}
                         <button 
                           type="button"
@@ -1557,7 +1556,7 @@ const ProductDetail = () => {
                 className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
               >
                 <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
-                  <img src={item.image} className="w-full h-full object-cover" alt={item.name} loading="lazy" />
+                  <img src={item.image} className="w-full h-full object-cover" alt={item.name} loading="lazy" onError={handleImageError} />
                   {item.rating > 0 && (
                     <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-gray-100 shadow-2xs">
                       <span className="text-[9px] font-black text-slate-800">{item.rating}</span>
@@ -1977,8 +1976,7 @@ const ProductDetail = () => {
             <img 
               src={activeMedia.url} 
               alt="fullscreen-preview" 
-              className="max-h-[70vh] max-w-full object-contain rounded-2xl"
-            />
+              className="max-h-[70vh] max-w-full object-contain rounded-2xl" loading="lazy" decoding="async" onError={handleImageError} />
           </div>
 
           {/* Bottom Thumbnails */}
@@ -1989,7 +1987,7 @@ const ProductDetail = () => {
                 onClick={() => setCurrentSlide(idx)}
                 className={`w-10 h-12 rounded-lg overflow-hidden border-2 ${currentSlide === idx ? 'border-white scale-105' : 'border-transparent opacity-50'}`}
               >
-                <img src={item.url} className="w-full h-full object-cover" alt="lightbox-thumb" />
+                <img src={item.url} className="w-full h-full object-cover" alt="lightbox-thumb" loading="lazy" decoding="async" onError={handleImageError} />
               </button>
             ))}
           </div>
@@ -2020,8 +2018,7 @@ const ProductDetail = () => {
               <img 
                 src={previewReviewMedia.url} 
                 alt="review-preview" 
-                className="max-h-[70vh] max-w-full object-contain rounded-2xl"
-              />
+                className="max-h-[70vh] max-w-full object-contain rounded-2xl" loading="lazy" decoding="async" onError={handleImageError} />
             )}
           </div>
           <div /> {/* spacing */}

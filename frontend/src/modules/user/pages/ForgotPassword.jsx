@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { X, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const ForgotPassword = () => {
           <X size={20} strokeWidth={2.5} />
         </button>
         <div className="flex items-center gap-2">
-          <img src="/logomith-removebg-preview.png" alt="Mithilakart" className="h-8 w-auto object-contain" />
+          <img src="/logomith-removebg-preview.png" alt="Mithilakart" className="h-8 w-auto object-contain" onError={handleImageError} />
           <span className="text-[#F26522] font-bold tracking-wider text-sm">MITHILAKART</span>
         </div>
         <div className="w-9"></div> {/* Spacer for symmetry */}
@@ -137,8 +138,7 @@ const ForgotPassword = () => {
         <img 
           src="/mthibg.png" 
           alt="Mithilakart" 
-          className="h-16 w-auto object-contain"
-        />
+          className="h-16 w-auto object-contain" onError={handleImageError} />
         <div className="flex items-center text-[14px] font-bold text-black tracking-wide italic">
           Mithilakart<span className="text-[10px] align-super ml-0.5">™</span>
         </div>

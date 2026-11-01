@@ -1,0 +1,19 @@
+[   15471ms] [ERROR] A bad HTTP response code (404) was received when fetching the script. @ :0
+[   15485ms] Failed to register a ServiceWorker for scope ('https://app.mithilakart.com/') with script ('https://app.mithilakart.com/sw.js'): A bad HTTP response code (404) was received when fetching the script.
+[   19583ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/597a6fa2-78b7-4d01-8d64-2d0e4125fba4.png:0
+[   19589ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/9aa9bb4e-a498-4948-b1dc-3f62b02ead5b.png:0
+[   19591ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/1c9fb822-db3e-4e7f-be92-d6e44e05d82c.png:0
+[   19592ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/145668cb-158b-4ccc-913d-9f4ed9535894.png:0
+[   19595ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/sample-banner.jpg:0
+[   19824ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/1c9fb822-db3e-4e7f-be92-d6e44e05d82c.png:0
+[   19833ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/145668cb-158b-4ccc-913d-9f4ed9535894.png:0
+[   19833ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/597a6fa2-78b7-4d01-8d64-2d0e4125fba4.png:0
+[   19843ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/9aa9bb4e-a498-4948-b1dc-3f62b02ead5b.png:0
+[   21692ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/1c9fb822-db3e-4e7f-be92-d6e44e05d82c.png:0
+[   21706ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/145668cb-158b-4ccc-913d-9f4ed9535894.png:0
+[   22145ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/597a6fa2-78b7-4d01-8d64-2d0e4125fba4.png:0
+[   22238ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/597a6fa2-78b7-4d01-8d64-2d0e4125fba4.png:0
+[   24716ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/1c9fb822-db3e-4e7f-be92-d6e44e05d82c.png:0
+[   24717ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/9aa9bb4e-a498-4948-b1dc-3f62b02ead5b.png:0
+[   25119ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/145668cb-158b-4ccc-913d-9f4ed9535894.png:0
+[   25221ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://app.mithilakart.com/uploads/cms/145668cb-158b-4ccc-913d-9f4ed9535894.png:0

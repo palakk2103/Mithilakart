@@ -35,11 +35,16 @@ class ProductService extends BaseService {
       filters.categoryId = categoryIds.length > 1 ? { $in: categoryIds } : categoryIds[0];
     }
 
+    const minRating = Number(query.minRating);
+    if (Number.isFinite(minRating) && minRating > 0) filters.rating = { $gte: Math.min(minRating, 5) };
+
     const searchFilter = buildSearchQuery(query, { fields: ['title', 'description', 'brand', 'tags'] });
     const sort = buildSortQuery(query, {
       allowedFields: ['createdAt', 'price', 'rating', 'title'],
       defaultSort: { createdAt: -1 },
     });
+    // _id tiebreaker keeps skip/limit batches stable (no repeats/gaps)
+    if (sort && typeof sort === 'object' && !('_id' in sort)) sort._id = -1;
 
     const combinedFilter = applyCommerceFlowFilter({ ...filters, ...searchFilter }, query);
 
@@ -99,7 +104,7 @@ class ProductService extends BaseService {
     );
 
     const items = await this.productRepository.searchPublic(searchTerm, filter, {
-      sort: { score: { $meta: 'textScore' } },
+      sort: { score: { $meta: 'textScore' }, _id: 1 },
       skip: pagination.skip,
       limit: pagination.limit,
     });

@@ -1,49 +1,78 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+
+const FALLBACK_IMAGE = '/hero_banner.png';
+
+// Offset of a slide relative to the active one: 0 = visible, -1 = just left, 1 = waiting on the right.
+const slideClasses = (idx, currentIndex, prevIndex, leftShift, rightShift) => {
+  const base = 'absolute inset-0 transition-[opacity,transform] ease-in-out will-change-[opacity,transform]';
+  if (idx === currentIndex) return `${base} opacity-100 translate-x-0 z-[2]`;
+  if (idx === prevIndex) return `${base} opacity-0 ${leftShift} z-[1]`;
+  return `${base} opacity-0 pointer-events-none ${rightShift} z-0 !duration-0`;
+};
 
 const BannerCarousel = ({ banners = [] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [prevIndex, setPrevIndex] = useState(-1);
   const [isHovered, setIsHovered] = useState(false);
+  const loadedRef = useRef(new Set());
+  const imagesRef = useRef([]);
 
   const totalBanners = banners ? banners.length : 0;
+
+  const goTo = useCallback((next) => {
+    if (next === currentIndex) return;
+    setPrevIndex(currentIndex);
+    setCurrentIndex(next);
+  }, [currentIndex]);
 
   useEffect(() => {
     if (currentIndex >= totalBanners && totalBanners > 0) {
       setCurrentIndex(0);
+      setPrevIndex(-1);
     }
   }, [totalBanners, currentIndex]);
 
+  // Preload and decode every banner up front so slides never wait on the network.
   useEffect(() => {
-    if (!banners || !banners.length) return;
+    loadedRef.current = new Set();
+    imagesRef.current = [];
+    if (!banners || !banners.length) return undefined;
+    let cancelled = false;
     banners.forEach((banner) => {
-      if (banner?.image) {
-        const img = new Image();
-        img.src = banner.image;
+      const src = banner?.image;
+      if (!src) return;
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+      imagesRef.current.push(img); // keep a reference so the decoded bitmap stays cached
+      const markLoaded = () => { if (!cancelled) loadedRef.current.add(src); };
+      if (typeof img.decode === 'function') {
+        img.decode().then(markLoaded).catch(markLoaded);
+      } else {
+        img.onload = markLoaded;
+        img.onerror = markLoaded;
       }
     });
+    return () => { cancelled = true; };
   }, [banners]);
 
   const nextSlide = useCallback(() => {
     if (totalBanners <= 1) return;
-    setCurrentIndex((prev) => (prev + 1) % totalBanners);
-  }, [totalBanners]);
-
-  const prevSlide = useCallback(() => {
-    if (totalBanners <= 1) return;
-    setCurrentIndex((prev) => (prev === 0 ? totalBanners - 1 : prev - 1));
-  }, [totalBanners]);
+    goTo((currentIndex + 1) % totalBanners);
+  }, [totalBanners, currentIndex, goTo]);
 
   useEffect(() => {
-    if (totalBanners <= 1 || isHovered) return;
+    if (totalBanners <= 1 || isHovered) return undefined;
     const interval = setInterval(() => {
+      // Only advance once the next image is ready, otherwise wait for the next tick.
+      const nextSrc = banners[(currentIndex + 1) % totalBanners]?.image;
+      if (nextSrc && !loadedRef.current.has(nextSrc)) return;
       nextSlide();
     }, 3000);
     return () => clearInterval(interval);
-  }, [nextSlide, totalBanners, isHovered]);
+  }, [nextSlide, totalBanners, isHovered, banners, currentIndex]);
 
   if (!banners || totalBanners === 0) return null;
-
-  const currentBanner = banners[currentIndex] || banners[0];
 
   return (
     <div 
@@ -62,39 +91,40 @@ const BannerCarousel = ({ banners = [] }) => {
     >
       {/* Mobile view - Single Banner */}
       <div className="md:hidden relative aspect-[16/9] w-full overflow-hidden rounded-2xl shadow-md bg-gray-50 border border-[#EADCC9]/40">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentBanner?.id || currentIndex}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
-            className="absolute inset-0"
+        {banners.map((banner, idx) => (
+          <div
+            key={banner?.id || idx}
+            className={slideClasses(idx, currentIndex, prevIndex, '-translate-x-5', 'translate-x-5')}
+            style={{ transitionDuration: '400ms' }}
+            aria-hidden={idx !== currentIndex}
           >
             <img
-              src={currentBanner?.image || '/hero_banner.png'}
-              alt={currentBanner?.title || "Hero Banner"}
+              src={banner?.image || FALLBACK_IMAGE}
+              alt={banner?.title || "Hero Banner"}
               className="h-full w-full object-cover"
-              loading="eager"
+              loading={idx === 0 ? "eager" : "lazy"}
+              decoding="async"
+              fetchPriority={idx === 0 ? 'high' : 'auto'}
+              draggable={false}
               onError={(e) => {
                 e.currentTarget.onerror = null;
-                e.currentTarget.src = '/hero_banner.png';
+                e.currentTarget.src = FALLBACK_IMAGE;
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
               <span className="text-[#e2a750] font-bold text-[10px] uppercase tracking-widest mb-0.5">Special Collection</span>
               <h3 className="text-white text-base font-black tracking-tight drop-shadow-md">
-                {currentBanner?.title || "Mithilakart Special Deals"}
+                {banner?.title || "Mithilakart Special Deals"}
               </h3>
             </div>
-          </motion.div>
-        </AnimatePresence>
+          </div>
+        ))}
 
         <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex justify-center gap-1.5 z-10">
           {banners.map((_, idx) => (
             <button
               key={idx}
-              onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
+              onClick={(e) => { e.stopPropagation(); goTo(idx); }}
               className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}
             />
           ))}
@@ -104,36 +134,37 @@ const BannerCarousel = ({ banners = [] }) => {
       {/* Desktop view - Premium Hero Section (Carousel + Sidebar Stack) */}
       <div className="hidden md:grid md:grid-cols-10 md:gap-6 md:max-w-[1600px] md:mx-auto">
         <div className="md:col-span-7 relative aspect-[16/9] w-full overflow-hidden rounded-2xl shadow-lg bg-gray-50 group border border-[#EADCC9]/50">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentBanner?.id || currentIndex}
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              transition={{ duration: 0.5, ease: 'easeInOut' }}
-              className="absolute inset-0"
+          {banners.map((banner, idx) => (
+            <div
+              key={banner?.id || idx}
+              className={slideClasses(idx, currentIndex, prevIndex, '-translate-x-[30px]', 'translate-x-[30px]')}
+              style={{ transitionDuration: '500ms' }}
+              aria-hidden={idx !== currentIndex}
             >
               <img
-                src={currentBanner?.image || '/hero_banner.png'}
-                alt={currentBanner?.title || "Hero Banner"}
+                src={banner?.image || FALLBACK_IMAGE}
+                alt={banner?.title || "Hero Banner"}
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                loading="eager"
+                loading={idx === 0 ? "eager" : "lazy"}
+                decoding="async"
+                fetchPriority={idx === 0 ? 'high' : 'auto'}
+                draggable={false}
                 onError={(e) => {
                   e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/hero_banner.png';
+                  e.currentTarget.src = FALLBACK_IMAGE;
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-8">
                 <span className="text-[#e2a750] font-bold text-sm uppercase tracking-widest mb-1 animate-pulse">Exclusive Collection</span>
                 <h3 className="text-white text-3xl font-black tracking-tight drop-shadow-md mb-2">
-                  {currentBanner?.title || "Mithilakart Special Deals"}
+                  {banner?.title || "Mithilakart Special Deals"}
                 </h3>
                 <p className="text-white/90 text-sm font-medium max-w-md drop-shadow-xs">
                   Discover authentic handcrafted treasures and deals directly from finest artisans.
                 </p>
               </div>
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          ))}
 
           <div className="absolute bottom-4 right-8 flex gap-2 z-10">
             {banners.map((_, idx) => (
@@ -141,7 +172,7 @@ const BannerCarousel = ({ banners = [] }) => {
                 key={idx}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCurrentIndex(idx);
+                  goTo(idx);
                 }}
                 className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${idx === currentIndex ? 'w-6 bg-white' : 'w-2 bg-white/40 hover:bg-white/70'}`}
               />
@@ -157,14 +188,15 @@ const BannerCarousel = ({ banners = [] }) => {
             return (
               <div 
                 key={offset} 
-                onClick={() => setCurrentIndex(idx)}
+                onClick={() => goTo(idx)}
                 className="relative flex-1 aspect-[16/7] w-full overflow-hidden rounded-2xl shadow-md bg-gray-50 cursor-pointer group hover:shadow-xl transition-all duration-300 border border-[#EADCC9]/40"
               >
                 <img
                   src={sideBanner.image || '/hero_banner.png'}
                   alt={sideBanner.title || "Promo Banner"}
                   className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
+                  loading="eager"
+                  decoding="async"
                   onError={(e) => {
                     e.currentTarget.onerror = null;
                     e.currentTarget.src = '/hero_banner.png';

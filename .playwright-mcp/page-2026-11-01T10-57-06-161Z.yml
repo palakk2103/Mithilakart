@@ -1,0 +1,108 @@
+- generic [ref=f1e2]:
+  - img "Mithilakart Splash" [ref=f1e6]
+  - generic [ref=f1e8]:
+    - generic [ref=f1e9]:
+      - generic [ref=f1e15]:
+        - paragraph [ref=f1e16]: Use live location
+        - paragraph [ref=f1e17]: Nearby sellers & faster delivery
+      - button "Close" [ref=f1e18]
+    - generic [ref=f1e22]:
+      - paragraph [ref=f1e23]: Allow Mithilakart to access your current location so we can show nearby seller products, accurate delivery address, and local offers.
+      - button "Allow live location" [ref=f1e24]
+      - button "Not now" [ref=f1e27]
+  - generic [ref=f1e28]:
+    - generic [ref=f1e30]:
+      - link "Mithilakart" [ref=f1e31] [cursor=pointer]:
+        - /url: /home
+      - generic [ref=f1e34]:
+        - generic [ref=f1e35] [cursor=pointer]:
+          - img "Mithilakart" [ref=f1e37]
+          - generic [ref=f1e38]: Mithilakart
+        - generic [ref=f1e39] [cursor=pointer]: Quick Shop
+        - generic [ref=f1e45] [cursor=pointer]: Mithilak
+        - generic [ref=f1e51] [cursor=pointer]: Fresh & Groceries
+      - navigation [ref=f1e58]:
+        - link "Home" [ref=f1e59] [cursor=pointer]:
+          - /url: /home
+        - link "Categories" [ref=f1e60] [cursor=pointer]:
+          - /url: /categories?flow=mithilak
+        - link "Cart 0" [ref=f1e61] [cursor=pointer]:
+          - /url: /cart
+          - generic [ref=f1e62]: Cart
+          - generic [ref=f1e63]: "0"
+        - link "Profile" [ref=f1e64] [cursor=pointer]:
+          - /url: /profile
+      - generic [ref=f1e65]:
+        - button "English English" [ref=f1e67] [cursor=pointer]:
+          - img "English" [ref=f1e68]
+          - generic [ref=f1e69]: English
+        - generic [ref=f1e70]:
+          - generic [ref=f1e71]: 📍 Deliver to
+          - button "Tap to set delivery location" [ref=f1e72]
+    - generic [ref=f1e73]:
+      - main [ref=f1e76]:
+        - status "Loading" [ref=f1e77]
+      - contentinfo [ref=f1e79]:
+        - img "Mithila Art Footer Border" [ref=f1e81]
+        - generic [ref=f1e82]:
+          - generic [ref=f1e83]:
+            - heading "About Mithilakart" [level=3] [ref=f1e84]
+            - paragraph [ref=f1e85]: Discover unique, high-quality handcrafted items and fresh goods directly from local artisans. We bridge the gap between traditional craftsmanship and modern convenience.
+          - generic [ref=f1e86]:
+            - heading "Customer Care" [level=3] [ref=f1e87]
+            - list [ref=f1e88]:
+              - listitem [ref=f1e89]:
+                - link "Help Center" [ref=f1e90] [cursor=pointer]:
+                  - /url: /profile/help-center
+              - listitem [ref=f1e91]:
+                - link "Track Order" [ref=f1e92] [cursor=pointer]:
+                  - /url: /profile/orders
+              - listitem [ref=f1e93]:
+                - link "Cancellations & Returns" [ref=f1e94] [cursor=pointer]:
+                  - /url: /cancellation-returns
+              - listitem [ref=f1e95]:
+                - link "Shipping Policy" [ref=f1e96] [cursor=pointer]:
+                  - /url: /shipping
+          - generic [ref=f1e97]:
+            - heading "Useful Links" [level=3] [ref=f1e98]
+            - list [ref=f1e99]:
+              - listitem [ref=f1e100]:
+                - link "Terms of Use" [ref=f1e101] [cursor=pointer]:
+                  - /url: /terms
+              - listitem [ref=f1e102]:
+                - link "Privacy Policy" [ref=f1e103] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=f1e104]:
+                - link "Home Page" [ref=f1e105] [cursor=pointer]:
+                  - /url: /home
+              - listitem [ref=f1e106]:
+                - link "Shop by Categories" [ref=f1e107] [cursor=pointer]:
+                  - /url: /categories
+          - generic [ref=f1e108]:
+            - heading "Contact Us" [level=3] [ref=f1e109]
+            - list [ref=f1e110]:
+              - listitem [ref=f1e111]:
+                - strong [ref=f1e112]: "Email:"
+                - text: support@mithilakart.com
+              - listitem [ref=f1e113]:
+                - strong [ref=f1e114]: "Phone:"
+                - text: +91 1800-123-4567
+              - listitem [ref=f1e115]:
+                - strong [ref=f1e116]: "Address:"
+                - text: Mithilakart Pvt Ltd, Mumbai, India
+        - generic [ref=f1e117]:
+          - link [ref=f1e118] [cursor=pointer]:
+            - /url: https://www.facebook.com/mithilakart
+          - link [ref=f1e121] [cursor=pointer]:
+            - /url: https://www.youtube.com/@mithilakart
+          - link [ref=f1e124] [cursor=pointer]:
+            - /url: https://www.instagram.com/mithilakart
+          - link [ref=f1e128] [cursor=pointer]:
+            - /url: https://x.com
+          - link [ref=f1e131] [cursor=pointer]:
+            - /url: https://wa.me/918076109547
+        - generic [ref=f1e134]:
+          - img "Mithilakart Logo" [ref=f1e135]
+          - generic [ref=f1e136]:
+            - text: Mithilakart
+            - generic [ref=f1e137]: ™

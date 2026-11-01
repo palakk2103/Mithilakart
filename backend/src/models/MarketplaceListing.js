@@ -49,6 +49,8 @@ marketplaceListingSchema.index(
 marketplaceListingSchema.index({ sellerId: 1, marketplaceTab: 1, listingStatus: 1 });
 marketplaceListingSchema.index({ marketplaceTab: 1, listingStatus: 1, isVisible: 1, price: 1 });
 marketplaceListingSchema.index({ productId: 1, listingStatus: 1 });
+// Public tab listing: filter + sortBoost/price/_id order used by infinite scroll
+marketplaceListingSchema.index({ marketplaceTab: 1, listingStatus: 1, isVisible: 1, deletedAt: 1, sortBoost: -1, price: 1, _id: 1 });
 
 module.exports =
   mongoose.models.MarketplaceListing

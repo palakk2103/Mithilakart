@@ -10,6 +10,7 @@ import { useLocation as useLiveLocation } from '../../../shared/context/Location
 import useTabTheme from '../../../shared/hooks/useTabTheme';
 import useVendorStore from '../../../store/useVendorStore';
 import SocialIcons from '../../../shared/components/SocialIcons';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 const FlowerIcon = ({ className = "w-5 h-5", color = "#F26522" }) => (
   <svg viewBox="0 0 24 24" className={`${className} inline-block`} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -495,8 +496,7 @@ const Login = () => {
         <img 
           src="/mthibg.png" 
           alt="Mithilakart" 
-          className="h-10 md:h-16 w-auto object-contain"
-        />
+          className="h-10 md:h-16 w-auto object-contain" onError={handleImageError} />
         <div className="flex items-center text-[13px] md:text-[14px] font-bold text-black tracking-wide italic">
           Mithilakart<span className="text-[10px] align-super ml-0.5">™</span>
         </div>

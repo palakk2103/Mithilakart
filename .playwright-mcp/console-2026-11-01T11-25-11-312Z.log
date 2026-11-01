@@ -1,0 +1,4 @@
+[    3586ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[    7944ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://images.dealshare.in/1743489478375:01935F21ED_DEAL.png?tr=f-webp:0
+[    7968ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://images.dealshare.in/1742374265318:0DB212E68E_1.png?tr=f-webp:0
+[   20795ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:0

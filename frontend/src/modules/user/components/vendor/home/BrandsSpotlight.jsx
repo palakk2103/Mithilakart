@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { handleImageError } from '../../../../../shared/utils/imageUtils';
 
 const BrandsSpotlight = ({ items = [] }) => {
   const navigate = useNavigate();
@@ -92,8 +93,7 @@ const BrandsSpotlight = ({ items = [] }) => {
                     src={card.img}
                     alt={card.title}
                     className="h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
+                    loading="lazy" onError={handleImageError} />
                   <div className="absolute top-3 right-3 bg-black/10 backdrop-blur-sm text-white text-[8px] px-1.5 py-0.5 rounded font-black border border-white/20">{t('common.ad') || 'AD'}</div>
                 </div>
 

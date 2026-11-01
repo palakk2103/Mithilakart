@@ -29,6 +29,7 @@ function buildPaginationMeta(page, limit, total) {
     limit,
     total,
     totalPages,
+    hasMore: page < totalPages,
   };
 }
 

@@ -1,0 +1,34 @@
+[    8795ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3003/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[    9253ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9254ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3003/src/config/userAppTabs.js:112
+[    9255ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[    9255ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9256ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3003/src/config/userAppTabs.js:112
+[    9256ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[    9256ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/cart' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9257ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/cart:0
+[    9258ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9258ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[    9278ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9279ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3003/src/config/userAppTabs.js:112
+[    9279ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[    9279ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/cart' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9280ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/cart:0
+[    9281ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9282ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[    9286ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9286ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3003/src/config/userAppTabs.js:112
+[    9287ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[    9487ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/cart' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9487ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/cart:0
+[    9522ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=mithilak' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9526ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=mithilak:0
+[    9528ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/categories?commerceFlow=mithilak' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9529ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/categories?commerceFlow=mithilak:0
+[    9529ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/categories?commerceFlow=mithilak' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9530ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/categories?commerceFlow=mithilak:0
+[    9530ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/cart' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9530ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/cart:0
+[    9530ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=mithilak' from origin 'http://localhost:3003' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:3003/mithilak:0
+[    9555ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=mithilak:0
+[   24667ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3003/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102

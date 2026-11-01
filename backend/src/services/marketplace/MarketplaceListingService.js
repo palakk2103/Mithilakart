@@ -14,6 +14,7 @@ const {
 } = require('../../utils/marketplaceTab');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
 const { eventBus } = require('../../events/EventBus');
+const { parseListingQuery, quickDeliveryCondition, resolveProductIds, runListingQuery } = require('../../utils/listingQuery');
 
 class MarketplaceListingService extends BaseService {
   constructor({
@@ -289,50 +290,43 @@ class MarketplaceListingService extends BaseService {
     await this.marketplaceEngineService.assertTabActive(tab);
 
     const pagination = parsePagination(query);
-    const filter = { marketplaceTab: tab };
-    if (query.categoryId) {
-      const categoryIds = await this._getCategorySubtreeIds(query.categoryId);
-      const products = await this.productRepository.findPublic({ categoryId: { $in: categoryIds } }, { limit: 500 });
-      const productIds = products.map((p) => p._id);
-      if (!productIds.length) {
-        return { items: [], meta: buildPaginationMeta(pagination.page, pagination.limit, 0) };
-      }
-      filter.productId = { $in: productIds };
-    }
+    const parsed = parseListingQuery(query);
+    const empty = () => ({ items: [], meta: buildPaginationMeta(pagination.page, pagination.limit, 0) });
 
-    // Production readiness audit (2026-08-25): searchPublic previously never
-    // reached this method at all — it only ever queried Product directly via
-    // the legacy commerceFlow filter, so `?marketplaceTab=` had no effect on
-    // search results whatsoever. Live-confirmed: searching "Atta" (a
-    // quick_shop-only product) with marketplaceTab=mithilak returned the same
-    // 4 results as no tab filter at all. Same intersect-then-filter pattern
-    // as the categoryId branch above: text-search Product first, then scope
-    // MarketplaceListing to that candidate set.
+    // Product-level scope (category subtree, text search, rating, in-stock) is
+    // resolved to ids first so the listing query can sort/paginate/count in the DB.
+    let restrictIds = null;
     const searchTerm = query.q || query.search;
     if (searchTerm) {
-      const matches = await this.productRepository.searchPublic(searchTerm, {}, { limit: 500 });
-      const matchIds = matches.map((p) => String(p._id));
-      const intersected = filter.productId
-        ? matchIds.filter((id) => filter.productId.$in.some((pid) => String(pid) === id))
-        : matchIds;
-      if (!intersected.length) {
-        return { items: [], meta: buildPaginationMeta(pagination.page, pagination.limit, 0) };
-      }
-      filter.productId = { $in: intersected };
+      const matches = await this.productRepository.searchPublic(searchTerm, {}, { limit: 5000 });
+      restrictIds = matches.map((p) => p._id);
+      if (!restrictIds.length) return empty();
     }
+    const categoryIds = query.categoryId ? await this._getCategorySubtreeIds(query.categoryId) : null;
+    const productIds = await resolveProductIds(this.productRepository, {
+      categoryIds,
+      minRating: parsed.minRating,
+      productType: parsed.productType,
+      restrictIds,
+    });
+    if (!productIds.length) return empty();
 
-    const [listings, total] = await Promise.all([
-      this.marketplaceListingRepository.findPublic(filter, {
-        sort: { sortBoost: -1, price: 1 },
-        skip: pagination.skip,
-        limit: pagination.limit,
-      }),
-      this.marketplaceListingRepository.countPublic(filter),
-    ]);
+    const filter = { marketplaceTab: tab, productId: { $in: productIds } };
+    if (parsed.price) filter.price = parsed.price;
+    if (parsed.discountOnly) filter.$expr = { $gt: ['$mrp', '$price'] };
+    if (parsed.quickDelivery) Object.assign(filter, quickDeliveryCondition());
 
-    const productIds = [...new Set(listings.map((l) => String(l.productId)))];
-    const products = productIds.length
-      ? await this.productRepository.findPublic({ _id: { $in: productIds } })
+    const { listings, total } = await runListingQuery({
+      listingRepo: this.marketplaceListingRepository,
+      productRepo: this.productRepository,
+      filter,
+      parsed,
+      pagination,
+    });
+
+    const pageProductIds = [...new Set(listings.map((l) => String(l.productId)))];
+    const products = pageProductIds.length
+      ? await this.productRepository.findPublic({ _id: { $in: pageProductIds } })
       : [];
     const productMap = new Map(products.map((p) => [String(p._id), p]));
 
@@ -341,7 +335,6 @@ class MarketplaceListingService extends BaseService {
         const product = productMap.get(String(listing.productId));
         if (!product) return null;
         const availableStock = this.productRepository.getAvailableStock(product);
-        if (availableStock <= 0) return null;
         return {
           ...this._serializeListing(listing, product),
           name: product.title,
@@ -351,6 +344,10 @@ class MarketplaceListingService extends BaseService {
           imageUrl: product.images?.[0]?.url || null,
           categoryId: product.categoryId ? String(product.categoryId) : null,
           availableStock,
+          stock: availableStock,
+          rating: product.rating || 0,
+          reviewCount: product.reviewCount || 0,
+          createdAt: listing.publishedAt || product.createdAt,
           commerceFlow: toLegacyCommerceFlow(tab),
           marketplaceTab: tab,
         };

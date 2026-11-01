@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import PageLoader from '../../../shared/components/PageLoader';
 import { Link, Outlet, useLocation as useRouterLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -264,13 +265,13 @@ const VendorLayout = () => {
                       : 'text-slate-800'
                   }`
         }`}>
-          <div className="flex items-center gap-8 max-w-[1600px] mx-auto w-full">
+          <div className="flex items-center gap-8 xl:gap-5 min-[1440px]:gap-8! max-w-[1600px] mx-auto w-full">
             <Link to="/home" className="flex items-center gap-2 flex-shrink-0">
               <span className="text-2xl font-black tracking-tight">Mithilakart</span>
             </Link>
 
             {/* Desktop Header Flow Tabs */}
-            <div className="w-[360px] flex-shrink-0 scale-95 origin-left">
+            <div className="w-[360px] xl:w-[400px] min-[1440px]:w-[460px]! 2xl:w-[540px]! flex-shrink-0 scale-95 origin-left">
               <HeaderTabs />
             </div>
 
@@ -338,7 +339,9 @@ const VendorLayout = () => {
         <div className={`flex-1 flex min-h-0 ${isDualScrollPage ? 'overflow-hidden h-full' : ''}`}>
           <div className={`w-full max-w-[1600px] mx-auto px-0 md:px-8 xl:px-12 flex h-full min-h-0 ${isDualScrollPage ? 'overflow-hidden' : ''}`}>
             <main className={`flex-1 min-w-0 min-h-0 flex flex-col pb-0 ${isDualScrollPage ? 'overflow-hidden h-full' : ''}`}>
-              <Outlet />
+              <Suspense fallback={<PageLoader />}>
+                <Outlet />
+              </Suspense>
             </main>
           </div>
         </div>

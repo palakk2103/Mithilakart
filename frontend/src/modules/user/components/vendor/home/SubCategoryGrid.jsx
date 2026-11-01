@@ -5,6 +5,7 @@ import { mapShopCategoryCards, findCategoryByName } from '../../../utils/mappers
 import { handleImageError, getImageUrl } from '../../../../../shared/utils/imageUtils';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../../../../shared/context/LanguageContext';
+import ScrollRow from './ScrollRow';
 
 // Curated fallbacks for clothing & fashion subcategories when Admin hasn't set an image
 import FashionHero from '../../../../../assets/products/product06.jpg';
@@ -155,12 +156,12 @@ const SubCategoryGrid = () => {
   return (
     <div className="py-4 px-3 w-full max-w-[1600px] mx-auto">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-[15px] font-black text-[#3F2A20] tracking-tight">
+        <h2 className="text-[19px] md:text-[22px] font-black text-[#3F2A20] tracking-tight">
           {t('home.shopByCategories', { defaultValue: 'Shop by Categories' })}
         </h2>
         <span
           onClick={() => navigate('/categories')}
-          className="text-xs font-bold text-[#65B842] hover:text-[#529C33] cursor-pointer hover:underline transition-colors"
+          className="text-[15px] md:text-[16px] font-bold text-[#65B842] hover:text-[#529C33] cursor-pointer hover:underline transition-colors"
         >
           {t('common.viewAll', { defaultValue: 'View All' })}
         </span>
@@ -171,7 +172,7 @@ const SubCategoryGrid = () => {
         <button
           type="button"
           onClick={() => setActiveTab('all')}
-          className={`px-3 py-1.5 rounded-full text-[11px] font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 border ${
+          className={`px-3.5 py-1.5 rounded-full text-[14px] md:text-[15px] font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 border ${
             activeTab === 'all'
               ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
               : 'bg-white text-[#3F2A20] border-[#EADCC9]/80 hover:bg-[#FFF8EE]'
@@ -184,7 +185,7 @@ const SubCategoryGrid = () => {
           <button
             type="button"
             onClick={() => setActiveTab('mens')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 active:scale-95 border ${
+            className={`px-3.5 py-1.5 rounded-full text-[14px] md:text-[15px] font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 active:scale-95 border ${
               activeTab === 'mens'
                 ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
                 : 'bg-white text-[#3F2A20] border-[#EADCC9]/80 hover:bg-[#FFF8EE]'
@@ -192,7 +193,7 @@ const SubCategoryGrid = () => {
           >
             <span>{t('categories.mensWear', { defaultValue: "Men's Wear" })}</span>
             <span
-              className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold ${
+              className={`text-[11.5px] px-1.5 py-0.2 rounded-full font-bold ${
                 activeTab === 'mens' ? 'bg-white/25 text-white' : 'bg-[#EADCC9]/60 text-[#3E5A44]'
               }`}
             >
@@ -205,7 +206,7 @@ const SubCategoryGrid = () => {
           <button
             type="button"
             onClick={() => setActiveTab('womens')}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 active:scale-95 border ${
+            className={`px-3.5 py-1.5 rounded-full text-[14px] md:text-[15px] font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 active:scale-95 border ${
               activeTab === 'womens'
                 ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
                 : 'bg-white text-[#3F2A20] border-[#EADCC9]/80 hover:bg-[#FFF8EE]'
@@ -213,7 +214,7 @@ const SubCategoryGrid = () => {
           >
             <span>{t('categories.womensWear', { defaultValue: "Women's Wear" })}</span>
             <span
-              className={`text-[9.5px] px-1.5 py-0.2 rounded-full font-bold ${
+              className={`text-[11.5px] px-1.5 py-0.2 rounded-full font-bold ${
                 activeTab === 'womens' ? 'bg-white/25 text-white' : 'bg-[#EADCC9]/60 text-[#3E5A44]'
               }`}
             >
@@ -224,16 +225,16 @@ const SubCategoryGrid = () => {
       </div>
 
       {/* Single Row Horizontal Scroll Container */}
-      <div className="flex items-center gap-3 md:gap-5 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-1 px-1">
+      <ScrollRow key={activeTab} className="flex items-center gap-3 md:gap-5 pb-2 pt-1 -mx-1 px-1">
         {displayItems.map((item) => (
           <div
             key={item.id}
             onClick={() => handleCategorySelect(item)}
-            className="flex-shrink-0 w-[98px] sm:w-[112px] md:w-[130px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
+            className="flex-shrink-0 w-[112px] sm:w-[126px] md:w-[148px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
           >
-            <div className="w-full aspect-[1/1.22] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(61,35,20,0.05)] group-hover:border-[#65B842]/40 transition-all duration-300 transform">
-              <div className="w-full h-[28px] sm:h-[32px] md:h-[34px] flex items-center justify-center px-0.5">
-                <span className="text-[9.5px] sm:text-[11px] md:text-xs font-bold text-[#3F2A20] text-center leading-[1.18] tracking-tight line-clamp-2 break-words">
+            <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(61,35,20,0.05)] group-hover:border-[#65B842]/40 transition-all duration-300 transform">
+              <div className="w-full h-[38px] sm:h-[40px] md:h-[44px] flex items-center justify-center px-0.5">
+                <span className="text-[13px] sm:text-[14px] md:text-[15px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
                   {item.name}
                 </span>
               </div>
@@ -244,8 +245,7 @@ const SubCategoryGrid = () => {
                     src={item.img}
                     alt={item.name}
                     onError={handleImageError}
-                    className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500"
-                  />
+                    className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500" loading="lazy" decoding="async" />
                 ) : (
                   <span className="text-[12px] font-black text-[#65B842]">{item.name.charAt(0)}</span>
                 )}
@@ -253,7 +253,7 @@ const SubCategoryGrid = () => {
             </div>
           </div>
         ))}
-      </div>
+      </ScrollRow>
     </div>
   );
 };

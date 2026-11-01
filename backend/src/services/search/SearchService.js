@@ -14,10 +14,10 @@ class SearchService extends BaseService {
     this.cacheService = cacheService;
   }
 
-  _searchCacheKey(query, pagination, tab = '') {
+  _searchCacheKey(query, pagination, tab = '', opts = {}) {
     const hash = crypto
       .createHash('sha256')
-      .update(JSON.stringify({ query, page: pagination.page, limit: pagination.limit, tab }))
+      .update(JSON.stringify({ query, page: pagination.page, limit: pagination.limit, tab, opts }))
       .digest('hex')
       .slice(0, 16);
     return CACHE_KEYS.searchResults(hash);
@@ -32,7 +32,12 @@ class SearchService extends BaseService {
       return { items: [], meta: buildPaginationMeta(pagination.page, pagination.limit, 0) };
     }
 
-    const cacheKey = this._searchCacheKey(term.toLowerCase(), pagination, tab);
+    const cacheKey = this._searchCacheKey(term.toLowerCase(), pagination, tab, {
+      sort: query.sort || '',
+      minPrice: query.minPrice ?? '',
+      maxPrice: query.maxPrice ?? '',
+      minRating: query.minRating ?? '',
+    });
     const ttl = config.cache?.searchTtlSeconds || CACHE_TTL.SEARCH_RESULTS;
 
     if (this.cacheService) {

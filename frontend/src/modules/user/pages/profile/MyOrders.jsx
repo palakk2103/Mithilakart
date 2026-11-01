@@ -23,6 +23,7 @@ import ImageBanner1 from '../../../../assets/TopBanner/ImageBanner1.jpg';
 import ImageBanner2 from '../../../../assets/TopBanner/ImageBanner2.jpg';
 import ImageBanner3 from '../../../../assets/TopBanner/ImageBanner3.webp';
 import ImageBanner4 from '../../../../assets/TopBanner/ImageBanner4.jpg';
+import { handleImageError } from '../../../../shared/utils/imageUtils';
 
 const BannerCarousel = () => {
   const [currentBanner, setCurrentBanner] = useState(0);
@@ -79,8 +80,7 @@ const BannerCarousel = () => {
               src={banners[currentBanner].image} 
               className="w-full h-full object-cover" 
               alt="banner" 
-              onLoad={() => setIsBannerLoaded(true)}
-            />
+              onLoad={() => setIsBannerLoaded(true)} loading="lazy" decoding="async" onError={handleImageError} />
             <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
           </motion.div>
         </AnimatePresence>
@@ -322,7 +322,7 @@ const MyOrders = () => {
         <div className="flex gap-3" onClick={() => navigate(`/profile/orders/${order.id}`)}>
           {/* Compact Image */}
           <div className="w-16 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center p-1.5 border border-gray-100">
-            <img src={mainItem.image} alt={mainItem.name} className="w-full h-full object-contain mix-blend-multiply" />
+            <img src={mainItem.image} alt={mainItem.name} className="w-full h-full object-contain mix-blend-multiply" loading="lazy" decoding="async" onError={handleImageError} />
           </div>
 
           <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
@@ -599,7 +599,7 @@ const MyOrders = () => {
                                          </div>
                                       </div>
                                    ) : (
-                                      <img src={previewUrl} className="w-full h-full object-cover" alt="preview" />
+                                      <img src={previewUrl} className="w-full h-full object-cover" alt="preview" loading="lazy" decoding="async" onError={handleImageError} />
                                    )}
                                    <button 
                                       type="button"

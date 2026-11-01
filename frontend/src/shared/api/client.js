@@ -23,6 +23,14 @@ function unwrapResponse(response) {
       err.status = response.status;
       throw err;
     }
+    // Paginated endpoints send { data: [...], meta }. Expose meta on the array
+    // as a non-enumerable property so existing consumers keep getting a plain
+    // array while infinite scroll can read hasMore/total.
+    if (Array.isArray(body.data) && body.meta && typeof body.meta === 'object') {
+      try {
+        Object.defineProperty(body.data, 'meta', { value: body.meta, enumerable: false });
+      } catch { /* ignore */ }
+    }
     return body.data;
   }
   return body;

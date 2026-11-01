@@ -59,6 +59,7 @@ class ApiResponse {
         limit,
         total,
         totalPages,
+        hasMore: page < totalPages,
       },
       statusCode
     );

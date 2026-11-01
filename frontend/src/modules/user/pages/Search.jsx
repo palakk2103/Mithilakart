@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { buildListParams, listParamsKey } from '../utils/listQuery';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search as SearchIcon, Filter, ArrowLeft, LayoutGrid, List, Mic, Clock, Plane, ShoppingBag, Sparkles, X } from 'lucide-react';
 import ProductCard from '../components/common/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
+import useInfiniteProducts from '../../../shared/hooks/useInfiniteProducts';
+import InfiniteScrollSentinel from '../../../shared/components/InfiniteScrollSentinel';
 import SearchInput from '../../../shared/components/SearchInput';
 import { search } from '../services/userApi';
 import { extractList, mapProductForCard } from '../utils/mappers';
 import { getCurrentMarketplaceTab, productBelongsToTab } from '../../../shared/utils/marketplaceHelpers';
-import { parsePrice } from '../../../shared/utils/priceFormatter';
 
 import SamsungImg from '../../../assets/products/product01.jpg';
 
@@ -87,9 +89,6 @@ const Search = () => {
   const [isListening, setIsListening] = useState(false);
   const [searchValue, setSearchValue] = useState(urlQuery);
   const [debouncedQuery, setDebouncedQuery] = useState(urlQuery.trim());
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const isInitialMount = useRef(true);
 
   // Sync tab from URL if it changes externally
@@ -156,46 +155,44 @@ const Search = () => {
     }
   }, [activeTab]);
 
+  // Sort + price/rating filters are applied by the API across all results.
+  const listParams = useMemo(() => {
+    const range = filterPrice === 'under500' ? { maxPrice: 499 }
+      : filterPrice === '500-2000' ? { minPrice: 500, maxPrice: 2000 }
+      : filterPrice === '2000+' ? { minPrice: 2001 }
+      : {};
+    return buildListParams({ sort: sortBy, minRating: filterRating, ...range });
+  }, [sortBy, filterPrice, filterRating]);
+  const listKey = listParamsKey(listParams);
+
   // Fetch search products scoped to active tab and debounced query
-  useEffect(() => {
+  const fetchBatch = useCallback(async (page, limit) => {
     const term = debouncedQuery.trim();
-    if (!term) {
-      setProducts([]);
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await search({ 
-          q: term, 
-          tab: activeTab, 
-          marketplaceTab: activeTab, 
-          limit: 50 
-        });
-        if (!cancelled) {
-          const list = extractList(data);
-          const mapped = list.map((p) => mapProductForCard(p, SamsungImg));
-          // Scoped client fallback
-          const scoped = mapped.filter((p) => productBelongsToTab(p, activeTab));
-          setProducts(scoped.length > 0 ? scoped : mapped);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Search failed');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    if (!term) return { items: [], hasMore: false };
+    const data = await search({
+      q: term,
+      tab: activeTab,
+      marketplaceTab: activeTab,
+      page,
+      limit,
+      ...listParams,
+    });
+    const list = extractList(data);
+    const mapped = list.map((p) => mapProductForCard(p, SamsungImg));
+    // Scoped client fallback
+    const scoped = mapped.filter((p) => productBelongsToTab(p, activeTab));
+    const meta = data?.meta;
+    return {
+      items: scoped.length > 0 ? scoped : mapped,
+      hasMore: meta ? Boolean(meta.hasMore ?? (meta.page < meta.totalPages)) : list.length >= limit,
     };
+  }, [debouncedQuery, activeTab, listKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedQuery, activeTab]);
+  const { items: products, loading, loadingMore, error, hasMore, loadMore } = useInfiniteProducts(
+    fetchBatch,
+    [debouncedQuery, activeTab, listKey],
+    { getKey: (p) => p.id || p.listingId || p._id }
+  );
 
   const handleSelectTab = (tabId) => {
     if (tabId === activeTab) return;
@@ -270,43 +267,8 @@ const Search = () => {
     return MARKETPLACE_TAB_CONFIG.find((t) => t.id === activeTab) || MARKETPLACE_TAB_CONFIG[0];
   }, [activeTab]);
 
-  // Apply filtering & sorting
-  const sortedProducts = useMemo(() => {
-    let list = [...products];
-
-    // Price Filter
-    if (filterPrice === 'under500') {
-      list = list.filter((p) => (p.rawPrice ?? parsePrice(p.price)) < 500);
-    } else if (filterPrice === '500-2000') {
-      list = list.filter((p) => {
-        const val = p.rawPrice ?? parsePrice(p.price);
-        return val >= 500 && val <= 2000;
-      });
-    } else if (filterPrice === '2000+') {
-      list = list.filter((p) => (p.rawPrice ?? parsePrice(p.price)) > 2000);
-    }
-
-    // Rating Filter
-    if (filterRating > 0) {
-      list = list.filter((p) => (Number(p.rating) || 0) >= filterRating);
-    }
-
-    // Sorting
-    const getPrice = (p) => p.rawPrice ?? parsePrice(p.price) ?? 0;
-    const getRating = (p) => Number(p.rating) || 0;
-    const getPopularity = (p) => Number(p.popularity ?? p.reviewCount ?? 0);
-
-    if (sortBy === 'Price: Low-High') {
-      list.sort((a, b) => getPrice(a) - getPrice(b));
-    } else if (sortBy === 'Price: High-Low') {
-      list.sort((a, b) => getPrice(b) - getPrice(a));
-    } else if (sortBy === 'Top Rated') {
-      list.sort((a, b) => getRating(b) - getRating(a));
-    } else if (sortBy === 'Relevance') {
-      list.sort((a, b) => getPopularity(b) - getPopularity(a));
-    }
-    return list;
-  }, [products, sortBy, filterPrice, filterRating]);
+  // Filtering & sorting happen server-side; products arrive already ordered.
+  const sortedProducts = products;
 
   const renderTabIcon = (tab, isActive) => {
     if (tab.id === 'mithilakart') {
@@ -531,6 +493,16 @@ const Search = () => {
                ))}
              </AnimatePresence>
           </div>
+        )}
+        {sortedProducts.length > 0 && (
+          <InfiniteScrollSentinel
+            onVisible={loadMore}
+            disabled={loading || loadingMore || !hasMore || Boolean(error)}
+            loadingMore={loadingMore}
+            error={products.length > 0 ? error : null}
+            onRetry={loadMore}
+            watch={products.length}
+          />
         )}
 
         {/* Empty State */}

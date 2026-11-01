@@ -4,6 +4,7 @@ import useVendorStore from '../../../../../store/useVendorStore';
 import { mapShopCategoryCards } from '../../../utils/mappers';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../../../../shared/context/LanguageContext';
+import { handleImageError } from '../../../../../shared/utils/imageUtils';
 
 const HeaderFlower = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block align-middle mx-1">
@@ -75,7 +76,7 @@ const KeepShopping = () => {
             >
               <div className="w-full aspect-square rounded-[14px] overflow-hidden bg-white border border-[#EADCC9]/50 flex items-center justify-center p-1 mb-1 shadow-[0_2px_6px_rgba(0,0,0,0.02)]">
                 {item.img ? (
-                  <img src={item.img} alt={item.name} className="w-full h-full object-cover rounded-[10px]" loading="lazy" />
+                  <img src={item.img} alt={item.name} className="w-full h-full object-cover rounded-[10px]" loading="lazy" onError={handleImageError} />
                 ) : (
                   <span className="text-[11px] font-black text-[#3E5A44]">{item.name.charAt(0)}</span>
                 )}

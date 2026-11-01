@@ -2,6 +2,7 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
 const { resolveTabFromQuery, isQuickCommerceTab } = require('../../utils/marketplaceTab');
+const { parseListingQuery, quickDeliveryCondition, resolveProductIds, runListingQuery, QUICK_DELIVERY_MAX_MINUTES } = require('../../utils/listingQuery');
 
 class NearbyService extends BaseService {
   constructor({ sellerRepository, productRepository, marketplaceListingRepository, geocodingService, categoryRepository = null }) {
@@ -226,31 +227,51 @@ class NearbyService extends BaseService {
   }
 
   async _nearbyListings({ query, coords, pagination, sellerIds, sellerMap, distanceBySeller, tab }) {
-    const listingFilter = {
-      marketplaceTab: tab,
-      sellerId: { $in: sellerIds },
+    const parsed = parseListingQuery(query);
+    const empty = {
+      items: [],
+      meta: buildPaginationMeta(pagination.page, pagination.limit, 0),
+      location: coords,
+      sellerCount: sellerIds.length,
+      deliverable: false,
+      reason: 'no_products_in_range',
     };
 
-    // Scope by category BEFORE paginating — filtering the page afterwards
-    // returned empty category screens whenever the first N listings of the
-    // tab belonged to other categories.
+    // Everything below is resolved BEFORE pagination (category scope, rating,
+    // serviceable radius, price, quick delivery, sort) so totals and pages are exact.
     const categoryIds = await this._categorySubtreeIds(query.categoryId);
-    if (categoryIds) {
-      const categoryProducts = await this.productRepository.findPublic(
-        { categoryId: { $in: categoryIds }, sellerId: { $in: sellerIds } },
-        { limit: 1000 }
-      );
-      listingFilter.productId = { $in: categoryProducts.map((p) => p._id) };
+    const scopedProductIds = await resolveProductIds(this.productRepository, {
+      categoryIds,
+      minRating: parsed.minRating,
+      productType: parsed.productType,
+      sellerIds,
+      select: '_id sellerId attributes.serviceableRadius',
+      keep: (p) => {
+        const d = distanceBySeller[String(p.sellerId)];
+        if (d == null) return false;
+        const radius = Number(p.attributes?.serviceableRadius);
+        return !(Number.isFinite(radius) && radius > 0 && d > radius);
+      },
+    });
+    if (!scopedProductIds.length) return empty;
+
+    const etaOfSeller = (sellerId) => this._calculateDeliveryEta(distanceBySeller[String(sellerId)]).estimatedDeliveryMinutes;
+    const listingFilter = { marketplaceTab: tab, sellerId: { $in: sellerIds }, productId: { $in: scopedProductIds } };
+    if (parsed.price) listingFilter.price = parsed.price;
+    if (parsed.discountOnly) listingFilter.$expr = { $gt: ['$mrp', '$price'] };
+    if (parsed.quickDelivery) {
+      const fastSellerIds = sellerIds.filter((id) => etaOfSeller(id) <= QUICK_DELIVERY_MAX_MINUTES);
+      Object.assign(listingFilter, quickDeliveryCondition(fastSellerIds));
     }
 
-    const [listings, total] = await Promise.all([
-      this.marketplaceListingRepository.findPublic(listingFilter, {
-        sort: { createdAt: -1 },
-        skip: pagination.skip,
-        limit: pagination.limit,
-      }),
-      this.marketplaceListingRepository.countPublic(listingFilter),
-    ]);
+    const { listings, total } = await runListingQuery({
+      listingRepo: this.marketplaceListingRepository,
+      productRepo: this.productRepository,
+      filter: listingFilter,
+      parsed,
+      pagination,
+      deliveryMinutesOf: (l) => l.deliveryPromiseMinutes || etaOfSeller(l.sellerId),
+    });
 
     const productIds = [...new Set(listings.map((l) => l.productId))];
     const products = productIds.length
@@ -285,10 +306,11 @@ class NearbyService extends BaseService {
           images: product.images,
           categoryId: product.categoryId ? String(product.categoryId) : null,
           brand: product.brand,
-          rating: product.ratingAvg || 0,
-          ratingAvg: product.ratingAvg || 0,
-          reviewCount: product.ratingCount || 0,
-          ratingCount: product.ratingCount || 0,
+          rating: product.rating || 0,
+          ratingAvg: product.rating || 0,
+          reviewCount: product.reviewCount || 0,
+          ratingCount: product.reviewCount || 0,
+          stock: this.productRepository.getAvailableStock(product),
           marketplaceTab: tab,
           deliveryPromiseMinutes: listing.deliveryPromiseMinutes || eta.estimatedDeliveryMinutes,
           estimatedDeliveryMinutes: eta.estimatedDeliveryMinutes,

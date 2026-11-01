@@ -9,6 +9,7 @@ import SearchInput from '../../../shared/components/SearchInput';
 import { getDeals } from '../services/userApi';
 import { extractList, mapDealsProducts } from '../utils/mappers';
 import { addProductToCart } from '../utils/cartUtils';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 const CornerFlower = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[10px] h-[10px] md:w-[13px] md:h-[13px] opacity-85 select-none pointer-events-none">
@@ -240,8 +241,7 @@ const DealsPage = () => {
                     src={product.image}
                     alt={product.name}
                     className="w-full h-full object-cover rounded-[11px] md:rounded-[15px] group-hover:scale-[1.04] transition-transform duration-500"
-                    loading="lazy"
-                  />
+                    loading="lazy" onError={handleImageError} />
 
                   {/* Wishlist Heart Button */}
                   <button

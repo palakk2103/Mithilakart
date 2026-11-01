@@ -4,6 +4,7 @@ import { ArrowLeft, Search, ShoppingCart, Star } from 'lucide-react';
 import { getProductById, getCategoryProducts } from '../services/catalogApi';
 import { extractList, mapProductForCard } from '../utils/mappers';
 import { fetchCartCount } from '../utils/cartUtils';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 const ContinueShopping = () => {
   const { productId } = useParams();
@@ -87,7 +88,7 @@ const ContinueShopping = () => {
       onClick={() => handleProductClick(product)}
     >
       <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100 flex items-center justify-center">
-        <img src={product.image} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+        <img src={product.image} alt={product.name} className="w-full h-full object-cover" loading="lazy" onError={handleImageError} />
       </div>
       <div className="px-2.5 pb-2.5 pt-0.5">
         {product.brand && (

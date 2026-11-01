@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { useLanguage, LANGUAGES } from '../../../../shared/context/LanguageContext';
+import { handleImageError } from '../../../../shared/utils/imageUtils';
 
 const LanguageSelector = ({ isDarkHeader = false, variant = '', compact = false }) => {
   const { currentLanguage: contextLang, changeLanguage, languages = LANGUAGES } = useLanguage();
@@ -30,8 +31,7 @@ const LanguageSelector = ({ isDarkHeader = false, variant = '', compact = false 
         <img
           src={currentLanguage.flagUrl}
           alt={currentLanguage.name}
-          className={`${compact ? 'w-[15px] h-[11px]' : 'w-[18px] h-[13px]'} object-cover rounded-[2px] shadow-xs border border-slate-200 flex-shrink-0`}
-        />
+          className={`${compact ? 'w-[15px] h-[11px]' : 'w-[18px] h-[13px]'} object-cover rounded-[2px] shadow-xs border border-slate-200 flex-shrink-0`} loading="lazy" decoding="async" onError={handleImageError} />
         <span>{currentLanguage.name}</span>
       </button>
 
@@ -54,8 +54,7 @@ const LanguageSelector = ({ isDarkHeader = false, variant = '', compact = false 
                     <img
                       src={lang.flagUrl}
                       alt={lang.name}
-                      className="w-4 h-3 object-cover rounded-[1px] shadow-xs border border-slate-200 flex-shrink-0"
-                    />
+                      className="w-4 h-3 object-cover rounded-[1px] shadow-xs border border-slate-200 flex-shrink-0" loading="lazy" decoding="async" onError={handleImageError} />
                     <span>{lang.name}</span>
                   </span>
                   {baseLanguageCode === lang.code && <Check size={12} className="text-emerald-800 stroke-[3px]" />}

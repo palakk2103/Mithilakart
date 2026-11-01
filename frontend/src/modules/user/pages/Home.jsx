@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingBag, Sparkles, Gift, Monitor, Gem, Shirt, Gamepad2, BookOpen, Zap, ChevronRight, MoreHorizontal, Heart, Star } from 'lucide-react';
 import SEO from '../../../shared/components/SEO';
@@ -29,6 +29,7 @@ import { addProductToCart } from '../utils/cartUtils';
 import { mapHomeBanners, mapNavChips } from '../utils/mappers';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../../shared/context/LanguageContext';
+import { handleImageError } from '../../../shared/utils/imageUtils';
 
 // Single category chip — extracted so the visible row, the hidden measuring row,
 // and the width calculations all render the exact same markup.
@@ -53,7 +54,7 @@ const CategoryChip = ({ cat, active, onClick }) => {
             <path d="M12 16.8s-2.2-1.8-2.7-2.3c-.7-.7-1-1.3-1-1.8 0-1.2 1-2.2 2.2-2.2.7 0 1.3.4 1.5 1 .2-.6.8-1 1.5-1 1.2 0 2.2 1 2.2 2.2 0 .5-.3 1.1-1 1.8-.5.5-2.7 2.3-2.7 2.3z" fill="white" />
           </svg>
         ) : cat.imageUrl ? (
-          <img src={cat.imageUrl} alt={cat.label} className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] object-contain rounded-full" />
+          <img src={cat.imageUrl} alt={cat.label} className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
         ) : (
           cat.icon
         )}
@@ -137,8 +138,7 @@ const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel = '
           src={deal.img}
           alt={title}
           className="w-full h-full object-cover rounded-[11px] md:rounded-[15px] group-hover:scale-[1.04] transition-transform duration-500"
-          loading="lazy"
-        />
+          loading="lazy" onError={handleImageError} />
 
         {/* Wishlist Heart Button */}
         <button
@@ -394,7 +394,55 @@ const Home = () => {
     setMoreOpen((prev) => !prev);
   }, [moreOpen]);
 
-  const hiddenChipsList = mainCategoriesList;
+  // ── Fit chips into the first visible screen; the rest go into "More" ──
+  // A hidden measuring row renders every chip (and the More button) so we know real widths,
+  // then we keep as many chips as fit in the row width and put "More" right after them.
+  const chipRowRef = useRef(null);
+  const measureRef = useRef(null);
+  const [visibleCount, setVisibleCount] = useState(null); // null = show all until measured
+
+  useLayoutEffect(() => {
+    const row = chipRowRef.current;
+    const measure = measureRef.current;
+    if (!row || !measure) return undefined;
+
+    const compute = () => {
+      const kids = Array.from(measure.children);
+      if (kids.length === 0) return;
+      const moreEl = kids[kids.length - 1];
+      const chipEls = kids.slice(0, -1);
+      const cs = window.getComputedStyle(row);
+      const gap = parseFloat(cs.columnGap) || 8;
+      const available = row.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      const moreW = moreEl.getBoundingClientRect().width;
+      const widths = chipEls.map((el) => el.getBoundingClientRect().width);
+
+      const total = widths.reduce((s, w) => s + w, 0) + gap * Math.max(widths.length - 1, 0);
+      if (total <= available) {
+        setVisibleCount(widths.length); // everything fits, no More needed
+        return;
+      }
+      let used = 0;
+      let count = 0;
+      for (let i = 0; i < widths.length; i += 1) {
+        const next = used + widths[i] + gap;
+        if (next + moreW > available) break;
+        used = next;
+        count += 1;
+      }
+      setVisibleCount(Math.max(count, 1));
+    };
+
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(row);
+    return () => ro.disconnect();
+  }, [mainCategoriesList]);
+
+  const shownCount = visibleCount ?? mainCategoriesList.length;
+  const visibleChips = mainCategoriesList.slice(0, shownCount);
+  const hiddenChipsList = mainCategoriesList.slice(shownCount);
+  const showMore = hiddenChipsList.length > 0;
 
   return (
     <>
@@ -406,12 +454,20 @@ const Home = () => {
     <div className="pb-2 bg-transparent text-primary-dark">
       {/* 1. TOP HORIZONTAL CATEGORY ROW (Sticky Header Categories on Scroll) */}
       <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F6F8F3]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(63,42,32,0.04)] border-b border-[#EADCC9]/40 py-2 mb-3 transition-all duration-200">
-        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar px-2 sm:px-3 touch-pan-x overscroll-x-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {mainCategoriesList.map((cat, idx) => (
+        <div ref={chipRowRef} data-testid="category-chip-row" className="relative flex items-center gap-2 sm:gap-3 overflow-hidden px-2 sm:px-3">
+          {/* Hidden measuring row (all chips + More) used to compute how many fit */}
+          <div ref={measureRef} aria-hidden="true" className="absolute left-0 top-0 flex items-center gap-2 sm:gap-3 invisible pointer-events-none h-0 overflow-hidden">
+            {mainCategoriesList.map((cat, idx) => (
+              <CategoryChip key={cat.id ?? idx} cat={cat} active={false} onClick={() => {}} />
+            ))}
+            <div className="w-[46px] sm:w-[50px] flex-shrink-0" />
+          </div>
+
+          {visibleChips.map((cat, idx) => (
             <CategoryChip key={cat.id ?? idx} cat={cat} active={isCategoryActive(cat)} onClick={() => handleCategoryClick(cat)} />
           ))}
 
-          {mainCategoriesList.length > 4 && (
+          {showMore && (
             <button
               ref={moreButtonRef}
               type="button"
@@ -464,7 +520,7 @@ const Home = () => {
               >
                 <span className="w-7 h-7 rounded-full bg-[#EADCC9]/25 flex items-center justify-center flex-shrink-0 text-[#3E5A44]">
                   {cat.imageUrl ? (
-                    <img src={cat.imageUrl} alt={cat.label} className="w-4 h-4 object-contain rounded-full" />
+                    <img src={cat.imageUrl} alt={cat.label} className="w-4 h-4 object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
                   ) : (
                     cat.icon
                   )}
