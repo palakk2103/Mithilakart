@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Horizontal scroller that works on touch AND desktop/tablet:
@@ -9,6 +10,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
  * - optional `center` to centre items only when they all fit (never clips the left edge)
  */
 const ScrollRow = ({ children, className = '', center = false, style }) => {
+  const { t } = useTranslation();
   const ref = useRef(null);
   const drag = useRef({ down: false, moved: false, startX: 0, startLeft: 0 });
   const [canLeft, setCanLeft] = useState(false);
@@ -70,7 +72,7 @@ const ScrollRow = ({ children, className = '', center = false, style }) => {
   return (
     <div className="relative">
       {canLeft && (
-        <button type="button" aria-label="Scroll left" onClick={() => scrollByDir(-1)} className={`${arrow} left-0.5`}>
+        <button type="button" aria-label={t('auto.scrollLeft')} onClick={() => scrollByDir(-1)} className={`${arrow} left-0.5`}>
           <ChevronLeft size={18} />
         </button>
       )}
@@ -91,7 +93,7 @@ const ScrollRow = ({ children, className = '', center = false, style }) => {
         {children}
       </div>
       {canRight && (
-        <button type="button" aria-label="Scroll right" onClick={() => scrollByDir(1)} className={`${arrow} right-0.5`}>
+        <button type="button" aria-label={t('auto.scrollRight')} onClick={() => scrollByDir(1)} className={`${arrow} right-0.5`}>
           <ChevronRight size={18} />
         </button>
       )}

@@ -1,3 +1,5 @@
+import i18n from '../../i18n';
+
 /**
  * Normalize OTP send API response for login/register screens.
  */
@@ -10,18 +12,18 @@ export function applyOtpSendResult(result, { setOtp, setSuccess, setOtpSent, set
     setOtp?.(otpCode);
     setSuccess(
       result.smsSent === false
-        ? `OTP: ${otpCode} (SMS not required — test code active)`
-        : `OTP sent. Test code: ${otpCode}`
+        ? i18n.t('x.otpTestActive', { code: otpCode })
+        : i18n.t('x.otpSentTest', { code: otpCode })
     );
     return;
   }
 
   if (result?.smsSent === false) {
-    setSuccess('OTP generated. Use test code 123456 if SMS is not received.');
+    setSuccess(i18n.t('x.otpGenerated'));
     return;
   }
 
-  setSuccess('OTP sent successfully to your phone (Test code: 123456)');
+  setSuccess(i18n.t('x.otpSentPhone'));
 }
 
 export function mapDeliveryVehicleType(value) {

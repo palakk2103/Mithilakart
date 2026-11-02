@@ -4,8 +4,10 @@ import { ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import saleAnimation from '../../../../assets/sale-animation.json';
 import useVendorStore from '../../../../store/useVendorStore';
+import { useTranslation } from 'react-i18next';
 
 const SaleBanner = () => {
+  const { t } = useTranslation();
   const { selectedCategory } = useVendorStore();
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = React.useRef(0);
@@ -74,7 +76,7 @@ const SaleBanner = () => {
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-1 z-10">
               <div className="flex flex-col items-center">
                 <h2 className="text-yellow-400 font-black text-[22px] uppercase leading-none tracking-tight">
-                  Starts 9th May
+                  {t('auto.starts9thMay')}
                 </h2>
                 <p className="text-white font-bold text-[11px] mt-1 leading-tight max-w-[150px]">
                   24hrs Early Access for PLUS & BLACK Members

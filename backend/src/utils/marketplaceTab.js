@@ -12,6 +12,8 @@ function normalizeMarketplaceTab(value) {
   const key = String(value).trim().toLowerCase();
   if (MARKETPLACE_TAB_VALUES.includes(key)) return key;
   if (LEGACY_FLOW_TO_TAB[key]) return LEGACY_FLOW_TO_TAB[key];
+  // Friendly aliases for the combined Fresh & Groceries tab.
+  if (key === 'fresh' || key === 'groceries' || key === 'grocery') return LEGACY_FLOW_TO_TAB.groceries_fresh;
   return null;
 }
 

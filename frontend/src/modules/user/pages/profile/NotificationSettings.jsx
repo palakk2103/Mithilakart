@@ -5,8 +5,10 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { updateNotificationPreferences } from '../../services/userApi';
 import { registerPushToken, sendTestPush, detectPlatform } from '../../../../shared/services/pushNotifications';
+import { useTranslation } from 'react-i18next';
 
 const NotificationSettings = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [settings, setSettings] = useState({
     offers: true,
@@ -41,7 +43,7 @@ const NotificationSettings = () => {
       toast.success(`Device token registered with platform: ${platformToUse}`);
       setTestResult({ success: true, message: `Device registered on platform "${platformToUse}"` });
     } catch (err) {
-      toast.error('Failed to register device: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to register device: ' + (err.message || t('auto.unknownError')));
       setTestResult({ success: false, message: err.message });
     } finally {
       setRegisteringDevice(false);
@@ -97,10 +99,10 @@ const NotificationSettings = () => {
 
       {/* Header */}
       <div className={`sticky top-0 z-50 p-4 flex items-center gap-4 relative z-10 transition-colors duration-300 border-b ${headerBg}`}>
-        <button onClick={() => navigate(-1)} className={`p-1 rounded-full hover:bg-slate-50 transition-colors ${headerTextColor}`} aria-label="Go back">
+        <button onClick={() => navigate(-1)} className={`p-1 rounded-full hover:bg-slate-50 transition-colors ${headerTextColor}`} aria-label={t('auto.goBack')}>
           <ArrowLeft size={22} />
         </button>
-        <h1 className={`text-[17px] font-black uppercase tracking-widest ${headerTextColor}`}>Notifications</h1>
+        <h1 className={`text-[17px] font-black uppercase tracking-widest ${headerTextColor}`}>{t('auto.notifications')}</h1>
       </div>
 
       <div className="container mx-auto px-4 py-8 w-full space-y-8 relative z-10">
@@ -109,20 +111,20 @@ const NotificationSettings = () => {
               <Bell size={24} className="animate-bounce" />
            </div>
            <div>
-              <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">Stay Updated</h3>
-              <p className="text-[11px] text-slate-500 font-medium mt-1 leading-normal uppercase">Control how you receive alerts and exclusive offers from Mithilakart.</p>
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">{t('auto.stayUpdated')}</h3>
+              <p className="text-[11px] text-slate-500 font-medium mt-1 leading-normal uppercase">{t('auto.controlHowYouReceiveAlerts')}</p>
            </div>
         </div>
 
         <div className="space-y-4">
-          <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>Push Notifications</h2>
+          <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>{t('auto.pushNotifications')}</h2>
           
           <div className="bg-white border border-slate-100 shadow-sm rounded-3xl overflow-hidden divide-y divide-slate-100">
              {[
-               { id: 'offers', title: 'Promotions & Offers', icon: Zap, iconColor: 'text-amber-600', bgColor: 'bg-amber-50' },
-               { id: 'orders', title: 'Order Updates', icon: Smartphone, iconColor: 'text-emerald-600', bgColor: 'bg-emerald-50' },
-               { id: 'updates', title: 'System Updates', icon: Bell, iconColor: 'text-purple-600', bgColor: 'bg-purple-50' },
-               { id: 'security', title: 'Account Security', icon: Bell, iconColor: 'text-red-600', bgColor: 'bg-red-50' }
+               { id: 'offers', title: t('common.promotionsOffers'), icon: Zap, iconColor: 'text-amber-600', bgColor: 'bg-amber-50' },
+               { id: 'orders', title: t('common.orderUpdates'), icon: Smartphone, iconColor: 'text-emerald-600', bgColor: 'bg-emerald-50' },
+               { id: 'updates', title: t('common.systemUpdates'), icon: Bell, iconColor: 'text-purple-600', bgColor: 'bg-purple-50' },
+               { id: 'security', title: t('auto.accountSecurity'), icon: Bell, iconColor: 'text-red-600', bgColor: 'bg-red-50' }
              ].map((item) => (
                <div key={item.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                   <div className="flex items-center gap-4">
@@ -143,13 +145,13 @@ const NotificationSettings = () => {
         </div>
 
         <div className="space-y-4">
-           <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>Email Preferences</h2>
+           <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>{t('auto.emailPreferences')}</h2>
            <div className="bg-white border border-slate-100 shadow-sm rounded-3xl p-5 flex items-center justify-between">
               <div className="flex items-center gap-4">
                  <div className="p-2.5 rounded-xl text-green-600 bg-green-50">
                     <Mail size={18} />
                  </div>
-                 <span className="text-xs font-black tracking-tight text-slate-800">Weekly Newsletter</span>
+                 <span className="text-xs font-black tracking-tight text-slate-800">{t('auto.weeklyNewsletter')}</span>
               </div>
               <button 
                 onClick={() => toggleSetting('newsletter')}
@@ -162,15 +164,15 @@ const NotificationSettings = () => {
 
         {/* Live Push Notification & FCM Diagnostics Card */}
         <div className="space-y-4">
-           <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>FCM Push Notification Test</h2>
+           <h2 className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px] ml-1`}>{t('auto.fcmPushNotificationTest')}</h2>
            <div className="bg-white border border-slate-100 shadow-sm rounded-3xl p-5 space-y-4">
               <div className="flex items-center justify-between">
                  <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Device & Push Status</h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">Test FCM token generation and register platform app/web to database.</p>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">{t('auto.devicePushStatus')}</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{t('auto.testFcmTokenGenerationAnd')}</p>
                  </div>
                  <span className="text-[10px] font-bold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 uppercase tracking-wider">
-                    FCM Live
+                    {t('common.fcmLive')}
                  </span>
               </div>
 
@@ -181,7 +183,7 @@ const NotificationSettings = () => {
                     className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold transition-all disabled:opacity-50"
                  >
                     <Smartphone size={16} />
-                    {registeringDevice ? 'Registering...' : 'Register as Platform "app"'}
+                    {registeringDevice ? t('auto.registering') : t('auto.registerAsPlatformApp')}
                  </button>
 
                  <button
@@ -190,7 +192,7 @@ const NotificationSettings = () => {
                     className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl ${primaryBg} text-white hover:opacity-90 text-xs font-bold transition-all disabled:opacity-50 shadow-sm`}
                  >
                     <Send size={16} />
-                    {testingPush ? 'Sending Test Push...' : 'Send Live Test Notification'}
+                    {testingPush ? t('auto.sendingTestPush') : t('auto.sendLiveTestNotification')}
                  </button>
               </div>
 

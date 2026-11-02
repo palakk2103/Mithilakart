@@ -29,6 +29,8 @@ import ImageBanner2 from '../../../assets/TopBanner/ImageBanner2.jpg';
 import ImageBanner3 from '../../../assets/TopBanner/ImageBanner3.webp';
 import ImageBanner4 from '../../../assets/TopBanner/ImageBanner4.jpg';
 import { handleImageError } from '../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 
 // ── Sub-category config ──────────────────────────────────
 const SUB_CATS = [
@@ -78,7 +80,7 @@ const ProductCard = React.memo(({ product, onPress }) => (
         <span className="text-[10px] font-bold text-slate-800">{product.rating}</span>
         <Star size={8} fill="currentColor" className="text-green-600" />
       </div>
-      <div className="absolute top-2 right-2 bg-[#6FAE4A] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{product.discount}</div>
+      <div className="absolute top-2 right-2 bg-[#6FAE4A] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{tName(product.discount)}</div>
     </div>
     <div className="pt-1.5 px-0.5">
       <p className="text-[11px] font-medium text-slate-600 line-clamp-1">{product.name}</p>
@@ -138,6 +140,7 @@ const HeroBanner = ({ banners }) => {
 
 // ── Main page ────────────────────────────────────────────
 const BeautyLanding = () => {
+  const { t } = useTranslation();
   const navigate  = useNavigate();
   const [active, setActive]     = useState('Beauty');
   const [cartCount, setCartCount] = useState(0);
@@ -234,10 +237,10 @@ const BeautyLanding = () => {
       <div className="px-3 mt-2 md:max-w-[900px] md:mx-auto w-full">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[20px] font-bold text-slate-900" style={{ lineHeight: 1.2, letterSpacing: '-0.3px' }}>
-            Great Savings
+            {t('auto.greatSavings')}
           </h2>
           <button onClick={() => navigate('/all-offers')} className="flex items-center gap-0.5 text-[12px] font-bold text-[#6FAE4A]">
-            See all <ChevronRight size={14} strokeWidth={2.5} />
+            {t('auto.seeAll')} <ChevronRight size={14} strokeWidth={2.5} />
           </button>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
@@ -263,7 +266,7 @@ const BeautyLanding = () => {
       {/* ── Trending items ── */}
       <div className="px-3 mt-5 md:max-w-[900px] md:mx-auto w-full">
         <h2 className="text-[20px] font-bold text-slate-900 mb-3" style={{ lineHeight: 1.2, letterSpacing: '-0.3px' }}>
-          Trending Now
+          {t('auto.trendingNow')}
         </h2>
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
           {trending.map((t, i) => (
@@ -288,14 +291,14 @@ const BeautyLanding = () => {
           <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/5 rounded-full" />
           <div className="absolute -right-2 bottom-0 w-20 h-20 bg-white/5 rounded-full" />
           <div className="relative z-10">
-            <p className="text-white text-[11px] font-bold uppercase tracking-widest opacity-80">Limited Time</p>
-            <h3 className="text-white text-[22px] font-black leading-tight mt-0.5">Up to 60% Off</h3>
-            <p className="text-white/80 text-[11px] font-medium mt-1">On {active} products</p>
+            <p className="text-white text-[11px] font-bold uppercase tracking-widest opacity-80">{t('auto.limitedTime')}</p>
+            <h3 className="text-white text-[22px] font-black leading-tight mt-0.5">{t('auto.upTo60Off')}</h3>
+            <p className="text-white/80 text-[11px] font-medium mt-1">{t('x.onProducts', { name: tName(active) })}</p>
             <button
               onClick={() => navigate('/all-offers')}
               className="mt-3 bg-[#FFD500] text-[#1259c3] text-[11px] font-black px-4 py-1.5 rounded-full active:scale-95 transition-transform"
             >
-              Shop Now
+              {t('auto.shopNow')}
             </button>
           </div>
           <img src={active === '1g Gold' || active === 'Art. Jewellery' ? JewelleryImg : LipstickDeal} alt="promo" className="w-24 h-24 object-contain relative z-10 drop-shadow-lg" loading="lazy" decoding="async" onError={handleImageError} />
@@ -305,7 +308,7 @@ const BeautyLanding = () => {
       {/* ── Recommended products grid ── */}
       <div className="px-3 mt-5 md:max-w-[900px] md:mx-auto w-full">
         <h2 className="text-[20px] font-bold text-slate-900 mb-3" style={{ lineHeight: 1.2, letterSpacing: '-0.3px' }}>
-          Recommended for You
+          {t('auto.recommendedForYou')}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-5 md:gap-6">
           {products.map(p => (
@@ -317,14 +320,14 @@ const BeautyLanding = () => {
       {/* ── Sticky bottom nav ── */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex items-center justify-between z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
         <div>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Cart Items</p>
-          <p className="text-[17px] font-black text-slate-900">{cartCount} Products</p>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{t('auto.cartItems')}</p>
+          <p className="text-[17px] font-black text-slate-900">{cartCount} {t('x.productsWord')}</p>
         </div>
         <button
           onClick={() => navigate('/cart')}
           className="bg-[#6FAE4A] text-white px-7 py-3 rounded-xl font-black text-[13px] uppercase tracking-wider shadow-md shadow-emerald-100 active:scale-95 transition-transform"
         >
-          Go to Cart
+          {t('auto.goToCart')}
         </button>
       </div>
 

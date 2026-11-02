@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../../shared/utils/translateName';
 
 const FALLBACK_IMAGE = '/hero_banner.png';
 
@@ -11,6 +13,7 @@ const slideClasses = (idx, currentIndex, prevIndex, leftShift, rightShift) => {
 };
 
 const BannerCarousel = ({ banners = [] }) => {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [prevIndex, setPrevIndex] = useState(-1);
   const [isHovered, setIsHovered] = useState(false);
@@ -100,7 +103,7 @@ const BannerCarousel = ({ banners = [] }) => {
           >
             <img
               src={banner?.image || FALLBACK_IMAGE}
-              alt={banner?.title || "Hero Banner"}
+              alt={banner?.title || t('home.heroBanner')}
               className="h-full w-full object-cover"
               loading={idx === 0 ? "eager" : "lazy"}
               decoding="async"
@@ -112,9 +115,9 @@ const BannerCarousel = ({ banners = [] }) => {
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
-              <span className="text-[#e2a750] font-bold text-[10px] uppercase tracking-widest mb-0.5">Special Collection</span>
+              <span className="text-[#e2a750] font-bold text-[10px] uppercase tracking-widest mb-0.5">{t('home.specialCollection')}</span>
               <h3 className="text-white text-base font-black tracking-tight drop-shadow-md">
-                {banner?.title || "Mithilakart Special Deals"}
+                {tName(banner?.title) || t('home.specialDeals')}
               </h3>
             </div>
           </div>
@@ -143,7 +146,7 @@ const BannerCarousel = ({ banners = [] }) => {
             >
               <img
                 src={banner?.image || FALLBACK_IMAGE}
-                alt={banner?.title || "Hero Banner"}
+                alt={banner?.title || t('home.heroBanner')}
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading={idx === 0 ? "eager" : "lazy"}
                 decoding="async"
@@ -155,12 +158,12 @@ const BannerCarousel = ({ banners = [] }) => {
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-8">
-                <span className="text-[#e2a750] font-bold text-sm uppercase tracking-widest mb-1 animate-pulse">Exclusive Collection</span>
+                <span className="text-[#e2a750] font-bold text-sm uppercase tracking-widest mb-1 animate-pulse">{t('home.exclusiveCollection')}</span>
                 <h3 className="text-white text-3xl font-black tracking-tight drop-shadow-md mb-2">
-                  {banner?.title || "Mithilakart Special Deals"}
+                  {tName(banner?.title) || t('home.specialDeals')}
                 </h3>
                 <p className="text-white/90 text-sm font-medium max-w-md drop-shadow-xs">
-                  Discover authentic handcrafted treasures and deals directly from finest artisans.
+                  {t('auto.discoverAuthenticHandcraftedTreasure')}
                 </p>
               </div>
             </div>
@@ -193,7 +196,7 @@ const BannerCarousel = ({ banners = [] }) => {
               >
                 <img
                   src={sideBanner.image || '/hero_banner.png'}
-                  alt={sideBanner.title || "Promo Banner"}
+                  alt={sideBanner.title || t('home.promoBanner')}
                   className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
                   loading="eager"
                   decoding="async"
@@ -204,10 +207,10 @@ const BannerCarousel = ({ banners = [] }) => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
                   <h4 className="text-white text-sm font-black tracking-tight leading-tight line-clamp-1">
-                    {sideBanner.title || "Trending Promo"}
+                    {tName(sideBanner.title) || t('home.trendingPromo')}
                   </h4>
                   <span className="text-[10px] text-white/90 font-bold uppercase tracking-wider mt-1 flex items-center gap-1 group-hover:text-[#e2a750] transition-colors">
-                    Explore Now <span className="text-xs">&rarr;</span>
+                    {t('x.exploreNow')} <span className="text-xs">&rarr;</span>
                   </span>
                 </div>
               </div>

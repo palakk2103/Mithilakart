@@ -4,8 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getMyQuestions } from '../../services/userApi';
 import { extractList, mapQuestion } from '../../utils/mappers';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../../shared/utils/translateName';
 
 const QuestionsAnswers = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
   const [qaData, setQaData] = useState([]);
@@ -24,7 +27,7 @@ const QuestionsAnswers = () => {
           setQaData(extractList(data).map(mapQuestion));
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load questions');
+        if (!cancelled) setError(err.message || t('auto.failedToLoadQuestions'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -82,13 +85,13 @@ const QuestionsAnswers = () => {
                 onClick={() => setActiveTab(tab)}
                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all duration-300 ${activeTab === tab ? 'bg-[var(--color-gold)] text-black border-[var(--color-gold)] shadow-[0_0_20px_rgba(226,167,80,0.3)]' : 'bg-black/20 text-[var(--card-sub)] border-[var(--card-border)] hover:border-[var(--color-gold)]/30'}`}
              >
-                {tab}
+                {tName(tab)}
              </button>
            ))}
         </div>
 
         <div className="space-y-4">
-          {loading && <p className="text-sm text-gray-500">Loading questions...</p>}
+          {loading && <p className="text-sm text-gray-500">{t('auto.loadingQuestions')}</p>}
           {error && <p className="text-sm text-red-600">{error}</p>}
            <AnimatePresence mode="popLayout">
              {filteredQA.map((item) => (
@@ -103,7 +106,7 @@ const QuestionsAnswers = () => {
                   <div className="flex justify-between items-start">
                      <h3 className="text-[10px] font-black text-[var(--card-sub)] uppercase tracking-widest leading-relaxed max-w-[70%]">{item.product}</h3>
                      <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${item.status === 'Answered' ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                        {item.status}
+                        {tName(item.status)}
                      </span>
                   </div>
 
@@ -123,7 +126,7 @@ const QuestionsAnswers = () => {
                           <p className="text-xs text-[var(--card-sub)] font-bold italic">{item.answer}</p>
                        </div>
                      ) : (
-                       <p className="text-[10px] text-[var(--card-sub)] italic ml-10 font-bold">Waiting for seller's response...</p>
+                       <p className="text-[10px] text-[var(--card-sub)] italic ml-10 font-bold">{t('auto.waitingForSellerSResponse')}</p>
                      )}
                   </div>
 
@@ -144,7 +147,7 @@ const QuestionsAnswers = () => {
                className="text-center py-20 bg-black/10 rounded-3xl border border-dashed border-[var(--card-border)]"
              >
                 <MessageSquare size={40} className="mx-auto text-[var(--card-sub)] mb-4 opacity-20" />
-                <p className="text-sm text-[var(--card-sub)] font-bold uppercase tracking-widest">No {activeTab.toLowerCase()} questions found</p>
+                <p className="text-sm text-[var(--card-sub)] font-bold uppercase tracking-widest">{t('x.noQuestionsFound', { type: tName(activeTab) })}</p>
              </motion.div>
            )}
         </div>

@@ -1,0 +1,29 @@
+[     260ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[     777ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[     778ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:5173/src/config/userAppTabs.js:112
+[     778ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[     779ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[     812ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[     836ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/cart' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[     838ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/cart:0
+[     838ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[     839ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:5173/src/config/userAppTabs.js:112
+[     841ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[     841ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[     974ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[     999ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/cart' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[    1001ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/cart:0
+[    1002ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[    1003ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart:0
+[    1003ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[    1003ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:5173/src/config/userAppTabs.js:112
+[    1004ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[    1004ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[    1059ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[    1059ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[    1088ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart:0
+[    1089ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[    1089ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:5173/src/config/userAppTabs.js:112
+[    1089ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[    1089ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:5173' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5173/home?category=Fashion:0
+[    1186ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0

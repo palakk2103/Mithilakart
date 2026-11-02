@@ -8,6 +8,8 @@ import { uploadAvatar } from '../../../../shared/services/uploadService';
 import { getImageUrl } from '../../../../shared/utils/imageUtils';
 import useAccountStore from '../../../../store/useAccountStore';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../../i18n';
 
 const mapProfileToForm = (profile) => ({
   name: profile?.name || '',
@@ -21,6 +23,7 @@ const mapProfileToForm = (profile) => ({
 });
 
 const EditProfile = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const updateAccountProfile = useAccountStore((state) => state.updateProfile);
@@ -60,15 +63,15 @@ const EditProfile = () => {
 
   const validate = () => {
     let newErrors = {};
-    if (!formData.name?.trim()) newErrors.name = 'Name is required';
+    if (!formData.name?.trim()) newErrors.name = i18n.t('auto.nameRequired');
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (formData.email?.trim() && !emailRegex.test(formData.email.trim())) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = i18n.t('auto.invalidEmailFormat');
     }
 
     if (formData.phone?.trim() && formData.phone.trim().length < 10) {
-      newErrors.phone = 'Invalid phone number';
+      newErrors.phone = i18n.t('auto.invalidPhoneNumber');
     }
 
     setErrors(newErrors);
@@ -77,7 +80,7 @@ const EditProfile = () => {
 
   const handleSave = async () => {
     if (!validate()) {
-      toast.error('Please fix the errors');
+      toast.error(t('auto.pleaseFixTheErrors'));
       return;
     }
 
@@ -136,10 +139,10 @@ const EditProfile = () => {
 
       window.dispatchEvent(new Event('customer-auth-changed'));
 
-      toast.success('Profile Updated Successfully');
+      toast.success(t('auto.profileUpdatedSuccessfully'));
       setTimeout(() => navigate(-1), 1200);
     } catch (err) {
-      toast.error(err?.message || 'Failed to update profile');
+      toast.error(err?.message || t('auto.failedToUpdateProfile'));
     } finally {
       setSaving(false);
     }
@@ -149,7 +152,7 @@ const EditProfile = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
+        toast.error(t('auto.imageSizeShouldBeLess'));
         return;
       }
 
@@ -157,7 +160,7 @@ const EditProfile = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, avatar: reader.result }));
-        toast.success('Photo selected');
+        toast.success(t('auto.photoSelected'));
       };
       reader.readAsDataURL(file);
     }
@@ -241,17 +244,17 @@ const EditProfile = () => {
       {/* Header */}
       <div className={`sticky top-0 z-50 p-4 flex items-center justify-between relative z-10 transition-colors duration-300 ${headerBg}`}>
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className={`p-1 rounded-full hover:bg-slate-50 transition-colors ${headerTextColor}`} aria-label="Go back">
+          <button onClick={() => navigate(-1)} className={`p-1 rounded-full hover:bg-slate-50 transition-colors ${headerTextColor}`} aria-label={t('auto.goBack')}>
             <ArrowLeft size={22} />
           </button>
-          <h1 className={`text-[17px] font-black uppercase tracking-widest ${headerTextColor}`}>Edit Profile</h1>
+          <h1 className={`text-[17px] font-black uppercase tracking-widest ${headerTextColor}`}>{t('auto.editProfile')}</h1>
         </div>
         <button 
           onClick={handleSave} 
           disabled={saving}
           className={`${primaryBg} text-white font-black text-xs uppercase tracking-widest px-5 py-2 rounded-xl shadow-sm active:scale-95 transition-all ${saving ? 'opacity-70 cursor-not-allowed' : ''}`}
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? t('auto.saving') : t('auto.save')}
         </button>
       </div>
 
@@ -290,7 +293,7 @@ const EditProfile = () => {
             onClick={() => fileInputRef.current.click()}
             className={`mt-2 md:mt-4 text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] hover:opacity-70 transition-opacity`}
           >
-            Change Photo
+            {t('auto.changePhoto')}
           </button>
         </div>
 
@@ -298,7 +301,7 @@ const EditProfile = () => {
         <div className="space-y-3.5 md:space-y-6">
           {/* Full Name */}
           <div className="space-y-1 md:space-y-2">
-            <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>Full Name</label>
+            <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>{t('auto.fullName')}</label>
             <div className={`relative ${errors.name ? 'animate-shake' : ''}`}>
               <User size={16} className={`absolute left-3.5 top-1/2 -translate-y-1/2 md:w-[18px] md:h-[18px] ${errors.name ? 'text-red-500' : 'text-slate-400'}`} />
               <input 
@@ -313,7 +316,7 @@ const EditProfile = () => {
 
           {/* Email */}
           <div className="space-y-1 md:space-y-2">
-            <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>Email Address</label>
+            <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>{t('auto.emailAddress')}</label>
             <div className={`relative ${errors.email ? 'animate-shake' : ''}`}>
               <Mail size={16} className={`absolute left-3.5 top-1/2 -translate-y-1/2 md:w-[18px] md:h-[18px] ${errors.email ? 'text-red-500' : 'text-slate-400'}`} />
               <input 
@@ -328,7 +331,7 @@ const EditProfile = () => {
 
           {/* Phone */}
           <div className="space-y-1 md:space-y-2">
-            <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>Phone Number</label>
+            <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>{t('auto.phoneNumber')}</label>
             <div className={`relative ${errors.phone ? 'animate-shake' : ''}`}>
               <Phone size={16} className={`absolute left-3.5 top-1/2 -translate-y-1/2 md:w-[18px] md:h-[18px] ${errors.phone ? 'text-red-500' : 'text-slate-400'}`} />
               <input 
@@ -344,7 +347,7 @@ const EditProfile = () => {
           {/* Gender & DOB Row */}
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-1 md:space-y-2">
-              <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>Gender</label>
+              <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>{t('auto.gender')}</label>
               <div className="relative">
                 <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 md:w-[18px] md:h-[18px]" />
                 <select 
@@ -352,15 +355,15 @@ const EditProfile = () => {
                   onChange={(e) => setFormData({...formData, gender: e.target.value})}
                   className={`w-full bg-white border border-slate-200 rounded-xl md:rounded-2xl py-2.5 md:py-4 pl-10 md:pl-12 pr-2 md:pr-4 text-xs md:text-sm font-semibold text-slate-800 focus:outline-none ${primaryFocusBorder} transition-all appearance-none shadow-xs md:shadow-sm`}
                 >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
+                  <option value="Male">{t('auto.male')}</option>
+                  <option value="Female">{t('auto.female')}</option>
+                  <option value="Other">{t('auto.other')}</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-1 md:space-y-2">
-              <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>Date of Birth</label>
+              <label className={`text-[9px] md:text-[10px] font-black ${primaryText} uppercase tracking-[2px] md:tracking-[3px] ml-1`}>{t('auto.dateOfBirth')}</label>
               <div className="relative">
                 <Calendar size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 md:w-[18px] md:h-[18px]" />
                 <input 
@@ -379,7 +382,7 @@ const EditProfile = () => {
             onClick={handleSave}
             className={`w-full ${primaryBg} text-white py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-xs md:text-base uppercase tracking-[2px] md:tracking-[3px] shadow-md ${primaryShadow} hover:scale-[1.02] transition-all active:scale-95 group relative overflow-hidden`}
           >
-            <span className="relative z-10">Save Changes</span>
+            <span className="relative z-10">{t('auto.saveChanges')}</span>
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
           </button>
         </div>

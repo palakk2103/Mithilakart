@@ -3,8 +3,10 @@ import { Wallet as WalletIcon, CreditCard, ArrowUpRight, ArrowDownLeft, Plus, Ch
 import { getWallet, getWalletTransactions } from '../services/userApi';
 import { extractList, mapWalletTransaction } from '../utils/mappers';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
+import { useTranslation } from 'react-i18next';
 
 const Wallet = () => {
+  const { t } = useTranslation();
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ const Wallet = () => {
           setTransactions(extractList(txData).map(mapWalletTransaction));
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load wallet');
+        if (!cancelled) setError(err.message || t('auto.failedToLoadWallet'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -47,13 +49,13 @@ const Wallet = () => {
                 <div className="p-2 bg-primary rounded-lg">
                    <WalletIcon size={24} className="text-slate-900" />
                 </div>
-                <h1 className="text-xl font-bold">Cocio Pay Balance</h1>
+                <h1 className="text-xl font-bold">{t('auto.cocioPayBalance')}</h1>
              </div>
              <ChevronRight size={20} className="text-slate-400" />
           </div>
           
           <div className="flex items-baseline gap-1 mb-8">
-             <span className="text-sm font-medium text-slate-500">Available Balance:</span>
+             <span className="text-sm font-medium text-slate-500">{t('auto.availableBalance')}</span>
              <span className="text-3xl font-black text-slate-900">
                {loading ? '...' : formatPrice(balance)}
              </span>
@@ -62,22 +64,22 @@ const Wallet = () => {
           <div className="grid grid-cols-2 gap-4">
              <button className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
                 <Plus size={24} className="text-primary-dark" />
-                <span className="text-xs font-bold">Add Money</span>
+                <span className="text-xs font-bold">{t('auto.addMoney')}</span>
              </button>
              <button className="flex flex-col items-center gap-2 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
                 <CreditCard size={24} className="text-orange-600" />
-                <span className="text-xs font-bold">Manage Cards</span>
+                <span className="text-xs font-bold">{t('auto.manageCards')}</span>
              </button>
           </div>
         </div>
 
-        <h2 className="text-lg font-bold mb-4 px-2">Recent Transactions</h2>
+        <h2 className="text-lg font-bold mb-4 px-2">{t('auto.recentTransactions')}</h2>
         {error && <p className="text-sm text-red-600 px-2 mb-3">{error}</p>}
         <div className="space-y-3">
            {loading ? (
-             <p className="text-sm text-slate-500 px-2">Loading transactions...</p>
+             <p className="text-sm text-slate-500 px-2">{t('auto.loadingTransactions')}</p>
            ) : transactions.length === 0 ? (
-             <p className="text-sm text-slate-500 px-2">No transactions yet.</p>
+             <p className="text-sm text-slate-500 px-2">{t('auto.noTransactionsYet')}</p>
            ) : (
              transactions.map((t) => (
               <div key={t.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">

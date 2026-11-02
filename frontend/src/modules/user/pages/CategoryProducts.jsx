@@ -3,13 +3,14 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { getCategories, getCategoryProducts } from '../services/catalogApi';
 import { findCategoryByName, extractList, mapProductForCard } from '../utils/mappers';
 import { fetchCartCount } from '../utils/cartUtils';
+import useWishlistToggle from '../hooks/useWishlistToggle';
 import SEO from '../../../shared/components/SEO';
 import useInfiniteProducts from '../../../shared/hooks/useInfiniteProducts';
 import InfiniteScrollSentinel from '../../../shared/components/InfiniteScrollSentinel';
 import { getCurrentMarketplaceTab } from '../../../shared/utils/marketplaceHelpers';
 import { buildListParams, listParamsKey } from '../utils/listQuery';
 import { 
-  Heart, 
+  Heart,
   Star, 
   ChevronDown, 
   SlidersHorizontal, 
@@ -35,6 +36,8 @@ import BeautyJewel4 from '../../../assets/Beauty/BeautyJewel4.jpg';
 import BeautyJewel5 from '../../../assets/Beauty/BeautyJewel5.jpg';
 import BeautyJewel6 from '../../../assets/Beauty/BeautyJewel6.jpg';
 import { handleImageError } from '../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 
 const CornerFlower = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px] opacity-85 select-none pointer-events-none">
@@ -76,7 +79,9 @@ const CardBottomDivider = () => (
 );
 
 const CategoryProductCard = React.memo(({ product }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { t } = useTranslation();
+  const { isWishlisted: checkWishlisted, toggle: toggleWishlist } = useWishlistToggle();
+  const isWishlisted = checkWishlisted(product);
 
   return (
     <Link
@@ -106,7 +111,7 @@ const CategoryProductCard = React.memo(({ product }) => {
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
-            setIsWishlisted(!isWishlisted);
+            toggleWishlist(product);
           }}
           className="absolute top-1 right-1 md:top-2 md:right-2 w-6 h-6 md:w-7.5 md:h-7.5 rounded-full bg-white/90 backdrop-blur-xs shadow-[0_2px_6px_rgba(0,0,0,0.06)] flex items-center justify-center text-slate-700 hover:text-red-500 z-10 transition-all duration-200 active:scale-85"
         >
@@ -119,7 +124,7 @@ const CategoryProductCard = React.memo(({ product }) => {
         {/* Bestseller Tag */}
         {product.bestseller && (
           <div className="absolute top-0 left-0 bg-[#008c7a] text-white text-[7.5px] font-black px-1.5 py-0.5 rounded-br uppercase tracking-wider shadow-xs leading-none z-10">
-            Bestseller
+            {t('auto.bestseller')}
           </div>
         )}
 
@@ -150,7 +155,7 @@ const CategoryProductCard = React.memo(({ product }) => {
             <div className="flex items-center gap-1 md:gap-1.5 flex-wrap">
               <span className="text-[11px] md:text-[13.5px] font-black text-slate-900">₹{product.price}</span>
               {product.oldPrice && (
-                <span className="text-[8.5px] md:text-[10px] text-gray-400 line-through font-semibold">MRP ₹{product.oldPrice}</span>
+                <span className="text-[8.5px] md:text-[10px] text-gray-400 line-through font-semibold">{t('product.mrp')} ₹{product.oldPrice}</span>
               )}
               {product.off && (
                 <span className="border border-[#F26522]/45 text-[#F26522] bg-[#F26522]/5 text-[7px] md:text-[8px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-tight">
@@ -169,6 +174,7 @@ const CategoryProductCard = React.memo(({ product }) => {
 });
 
 const CategoryProducts = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const category = searchParams.get('category') || 'Jewellery';
   const subcategoryParam = searchParams.get('subcategory') || '';
@@ -314,7 +320,7 @@ const CategoryProducts = () => {
   return (
     <>
       <SEO
-        title={`${category} — Shop Online`}
+        title={t('x.shopOnline', { name: tName(category) })}
         description={`Browse ${category} products on Mithilakart — quick commerce delivery and standard shipping across India.`}
         path={`/category-products?category=${encodeURIComponent(category)}`}
       />
@@ -327,7 +333,7 @@ const CategoryProducts = () => {
             <Link to="/home" className="p-1 active:scale-90 transition-transform">
               <ArrowLeft size={20} strokeWidth={2.5} />
             </Link>
-            <h1 className="text-[15.5px] font-black tracking-tight">{category}</h1>
+            <h1 className="text-[15.5px] font-black tracking-tight">{tName(category)}</h1>
           </div>
           
           <div className="flex items-center gap-0.5">
@@ -349,7 +355,7 @@ const CategoryProducts = () => {
             onClick={() => setShowSortModal(true)}
             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold uppercase tracking-wide active:bg-white/10"
           >
-            Sort: <span className="font-extrabold underline decoration-white/40">{activeSort}</span> <ChevronDown size={12} strokeWidth={2.5} />
+            {t('common.sort')}: <span className="font-extrabold underline decoration-white/40">{tName(activeSort)}</span> <ChevronDown size={12} strokeWidth={2.5} />
           </button>
           <div className="w-[1px] h-3.5 bg-white/20"></div>
           <button 
@@ -359,7 +365,7 @@ const CategoryProducts = () => {
             }}
             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-bold uppercase tracking-wide active:bg-white/10 relative"
           >
-            <SlidersHorizontal size={12} strokeWidth={2.5} /> Filter
+            <SlidersHorizontal size={12} strokeWidth={2.5} /> {t('search.filter')}
             {activeFilterCount > 0 && (
               <span className="w-4 h-4 bg-white text-[#6FAE4A] rounded-full text-[9px] font-black flex items-center justify-center ml-1">
                 {activeFilterCount}
@@ -372,14 +378,14 @@ const CategoryProducts = () => {
       {/* ── Category Hero Info ── */}
       <div className="px-3.5 py-2.5 bg-white border-b border-gray-100 flex items-center justify-between shadow-xs">
         <div>
-          <h2 className="text-[16px] font-black text-slate-800 uppercase tracking-tight leading-none">{category}</h2>
+          <h2 className="text-[16px] font-black text-slate-800 uppercase tracking-tight leading-none">{tName(category)}</h2>
           <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-            {sortedProducts.length} items available
+            {t('x.itemsAvailable', { count: sortedProducts.length })}
           </p>
         </div>
         <div className="flex -space-x-1.5">
            <div className="w-7 h-7 rounded-full border-2 border-white bg-primary-light flex items-center justify-center text-[9px] font-bold text-[#6FAE4A]">NEW</div>
-           <div className="w-7 h-7 rounded-full border-2 border-white bg-green-50 flex items-center justify-center text-[9px] font-bold text-[#388e3c]">SALE</div>
+           <div className="w-7 h-7 rounded-full border-2 border-white bg-green-50 flex items-center justify-center text-[9px] font-bold text-[#388e3c]">{t('auto.sale')}</div>
         </div>
       </div>
 
@@ -394,13 +400,13 @@ const CategoryProducts = () => {
                 next.delete('subcategory');
                 setSearchParams(next, { replace: true });
               }}
-              className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-black transition-all ${
+              className={`flex-shrink-0 px-3 py-1 rounded-full text-[13px] sm:text-[14px] md:text-[15px] font-black transition-all ${
                 !activeSubcategory || activeSubcategory === 'All'
                   ? 'bg-[#6FAE4A] text-white shadow-xs'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              All
+              {t('auto.all')}
             </button>
             {subcategories.map((sub) => {
               const subName = sub.name;
@@ -419,7 +425,7 @@ const CategoryProducts = () => {
                     }
                     setSearchParams(next, { replace: true });
                   }}
-                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black transition-all ${
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] sm:text-[14px] md:text-[15px] font-black transition-all ${
                     isSelected
                       ? 'bg-[#6FAE4A] text-white shadow-xs'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -443,8 +449,8 @@ const CategoryProducts = () => {
       {/* Empty State when filters match nothing */}
       {!loading && sortedProducts.length === 0 && (
         <div className="py-14 px-4 text-center max-w-sm mx-auto">
-          <p className="text-sm font-bold text-slate-700">No products match your selected filters</p>
-          <p className="text-xs text-slate-500 mt-1">Try broadening your price range or turning off filters.</p>
+          <p className="text-sm font-bold text-slate-700">{t('auto.noProductsMatchYourSelected')}</p>
+          <p className="text-xs text-slate-500 mt-1">{t('auto.tryBroadeningYourPriceRange')}</p>
           <button
             onClick={() => {
               setFilters({ minPrice: '', maxPrice: '', quickDelivery: false, minRating: 0, inStockOnly: false });
@@ -452,7 +458,7 @@ const CategoryProducts = () => {
             }}
             className="mt-4 px-4 py-2 bg-[#6FAE4A] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90"
           >
-            Clear All Filters
+            {t('auto.clearAllFilters')}
           </button>
         </div>
       )}
@@ -467,8 +473,8 @@ const CategoryProducts = () => {
       {/* 🔶 Horizontal Trends Section (Slider as requested) */}
       <div className="my-2 py-4 bg-[var(--card-border)]/30 border-y border-[var(--card-border)] md:max-w-[1000px] md:mx-auto md:w-full md:rounded-2xl">
         <div className="px-4 flex items-center gap-2 mb-3">
-          <span className="bg-[#008c7a] text-white text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Trending</span>
-          <h2 className="text-[13px] font-black text-[var(--card-text)] uppercase tracking-tight">Hot and latest for you</h2>
+          <span className="bg-[#008c7a] text-white text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">{t('auto.trending')}</span>
+          <h2 className="text-[13px] font-black text-[var(--card-text)] uppercase tracking-tight">{t('auto.hotAndLatestForYou')}</h2>
         </div>
         <div className="flex overflow-x-auto gap-4 px-4 no-scrollbar pb-2">
           {trendingItems.map((item) => (
@@ -488,7 +494,7 @@ const CategoryProducts = () => {
 
       {/* 🔶 Main Product Grid (Bottom Part) */}
       <div className="px-4 py-2 mt-4 md:max-w-[1000px] md:mx-auto w-full">
-        <h2 className="text-[13px] font-black text-[var(--card-text)] uppercase tracking-tight">For You</h2>
+        <h2 className="text-[13px] font-black text-[var(--card-text)] uppercase tracking-tight">{t('auto.forYou')}</h2>
       </div>
       <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 md:max-w-[1000px] md:mx-auto w-full">
         {sortedProducts.slice(4).map((product) => (
@@ -510,7 +516,7 @@ const CategoryProducts = () => {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSortModal(false)}></div>
           <div className="relative w-full bg-[#111111] rounded-t-2xl border-t border-[#6FAE4A]/20 p-6 animate-in slide-in-from-bottom duration-300">
             <div className="w-12 h-1 bg-gray-800 rounded-full mx-auto mb-6"></div>
-            <h2 className="text-sm font-black text-[#6FAE4A] uppercase tracking-widest mb-6">Sort By</h2>
+            <h2 className="text-sm font-black text-[#6FAE4A] uppercase tracking-widest mb-6">{t('auto.sortBy')}</h2>
             <div className="space-y-4">
               {['Popularity', 'Price: Low to High', 'Price: High to Low', 'Customer Rating'].map((option) => (
                 <button 
@@ -521,7 +527,7 @@ const CategoryProducts = () => {
                   }}
                   className={`w-full flex items-center justify-between text-sm font-bold py-2 ${activeSort === option ? 'text-white' : 'text-gray-500'}`}
                 >
-                  {option}
+                  {tName(option)}
                   {activeSort === option && <div className="w-2 h-2 bg-[#6FAE4A] rounded-full shadow-[0_0_8px_#6FAE4A]"></div>}
                 </button>
               ))}
@@ -535,17 +541,17 @@ const CategoryProducts = () => {
         <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200 flex justify-center">
           <div className="w-full max-w-lg h-full flex flex-col bg-[#111111] text-white">
             <div className="p-4 border-b border-gray-800 flex justify-between items-center">
-              <h2 className="text-sm font-black text-[#6FAE4A] uppercase tracking-widest">Filters</h2>
+              <h2 className="text-sm font-black text-[#6FAE4A] uppercase tracking-widest">{t('auto.filters')}</h2>
               <button onClick={() => setShowFilterModal(false)} className="text-white p-1 hover:text-[#6FAE4A]">✕</button>
             </div>
             
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
               {/* Price Range */}
               <div>
-                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Price Range (₹)</h3>
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{t('auto.priceRange')}</h3>
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className="text-[9px] text-gray-400 block mb-1">Min Price</label>
+                    <label className="text-[9px] text-gray-400 block mb-1">{t('auto.minPrice')}</label>
                     <input 
                       type="number" 
                       placeholder="₹0"
@@ -555,10 +561,10 @@ const CategoryProducts = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] text-gray-400 block mb-1">Max Price</label>
+                    <label className="text-[9px] text-gray-400 block mb-1">{t('auto.maxPrice')}</label>
                     <input 
                       type="number" 
-                      placeholder="No limit"
+                      placeholder={t('auto.noLimit')}
                       value={tempFilters.maxPrice}
                       onChange={(e) => setTempFilters(p => ({ ...p, maxPrice: e.target.value }))}
                       className="w-full bg-gray-900 border border-gray-800 p-2.5 rounded-lg text-xs font-bold text-white outline-none focus:border-[#6FAE4A]"
@@ -592,7 +598,7 @@ const CategoryProducts = () => {
 
               {/* Customer Rating */}
               <div>
-                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Customer Rating</h3>
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{t('auto.customerRating')}</h3>
                 <div className="flex gap-2">
                   {[
                     { label: 'Any', value: 0 },
@@ -617,13 +623,13 @@ const CategoryProducts = () => {
 
               {/* Quick Delivery Toggle */}
               <div>
-                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Delivery & Availability</h3>
+                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{t('auto.deliveryAvailability')}</h3>
                 <div className="space-y-3">
                   <div 
                     onClick={() => setTempFilters(p => ({ ...p, quickDelivery: !p.quickDelivery }))}
                     className="flex items-center justify-between p-3 bg-gray-900 border border-gray-800 rounded-lg cursor-pointer"
                   >
-                    <span className="text-xs font-bold text-white">⚡ Quick Delivery / 30m</span>
+                    <span className="text-xs font-bold text-white">{t('auto.quickDelivery30m')}</span>
                     <div className={`w-10 h-5 rounded-full relative transition-colors ${tempFilters.quickDelivery ? 'bg-[#6FAE4A]' : 'bg-gray-700'}`}>
                       <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${tempFilters.quickDelivery ? 'right-0.5' : 'left-0.5'}`}></div>
                     </div>
@@ -633,7 +639,7 @@ const CategoryProducts = () => {
                     onClick={() => setTempFilters(p => ({ ...p, inStockOnly: !p.inStockOnly }))}
                     className="flex items-center justify-between p-3 bg-gray-900 border border-gray-800 rounded-lg cursor-pointer"
                   >
-                    <span className="text-xs font-bold text-white">In Stock Only</span>
+                    <span className="text-xs font-bold text-white">{t('auto.inStockOnly')}</span>
                     <div className={`w-10 h-5 rounded-full relative transition-colors ${tempFilters.inStockOnly ? 'bg-[#6FAE4A]' : 'bg-gray-700'}`}>
                       <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${tempFilters.inStockOnly ? 'right-0.5' : 'left-0.5'}`}></div>
                     </div>
@@ -653,7 +659,7 @@ const CategoryProducts = () => {
                 }} 
                 className="flex-1 py-3 text-[11px] font-black text-gray-400 hover:text-white uppercase tracking-widest"
               >
-                Clear All
+                {t('auto.clearAll')}
               </button>
               <button 
                 onClick={() => {
@@ -662,7 +668,7 @@ const CategoryProducts = () => {
                 }} 
                 className="flex-[2] py-3 bg-[#6FAE4A] text-black text-[11px] font-black uppercase tracking-widest rounded-lg shadow-sm active:scale-98 transition-all"
               >
-                Apply Filters
+                {t('auto.applyFilters')}
               </button>
             </div>
           </div>

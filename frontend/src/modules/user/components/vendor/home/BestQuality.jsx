@@ -9,6 +9,7 @@ import StillImg1 from '../../../../../assets/StillSection/StillImages1.png';
 import StillImg2 from '../../../../../assets/StillSection/StillImages2.jpg';
 import StillImg3 from '../../../../../assets/StillSection/StillImages3.jpg';
 import StillImg4 from '../../../../../assets/StillSection/StillImages4.png';
+import AddToCartButton from '../../common/AddToCartButton';
 
 // Custom header flower matching Mithila art
 const HeaderFlower = () => (
@@ -177,7 +178,7 @@ const BestQuality = ({ items = [] }) => {
         <div className="flex items-center min-w-0 pr-2">
           <HeaderFlower />
           <h2 className="text-[13px] sm:text-[16px] md:text-[22px] font-black text-[#4E2812] uppercase tracking-normal sm:tracking-[0.08em] font-serif whitespace-nowrap truncate">
-            {t('home.bestQuality') || 'Best Quality Guaranteed'}
+            {t('home.bestQuality') || t('auto.bestQualityGuaranteed')}
           </h2>
           <HeaderFlower />
         </div>
@@ -227,6 +228,12 @@ const BestQuality = ({ items = [] }) => {
                 <span className="text-[12.5px] md:text-[16px] font-serif font-black text-[#4E2812] leading-tight mt-1 block truncate">
                   {product.tag}
                 </span>
+                {product.price > 0 && (
+                  <div className="flex items-center justify-between gap-2 mt-1.5">
+                    <span className="text-[12px] md:text-[14px] font-black text-[#4E2812]">₹{product.price}</span>
+                    <div className="w-[56px] md:w-[68px]"><AddToCartButton product={product} /></div>
+                  </div>
+                )}
               </div>
             </div>
           );

@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { X, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { handleImageError } from '../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
 
 const ForgotPassword = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [inputVal, setInputVal] = useState('');
   const [useEmail, setUseEmail] = useState(true);
@@ -51,10 +53,10 @@ const ForgotPassword = () => {
       <div className="w-full max-w-[420px] bg-[#FFF5EE]/95 rounded-[32px] px-6 py-8 shadow-2xl border border-white/40 backdrop-blur-md z-10 my-6">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-[#F26522]">
-            Reset Password
+            {t('auto.resetPassword')}
           </h2>
           <p className="text-[#F26522]/80 text-[13px] font-semibold mt-1">
-            {submitted ? 'Check your instructions below' : 'Enter your details to receive a recovery link'}
+            {submitted ? t('auto.checkYourInstructionsBelow') : t('auto.enterYourDetailsToReceive')}
           </p>
         </div>
 
@@ -69,7 +71,7 @@ const ForgotPassword = () => {
             {/* Input Box */}
             <div className="space-y-2">
               <label className="text-[12px] font-black text-[#F26522] uppercase tracking-wider pl-1 block">
-                {useEmail ? 'Email Address' : 'Phone Number'}
+                {useEmail ? t('auto.emailAddress') : t('auto.phoneNumber')}
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-4.5 flex items-center text-[#F26522]/70">
@@ -91,7 +93,7 @@ const ForgotPassword = () => {
               whileTap={{ scale: 0.98 }}
               className="w-full bg-[#F26522] text-white hover:bg-[#d45014] py-4 rounded-2xl font-black text-[13.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] cursor-pointer"
             >
-              Send Reset Link
+              {t('auto.sendResetLink')}
             </motion.button>
 
             {/* Toggle Input Type Link */}
@@ -105,14 +107,14 @@ const ForgotPassword = () => {
                 }}
                 className="text-[12px] font-bold text-[#F26522] hover:underline"
               >
-                {useEmail ? 'Use Phone Number Instead' : 'Use Email Address Instead'}
+                {useEmail ? t('auto.usePhoneNumberInstead') : t('auto.useEmailAddressInstead')}
               </button>
             </div>
           </form>
         ) : (
           <div className="space-y-6 text-center">
             <div className="bg-[#FFF5EE] border border-[#F26522]/35 p-5 rounded-2xl text-[14px] font-bold text-[#F26522] leading-relaxed">
-              We've sent a recovery link to <span className="underline">{inputVal}</span>. Please check your inbox and follow the instructions to set a new password.
+              {t('x.recoverySentTo')} <span className="underline">{inputVal}</span>. {t('x.recoverySentRest')}
             </div>
 
             <motion.button
@@ -120,15 +122,15 @@ const ForgotPassword = () => {
               whileTap={{ scale: 0.98 }}
               className="w-full bg-[#F26522] text-white hover:bg-[#d45014] py-4 rounded-2xl font-black text-[13.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] cursor-pointer"
             >
-              Return to Login
+              {t('auto.returnToLogin')}
             </motion.button>
           </div>
         )}
 
         <div className="text-center mt-5 text-[12px] font-bold text-[#F26522]/80">
-          Remembered your password?{' '}
+          {t('auth.rememberedPassword')}{' '}
           <Link to="/login" className="text-[#F26522] hover:underline">
-            Log in here!
+            {t('auto.logInHere')}
           </Link>
         </div>
       </div>

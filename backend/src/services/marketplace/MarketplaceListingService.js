@@ -14,6 +14,7 @@ const {
 } = require('../../utils/marketplaceTab');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
 const { eventBus } = require('../../events/EventBus');
+const { findRankedMatches } = require('../../utils/searchMatch');
 const { parseListingQuery, quickDeliveryCondition, resolveProductIds, runListingQuery } = require('../../utils/listingQuery');
 
 class MarketplaceListingService extends BaseService {
@@ -296,11 +297,17 @@ class MarketplaceListingService extends BaseService {
     // Product-level scope (category subtree, text search, rating, in-stock) is
     // resolved to ids first so the listing query can sort/paginate/count in the DB.
     let restrictIds = null;
+    let relevance = null;
     const searchTerm = query.q || query.search;
     if (searchTerm) {
-      const matches = await this.productRepository.searchPublic(searchTerm, {}, { limit: 5000 });
-      restrictIds = matches.map((p) => p._id);
+      const matches = await findRankedMatches({
+        productRepository: this.productRepository,
+        categoryRepository: this.categoryRepository,
+        term: searchTerm,
+      });
+      restrictIds = matches.map((m) => m._id);
       if (!restrictIds.length) return empty();
+      relevance = new Map(matches.map((m) => [String(m._id), m.score]));
     }
     const categoryIds = query.categoryId ? await this._getCategorySubtreeIds(query.categoryId) : null;
     const productIds = await resolveProductIds(this.productRepository, {
@@ -322,6 +329,7 @@ class MarketplaceListingService extends BaseService {
       filter,
       parsed,
       pagination,
+      relevanceOf: relevance ? (l) => relevance.get(String(l.productId)) || 0 : null,
     });
 
     const pageProductIds = [...new Set(listings.map((l) => String(l.productId)))];

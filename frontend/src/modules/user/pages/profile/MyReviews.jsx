@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getMyReviews } from '../../services/userApi';
 import { extractList, mapReview } from '../../utils/mappers';
+import { useTranslation } from 'react-i18next';
 
 const MyReviews = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +25,7 @@ const MyReviews = () => {
           setReviews(extractList(data).map(mapReview));
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load reviews');
+        if (!cancelled) setError(err.message || t('auto.failedToLoadReviews'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -65,11 +67,11 @@ const MyReviews = () => {
         <button onClick={() => navigate(-1)} className={`hover:opacity-80 transition-colors ${headerTextColor}`}>
           <ArrowLeft size={24} />
         </button>
-        <h1 className={`text-lg font-black uppercase tracking-widest ${headerTextColor}`}>My Reviews</h1>
+        <h1 className={`text-lg font-black uppercase tracking-widest ${headerTextColor}`}>{t('auto.myReviews')}</h1>
       </div>
 
       <div className="container mx-auto px-4 py-8 w-full space-y-6 relative z-10">
-        {loading && <p className="text-sm text-gray-500">Loading reviews...</p>}
+        {loading && <p className="text-sm text-gray-500">{t('auto.loadingReviews')}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="bg-white border border-[#EADCC9]/65 rounded-2xl p-6 flex items-center justify-between shadow-xs">
            <div className="text-center flex-1 border-r border-[var(--card-border)]">
@@ -78,14 +80,14 @@ const MyReviews = () => {
                  {[1,2,3,4].map(i => <Star key={i} size={10} className="text-[var(--color-gold)] fill-[var(--color-gold)]" />)}
                  <Star size={10} className="text-gray-600" />
               </div>
-              <p className="text-[8px] font-black uppercase tracking-widest text-[var(--card-sub)]">Overall Rating</p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-[var(--card-sub)]">{t('auto.overallRating')}</p>
            </div>
            <div className="text-center flex-1">
               <h3 className="text-3xl font-black text-[var(--card-text)]">{reviews.length}</h3>
               <div className="flex justify-center gap-0.5 my-1">
                  <MessageSquare size={10} className="text-primary-dark fill-blue-500" />
               </div>
-              <p className="text-[8px] font-black uppercase tracking-widest text-[var(--card-sub)]">Total Reviews</p>
+              <p className="text-[8px] font-black uppercase tracking-widest text-[var(--card-sub)]">{t('auto.totalReviews')}</p>
            </div>
         </div>
 

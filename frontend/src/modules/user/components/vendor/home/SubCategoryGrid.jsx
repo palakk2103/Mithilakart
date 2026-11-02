@@ -4,6 +4,7 @@ import useVendorStore from '../../../../../store/useVendorStore';
 import { mapShopCategoryCards, findCategoryByName } from '../../../utils/mappers';
 import { handleImageError, getImageUrl } from '../../../../../shared/utils/imageUtils';
 import { useTranslation } from 'react-i18next';
+import { tName } from '../../../../../shared/utils/translateName';
 import { useLanguage } from '../../../../../shared/context/LanguageContext';
 import ScrollRow from './ScrollRow';
 
@@ -157,13 +158,13 @@ const SubCategoryGrid = () => {
     <div className="py-4 px-3 w-full max-w-[1600px] mx-auto">
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-[19px] md:text-[22px] font-black text-[#3F2A20] tracking-tight">
-          {t('home.shopByCategories', { defaultValue: 'Shop by Categories' })}
+          {t('home.shopByCategories', { defaultValue: t('auto.shopByCategories') })}
         </h2>
         <span
           onClick={() => navigate('/categories')}
           className="text-[15px] md:text-[16px] font-bold text-[#65B842] hover:text-[#529C33] cursor-pointer hover:underline transition-colors"
         >
-          {t('common.viewAll', { defaultValue: 'View All' })}
+          {t('common.viewAll', { defaultValue: t('auto.viewAll') })}
         </span>
       </div>
 
@@ -178,7 +179,7 @@ const SubCategoryGrid = () => {
               : 'bg-white text-[#3F2A20] border-[#EADCC9]/80 hover:bg-[#FFF8EE]'
           }`}
         >
-          {t('common.allCategories', { defaultValue: 'All Categories' })}
+          {t('common.allCategories', { defaultValue: t('auto.allCategories') })}
         </button>
 
         {mensItems.length > 0 && (
@@ -235,7 +236,7 @@ const SubCategoryGrid = () => {
             <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(61,35,20,0.05)] group-hover:border-[#65B842]/40 transition-all duration-300 transform">
               <div className="w-full h-[38px] sm:h-[40px] md:h-[44px] flex items-center justify-center px-0.5">
                 <span className="text-[13px] sm:text-[14px] md:text-[15px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
-                  {item.name}
+                  {tName(item.name)}
                 </span>
               </div>
 
@@ -243,7 +244,7 @@ const SubCategoryGrid = () => {
                 {item.img ? (
                   <img
                     src={item.img}
-                    alt={item.name}
+                    alt={tName(item.name)}
                     onError={handleImageError}
                     className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500" loading="lazy" decoding="async" />
                 ) : (

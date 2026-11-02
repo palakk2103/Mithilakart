@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { handleImageError, getProductImage } from '../../../../../shared/utils/imageUtils';
 import { useTranslation } from 'react-i18next';
+import AddToCartButton from '../../common/AddToCartButton';
 
 // Custom header flower matching Mithila art
 const HeaderFlower = () => (
@@ -219,6 +220,12 @@ const TopSelection = ({ items = [] }) => {
                 <span className="text-[12.5px] md:text-[16px] font-serif font-black text-[#4E2812] leading-tight mt-1 block truncate">
                   {product.tag}
                 </span>
+                {product.price > 0 && (
+                  <div className="flex items-center justify-between gap-2 mt-1.5">
+                    <span className="text-[12px] md:text-[14px] font-black text-[#4E2812]">₹{product.price}</span>
+                    <div className="w-[56px] md:w-[68px]"><AddToCartButton product={product} /></div>
+                  </div>
+                )}
               </div>
             </div>
           );

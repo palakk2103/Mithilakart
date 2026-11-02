@@ -2,8 +2,10 @@ import React from 'react';
 import { PackageX, Home, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const ProductNotFound = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -46,10 +48,10 @@ const ProductNotFound = () => {
         </div>
       </div>
 
-      <h3 className="text-xl font-black tracking-tight text-slate-800 mb-2">Product Not Available</h3>
+      <h3 className="text-xl font-black tracking-tight text-slate-800 mb-2">{t('auto.productNotAvailable')}</h3>
       
       <p className="text-slate-500 text-xs font-semibold leading-relaxed mb-8 max-w-xs mx-auto">
-        We're sorry, but the product you are looking for is currently unavailable, out of stock, or does not exist.
+        {t('auto.weReSorryButThe')}
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
@@ -58,7 +60,7 @@ const ProductNotFound = () => {
           className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl border ${borderPrimary} font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm`}
         >
           <ArrowLeft size={12} />
-          Back
+          {t('auto.back')}
         </button>
         
         <button
@@ -66,7 +68,7 @@ const ProductNotFound = () => {
           className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl ${buttonBg} text-white font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md`}
         >
           <Home size={12} />
-          Home
+          {t('auto.home')}
         </button>
       </div>
     </motion.div>

@@ -13,6 +13,7 @@ import { Button } from '../../components/ui';
 import { getProduct, createProduct, updateProduct, createProductListing, publishProductListing } from '../../services/sellerApi';
 import { customerApi } from '../../../../shared/api/client';
 import toast from 'react-hot-toast';
+import AdditionalCategoryPicker from './AdditionalCategoryPicker';
 
 const MARKETPLACE_TAB_OPTIONS = [
   { key: 'mithilakart', label: 'Mithilakart', legacyFlow: 'standard' },
@@ -101,6 +102,7 @@ const AddProduct = () => {
   const [quickDeliveryMinutes, setQuickDeliveryMinutes] = useState(20);
   const [categoriesTree, setCategoriesTree] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [extraCategoryIds, setExtraCategoryIds] = useState([]);
 
   const selectedCategoryId = watch('categoryId');
   const selectedSubcategoryId = watch('subcategoryId');
@@ -141,6 +143,7 @@ const AddProduct = () => {
         setError(null);
         const product = await getProduct(id);
         setExistingProduct(product);
+        setExtraCategoryIds(Array.isArray(product?.categoryIds) ? product.categoryIds.map((c) => String(c?._id || c)) : []);
         reset(mapProductToForm(product));
         setCommerceFlow(product?.commerceFlows?.[0] || 'standard');
         setDeliveryMode(inferDeliveryMode(product?.commerceFlows));
@@ -278,6 +281,7 @@ const AddProduct = () => {
       description: data.description || '',
       sku: data.sku?.trim() || `SKU-${Date.now().toString(36).toUpperCase()}`,
       categoryId: categoryIdEffective,
+      categoryIds: extraCategoryIds.filter((cid) => cid !== String(categoryIdEffective)),
       brand: data.brand || '',
       price,
       mrp,
@@ -523,6 +527,16 @@ const AddProduct = () => {
                     </select>
                   </div>
                 </div>
+
+                <AdditionalCategoryPicker
+                  tree={categoriesTree}
+                  value={extraCategoryIds}
+                  onChange={setExtraCategoryIds}
+                  primaryId={watch('childSubcategoryId') || watch('subcategoryId') || selectedCategoryId}
+                  disabled={categoriesLoading}
+                  inputClass={inputClass}
+                  labelClass={labelClass}
+                />
 
                 {selectedTabs.some((t) => QUICK_TAB_KEYS.has(t)) && (
                   <div>

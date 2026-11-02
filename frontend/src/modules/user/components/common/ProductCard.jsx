@@ -2,9 +2,12 @@ import React from 'react';
 import { Heart } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { tName } from '../../../../shared/utils/translateName';
 
 import useTabTheme from '../../../../shared/hooks/useTabTheme';
 import { useLanguage } from '../../../../shared/context/LanguageContext';
+import AddToCartButton from './AddToCartButton';
+import useWishlistToggle from '../../hooks/useWishlistToggle';
 import { handleImageError } from '../../../../shared/utils/imageUtils';
 
 const ProductCard = ({ product, onClick }) => {
@@ -13,6 +16,8 @@ const ProductCard = ({ product, onClick }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { primaryBg, primaryText, primaryBorder } = useTabTheme();
+  const { isWishlisted, toggle: toggleWishlist } = useWishlistToggle();
+  const wishlisted = isWishlisted(product);
 
   const handleClick = () => {
     if (onClick) {
@@ -38,15 +43,15 @@ const ProductCard = ({ product, onClick }) => {
 
   const deliveryBadge = product.deliveryEtaText ? (
     <>
-      <span className={`${primaryText} font-bold`}>⚡ Quick</span> {product.deliveryEtaText}
+      <span className={`${primaryText} font-bold`}>{t('auto.quick')}</span> {tName(product.deliveryEtaText)}
     </>
   ) : product.deliveryPromiseMinutes ? (
     <>
-      <span className={`${primaryText} font-bold`}>⚡ Quick</span> {product.deliveryPromiseMinutes} mins
+      <span className={`${primaryText} font-bold`}>{t('auto.quick')}</span> {product.deliveryPromiseMinutes} mins
     </>
   ) : (
     <>
-      <span className={`${primaryText} font-bold`}>Prime</span> {t('product.deliveryTomorrow')}
+      <span className={`${primaryText} font-bold`}>{t('x.prime')}</span> {t('product.deliveryTomorrow')}
     </>
   );
 
@@ -70,10 +75,13 @@ const ProductCard = ({ product, onClick }) => {
           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" onError={handleImageError} />
         <button
           type="button"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleWishlist(product);
+          }}
           className="absolute top-2 right-2 p-1.5 md:top-3 md:right-3 md:p-2 bg-white/80 backdrop-blur-sm rounded-full text-slate-300 hover:text-red-500 transition-colors shadow-sm"
         >
-          <Heart size={15} className="md:w-[18px] md:h-[18px]" />
+          <Heart size={15} className={`md:w-[18px] md:h-[18px] ${wishlisted ? 'fill-red-500 text-red-500' : ''}`} />
         </button>
       </div>
       <div className="p-2 md:p-3 flex flex-col flex-1">
@@ -107,6 +115,9 @@ const ProductCard = ({ product, onClick }) => {
           <p className="text-[9px] md:text-[10px] text-slate-500 mt-0.5 md:mt-1 flex items-center gap-1">
             {deliveryBadge}
           </p>
+        </div>
+        <div className="mt-auto pt-2">
+          <AddToCartButton product={product} />
         </div>
       </div>
     </div>

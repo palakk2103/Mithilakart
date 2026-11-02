@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Camera, Mic, Scan, Star, Heart, Plus, ChevronDown, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import useWishlistToggle from '../hooks/useWishlistToggle';
 import useAccountStore from '../../../store/useAccountStore';
 import useVendorStore from '../../../store/useVendorStore';
 import SearchInput from '../../../shared/components/SearchInput';
@@ -10,6 +11,8 @@ import { getDeals } from '../services/userApi';
 import { extractList, mapDealsProducts } from '../utils/mappers';
 import { addProductToCart } from '../utils/cartUtils';
 import { handleImageError } from '../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 
 const CornerFlower = () => (
   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-[10px] h-[10px] md:w-[13px] md:h-[13px] opacity-85 select-none pointer-events-none">
@@ -45,13 +48,14 @@ const CardBottomDivider = () => (
 );
 
 const DealsPage = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const sectionTitle = location.state?.title || "Today's Special Deals";
+  const sectionTitle = location.state?.title || t('home.todaysSpecialDeals');
   const { isDarkMode } = useAccountStore();
   const { homeSections } = useVendorStore();
   
-  const [wishlisted, setWishlisted] = useState({});
+  const { isWishlisted: checkWishlisted, toggle: toggleWishlistItem } = useWishlistToggle();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -117,16 +121,15 @@ const DealsPage = () => {
     e.stopPropagation();
     try {
       await addProductToCart(product);
-      toast.success('Added to cart');
+      toast.success(t('auto.addedToCart'));
     } catch {
-      toast.error('Could not add to cart');
+      toast.error(t('auto.couldNotAddToCart'));
     }
   };
 
-  const toggleWishlist = (id, e) => {
+  const toggleWishlist = (product, e) => {
     e.stopPropagation();
-    setWishlisted(prev => ({ ...prev, [id]: !prev[id] }));
-    toast.success(wishlisted[id] ? 'Removed from wishlist' : 'Added to wishlist');
+    toggleWishlistItem(product);
   };
 
   const filteredProducts = products.filter((p) => {
@@ -156,7 +159,7 @@ const DealsPage = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
-              placeholder="Search items, brands, categories..."
+              placeholder={t('auto.searchItemsBrandsCategories')}
               className="rounded-full shadow-xs"
               rightElement={
                 <div className="flex items-center gap-2.5 text-slate-500">
@@ -167,7 +170,7 @@ const DealsPage = () => {
                       toast.loading("Analyzing image search...", { id: "deals-img" });
                       setTimeout(() => {
                         toast.dismiss("deals-img");
-                        toast.success("Image search completed!");
+                        toast.success(t('auto.imageSearchCompleted'));
                         navigate('/search?q=Handicraft');
                       }, 1500);
                     }}
@@ -180,7 +183,7 @@ const DealsPage = () => {
                       toast.loading("Simulating barcode scanner...", { id: "deals-scan" });
                       setTimeout(() => {
                         toast.dismiss("deals-scan");
-                        toast.success("Barcode recognized successfully!");
+                        toast.success(t('auto.barcodeRecognizedSuccessfully'));
                         navigate('/search?q=Painting');
                       }, 1500);
                     }}
@@ -198,7 +201,7 @@ const DealsPage = () => {
             <div className={`w-10 h-1 mt-1 rounded-full ${isDarkMode ? 'bg-[var(--color-gold)] shadow-[0_0_10px_rgba(226,167,80,0.5)]' : 'bg-[#3E5A44] shadow-sm'}`}></div>
           </div>
           <span className="text-xs font-bold text-slate-500">
-            {filteredProducts.length} deals available
+            {t('common.dealsAvailable', { count: filteredProducts.length })}
           </span>
         </div>
       </div>
@@ -219,7 +222,7 @@ const DealsPage = () => {
       ) : filteredProducts.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4 p-3 md:p-4 max-w-[1600px] mx-auto">
           {filteredProducts.map((product) => {
-            const isItemWishlisted = wishlisted[product.id];
+            const isItemWishlisted = checkWishlisted(product);
             return (
               <div
                 key={product.id}
@@ -245,7 +248,7 @@ const DealsPage = () => {
 
                   {/* Wishlist Heart Button */}
                   <button
-                    onClick={(e) => toggleWishlist(product.id, e)}
+                    onClick={(e) => toggleWishlist(product, e)}
                     className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-6 h-6 md:w-7 md:h-7 rounded-full bg-white/90 backdrop-blur-xs shadow-sm flex items-center justify-center text-slate-700 hover:text-red-500 z-10 transition-all duration-200 active:scale-85"
                   >
                     <Heart
@@ -257,7 +260,7 @@ const DealsPage = () => {
                   {/* Discount Badge */}
                   {product.discount && (
                     <div className="absolute top-1.5 left-1.5 bg-[#3E5A44] text-white text-[7.5px] md:text-[8.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
-                      {product.discount}
+                      {tName(product.discount)}
                     </div>
                   )}
 
@@ -295,7 +298,7 @@ const DealsPage = () => {
                       className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs"
                     >
                       <ShoppingBag size={12} strokeWidth={2.2} />
-                      <span>Add to Cart</span>
+                      <span>{t('auto.addToCart')}</span>
                     </button>
                   </div>
 
@@ -310,13 +313,13 @@ const DealsPage = () => {
           <div className="w-16 h-16 rounded-full bg-emerald-50 text-[#3E5A44] flex items-center justify-center mb-3 shadow-inner">
             <ShoppingBag size={28} />
           </div>
-          <h3 className="text-base font-bold text-slate-800">No deals match your search</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-xs">Try different keywords or browse our catalog.</p>
+          <h3 className="text-base font-bold text-slate-800">{t('auto.noDealsMatchYourSearch')}</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-xs">{t('auto.tryDifferentKeywordsOrBrowse')}</p>
           <button
             onClick={() => { setSearchQuery(''); navigate('/'); }}
             className="mt-4 px-5 py-2 bg-[#3E5A44] text-white text-xs font-bold rounded-xl active:scale-95 transition-transform shadow-sm"
           >
-            Continue Shopping
+            {t('auto.continueShopping')}
           </button>
         </div>
       )}

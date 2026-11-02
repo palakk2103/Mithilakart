@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Heart, Star, ShoppingBag } from 'lucide-react';
+import useWishlistToggle from '../hooks/useWishlistToggle';
+import { ChevronRight, Heart, Star, ShoppingBag, MoreHorizontal } from 'lucide-react';
 import useVendorStore from '../../../store/useVendorStore';
 import { addProductToCart } from '../utils/cartUtils';
 import { getCategories } from '../services/catalogApi';
-import { mapMithilaCategoryCards } from '../utils/mappers';
+import { mapMithilaCategoryCards, mapNavChips } from '../utils/mappers';
+import { getHeaderChipIcon } from '../../../shared/constants/headerChipIcons';
 
 // Shared Home Components for Merchandising Pattern Alignment
 import LazySection from '../components/vendor/home/LazySection';
@@ -17,6 +19,8 @@ import AlreadyBoughtSection from '../components/vendor/home/AlreadyBoughtSection
 import bannerIllustration from '../../../assets/banner_illustration.png';
 import { handleImageError } from '../../../shared/utils/imageUtils';
 import ScrollRow from '../components/vendor/home/ScrollRow';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 
 const getDisplayName = (name) => {
   if (name === 'Mithila Festival & Cultural') return 'Festival & Cultural';
@@ -65,9 +69,12 @@ const MithilaCardBottomDivider = () => (
 );
 
 // Styled Product Card matching the reference image layout and structure
-const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel = 'Add to Cart', ctaDisabled = false }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const name = prod.title || prod.name || prod.label || 'Product';
+const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel, ctaDisabled = false }) => {
+  const { t } = useTranslation();
+  const { isWishlisted: checkWishlisted, toggle: toggleWishlist } = useWishlistToggle();
+  const wishlistTarget = prod.product?.id || prod.product?.productId ? prod.product : prod;
+  const isWishlisted = checkWishlisted(wishlistTarget);
+  const name =prod.title || prod.name || prod.label || 'Product';
   const price = prod.product?.price ?? prod.price ?? 0;
   const mrp = prod.product?.mrp || prod.mrp;
   const image = prod.img || prod.image;
@@ -101,7 +108,7 @@ const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel = 
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setIsWishlisted(!isWishlisted);
+            toggleWishlist({ ...wishlistTarget, image: wishlistTarget.image || image, title: wishlistTarget.title || name });
           }}
           className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-6 h-6 md:w-7 md:h-7 rounded-full bg-white/90 backdrop-blur-xs shadow-sm flex items-center justify-center text-slate-700 hover:text-red-500 z-10 transition-all duration-200 active:scale-85"
         >
@@ -114,7 +121,7 @@ const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel = 
         {/* Discount Badge */}
         {discount && (
           <div className="absolute top-1.5 left-1.5 bg-[#207C8A] text-white text-[7.5px] md:text-[8.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
-            {discount}
+            {tName(discount)}
           </div>
         )}
 
@@ -151,7 +158,7 @@ const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel = 
             className="w-full py-1.5 px-2 bg-[#F0F9FA] hover:bg-[#207C8A] text-[#207C8A] hover:text-white border border-[#207C8A]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#F0F9FA] disabled:hover:text-[#207C8A]"
           >
             <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>{ctaLabel}</span>
+            <span>{ctaLabel || t('common.addToCart')}</span>
           </button>
         </div>
 
@@ -164,13 +171,181 @@ const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel = 
 // Adapter so shared sections (AlreadyBoughtSection) can render the teal Mithila card
 const MithilaBoughtCard = ({ deal, ...rest }) => <MithilaDealCard prod={deal} {...rest} />;
 
+// Header categories row for the Mithilak tab: equal-width chips, wrapped names,
+// overflow goes into a "More" popup (same behaviour as the Mithilakart tab).
+const CHIP_W = 72;
+const CHIP_GAP = 8;
+const MORE_W = 56;
+const CHIP_MIN_W = 60;
+
+const MithilaChip = ({ chip, onClick, width = CHIP_W }) => {
+  const DynamicIcon = getHeaderChipIcon(chip.iconKey);
+  const label = chip.label ? tName(chip.label) : chip.rawLabel;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{ width }}
+      className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform outline-none"
+    >
+      <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full flex items-center justify-center bg-white border border-[#207C8A]/30 text-[#207C8A] shadow-[0_1.5px_4px_rgba(32,124,138,0.06)]">
+        {chip.imageUrl ? (
+          <img src={chip.imageUrl} alt={label} className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
+        ) : DynamicIcon ? (
+          <DynamicIcon size={18} />
+        ) : (
+          <ShoppingBag size={18} />
+        )}
+      </div>
+      <span className="w-full text-[11px] sm:text-[12px] mt-1.5 leading-[1.15] text-center line-clamp-2 break-words min-h-[2.3em] font-bold text-[#3F2A20]">
+        {label}
+      </span>
+    </button>
+  );
+};
+
+const MithilaHeaderChips = ({ chips, onSelect }) => {
+  const { t } = useTranslation();
+  const rowRef = useRef(null);
+  const moreBtnRef = useRef(null);
+  const menuRef = useRef(null);
+  const [visibleCount, setVisibleCount] = useState(null);
+  const [chipW, setChipW] = useState(CHIP_W);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) return undefined;
+    const compute = () => {
+      const cs = window.getComputedStyle(row);
+      const available = row.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      const total = chips.length * CHIP_W + Math.max(chips.length - 1, 0) * CHIP_GAP;
+      if (total <= available) {
+        setVisibleCount(chips.length);
+        setChipW(CHIP_W);
+        return;
+      }
+      // Fit as many chips as possible (min width), then stretch them evenly so
+      // "More" sits right after the last chip with the same gap.
+      const fit = Math.max(Math.floor((available - MORE_W) / (CHIP_MIN_W + CHIP_GAP)), 1);
+      setVisibleCount(fit);
+      setChipW(Math.min(CHIP_W, Math.floor((available - MORE_W - CHIP_GAP * fit) / fit)));
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(row);
+    return () => ro.disconnect();
+  }, [chips.length]);
+
+  useEffect(() => {
+    if (!moreOpen) return undefined;
+    const inside = (el, target) => el && (el === target || el.contains(target));
+    const onDown = (e) => {
+      if (inside(menuRef.current, e.target) || inside(moreBtnRef.current, e.target)) return;
+      setMoreOpen(false);
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setMoreOpen(false); };
+    const onScroll = (e) => { if (!inside(menuRef.current, e.target)) setMoreOpen(false); };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [moreOpen]);
+
+  const toggleMore = () => {
+    if (!moreOpen && moreBtnRef.current) {
+      const rect = moreBtnRef.current.getBoundingClientRect();
+      const menuWidth = 220;
+      const margin = 12;
+      const left = Math.min(Math.max(rect.right - menuWidth, margin), window.innerWidth - menuWidth - margin);
+      setMenuPos({ top: rect.bottom + 8, left });
+    }
+    setMoreOpen((p) => !p);
+  };
+
+  if (!chips.length) return null;
+  const shown = visibleCount ?? chips.length;
+  const visible = chips.slice(0, shown);
+  const hidden = chips.slice(shown);
+
+  return (
+    <>
+      <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F5F9FA]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(32,124,138,0.06)] border-b border-[#207C8A]/15 py-2">
+        <div ref={rowRef} className="flex items-start overflow-hidden px-2 sm:px-3" style={{ gap: CHIP_GAP }}>
+          {visible.map((chip) => (
+            <MithilaChip key={chip.id} chip={chip} width={chipW} onClick={() => onSelect(chip)} />
+          ))}
+          {hidden.length > 0 && (
+            <button
+              ref={moreBtnRef}
+              type="button"
+              onClick={toggleMore}
+              aria-haspopup="true"
+              aria-expanded={moreOpen}
+              style={{ width: MORE_W }}
+              className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
+            >
+              <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full bg-[#207C8A] border border-[#207C8A] text-white flex items-center justify-center shadow-xs">
+                <MoreHorizontal size={18} />
+              </div>
+              <span className="text-[11px] sm:text-[12px] font-bold text-[#3F2A20] mt-1.5 leading-[1.15]">{t('common.more')}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {moreOpen && hidden.length > 0 && (
+        <div
+          ref={menuRef}
+          role="menu"
+          className="fixed z-[70] w-[220px] overflow-y-auto overscroll-contain rounded-2xl border border-[#207C8A]/20 bg-white shadow-[0_12px_30px_rgba(32,124,138,0.2)] p-2"
+          style={{ top: menuPos.top, left: menuPos.left, maxHeight: `min(70vh, calc(100dvh - ${menuPos.top + 76}px))` }}
+        >
+          {hidden.map((chip) => {
+            const DynamicIcon = getHeaderChipIcon(chip.iconKey);
+            const label = chip.label ? tName(chip.label) : chip.rawLabel;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                role="menuitem"
+                onClick={() => { onSelect(chip); setMoreOpen(false); }}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-[12.5px] font-bold text-[#3F2A20] hover:bg-[#F0F9FA] transition-colors cursor-pointer"
+              >
+                <span className="w-7 h-7 rounded-full bg-[#207C8A]/10 flex items-center justify-center flex-shrink-0 text-[#207C8A]">
+                  {chip.imageUrl ? (
+                    <img src={chip.imageUrl} alt={label} className="w-4 h-4 object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
+                  ) : DynamicIcon ? (
+                    <DynamicIcon size={14} />
+                  ) : (
+                    <ShoppingBag size={14} />
+                  )}
+                </span>
+                <span className="truncate">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+};
+
 const Mithilak = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [mithilaCategories, setMithilaCategories] = useState([]);
   const { fetchHomeSections, homeSections, homeBanners } = useVendorStore();
   const [bannerIndex, setBannerIndex] = useState(0);
+  // Header categories (chips) created by admin for the Mithilak tab
+  const [headerChips, setHeaderChips] = useState([]);
   const adminBanners = (Array.isArray(homeBanners) ? homeBanners : [])
     .filter((b) => b?.imageUrl || b?.image)
     .map((b, idx) => ({
@@ -192,7 +367,9 @@ const Mithilak = () => {
     localStorage.setItem('isFreshGroceryFlow', 'false');
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('cartUpdated'));
-    fetchHomeSections('mithilak');
+    fetchHomeSections('mithilak').then((data) => {
+      setHeaderChips(mapNavChips(data?.chips || []));
+    });
   }, [fetchHomeSections]);
 
   useEffect(() => {
@@ -218,14 +395,26 @@ const Mithilak = () => {
   };
 
   return (
-    <div className="bg-[#F5F9FA] min-h-screen px-4 py-5 select-none pb-24">
+    <div className="bg-[#F5F9FA] min-h-screen select-none pb-24">
+      {/* 0. Header Categories (admin-managed for Mithilak tab) */}
+      <MithilaHeaderChips
+        chips={headerChips}
+        onSelect={(chip) => {
+          if (!chip.categoryId) return;
+          localStorage.setItem('isMithilakFlow', 'true');
+          localStorage.setItem('isQuickShopFlow', 'false');
+          navigate('/mithilak/category', { state: { category: chip.rawLabel || chip.label, categoryId: chip.categoryId } });
+        }}
+      />
+
+      <div className="px-4 py-5">
       {/* 1. Page Title Header */}
       <div className="mb-4 px-1">
         <h2 className="text-[19px] font-bold text-[#3F2A20] tracking-tight leading-none mb-1">
-          Mithila Specialities
+          {t('auto.mithilaSpecialities')}
         </h2>
         <p className="text-[10px] text-[#207C8A] font-extrabold tracking-widest uppercase mt-1">
-          HANDPICKED CULTURAL PRODUCTS
+          {t('auto.handpickedCulturalProducts')}
         </p>
       </div>
 
@@ -258,13 +447,13 @@ const Mithilak = () => {
       <div className="mb-6 bg-gradient-to-r from-[#207C8A] to-[#5DB6C3] rounded-2xl p-4 text-white relative overflow-hidden shadow-sm flex items-center justify-between h-[165px]">
         <div className="z-10 flex-1 max-w-[65%] flex flex-col justify-center h-full">
           <span className="bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full w-max uppercase tracking-wider">
-            MITHILA UTSAV
+            {t('auto.mithilaUtsav')}
           </span>
           <h3 className="text-[17px] font-bold mt-2 leading-tight tracking-tight">
-            Authentic Mithila Artistry
+            {t('auto.authenticMithilaArtistry')}
           </h3>
           <p className="text-[11.5px] text-white/90 font-medium mt-1">
-            Flat 20% OFF on Paintings & Crafts
+            {t('auto.flat20OffOnPaintings')}
           </p>
         </div>
         <div className="absolute right-0 bottom-0 h-full w-[42%] flex items-end justify-end pointer-events-none overflow-hidden">
@@ -281,7 +470,7 @@ const Mithilak = () => {
         <div className="py-4 w-full max-w-[1600px] mx-auto mb-5 md:mb-8">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-[16px] md:text-[18px] font-black text-[#3F2A20] tracking-tight">
-              Shop by Categories
+              {t('auto.shopByCategories')}
             </h2>
             <span
               onClick={() => {
@@ -291,7 +480,7 @@ const Mithilak = () => {
               }}
               className="text-[13px] font-bold text-[#207C8A] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
             >
-              View All
+              {t('auto.viewAll')}
             </span>
           </div>
 
@@ -300,7 +489,7 @@ const Mithilak = () => {
               type="button"
               className="px-3.5 py-1.5 rounded-full text-[12px] md:text-[13px] font-black whitespace-nowrap border bg-[#207C8A] text-white border-[#207C8A] shadow-xs"
             >
-              All Categories
+              {t('auto.allCategories')}
             </button>
           </div>
 
@@ -316,8 +505,8 @@ const Mithilak = () => {
                 className="flex-shrink-0 w-[104px] sm:w-[120px] md:w-[140px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
               >
                 <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[#207C8A]/40 transition-all duration-300 transform">
-                  <div className="w-full h-[32px] sm:h-[34px] md:h-[38px] flex items-center justify-center px-0.5">
-                    <span className="text-[11px] sm:text-[12px] md:text-[13px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
+                  <div className="w-full h-[38px] sm:h-[40px] md:h-[44px] flex items-center justify-center px-0.5">
+                    <span className="text-[13px] sm:text-[14px] md:text-[15px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
                       {getDisplayName(item.name)}
                     </span>
                   </div>
@@ -352,7 +541,7 @@ const Mithilak = () => {
       {/* 5. Today's Special Deals / Best Sellers Section */}
       <div className="md:max-w-[1600px] md:mx-auto md:w-full mb-6 md:mb-8">
         <div className="flex items-center justify-between mb-4 px-1">
-          <h2 className="text-[17px] font-bold text-[#3F2A20] leading-none">Today's Special Deals</h2>
+          <h2 className="text-[17px] font-bold text-[#3F2A20] leading-none">{t('auto.todaySSpecialDeals')}</h2>
           <span 
             onClick={() => {
               localStorage.setItem('isMithilakFlow', 'true');
@@ -361,7 +550,7 @@ const Mithilak = () => {
             }}
             className="text-[12px] text-[#207C8A] font-bold cursor-pointer hover:underline flex items-center gap-0.5"
           >
-            View All <ChevronRight size={13} strokeWidth={2.5} className="inline-block" />
+            {t('common.viewAll')} <ChevronRight size={13} strokeWidth={2.5} className="inline-block" />
           </span>
         </div>
 
@@ -393,7 +582,7 @@ const Mithilak = () => {
                     });
                     triggerToast(`${name} added to cart!`);
                   } catch (err) {
-                    triggerToast(err?.message || 'Could not add to cart');
+                    triggerToast(err?.message || t('auto.couldNotAddToCart'));
                   }
                 }}
               />
@@ -435,6 +624,7 @@ const Mithilak = () => {
           {toastMessage}
         </div>
       )}
+      </div>
     </div>
   );
 };

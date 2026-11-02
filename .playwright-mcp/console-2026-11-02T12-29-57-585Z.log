@@ -1,0 +1,6 @@
+[     626ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[     841ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5000/api/v1/users/me/addresses:0
+[     864ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5000/api/v1/users/me/addresses:0
+[    1031ms] [WARNING] Geolocation permission has been blocked as the user has ignored the permission prompt several times. This can be reset in Page Info which can be accessed by clicking the tune icon next to the URL. See https://www.chromestatus.com/feature/6443143280984064 for more information. @ http://localhost:3000/search?q=Rice&tab=groceries_fresh:0
+[    4096ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://images.dealshare.in/1742371274774:F870A3D320_1.png?tr=f-webp:0
+[    4105ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://images.dealshare.in/1742374265318:0DB212E68E_1.png?tr=f-webp:0

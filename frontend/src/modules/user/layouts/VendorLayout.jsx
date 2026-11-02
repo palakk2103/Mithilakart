@@ -21,6 +21,7 @@ import useAccountStore from '../../../store/useAccountStore';
 import useVendorStore from '../../../store/useVendorStore';
 import { fetchCartItems } from '../utils/cartUtils';
 import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import Footer from '../../../shared/components/Footer';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
@@ -282,7 +283,7 @@ const VendorLayout = () => {
                 <span>{t('nav.cart')}</span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${cartBadgeBg} text-white`}>{cartTotalItems}</span>
               </Link>
-              <Link to="/profile" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>Profile</Link>
+              <Link to="/profile" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>{t('auto.profile')}</Link>
             </nav>
 
             <div className="ml-auto flex items-center gap-6">
@@ -294,7 +295,7 @@ const VendorLayout = () => {
                   onClick={() => setPromptOpen(true)}
                   className="font-bold truncate max-w-[200px] hover:underline text-left"
                 >
-                  {deliverTo.label}
+                  {tName(deliverTo.label)}
                 </button>
               </div>
             </div>
@@ -457,7 +458,7 @@ const VendorLayout = () => {
                 setIsFloatingCartDismissed(true);
               }}
               className="p-1 rounded-full hover:bg-white/20 active:scale-90 transition-all text-white/80 hover:text-white"
-              aria-label="Dismiss cart notification"
+              aria-label={t('auto.dismissCartNotification')}
             >
               <X size={18} strokeWidth={2.5} />
             </button>

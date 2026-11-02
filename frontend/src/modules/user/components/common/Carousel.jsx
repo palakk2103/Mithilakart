@@ -7,6 +7,7 @@ import MakeupImg from '../../../../assets/Carousel/mkup-removebg-preview.png';
 import ElectronicsImg from '../../../../assets/Carousel/elctrncs-removebg-preview.png';
 import ClothesImg from '../../../../assets/Carousel/clths-removebg-preview.png';
 import { handleImageError } from '../../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
 
 const slides = [
   {
@@ -48,6 +49,7 @@ const slides = [
 ];
 
 const Carousel = () => {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const nextSlide = () => {
@@ -96,8 +98,8 @@ const Carousel = () => {
             <div className="bg-white p-3 shadow-sm rounded-sm flex items-center gap-3 w-fit border border-gray-100">
               <img src="https://m.media-amazon.com/images/G/31/marketing/fba/fba-badge_18._CB485935210_.png" alt="Amazon Pay" className="h-6" onError={handleImageError} />
               <div className="text-[12px] leading-tight font-bold">
-                Unlimited 5% cashback
-                <div className="text-gray-500 font-normal">with Amazon Pay ICICI Bank credit card</div>
+                {t('auto.unlimited5Cashback')}
+                <div className="text-gray-500 font-normal">{t('auto.withAmazonPayIciciBank')}</div>
               </div>
             </div>
           </div>

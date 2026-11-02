@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import useWishlistToggle from '../hooks/useWishlistToggle';
 import { ShoppingBag, Sparkles, Gift, Monitor, Gem, Shirt, Gamepad2, BookOpen, Zap, ChevronRight, MoreHorizontal, Heart, Star } from 'lucide-react';
 import SEO from '../../../shared/components/SEO';
 import { getHeaderChipIcon } from '../../../shared/constants/headerChipIcons';
@@ -28,6 +29,7 @@ import toast from 'react-hot-toast';
 import { addProductToCart } from '../utils/cartUtils';
 import { mapHomeBanners, mapNavChips } from '../utils/mappers';
 import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 import { useLanguage } from '../../../shared/context/LanguageContext';
 import { handleImageError } from '../../../shared/utils/imageUtils';
 
@@ -60,7 +62,7 @@ const CategoryChip = ({ cat, active, onClick }) => {
         )}
       </div>
       <span
-        className={`text-[9.5px] sm:text-[10px] mt-1.5 leading-none text-center max-w-[64px] sm:max-w-[76px] truncate ${
+        className={`text-[11.5px] sm:text-[12px] mt-1.5 leading-none text-center whitespace-nowrap ${
           active ? 'font-black text-[#3E5A44]' : 'font-bold text-[#3F2A20]'
         }`}
       >
@@ -109,8 +111,11 @@ const CardBottomDivider = () => (
 );
 
 // Styled Product Card matching the reference image layout and structure
-const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel = 'Add to Cart', ctaDisabled = false }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel, ctaDisabled = false }) => {
+  const { t } = useTranslation();
+  const { isWishlisted: checkWishlisted, toggle: toggleWishlist } = useWishlistToggle();
+  const wishlistTarget = deal.product?.id || deal.product?.productId ? deal.product : deal;
+  const isWishlisted = checkWishlisted(wishlistTarget);
   const title = deal.title || deal.name;
   const brand = deal.product?.brand || 'MITHILAKART';
   const price = deal.product?.price ?? deal.price;
@@ -144,7 +149,7 @@ const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel = '
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setIsWishlisted(!isWishlisted);
+            toggleWishlist({ ...wishlistTarget, image: wishlistTarget.image || deal.img, title: wishlistTarget.title || title });
           }}
           className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-6 h-6 md:w-7 md:h-7 rounded-full bg-white/90 backdrop-blur-xs shadow-sm flex items-center justify-center text-slate-700 hover:text-red-500 z-10 transition-all duration-200 active:scale-85"
         >
@@ -157,7 +162,7 @@ const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel = '
         {/* Discount Badge */}
         {discount && (
           <div className="absolute top-1.5 left-1.5 bg-[#3E5A44] text-white text-[7.5px] md:text-[8.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
-            {discount}
+            {tName(discount)}
           </div>
         )}
 
@@ -194,7 +199,7 @@ const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel = '
             className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#FFF8EE] disabled:hover:text-[#3E5A44]"
           >
             <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>{ctaLabel}</span>
+            <span>{ctaLabel || t('common.addToCart')}</span>
           </button>
         </div>
 
@@ -229,10 +234,10 @@ const Home = () => {
 
   const categoryBanners = useMemo(() => {
     const fallbackBanners = [
-      { id: 'g1', image: '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png', title: 'Shop More Save More' },
-      { id: 'g2', image: '/Gemini_Generated_Image_rhy76srhy76srhy7.png', title: 'Authentic Mithila Artistry' },
-      { id: 'g3', image: '/Gemini_Generated_Image_unwuxnunwuxnunwu.png', title: 'Cultural Heritage Collection' },
-      { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: 'Special Festival Handicrafts' }
+      { id: 'g1', image: '/Gemini_Generated_Image_pxcb6vpxcb6vpxcb.png', title: t('home.fbShopMore') },
+      { id: 'g2', image: '/Gemini_Generated_Image_rhy76srhy76srhy7.png', title: t('home.fbAuthentic') },
+      { id: 'g3', image: '/Gemini_Generated_Image_unwuxnunwuxnunwu.png', title: t('home.fbHeritage') },
+      { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: t('home.fbFestival') }
     ];
 
     const homeBannerList = mapHomeBanners(homeBanners, fallbackBanners);
@@ -247,7 +252,7 @@ const Home = () => {
       'Cosmetics': homeBannerList,
       'Fashion': homeBannerList
     };
-  }, [homeBanners]);
+  }, [homeBanners, t]);
 
   const mainCategoriesList = useMemo(() => {
     const iconMap = {
@@ -281,7 +286,7 @@ const Home = () => {
       const isYouBuy = raw === 'You Buy' || chip.label === 'You Buy' || chip.id === 'for-you';
       const label = isYouBuy 
         ? t('categories.for-you', { defaultValue: chip.label || 'You Buy' })
-        : (chip.label || t(`categories.${chip.id}`, { defaultValue: raw }));
+        : (chip.label ? tName(chip.label) : t(`categories.${chip.id}`, { defaultValue: raw }));
 
       // Admin-selected React icon (dynamic, works for any newly created
       // header category chip) takes priority; legacy hardcoded lookup and
@@ -436,6 +441,9 @@ const Home = () => {
     compute();
     const ro = new ResizeObserver(compute);
     ro.observe(row);
+    // Re-measure when chip widths change (fonts/translations loading) so More never gets clipped
+    Array.from(measure.children).forEach((el) => ro.observe(el));
+    if (document.fonts?.ready) document.fonts.ready.then(compute).catch(() => {});
     return () => ro.disconnect();
   }, [mainCategoriesList]);
 
@@ -447,20 +455,20 @@ const Home = () => {
   return (
     <>
       <SEO
-        title="Quick Commerce & Everyday Essentials"
-        description="Shop Mithilakart for groceries, fashion, electronics, beauty and authentic Mithila crafts — fast quick-commerce delivery and standard shipping, all in one place."
+        title={t('home.seoTitle')}
+        description={t('home.seoDescription')}
         path="/home"
       />
     <div className="pb-2 bg-transparent text-primary-dark">
       {/* 1. TOP HORIZONTAL CATEGORY ROW (Sticky Header Categories on Scroll) */}
       <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F6F8F3]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(63,42,32,0.04)] border-b border-[#EADCC9]/40 py-2 mb-3 transition-all duration-200">
-        <div ref={chipRowRef} data-testid="category-chip-row" className="relative flex items-center gap-2 sm:gap-3 overflow-hidden px-2 sm:px-3">
+        <div ref={chipRowRef} data-testid="category-chip-row" className="relative flex items-center justify-between gap-2 sm:gap-3 overflow-hidden px-2 sm:px-3">
           {/* Hidden measuring row (all chips + More) used to compute how many fit */}
           <div ref={measureRef} aria-hidden="true" className="absolute left-0 top-0 flex items-center gap-2 sm:gap-3 invisible pointer-events-none h-0 overflow-hidden">
             {mainCategoriesList.map((cat, idx) => (
               <CategoryChip key={cat.id ?? idx} cat={cat} active={false} onClick={() => {}} />
             ))}
-            <div className="w-[46px] sm:w-[50px] flex-shrink-0" />
+            <div className="min-w-[56px] flex-shrink-0 text-[12px] font-bold px-1">{t('common.more')}</div>
           </div>
 
           {visibleChips.map((cat, idx) => (
@@ -474,14 +482,14 @@ const Home = () => {
               onClick={toggleMoreMenu}
               aria-haspopup="true"
               aria-expanded={moreOpen}
-              aria-label="More categories"
-              className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
+              aria-label={t('home.moreCategories')}
+              className="min-w-[56px] flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
             >
               <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full bg-[#3E5A44] border border-[#3E5A44] text-white flex items-center justify-center shadow-xs">
                 <MoreHorizontal size={18} />
               </div>
-              <span className="text-[9.5px] sm:text-[10px] font-bold text-[#3F2A20] mt-1.5 leading-none">
-                {t('common.more', { defaultValue: 'More' })}
+              <span className="text-[11.5px] sm:text-[12px] font-bold text-[#3F2A20] mt-1.5 leading-none">
+                {t('common.more')}
               </span>
             </button>
           )}
@@ -494,7 +502,7 @@ const Home = () => {
         <div
           ref={moreMenuRef}
           role="menu"
-          aria-label="More categories"
+          aria-label={t('home.moreCategories')}
           className="fixed z-[70] w-[220px] overflow-y-auto overscroll-contain touch-pan-y rounded-2xl border border-[#EADCC9] bg-white shadow-[0_12px_30px_rgba(63,42,32,0.18)] p-2"
           style={{
             top: moreMenuPos.top,
@@ -566,18 +574,18 @@ const Home = () => {
         <div className="py-2 px-3 w-full max-w-[1600px] mx-auto select-none mb-5 md:mb-8">
           <div className="flex justify-between items-center mb-3.5 px-1">
             <h2 className="text-[15.5px] font-black text-[#3F2A20] tracking-tight">
-              Today's Special Deals
+              {t('home.todaysSpecialDeals')}
             </h2>
             <span
               onClick={() => navigate('/deals', {
                 state: {
                   deals: homeSections.todaysSpecialDeals?.length ? homeSections.todaysSpecialDeals : homeSections.brandsSpotlight || [],
-                  title: "Today's Special Deals"
+                  title: t('home.todaysSpecialDeals')
                 }
               })}
               className="text-[11.5px] font-bold text-[#3E5A44] hover:underline cursor-pointer flex items-center gap-0.5"
             >
-              View All <ChevronRight size={13} strokeWidth={2.5} className="inline-block" />
+              {t('common.viewAll')} <ChevronRight size={13} strokeWidth={2.5} className="inline-block" />
             </span>
           </div>
 
@@ -599,9 +607,9 @@ const Home = () => {
                         price: d.product?.price ?? d.price,
                         image: d.img,
                       });
-                      toast.success(`${d.title || d.name} added to cart!`);
+                      toast.success(t('common.addedToCart', { name: d.title || d.name }));
                     } catch (err) {
-                      toast.error(err?.message || 'Could not add to cart');
+                      toast.error(err?.message || t('common.couldNotAddToCart'));
                     }
                   }}
                 />

@@ -7,6 +7,7 @@ import { getCategories } from '../services/catalogApi';
 import { mapCategorySections } from '../utils/mappers';
 import { DEFAULT_PRODUCT_IMAGE, handleImageError } from '../../../shared/utils/imageUtils';
 import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 import { useLanguage } from '../../../shared/context/LanguageContext';
 
 // Import Assets (aligned with categories)
@@ -373,7 +374,7 @@ const Categories = () => {
   };
 
   return (
-    <div className={`${pageBg} min-h-screen flex flex-col font-sans text-slate-800 relative`}>
+    <div className={`${pageBg} h-[100dvh] overflow-hidden flex flex-col font-roboto text-slate-800 relative`}>
       {/* Global Repeating Mithila Art Page Background Texture */}
       {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (
         <div 
@@ -401,7 +402,7 @@ const Categories = () => {
             <ArrowLeft size={22} />
           </button>
           <h1 className={`text-[19px] font-black tracking-tight ${headerTextColor}`}>
-            {isMithilakFlow ? 'Mithila Specialities' : isFreshGroceryFlow ? 'Fresh & Groceries' : isQuickShopFlow ? 'Quick Categories' : 'Categories'}
+            {isMithilakFlow ? t('categoriesPage.mithilaSpecialities') : isFreshGroceryFlow ? t('categoriesPage.freshGroceries') : isQuickShopFlow ? t('categoriesPage.quickCategories') : t('categoriesPage.categories')}
           </h1>
         </div>
         <button 
@@ -416,9 +417,9 @@ const Categories = () => {
       </div>
 
       {/* Split-pane Layout (All Screen Sizes — scrollable category tabs + content) */}
-      <div className="flex relative z-10 flex-1 h-[calc(100vh-60px)] overflow-hidden md:max-w-5xl md:mx-auto md:w-full md:border-x md:border-slate-200/70 md:shadow-sm">
+      <div className="flex relative z-10 flex-1 min-h-0 overflow-hidden md:max-w-5xl md:mx-auto md:w-full md:border-x md:border-slate-200/70 md:shadow-sm">
         {/* Left Sidebar */}
-        <div className="w-[95px] md:w-[190px] lg:w-[220px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto overscroll-contain no-scrollbar pb-24">
+        <div className="w-[100px] md:w-[190px] lg:w-[220px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto overscroll-contain no-scrollbar pb-24">
           {sectionsList.map((section, sIdx) => {
             const isActive = activeSectionIndex === sIdx;
             const sectionImg = section.items[0]?.img;
@@ -431,8 +432,8 @@ const Categories = () => {
                 }}
                 className={`w-full py-4 px-1.5 flex flex-col items-center gap-1.5 border-b border-slate-100 relative transition-all duration-200 ${
                   isActive 
-                    ? 'bg-white font-black' 
-                    : 'opacity-70 hover:opacity-100'
+                    ? 'bg-white font-black'
+                    : 'hover:bg-white/60'
                 }`}
               >
                 {/* Active Indicator Bar on the left */}
@@ -445,18 +446,18 @@ const Categories = () => {
                   <div className="w-11 h-11 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200/50 p-0.5 shadow-sm">
                     <img 
                       src={sectionImg || DEFAULT_PRODUCT_IMAGE} 
-                      alt={section.title} 
+                      alt={tName(section.title)} 
                       onError={handleImageError}
                       className="w-full h-full object-cover rounded-full" loading="lazy" decoding="async" />
                   </div>
                 )}
                 
-                <span className={`text-[9.5px] text-center leading-tight tracking-tight break-words w-full ${
-                  isActive 
-                    ? `${textPrimary} font-black` 
-                    : 'text-slate-600 font-medium'
+                <span className={`text-[12.5px] text-center leading-tight break-words w-full ${
+                  isActive
+                    ? `${textPrimary} font-bold`
+                    : 'text-slate-800 font-medium'
                 }`}>
-                  {section.title}
+                  {tName(section.title)}
                 </span>
               </button>
             );
@@ -464,7 +465,7 @@ const Categories = () => {
         </div>
 
         {/* Right Content Area */}
-        <div ref={rightContentRef} className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-4">
+        <div ref={rightContentRef} className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-3 min-[360px]:p-4">
           {selectedSubCategory ? (
             <div className="space-y-4 animate-in fade-in duration-200">
               {/* Back button & Title Header */}
@@ -472,16 +473,16 @@ const Categories = () => {
                 <button
                   onClick={() => setSelectedSubCategory(null)}
                   className="p-1.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center shadow-xs"
-                  aria-label="Back"
+                  aria-label={t('common.back')}
                 >
                   <ArrowLeft size={16} />
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    {sectionsList[activeSectionIndex]?.title}
+                    {tName(sectionsList[activeSectionIndex]?.title)}
                   </div>
-                  <h2 className="text-[14px] font-black text-slate-800 tracking-tight uppercase truncate">
-                    {selectedSubCategory.name}
+                  <h2 className="text-[14px] font-black text-slate-800 tracking-tight uppercase break-words leading-tight">
+                    {tName(selectedSubCategory.name)}
                   </h2>
                 </div>
               </div>
@@ -491,13 +492,13 @@ const Categories = () => {
                 onClick={handleViewAllForSubCategory}
                 className="w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-emerald-800 flex items-center justify-between text-[11px] font-extrabold active:scale-[0.98] transition-transform shadow-xs"
               >
-                <span>All {selectedSubCategory.name} Products</span>
-                <span className="text-[10px] bg-[#6FAE4A] text-white px-2.5 py-0.5 rounded-full font-black">View All →</span>
+                <span>{t('common.allProductsOf', { name: tName(selectedSubCategory.name) })}</span>
+                <span className="text-[10px] bg-[#6FAE4A] text-white px-2.5 py-0.5 rounded-full font-black">{t('common.viewAll')} →</span>
               </button>
 
               {/* 3-Column Grid of Level 3 Subcategories */}
               <div>
-                <h3 className="text-[10.5px] font-black text-slate-400 tracking-tight mb-3 uppercase">
+                <h3 className="text-[11px] font-bold text-slate-500 tracking-tight mb-3 uppercase">
                   Explore Subcategories ({selectedSubCategory.children?.length || 0})
                 </h3>
                 <div className="grid grid-cols-3 gap-x-2 gap-y-4">
@@ -510,14 +511,14 @@ const Categories = () => {
                       <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 relative shadow-[0_2px_6px_rgba(0,0,0,0.03)] hover:border-emerald-300 transition-colors">
                         <img
                           src={sub.img || DEFAULT_PRODUCT_IMAGE}
-                          alt={sub.name}
+                          alt={tName(sub.name)}
                           onError={handleImageError}
                           className="w-full h-full object-cover rounded-xl"
                           loading="lazy"
                         />
                       </div>
-                      <span className="text-[9.5px] font-bold text-slate-700 text-center leading-tight tracking-tight line-clamp-2">
-                        {sub.name}
+                      <span className="text-[11.5px] min-[360px]:text-[12.5px] font-medium text-slate-900 text-center leading-tight break-words w-full">
+                        {tName(sub.name)}
                       </span>
                     </div>
                   ))}
@@ -528,7 +529,7 @@ const Categories = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-[13px] font-black text-slate-800 tracking-tight mb-4 uppercase">
-                  {sectionsList[activeSectionIndex].title}
+                  {tName(sectionsList[activeSectionIndex].title)}
                 </h2>
                 
                 {/* 3-Column Grid of Subcategories */}
@@ -542,7 +543,7 @@ const Categories = () => {
                       <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 relative shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
                         <img 
                           src={item.img || DEFAULT_PRODUCT_IMAGE} 
-                          alt={item.name} 
+                          alt={tName(item.name)} 
                           onError={handleImageError}
                           className="w-full h-full object-cover rounded-xl" loading="lazy" decoding="async" />
                         {item.children && item.children.length > 0 && (
@@ -551,8 +552,8 @@ const Categories = () => {
                           </div>
                         )}
                       </div>
-                      <span className="text-[9.5px] font-bold text-slate-700 text-center leading-tight tracking-tight line-clamp-2">
-                        {item.name.replace('Mithila ', '')}
+                      <span className="text-[11.5px] min-[360px]:text-[12.5px] font-medium text-slate-900 text-center leading-tight break-words w-full">
+                        {tName(item.name).replace('Mithila ', '')}
                       </span>
                     </div>
                   ))}
@@ -561,11 +562,11 @@ const Categories = () => {
 
               {/* Extra banner or explore section */}
               <div className="mt-8 pt-4 border-t border-slate-100">
-                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-3">Explore More</h3>
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-3">{t('categoriesPage.exploreMore')}</h3>
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-3 border border-amber-100/50 flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <p className="text-[11px] font-black text-amber-900">Trending in {sectionsList[activeSectionIndex].title}</p>
-                    <p className="text-[9px] text-amber-700/80">Check out the newest arrivals</p>
+                    <p className="text-[11px] font-black text-amber-900">{t('categoriesPage.trendingIn', { name: tName(sectionsList[activeSectionIndex].title) })}</p>
+                    <p className="text-[9px] text-amber-700/80">{t('categoriesPage.newestArrivals')}</p>
                   </div>
                   <button 
                     onClick={() => {
@@ -574,7 +575,7 @@ const Categories = () => {
                     }}
                     className="px-2.5 py-1 text-[9px] font-black bg-amber-600 text-white rounded-lg shadow-sm active:scale-95 transition-transform"
                   >
-                    View All
+                    {t('common.viewAll')}
                   </button>
                 </div>
               </div>

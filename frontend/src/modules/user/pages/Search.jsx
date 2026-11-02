@@ -12,6 +12,8 @@ import { extractList, mapProductForCard } from '../utils/mappers';
 import { getCurrentMarketplaceTab, productBelongsToTab } from '../../../shared/utils/marketplaceHelpers';
 
 import SamsungImg from '../../../assets/products/product01.jpg';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 
 const MARKETPLACE_TAB_CONFIG = [
   {
@@ -76,6 +78,7 @@ const resolveTabKey = (val) => {
 };
 
 const Search = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const urlQuery = searchParams.get('q') || '';
@@ -179,11 +182,12 @@ const Search = () => {
     });
     const list = extractList(data);
     const mapped = list.map((p) => mapProductForCard(p, SamsungImg));
-    // Scoped client fallback
-    const scoped = mapped.filter((p) => productBelongsToTab(p, activeTab));
+    // The API already scopes results to the selected tab (each item carries marketplaceTab);
+    // never fall back to unscoped results, that is what leaked other tabs' products.
+    const scoped = mapped.filter((p) => !p.marketplaceTab || productBelongsToTab(p, activeTab));
     const meta = data?.meta;
     return {
-      items: scoped.length > 0 ? scoped : mapped,
+      items: scoped,
       hasMore: meta ? Boolean(meta.hasMore ?? (meta.page < meta.totalPages)) : list.length >= limit,
     };
   }, [debouncedQuery, activeTab, listKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -297,7 +301,7 @@ const Search = () => {
           <button 
             onClick={() => navigate(-1)} 
             className="text-white hover:bg-white/10 p-1.5 rounded-full transition-colors active:scale-95 flex-shrink-0"
-            aria-label="Go Back"
+            aria-label={t('auto.goBack2')}
           >
             <ArrowLeft size={22} />
           </button>
@@ -353,7 +357,7 @@ const Search = () => {
                 }`}
               >
                 {renderTabIcon(tab, isActive)}
-                <span>{tab.label}</span>
+                <span>{tName(tab.label)}</span>
               </button>
             );
           })}
@@ -365,10 +369,10 @@ const Search = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
            <div>
               <h2 className={`text-xs md:text-sm font-black uppercase tracking-wider ${currentTabConfig.textPrimary}`}>
-                {activeSearchTerm ? `Results for "${activeSearchTerm}"` : `Type to search in ${currentTabConfig.label}`}
+                {activeSearchTerm ? t('search.resultsFor', { term: activeSearchTerm }) : t('search.typeToSearchIn', { tab: tName(currentTabConfig.label) })}
               </h2>
               <p className="text-[10px] font-bold text-slate-500 mt-0.5 uppercase tracking-wider">
-                {loading ? 'Searching products...' : `${sortedProducts.length} items found in ${currentTabConfig.label}`}
+                {!activeSearchTerm ? '' : loading ? t('auto.searchingProducts') : t('search.itemsFoundIn', { count: sortedProducts.length, tab: tName(currentTabConfig.label) })}
               </p>
            </div>
            
@@ -376,14 +380,14 @@ const Search = () => {
               <div className="flex bg-white p-1 rounded-xl border border-slate-200/80 shadow-xs">
                  <button 
                    onClick={() => setViewMode('grid')}
-                   title="Grid View"
+                   title={t('auto.gridView')}
                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? `${currentTabConfig.headerBg} text-white shadow-xs` : 'text-slate-400 hover:text-slate-600'}`}
                  >
                     <LayoutGrid size={15} />
                  </button>
                  <button 
                    onClick={() => setViewMode('list')}
-                   title="List View"
+                   title={t('auto.listView')}
                    className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? `${currentTabConfig.headerBg} text-white shadow-xs` : 'text-slate-400 hover:text-slate-600'}`}
                  >
                     <List size={15} />
@@ -396,7 +400,7 @@ const Search = () => {
         <div className="flex flex-col gap-2 mb-5">
           {/* Sort row */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">Sort:</span>
+             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">{t('auto.sort2')}</span>
              {['Relevance', 'Price: Low-High', 'Price: High-Low', 'Top Rated'].map((tag) => (
                <button 
                  key={tag}
@@ -407,7 +411,7 @@ const Search = () => {
                      : `bg-white text-slate-700 hover:border-slate-300 border-slate-200/80`
                  }`}
                >
-                  {tag}
+                  {tName(tag)}
                </button>
              ))}
           </div>
@@ -415,7 +419,7 @@ const Search = () => {
           {/* Filter row */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0 flex items-center gap-1">
-               <Filter size={10} /> Filter:
+               <Filter size={10} /> {t('search.filter')}:
              </span>
              {[
                { id: 'all', label: 'All Prices' },
@@ -432,7 +436,7 @@ const Search = () => {
                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                  }`}
                >
-                 {f.label}
+                 {tName(f.label)}
                </button>
              ))}
 
@@ -444,7 +448,7 @@ const Search = () => {
                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                }`}
              >
-               ★ 4+ Rated
+               ★ {t('search.rated4')}
              </button>
 
              {(filterPrice !== 'all' || filterRating > 0) && (
@@ -455,7 +459,7 @@ const Search = () => {
                  }}
                  className="text-[9.5px] font-bold text-red-600 hover:underline px-1.5 whitespace-nowrap"
                >
-                 Reset
+                 {t('auto.reset')}
                </button>
              )}
           </div>
@@ -512,15 +516,15 @@ const Search = () => {
                <SearchIcon size={30} className="text-slate-400" />
              </div>
              <h3 className={`text-base font-black uppercase tracking-wider ${currentTabConfig.textPrimary}`}>
-               No results in {currentTabConfig.label}
+               {t('search.noResultsIn', { tab: tName(currentTabConfig.label) })}
              </h3>
              <p className="text-xs text-slate-500 font-medium mt-1">
-               We couldn't find any items matching "{activeSearchTerm}" in {currentTabConfig.label}.
+               {t('search.noItemsMatching', { term: activeSearchTerm, tab: tName(currentTabConfig.label) })}
              </p>
 
              <div className="mt-5 pt-4 border-t border-slate-100">
                <p className="text-[11px] font-bold text-slate-450 uppercase tracking-wider mb-2.5">
-                 Try searching in other tabs:
+                 {t('auto.trySearchingInOtherTabs')}
                </p>
                <div className="flex flex-wrap justify-center gap-1.5">
                  {MARKETPLACE_TAB_CONFIG.filter((t) => t.id !== activeTab).map((otherTab) => (
@@ -529,7 +533,7 @@ const Search = () => {
                      onClick={() => handleSelectTab(otherTab.id)}
                      className="px-3 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full text-[10px] font-bold text-slate-700 transition-colors"
                    >
-                     Search in {otherTab.label}
+                     {t('search.searchIn', { tab: tName(otherTab.label) })}
                    </button>
                  ))}
                </div>
@@ -539,7 +543,7 @@ const Search = () => {
                onClick={() => navigate('/home')}
                className={`mt-6 px-6 py-2.5 ${currentTabConfig.headerBg} text-white rounded-xl font-black uppercase tracking-wider text-[10px] shadow-sm active:scale-95 transition-transform`}
              >
-                Explore Homepage
+                {t('auto.exploreHomepage')}
              </button>
           </div>
         )}
@@ -551,10 +555,10 @@ const Search = () => {
                <Sparkles size={28} className="text-emerald-600" />
              </div>
              <h3 className={`text-base font-black uppercase tracking-wider ${currentTabConfig.textPrimary}`}>
-               Search in {currentTabConfig.label}
+               {t('search.searchIn', { tab: tName(currentTabConfig.label) })}
              </h3>
              <p className="text-xs text-slate-500 font-medium mt-1.5">
-               Type keywords above or use voice search to discover top products.
+               {t('auto.typeKeywordsAboveOrUse')}
              </p>
           </div>
         )}

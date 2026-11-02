@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { tName } from '../../../../../shared/utils/translateName';
 import { handleImageError } from '../../../../../shared/utils/imageUtils';
 
 const BrandsSpotlight = ({ items = [] }) => {
@@ -44,7 +45,7 @@ const BrandsSpotlight = ({ items = [] }) => {
               <div className="relative aspect-square rounded-lg overflow-hidden bg-white border border-gray-100 shadow-sm flex items-center justify-center p-2">
                 <img
                   src={card.img}
-                  alt={card.title}
+                  alt={tName(card.title)}
                   className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
                   onError={(e) => {
@@ -54,7 +55,7 @@ const BrandsSpotlight = ({ items = [] }) => {
                 />
                 <div className="absolute top-1 right-1 bg-black/10 backdrop-blur-sm text-white text-[6px] px-1 py-0.5 rounded-sm font-bold border border-white/20">{t('common.ad') || 'AD'}</div>
                 <div className="absolute bottom-0 left-0 right-0 bg-[#ff0000] text-white text-center py-0.5 text-[8.5px] font-black leading-tight">
-                  {card.title}
+                  {tName(card.title)}
                 </div>
               </div>
               <div className="text-center px-0.5">
@@ -91,7 +92,7 @@ const BrandsSpotlight = ({ items = [] }) => {
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100/60 flex items-center justify-center p-5 group-hover:bg-slate-100/60 transition-colors duration-300">
                   <img
                     src={card.img}
-                    alt={card.title}
+                    alt={tName(card.title)}
                     className="h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
                     loading="lazy" onError={handleImageError} />
                   <div className="absolute top-3 right-3 bg-black/10 backdrop-blur-sm text-white text-[8px] px-1.5 py-0.5 rounded font-black border border-white/20">{t('common.ad') || 'AD'}</div>

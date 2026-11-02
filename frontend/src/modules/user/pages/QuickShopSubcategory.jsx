@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Share2, ChevronDown, Heart, Check, X, Sparkles, Clock, Star, Zap } from 'lucide-react';
+import useWishlistToggle from '../hooks/useWishlistToggle';
 import { formatPrice, parsePrice } from '../../../shared/utils/priceFormatter';
 import closedShutter from '../../../assets/closed_shutter.png';
 import { getCategories, getCategoryProducts, getNearbyProducts } from '../services/catalogApi';
@@ -12,6 +13,8 @@ import { addProductToCart } from '../utils/cartUtils';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
 import useInfiniteProducts from '../../../shared/hooks/useInfiniteProducts';
 import useAccountStore from '../../../store/useAccountStore';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 
 const FALLBACK_IMAGE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="%23fdfbf7" rx="12"/><text x="75" y="80" font-size="12" font-family="sans-serif" font-weight="bold" fill="%23d3a075" text-anchor="middle">Mithilakart</text></svg>`;
 
@@ -124,7 +127,14 @@ const getDescendantIdSet = (node) => {
   return ids;
 };
 
+const weightLabel = (w, t) => {
+  const m = typeof w === 'string' && w.match(/^([d.]+) km away$/);
+  if (m) return t('x.kmAway', { n: m[1] });
+  return w === '1 Unit' ? t('x.oneUnit') : w;
+};
+
 const QuickShopSubcategory = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTabTheme();
@@ -410,15 +420,7 @@ const QuickShopSubcategory = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestedId, requestedName, marketplaceTab, liveLocation?.latitude, liveLocation?.longitude]);
 
-  const [favorites, setFavorites] = useState([]);
-
-  const toggleFavorite = (id) => {
-    if (favorites.includes(id)) {
-      setFavorites(favorites.filter(favId => favId !== id));
-    } else {
-      setFavorites([...favorites, id]);
-    }
-  };
+  const { isWishlisted: checkWishlisted, toggle: toggleFavorite } = useWishlistToggle();
 
   const handleProductClick = (product) => {
     const discountPct = Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100) + '% OFF';
@@ -600,7 +602,7 @@ const QuickShopSubcategory = () => {
               onClick={() => setPromptOpen(true)}
               className="text-[10px] font-bold flex items-center gap-0.5 text-white/95"
             >
-              Delivering to : <span className="font-medium truncate max-w-[150px] text-white/80">{deliverLabel}</span>
+              {t('x.deliveringTo')} : <span className="font-medium truncate max-w-[150px] text-white/80">{tName(deliverLabel)}</span>
               <ChevronDown size={10} />
             </button>
           </div>
@@ -698,13 +700,13 @@ const QuickShopSubcategory = () => {
           {/* Header text exactly like reference */}
           <div className="relative z-20 space-y-1.5 mb-6">
             <h2 className="text-xl font-bold tracking-tight text-white font-montserrat">
-              Closed for the day!
+              {t('auto.closedForTheDay')}
             </h2>
             <p className="text-[12px] font-medium text-slate-200/90 px-3">
-              Our quick shop is currently closed.
+              {t('auto.ourQuickShopIsCurrently')}
             </p>
             <p className="text-[12px] font-medium text-slate-200/90">
-              We'll be back at <span className="text-yellow-400 font-extrabold text-xs">6:00 AM</span>
+              {t('x.backAt')} <span className="text-yellow-400 font-extrabold text-xs">{t('x.sixAm')}</span>
             </p>
           </div>
 
@@ -721,7 +723,7 @@ const QuickShopSubcategory = () => {
 
               {/* Digital countdown timer on the right */}
               <div className="flex flex-col items-start gap-0.5">
-                <div className="text-[10px] font-bold text-slate-400 tracking-wide">We open in</div>
+                <div className="text-[10px] font-bold text-slate-400 tracking-wide">{t('auto.weOpenIn')}</div>
                 {(() => {
                   const [timeLeft, setTimeLeft] = React.useState({ h: '00', m: '00', s: '00' });
                   React.useEffect(() => {
@@ -757,9 +759,9 @@ const QuickShopSubcategory = () => {
                         {timeLeft.h} : {timeLeft.m} : {timeLeft.s}
                       </div>
                       <div className="flex items-center gap-2 text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                        <span>Hours</span>
-                        <span>Minutes</span>
-                        <span>Seconds</span>
+                        <span>{t('auto.hours')}</span>
+                        <span>{t('auto.minutes')}</span>
+                        <span>{t('auto.seconds')}</span>
                       </div>
                     </div>
                   );
@@ -770,7 +772,7 @@ const QuickShopSubcategory = () => {
             {/* Thanks for your patience tagline */}
             <div className="w-full border-t border-white/5 pt-2 flex items-center justify-center gap-1 text-[10px] font-semibold text-slate-400/90">
               <span className="text-yellow-400">Γ£ª</span>
-              <span>Thanks for your patience!</span>
+              <span>{t('auto.thanksForYourPatience')}</span>
             </div>
           </div>
         </div>
@@ -797,7 +799,7 @@ const QuickShopSubcategory = () => {
               : 'border-gray-200/80 text-gray-700 hover:bg-gray-50'
           }`}
         >
-          <SlidersHorizontalIcon /> Filters {hasActiveFilters && `(${activeFilterCount})`} <ChevronDown size={10} />
+          <SlidersHorizontalIcon /> {t('auto.filters')} {hasActiveFilters && `(${activeFilterCount})`} <ChevronDown size={10} />
         </button>
 
         <button 
@@ -809,9 +811,9 @@ const QuickShopSubcategory = () => {
           }`}
         >
           {sortBy !== 'relevance' ? (
-            <>Sort: <span className="font-extrabold">{sortLabel}</span></>
+            <>{t('auto.sort2')} <span className="font-extrabold">{tName(sortLabel)}</span></>
           ) : (
-            'Sort'
+            t('common.sort')
           )} <ChevronDown size={10} />
         </button>
 
@@ -824,9 +826,9 @@ const QuickShopSubcategory = () => {
           }`}
         >
           {filterType !== 'all' ? (
-            <>Type: <span className="font-extrabold">{typeLabel}</span></>
+            <>{t('auto.type')} <span className="font-extrabold">{tName(typeLabel)}</span></>
           ) : (
-            'Type'
+            t('x.typeWord')
           )} <ChevronDown size={10} />
         </button>
 
@@ -835,7 +837,7 @@ const QuickShopSubcategory = () => {
             onClick={resetAllFilters}
             className="text-[10.5px] font-bold text-red-500 hover:underline px-2 py-1 flex items-center gap-1 flex-shrink-0 cursor-pointer whitespace-nowrap"
           >
-            Clear All
+            {t('auto.clearAll')}
           </button>
         )}
       </div>
@@ -867,7 +869,7 @@ const QuickShopSubcategory = () => {
                 <span className={`text-[9.5px] text-center leading-tight font-semibold tracking-tight ${
                   isActive ? `${primaryText} font-bold` : 'text-gray-500'
                 }`}>
-                  {sub.name}
+                  {tName(sub.name)}
                 </span>
               </div>
             );
@@ -881,10 +883,10 @@ const QuickShopSubcategory = () => {
           <div className={`${promoBg} rounded-xl p-3 flex justify-between items-center mb-4 relative overflow-hidden`}>
             <div className="z-10 flex flex-col">
               <span className="text-[12px] font-bold text-gray-900 leading-tight">
-                Fresh & Premium Products
+                {t('auto.freshPremiumProducts')}
               </span>
               <span className="text-[9px] text-gray-500 font-medium mt-0.5">
-                Nutritional goodness in every bite
+                {t('auto.nutritionalGoodnessInEveryBite')}
               </span>
             </div>
             <img 
@@ -899,11 +901,11 @@ const QuickShopSubcategory = () => {
             <div className="mx-3 mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
               <p className="text-sm font-bold text-amber-900">
                 {liveLocation?.latitude == null
-                  ? 'Turn on location to see Quick Commerce products near you.'
-                  : 'Quick Commerce is not available at this delivery address yet.'}
+                  ? t('auto.turnOnLocationToSee')
+                  : t('auto.quickCommerceIsNotAvailable')}
               </p>
               <p className="text-xs text-amber-800 mt-1">
-                Try a different address or check back when a nearby seller is online.
+                {t('auto.tryADifferentAddressOr')}
               </p>
               {liveLocation?.latitude == null && (
                 <button
@@ -911,7 +913,7 @@ const QuickShopSubcategory = () => {
                   onClick={() => setPromptOpen(true)}
                   className="mt-3 px-4 py-2 rounded-full bg-amber-600 text-white text-xs font-bold"
                 >
-                  Enable Location
+                  {t('auto.enableLocation')}
                 </button>
               )}
             </div>
@@ -924,13 +926,13 @@ const QuickShopSubcategory = () => {
                 <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-2.5 px-0.5">
                   <button
                     onClick={() => setActiveSub(siblingPills.parent.id)}
-                    className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-bold transition-all border ${
+                    className={`flex-shrink-0 px-3 py-1 rounded-full text-[13px] sm:text-[14px] md:text-[15px] font-bold transition-all border ${
                       activeSub === siblingPills.parent.id
                         ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
                         : 'bg-white text-gray-700 border-gray-200/80 hover:bg-gray-50'
                     }`}
                   >
-                    All Items
+                    {t('auto.allItems')}
                   </button>
                   {siblingPills.items.map((sibling) => {
                     const isSiblingActive = activeSub === sibling.id;
@@ -938,7 +940,7 @@ const QuickShopSubcategory = () => {
                       <button
                         key={sibling.id}
                         onClick={() => setActiveSub(sibling.id)}
-                        className={`flex-shrink-0 px-3 py-1 rounded-full text-[11px] font-bold transition-all border ${
+                        className={`flex-shrink-0 px-3 py-1 rounded-full text-[13px] sm:text-[14px] md:text-[15px] font-bold transition-all border ${
                           isSiblingActive
                             ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
                             : 'bg-white text-gray-700 border-gray-200/80 hover:bg-gray-50'
@@ -963,7 +965,7 @@ const QuickShopSubcategory = () => {
                     </button>
                   ) : (
                     <span className="text-[13px] md:text-[15px] font-black text-gray-900 tracking-tight">
-                      Browse Categories
+                      {t('auto.browseCategories')}
                     </span>
                   )}
 
@@ -981,7 +983,7 @@ const QuickShopSubcategory = () => {
                     </h2>
                     {!isAllItems && currentSubcategoriesToShow.length > 0 && (
                       <p className="text-[9.5px] text-gray-500 font-medium mt-0.5">
-                        Select a subcategory to browse products
+                        {t('auto.selectASubcategoryToBrowse')}
                       </p>
                     )}
                   </div>
@@ -1007,10 +1009,10 @@ const QuickShopSubcategory = () => {
                             onError={handleImageError} loading="lazy" decoding="async" />
                         </div>
                         <span className={`text-[10.5px] md:text-[12px] font-bold text-gray-900 leading-tight line-clamp-2 min-h-[26px] flex items-center justify-center group-hover:${primaryText} transition-colors`}>
-                          {sub.name}
+                          {tName(sub.name)}
                         </span>
                         <span className="mt-1 text-[9px] md:text-[10px] font-semibold text-gray-400 group-hover:text-amber-600 transition-colors">
-                          {count > 0 ? `${count} ${count === 1 ? 'item' : 'items'}` : 'Explore'}
+                          {count > 0 ? t('x.itemsCount', { count }) : t('auto.explore')}
                         </span>
                       </div>
                     );
@@ -1024,7 +1026,7 @@ const QuickShopSubcategory = () => {
                     <>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {visibleProducts.map((product) => {
-                          const isFav = favorites.includes(product.id);
+                          const isFav = checkWishlisted(product);
                           return (
                             <div 
                               key={product.id}
@@ -1042,7 +1044,7 @@ const QuickShopSubcategory = () => {
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleFavorite(product.id);
+                                  toggleFavorite(product);
                                 }}
                                 className="absolute top-1.5 right-1.5 w-5 h-5 md:w-6 md:h-6 bg-white/95 backdrop-blur-xs rounded-full flex items-center justify-center shadow-xs border border-gray-100/30 z-10 active:scale-90 transition-transform"
                               >
@@ -1073,7 +1075,7 @@ const QuickShopSubcategory = () => {
                               {/* Weight Details */}
                               <div className="flex items-center gap-1 mb-1">
                                 <span className="text-[8.5px] md:text-[10px] text-gray-500 font-bold border border-gray-200/60 px-1 py-0.2 md:px-1.5 md:py-0.5 rounded bg-gray-50/30">
-                                  {product.weight}
+                                  {weightLabel(product.weight, t)}
                                 </span>
                                 {product.subText && (
                                   <span className="text-[8px] md:text-[9px] text-gray-400 font-semibold">{product.subText}</span>
@@ -1117,14 +1119,14 @@ const QuickShopSubcategory = () => {
                                   }}
                                   className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
                                 >
-                                  Add
+                                  {t('auto.add')}
                                 </button>
                               </div>
              
                               {/* ETA & Stock status strip */}
                               <div className="flex items-center gap-1.5 mt-1.5 pt-0.5 border-t border-dashed border-gray-100 text-[8px] md:text-[8.5px] text-gray-400 font-semibold">
                                 <span className={`flex items-center gap-0.5 ${primaryText}`}>
-                                  ⏱ {product.eta}
+                                  ⏱ {tName(product.eta)}
                                 </span>
                                 {product.stock && (
                                   <span className="text-rose-500 font-bold bg-rose-50/50 px-1 rounded-sm">
@@ -1141,27 +1143,27 @@ const QuickShopSubcategory = () => {
                       {hasMore && (
                         <div ref={sentinelRef} className="py-4 flex items-center justify-center gap-2 text-gray-400">
                           <div className={`w-4 h-4 border-2 ${primaryBorder} border-t-transparent rounded-full animate-spin`} />
-                          <span className="text-[11px] font-semibold text-gray-500">Loading more products...</span>
+                          <span className="text-[11px] font-semibold text-gray-500">{t('auto.loadingMoreProducts')}</span>
                         </div>
                       )}
                       {!hasMore && !listLoading && filteredProducts.length > 12 && (
                         <div className="py-4 text-center text-[10.5px] font-semibold text-gray-400">
-                          Showing all {filteredProducts.length} items
+                          {t('x.showingAllItems', { count: filteredProducts.length })}
                         </div>
                       )}
                     </>
                   ) : (
                     <div className="text-center py-10 px-4 bg-white/60 rounded-2xl border border-dashed border-gray-200 my-2">
-                      <p className="text-[13px] font-bold text-gray-700">No products here yet</p>
+                      <p className="text-[13px] font-bold text-gray-700">{t('auto.noProductsHereYet')}</p>
                       <p className="text-[11px] text-gray-500 mt-1">
-                        Try browsing other subcategories.
+                        {t('auto.tryBrowsingOtherSubcategories')}
                       </p>
                       <button
                         type="button"
                         onClick={() => setActiveSub(parentNode ? parentNode.id : 'all')}
                         className={`mt-3 px-4 py-1.5 rounded-xl text-xs font-bold text-white ${primaryBg} active:scale-95 transition-all shadow-xs`}
                       >
-                        Back to {parentNode ? parentNode.name : 'Subcategories'}
+                        {t('x.backTo')} {parentNode ? parentNode.name : t('x.subcategories')}
                       </button>
                     </div>
                   )}
@@ -1171,7 +1173,7 @@ const QuickShopSubcategory = () => {
           )}
 
           {!notDeliverable && (loading || listLoading) && (
-            <p className="text-center text-[12px] font-bold text-gray-400 py-10">Loading productsΓÇª</p>
+            <p className="text-center text-[12px] font-bold text-gray-400 py-10">{t('auto.loadingProducts')}</p>
           )}
         </div>
 
@@ -1184,7 +1186,7 @@ const QuickShopSubcategory = () => {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setOpenModal(null)} />
           <div className="relative w-full max-w-sm bg-white rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200">
             <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-              <h3 className="text-sm font-black text-slate-800">Sort Products By</h3>
+              <h3 className="text-sm font-black text-slate-800">{t('auto.sortProductsBy')}</h3>
               <button onClick={() => setOpenModal(null)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X size={16} />
               </button>
@@ -1209,8 +1211,8 @@ const QuickShopSubcategory = () => {
                   }`}
                 >
                   <div>
-                    <div className="text-xs font-bold">{opt.label}</div>
-                    <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                    <div className="text-xs font-bold">{tName(opt.label)}</div>
+                    <div className="text-[10px] text-slate-400">{tName(opt.desc)}</div>
                   </div>
                   {sortBy === opt.id && <Check size={16} className={primaryText} />}
                 </button>
@@ -1226,7 +1228,7 @@ const QuickShopSubcategory = () => {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setOpenModal(null)} />
           <div className="relative w-full max-w-sm bg-white rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200 max-h-[80vh] flex flex-col">
             <div className="flex justify-between items-center pb-3 border-b border-gray-100 flex-shrink-0">
-              <h3 className="text-sm font-black text-slate-800">Select Product Type</h3>
+              <h3 className="text-sm font-black text-slate-800">{t('auto.selectProductType')}</h3>
               <button onClick={() => setOpenModal(null)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X size={16} />
               </button>
@@ -1262,8 +1264,8 @@ const QuickShopSubcategory = () => {
                   }`}
                 >
                   <div>
-                    <div className="text-xs font-bold">{opt.label}</div>
-                    <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                    <div className="text-xs font-bold">{tName(opt.label)}</div>
+                    <div className="text-[10px] text-slate-400">{tName(opt.desc)}</div>
                   </div>
                   {(filterType === opt.id || (opt.isSubcategory && activeSub === opt.id)) && <Check size={16} className={primaryText} />}
                 </button>
@@ -1279,7 +1281,7 @@ const QuickShopSubcategory = () => {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setOpenModal(null)} />
           <div className="relative w-full max-w-sm bg-white rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl z-10 animate-in slide-in-from-bottom duration-200 max-h-[85vh] flex flex-col">
             <div className="flex justify-between items-center pb-3 border-b border-gray-100 flex-shrink-0">
-              <h3 className="text-sm font-black text-slate-800">Filter Products</h3>
+              <h3 className="text-sm font-black text-slate-800">{t('auto.filterProducts')}</h3>
               <button onClick={() => setOpenModal(null)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X size={16} />
               </button>
@@ -1288,11 +1290,11 @@ const QuickShopSubcategory = () => {
             <div className="py-3 space-y-4 overflow-y-auto flex-1">
               {/* Price Range */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">Price Range (₹)</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">{t('auto.priceRange')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
-                    placeholder="Min ₹"
+                    placeholder={t('auto.min2')}
                     value={tempPriceMin}
                     onChange={(e) => setTempPriceMin(e.target.value)}
                     className="w-full p-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-amber-500"
@@ -1300,7 +1302,7 @@ const QuickShopSubcategory = () => {
                   <span className="text-slate-400 font-bold">-</span>
                   <input
                     type="number"
-                    placeholder="Max ₹"
+                    placeholder={t('auto.max2')}
                     value={tempPriceMax}
                     onChange={(e) => setTempPriceMax(e.target.value)}
                     className="w-full p-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-amber-500"
@@ -1340,8 +1342,8 @@ const QuickShopSubcategory = () => {
                 className="flex items-center justify-between p-3 border border-slate-200/80 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
               >
                 <div>
-                  <div className="text-xs font-bold text-slate-800">⚡ Fast Delivery Only</div>
-                  <div className="text-[10px] text-slate-400">Under 25-30 minutes arrival</div>
+                  <div className="text-xs font-bold text-slate-800">{t('auto.fastDeliveryOnly')}</div>
+                  <div className="text-[10px] text-slate-400">{t('auto.under2530MinutesArrival')}</div>
                 </div>
                 <div className={`w-9 h-5 rounded-full relative transition-colors ${tempFastDelivery ? 'bg-green-500' : 'bg-slate-300'}`}>
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${tempFastDelivery ? 'right-1' : 'left-1'}`} />
@@ -1354,8 +1356,8 @@ const QuickShopSubcategory = () => {
                 className="flex items-center justify-between p-3 border border-slate-200/80 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
               >
                 <div>
-                  <div className="text-xs font-bold text-slate-800">In Stock Items Only</div>
-                  <div className="text-[10px] text-slate-400">Hide out-of-stock items</div>
+                  <div className="text-xs font-bold text-slate-800">{t('auto.inStockItemsOnly')}</div>
+                  <div className="text-[10px] text-slate-400">{t('auto.hideOutOfStockItems')}</div>
                 </div>
                 <div className={`w-9 h-5 rounded-full relative transition-colors ${tempInStock ? 'bg-green-500' : 'bg-slate-300'}`}>
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${tempInStock ? 'right-1' : 'left-1'}`} />
@@ -1368,8 +1370,8 @@ const QuickShopSubcategory = () => {
                 className="flex items-center justify-between p-3 border border-slate-200/80 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
               >
                 <div>
-                  <div className="text-xs font-bold text-slate-800">Discounted / Offers Only</div>
-                  <div className="text-[10px] text-slate-400">Show items with price discounts</div>
+                  <div className="text-xs font-bold text-slate-800">{t('auto.discountedOffersOnly')}</div>
+                  <div className="text-[10px] text-slate-400">{t('auto.showItemsWithPriceDiscounts')}</div>
                 </div>
                 <div className={`w-9 h-5 rounded-full relative transition-colors ${tempDiscountOnly ? 'bg-green-500' : 'bg-slate-300'}`}>
                   <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-transform ${tempDiscountOnly ? 'right-1' : 'left-1'}`} />
@@ -1396,7 +1398,7 @@ const QuickShopSubcategory = () => {
                 }}
                 className="flex-1 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
               >
-                Clear All
+                {t('auto.clearAll')}
               </button>
               <button
                 type="button"
@@ -1410,7 +1412,7 @@ const QuickShopSubcategory = () => {
                 }}
                 className={`flex-[2] py-2.5 ${primaryBg} text-white text-xs font-bold rounded-xl shadow-sm transition-opacity hover:opacity-95 cursor-pointer`}
               >
-                Apply Filters
+                {t('auto.applyFilters')}
               </button>
             </div>
           </div>

@@ -1,0 +1,200 @@
+- main [ref=f1e7]:
+  - generic [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic [ref=f1e12]:
+        - button "पाछू जाउ" [ref=f1e13]
+        - generic [ref=f1e17]:
+          - textbox "Search Fresh Fruits, Veggies, Atta, Dal..." [active] [ref=f1e18]: Atta
+          - generic [ref=f1e20]:
+            - button [ref=f1e21]
+            - img [aria-hidden] [ref=f1e25] [cursor=pointer]
+      - generic [ref=f1e28]:
+        - button "मिथिलाकार्ट" [ref=f1e29]
+        - button "त्वरित दोकान" [ref=f1e34]
+        - button "मिथिलाक" [ref=f1e39]
+        - button "ताजा आ राशन" [ref=f1e43]
+    - generic [ref=f1e48]:
+      - generic [ref=f1e49]:
+        - generic [ref=f1e50]:
+          - heading "\"Atta\" क परिणाम" [level=2] [ref=f1e51]
+          - paragraph [ref=f1e52]: ताजा आ राशन मे 10 सामान भेटल
+        - generic [ref=f1e54]:
+          - button "ग्रिड व्यू" [ref=f1e55]
+          - button "लिस्ट व्यू" [ref=f1e61]
+      - generic [ref=f1e63]:
+        - generic [ref=f1e64]:
+          - generic [ref=f1e65]: "क्रम:"
+          - button "प्रासंगिकता" [ref=f1e66]
+          - 'button "मूल्य: कम-बेसी" [ref=f1e67]'
+          - 'button "मूल्य: बेसी-कम" [ref=f1e68]'
+          - button "सर्वश्रेष्ठ रेटिंग" [ref=f1e69]
+        - generic [ref=f1e70]:
+          - generic [ref=f1e71]: "फिल्टर:"
+          - button "सभ मूल्य" [ref=f1e74]
+          - button "< ₹500" [ref=f1e75]
+          - button "₹500 - ₹2,000" [ref=f1e76]
+          - button "> ₹2,000" [ref=f1e77]
+          - button "★ 4+ रेटिंग" [ref=f1e78]
+      - generic [ref=f1e79]:
+        - button "Fortune Chakki Fresh Atta 5kg Fortune Chakki Fresh Atta 5kg ₹215 एमआरपी ₹260 17% छूट ⚡ त्वरित 30 मिनट जोड़ू" [ref=f1e81] [cursor=pointer]:
+          - generic [ref=f1e82]:
+            - img "Fortune Chakki Fresh Atta 5kg" [ref=f1e83]
+            - button [ref=f1e84]
+          - generic [ref=f1e87]:
+            - heading "Fortune Chakki Fresh Atta 5kg" [level=3] [ref=f1e88]
+            - generic [ref=f1e89]:
+              - generic [ref=f1e90]:
+                - generic [ref=f1e91]: ₹215
+                - generic [ref=f1e92]: एमआरपी ₹260
+                - generic [ref=f1e93]: 17% छूट
+              - paragraph [ref=f1e94]:
+                - generic [ref=f1e95]: ⚡ त्वरित
+                - text: 30 मिनट
+            - button "जोड़ू" [ref=f1e97]
+        - button "Fortune Chakki Fresh Atta 5kg Fortune Chakki Fresh Atta 5kg ₹215 एमआरपी ₹260 17% छूट ⚡ त्वरित 30 मिनट जोड़ू" [ref=f1e99] [cursor=pointer]:
+          - generic [ref=f1e100]:
+            - img "Fortune Chakki Fresh Atta 5kg" [ref=f1e101]
+            - button [ref=f1e102]
+          - generic [ref=f1e105]:
+            - heading "Fortune Chakki Fresh Atta 5kg" [level=3] [ref=f1e106]
+            - generic [ref=f1e107]:
+              - generic [ref=f1e108]:
+                - generic [ref=f1e109]: ₹215
+                - generic [ref=f1e110]: एमआरपी ₹260
+                - generic [ref=f1e111]: 17% छूट
+              - paragraph [ref=f1e112]:
+                - generic [ref=f1e113]: ⚡ त्वरित
+                - text: 30 मिनट
+            - button "जोड़ू" [ref=f1e115]
+        - button "Fortune Chakki Fresh Atta 5kg Fortune Chakki Fresh Atta 5kg ₹215 एमआरपी ₹260 17% छूट ⚡ त्वरित 30 मिनट जोड़ू" [ref=f1e117] [cursor=pointer]:
+          - generic [ref=f1e118]:
+            - img "Fortune Chakki Fresh Atta 5kg" [ref=f1e119]
+            - button [ref=f1e120]
+          - generic [ref=f1e123]:
+            - heading "Fortune Chakki Fresh Atta 5kg" [level=3] [ref=f1e124]
+            - generic [ref=f1e125]:
+              - generic [ref=f1e126]:
+                - generic [ref=f1e127]: ₹215
+                - generic [ref=f1e128]: एमआरपी ₹260
+                - generic [ref=f1e129]: 17% छूट
+              - paragraph [ref=f1e130]:
+                - generic [ref=f1e131]: ⚡ त्वरित
+                - text: 30 मिनट
+            - button "जोड़ू" [ref=f1e133]
+        - button "Fortune Chakki Fresh Atta 5kg Fortune Chakki Fresh Atta 5kg ₹215 एमआरपी ₹260 17% छूट ⚡ त्वरित 30 मिनट जोड़ू" [ref=f1e135] [cursor=pointer]:
+          - generic [ref=f1e136]:
+            - img "Fortune Chakki Fresh Atta 5kg" [ref=f1e137]
+            - button [ref=f1e138]
+          - generic [ref=f1e141]:
+            - heading "Fortune Chakki Fresh Atta 5kg" [level=3] [ref=f1e142]
+            - generic [ref=f1e143]:
+              - generic [ref=f1e144]:
+                - generic [ref=f1e145]: ₹215
+                - generic [ref=f1e146]: एमआरपी ₹260
+                - generic [ref=f1e147]: 17% छूट
+              - paragraph [ref=f1e148]:
+                - generic [ref=f1e149]: ⚡ त्वरित
+                - text: 30 मिनट
+            - button "जोड़ू" [ref=f1e151]
+        - button "Fortune Chakki Fresh Atta 5kg Fortune Chakki Fresh Atta 5kg ₹215 एमआरपी ₹260 17% छूट ⚡ त्वरित 30 मिनट जोड़ू" [ref=f1e153] [cursor=pointer]:
+          - generic [ref=f1e154]:
+            - img "Fortune Chakki Fresh Atta 5kg" [ref=f1e155]
+            - button [ref=f1e156]
+          - generic [ref=f1e159]:
+            - heading "Fortune Chakki Fresh Atta 5kg" [level=3] [ref=f1e160]
+            - generic [ref=f1e161]:
+              - generic [ref=f1e162]:
+                - generic [ref=f1e163]: ₹215
+                - generic [ref=f1e164]: एमआरपी ₹260
+                - generic [ref=f1e165]: 17% छूट
+              - paragraph [ref=f1e166]:
+                - generic [ref=f1e167]: ⚡ त्वरित
+                - text: 30 मिनट
+            - button "जोड़ू" [ref=f1e169]
+        - button "Agro Fresh Chakki Atta - 10 Kg Agro Fresh Chakki Atta - 10 Kg 4.8 ★ (32) ₹393 एमआरपी ₹525 25% छूट ⚡ त्वरित 25 मिनट जोड़ू" [ref=f1e171] [cursor=pointer]:
+          - generic [ref=f1e172]:
+            - img "Agro Fresh Chakki Atta - 10 Kg" [ref=f1e173]
+            - button [ref=f1e174]
+          - generic [ref=f1e177]:
+            - heading "Agro Fresh Chakki Atta - 10 Kg" [level=3] [ref=f1e178]
+            - generic [ref=f1e179]:
+              - generic [ref=f1e180]: 4.8 ★
+              - generic [ref=f1e181]: (32)
+            - generic [ref=f1e182]:
+              - generic [ref=f1e183]:
+                - generic [ref=f1e184]: ₹393
+                - generic [ref=f1e185]: एमआरपी ₹525
+                - generic [ref=f1e186]: 25% छूट
+              - paragraph [ref=f1e187]:
+                - generic [ref=f1e188]: ⚡ त्वरित
+                - text: 25 मिनट
+            - button "जोड़ू" [ref=f1e190]
+        - button "Agro Fresh Chakki Atta - 10 Kg Agro Fresh Chakki Atta - 10 Kg 4.8 ★ (32) ₹395 एमआरपी ₹525 25% छूट ⚡ त्वरित 25 मिनट जोड़ू" [ref=f1e192] [cursor=pointer]:
+          - generic [ref=f1e193]:
+            - img "Agro Fresh Chakki Atta - 10 Kg" [ref=f1e194]
+            - button [ref=f1e195]
+          - generic [ref=f1e198]:
+            - heading "Agro Fresh Chakki Atta - 10 Kg" [level=3] [ref=f1e199]
+            - generic [ref=f1e200]:
+              - generic [ref=f1e201]: 4.8 ★
+              - generic [ref=f1e202]: (32)
+            - generic [ref=f1e203]:
+              - generic [ref=f1e204]:
+                - generic [ref=f1e205]: ₹395
+                - generic [ref=f1e206]: एमआरपी ₹525
+                - generic [ref=f1e207]: 25% छूट
+              - paragraph [ref=f1e208]:
+                - generic [ref=f1e209]: ⚡ त्वरित
+                - text: 25 मिनट
+            - button "जोड़ू" [ref=f1e211]
+        - button "Agro Fresh Chakki Atta - 10 Kg Agro Fresh Chakki Atta - 10 Kg 4.8 ★ (32) ₹395 एमआरपी ₹525 25% छूट ⚡ त्वरित 25 मिनट जोड़ू" [ref=f1e213] [cursor=pointer]:
+          - generic [ref=f1e214]:
+            - img "Agro Fresh Chakki Atta - 10 Kg" [ref=f1e215]
+            - button [ref=f1e216]
+          - generic [ref=f1e219]:
+            - heading "Agro Fresh Chakki Atta - 10 Kg" [level=3] [ref=f1e220]
+            - generic [ref=f1e221]:
+              - generic [ref=f1e222]: 4.8 ★
+              - generic [ref=f1e223]: (32)
+            - generic [ref=f1e224]:
+              - generic [ref=f1e225]:
+                - generic [ref=f1e226]: ₹395
+                - generic [ref=f1e227]: एमआरपी ₹525
+                - generic [ref=f1e228]: 25% छूट
+              - paragraph [ref=f1e229]:
+                - generic [ref=f1e230]: ⚡ त्वरित
+                - text: 25 मिनट
+            - button "जोड़ू" [ref=f1e232]
+        - button "Agro Fresh Chakki Atta - 10 Kg Agro Fresh Chakki Atta - 10 Kg 4.8 ★ (32) ₹395 एमआरपी ₹525 25% छूट ⚡ त्वरित 25 मिनट जोड़ू" [ref=f1e234] [cursor=pointer]:
+          - generic [ref=f1e235]:
+            - img "Agro Fresh Chakki Atta - 10 Kg" [ref=f1e236]
+            - button [ref=f1e237]
+          - generic [ref=f1e240]:
+            - heading "Agro Fresh Chakki Atta - 10 Kg" [level=3] [ref=f1e241]
+            - generic [ref=f1e242]:
+              - generic [ref=f1e243]: 4.8 ★
+              - generic [ref=f1e244]: (32)
+            - generic [ref=f1e245]:
+              - generic [ref=f1e246]:
+                - generic [ref=f1e247]: ₹395
+                - generic [ref=f1e248]: एमआरपी ₹525
+                - generic [ref=f1e249]: 25% छूट
+              - paragraph [ref=f1e250]:
+                - generic [ref=f1e251]: ⚡ त्वरित
+                - text: 25 मिनट
+            - button "जोड़ू" [ref=f1e253]
+        - button "Organic Basmati Rice 5kg Organic Basmati Rice 5kg ₹499 एमआरपी ₹650 23% छूट ⚡ त्वरित 30 मिनट जोड़ू" [ref=f1e255] [cursor=pointer]:
+          - generic [ref=f1e256]:
+            - img "Organic Basmati Rice 5kg" [ref=f1e257]
+            - button [ref=f1e258]
+          - generic [ref=f1e261]:
+            - heading "Organic Basmati Rice 5kg" [level=3] [ref=f1e262]
+            - generic [ref=f1e263]:
+              - generic [ref=f1e264]:
+                - generic [ref=f1e265]: ₹499
+                - generic [ref=f1e266]: एमआरपी ₹650
+                - generic [ref=f1e267]: 23% छूट
+              - paragraph [ref=f1e268]:
+                - generic [ref=f1e269]: ⚡ त्वरित
+                - text: 30 मिनट
+            - button "जोड़ू" [ref=f1e271]

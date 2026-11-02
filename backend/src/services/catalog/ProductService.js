@@ -7,6 +7,8 @@ const { resolveTabFromQuery } = require('../../utils/marketplaceTab');
 const { buildSearchQuery } = require('../../utils/search');
 const { buildSortQuery } = require('../../utils/sort');
 const { eventBus } = require('../../events/EventBus');
+const { findRankedMatches } = require('../../utils/searchMatch');
+const { withCategoryMatch, normalizeAdditionalCategoryIds } = require('../../utils/productCategories');
 
 class ProductService extends BaseService {
   constructor(productRepository, productVariantRepository, categoryRepository, cacheService, marketplaceListingService = null, translationService = null) {
@@ -30,9 +32,10 @@ class ProductService extends BaseService {
       baseFilter: {},
     });
 
+    let categoryScope = null;
     if (query.categoryId) {
-      const categoryIds = await this._getCategorySubtreeIds(query.categoryId);
-      filters.categoryId = categoryIds.length > 1 ? { $in: categoryIds } : categoryIds[0];
+      categoryScope = await this._getCategorySubtreeIds(query.categoryId);
+      delete filters.categoryId;
     }
 
     const minRating = Number(query.minRating);
@@ -46,7 +49,8 @@ class ProductService extends BaseService {
     // _id tiebreaker keeps skip/limit batches stable (no repeats/gaps)
     if (sort && typeof sort === 'object' && !('_id' in sort)) sort._id = -1;
 
-    const combinedFilter = applyCommerceFlowFilter({ ...filters, ...searchFilter }, query);
+    let combinedFilter = applyCommerceFlowFilter({ ...filters, ...searchFilter }, query);
+    if (categoryScope) combinedFilter = withCategoryMatch(combinedFilter, categoryScope);
 
     const [items, total] = await Promise.all([
       this.productRepository.findPublic(combinedFilter, {
@@ -103,16 +107,17 @@ class ProductService extends BaseService {
       query
     );
 
-    const items = await this.productRepository.searchPublic(searchTerm, filter, {
-      sort: { score: { $meta: 'textScore' }, _id: 1 },
-      skip: pagination.skip,
-      limit: pagination.limit,
+    const matches = await findRankedMatches({
+      productRepository: this.productRepository,
+      categoryRepository: this.categoryRepository,
+      term: searchTerm,
+      baseFilter: filter,
     });
-
-    const total = await this.productRepository.countPublic({
-      ...filter,
-      $text: { $search: searchTerm },
-    });
+    const pageIds = matches.slice(pagination.skip, pagination.skip + pagination.limit).map((m) => m._id);
+    const docs = pageIds.length ? await this.productRepository.findPublic({ _id: { $in: pageIds } }) : [];
+    const byId = new Map(docs.map((d) => [String(d._id), d]));
+    const items = pageIds.map((id) => byId.get(String(id))).filter(Boolean);
+    const total = matches.length;
 
     const lang = query.lang || 'en';
     return {
@@ -236,6 +241,18 @@ class ProductService extends BaseService {
       if (!category || category.deletedAt) throw AppError.notFound('Category not found');
     }
 
+    if (data.categoryIds !== undefined || data.categoryId) {
+      const extras = normalizeAdditionalCategoryIds(
+        data.categoryIds !== undefined ? data.categoryIds : existing.categoryIds,
+        data.categoryId || existing.categoryId
+      );
+      for (const id of extras) {
+        const category = await this.categoryRepository.findById(id);
+        if (!category || category.deletedAt) throw AppError.notFound(`Category not found: ${id}`);
+      }
+      data.categoryIds = extras;
+    }
+
     if (this.translationService && (data.title !== undefined || data.description !== undefined)) {
       try {
         const titleToTrans = data.title !== undefined ? data.title : existing.title;
@@ -307,6 +324,7 @@ class ProductService extends BaseService {
       mrp: product.mrp,
       stock: product.stock,
       categoryId: product.categoryId,
+      categoryIds: product.categoryIds || [],
       images: product.images,
       videos: product.videos,
       commerceFlows: product.commerceFlows,

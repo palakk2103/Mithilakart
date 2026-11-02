@@ -6,8 +6,10 @@
 import React from 'react';
 import { AlertTriangle, Clock, AlertCircle, Info } from 'lucide-react';
 import useDispatchDelay from '../hooks/useDispatchDelay';
+import { useTranslation } from 'react-i18next';
 
 export const DispatchDelayBanner = ({ order, role = 'seller', className = '' }) => {
+  const { t } = useTranslation();
   const slaInfo = useDispatchDelay(order);
 
   if (!slaInfo.isPending || slaInfo.dispatchState === 'normal' || slaInfo.dispatchState === 'completed') {
@@ -33,9 +35,9 @@ export const DispatchDelayBanner = ({ order, role = 'seller', className = '' }) 
           </div>
           <div className="space-y-1">
             <h4 className="text-sm font-bold text-amber-950 flex items-center gap-2">
-              {isQuick ? 'Delivery Running A Little Late' : 'Shipment Delayed'}
+              {isQuick ? t('auto.deliveryRunningALittleLate') : t('auto.shipmentDelayed')}
               <span className="text-[10px] bg-amber-200/70 text-amber-900 font-semibold px-2 py-0.5 rounded-full">
-                SLA Delay: {formattedTime}
+                {t('x.slaDelay')}: {formattedTime}
               </span>
             </h4>
             <p className="text-xs text-amber-800/90 leading-relaxed font-medium">
@@ -58,7 +60,7 @@ export const DispatchDelayBanner = ({ order, role = 'seller', className = '' }) 
           <div className="flex items-start gap-3">
             <AlertTriangle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-sm font-bold text-amber-900">Dispatch Deadline Approaching</h4>
+              <h4 className="text-sm font-bold text-amber-900">{t('auto.dispatchDeadlineApproaching')}</h4>
               <p className="text-xs text-amber-700 mt-0.5">
                 Time remaining: <span className="font-mono font-bold text-amber-900">{formattedTime}</span>. Please dispatch this order soon to avoid SLA delay penalty.
               </p>
@@ -81,7 +83,7 @@ export const DispatchDelayBanner = ({ order, role = 'seller', className = '' }) 
                 </span>
               </h4>
               <p className="text-xs text-red-700 mt-0.5">
-                This order has exceeded the expected dispatch time. Please mark as packed/shipped as soon as possible.
+                {t('auto.thisOrderHasExceededThe')}
               </p>
             </div>
           </div>
@@ -97,7 +99,7 @@ export const DispatchDelayBanner = ({ order, role = 'seller', className = '' }) 
         <div className={`rounded-xl bg-red-50 border border-red-200 p-3 text-red-900 text-xs flex items-center gap-2.5 ${className}`}>
           <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
           <span>
-            <strong>Seller Delay Escalation:</strong> Order exceeded SLA dispatch limit by <span className="font-mono font-bold">{formattedTime}</span>.
+            <strong>{t('auto.sellerDelayEscalation')}</strong> {t('auto.orderExceededSlaDispatchLimit')} <span className="font-mono font-bold">{formattedTime}</span>.
           </span>
         </div>
       );

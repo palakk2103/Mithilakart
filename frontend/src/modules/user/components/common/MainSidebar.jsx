@@ -34,7 +34,7 @@ const MainSidebar = ({ isOpen, onClose }) => {
               {[
                 { key: 'bestsellers', label: 'Bestsellers' },
                 { key: 'newReleases', label: 'New Releases' },
-                { key: 'moversAndShakers', label: 'Movers and Shakers' }
+                { key: 'moversAndShakers', label: t('auto.moversAndShakers') }
               ].map((item) => (
                 <li key={item.key}>
                   <Link to="#" className="px-6 py-2 text-[14px] text-gray-800 font-medium hover:bg-gray-100 flex items-center justify-between group">
@@ -55,7 +55,7 @@ const MainSidebar = ({ isOpen, onClose }) => {
                 { key: 'kindleBooks', label: 'Kindle E-Readers & eBooks' },
                 { key: 'audibleAudiobooks', label: 'Audible Audiobooks' },
                 { key: 'primeVideo', label: 'Amazon Prime Video' },
-                { key: 'primeMusic', label: 'Amazon Prime Music' }
+                { key: 'primeMusic', label: t('auto.amazonPrimeMusic') }
               ].map((item) => (
                 <li key={item.key}>
                   <Link to="#" className="px-6 py-2 text-[14px] text-gray-800 font-medium hover:bg-gray-100 flex items-center justify-between group">
@@ -105,7 +105,7 @@ const MainSidebar = ({ isOpen, onClose }) => {
               {[
                 { key: 'launchpad', label: 'Amazon Launchpad' },
                 { key: 'business', label: 'Amazon Business' },
-                { key: 'handloomHandicrafts', label: 'Handloom and Handicrafts' }
+                { key: 'handloomHandicrafts', label: t('auto.handloomAndHandicrafts') }
               ].map((item) => (
                 <li key={item.key}>
                   <Link to="#" className="px-6 py-2 text-[14px] text-gray-800 font-medium hover:bg-gray-100 flex items-center justify-between group">
@@ -128,7 +128,7 @@ const MainSidebar = ({ isOpen, onClose }) => {
               {[
                 { key: 'yourAccount', label: 'Your Account' },
                 { key: 'customerService', label: 'Customer Service' },
-                { key: 'signOut', label: 'Sign Out' }
+                { key: 'signOut', label: t('auto.signOut') }
               ].map((item) => (
                 <li key={item.key}>
                   <Link to="#" className="px-6 py-2 text-[14px] text-gray-800 font-medium hover:bg-gray-100 flex items-center justify-between group">

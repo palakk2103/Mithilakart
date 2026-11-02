@@ -11,6 +11,8 @@ const sellerProductCreateSchema = Joi.object({
   mrp: Joi.number().min(0).required(),
   stock: Joi.number().integer().min(0).optional(),
   categoryId: Joi.string().trim().required(),
+  // Additional categories the same product is also listed under.
+  categoryIds: Joi.array().items(objectIdSchema).max(25).optional(),
   images: Joi.array().items(
     Joi.alternatives().try(
       Joi.string(),

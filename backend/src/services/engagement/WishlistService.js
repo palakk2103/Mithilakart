@@ -35,12 +35,13 @@ class WishlistService extends BaseService {
       throw AppError.conflict(`Wishlist limit of ${MAX_WISHLIST_ITEMS} items reached`);
     }
 
-    return this.wishlistRepository.create({ userId, productId });
+    // Use the resolved product's _id (the request may have sent a sku/catalogKey)
+    return this.wishlistRepository.upsertActive(userId, product._id);
   }
 
   async remove(userId, productId) {
     const entry = await this.wishlistRepository.findEntry(userId, productId);
-    if (!entry) throw AppError.notFound('Wishlist item not found');
+    if (!entry) return { removed: true }; // already gone: idempotent
     await this.wishlistRepository.softDelete(userId, productId);
     return { removed: true };
   }

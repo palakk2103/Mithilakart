@@ -13,6 +13,7 @@
  *   quickDelivery true|1  -> listing promises delivery within QUICK_DELIVERY_MAX_MINUTES
  */
 const { DELIVERY_TYPE } = require('../constants/marketplace');
+const { categoryMatchClause } = require('./productCategories');
 
 const QUICK_DELIVERY_MAX_MINUTES = 30;
 const CANDIDATE_CAP = 20000;
@@ -71,7 +72,7 @@ async function resolveProductIds(productRepo, { categoryIds, minRating, productT
   const filter = {
     $expr: { $gt: [{ $subtract: [{ $ifNull: ['$stock', 0] }, { $ifNull: ['$reservedStock', 0] }] }, 0] },
   };
-  if (categoryIds) filter.categoryId = { $in: categoryIds };
+  if (categoryIds) filter.$and = [categoryMatchClause(categoryIds)];
   if (minRating > 0) filter.rating = { $gte: minRating };
   if (productType && PRODUCT_TYPES[productType]) {
     filter.$or = [{ tags: PRODUCT_TYPES[productType] }, { title: PRODUCT_TYPES[productType] }];
@@ -87,14 +88,32 @@ async function resolveProductIds(productRepo, { categoryIds, minRating, productT
  * possible. `deliveryMinutesOf(listing)` supplies the effective ETA for the
  * 'delivery' sort (fixed promise, or seller-distance estimate for nearby).
  *
+ * `relevanceOf(listing)` (search only) ranks the default ordering by match score.
+ *
  * Returns { listings, total }.
  */
-async function runListingQuery({ listingRepo, productRepo, filter, parsed, pagination, deliveryMinutesOf }) {
+async function runListingQuery({ listingRepo, productRepo, filter, parsed, pagination, deliveryMinutesOf, relevanceOf }) {
   const { sortField, dir } = parsed;
   const dbSorts = {
     price: { price: dir, _id: 1 },
     createdAt: { publishedAt: dir, _id: dir },
   };
+
+  // Search with default ordering: rank by text relevance (best match first), then price.
+  if (!sortField && relevanceOf) {
+    const cands = await listingRepo.findPublic(filter, {
+      select: '_id productId price',
+      sort: { _id: 1 },
+      limit: CANDIDATE_CAP,
+    });
+    const ranked = cands
+      .map((l) => ({ id: l._id, r: relevanceOf(l), price: Number(l.price) || 0 }))
+      .sort((a, b) => b.r - a.r || a.price - b.price || String(a.id).localeCompare(String(b.id)));
+    const ids = ranked.slice(pagination.skip, pagination.skip + pagination.limit).map((x) => x.id);
+    const rows = ids.length ? await listingRepo.findPublic({ _id: { $in: ids } }, { limit: ids.length }) : [];
+    const map = new Map(rows.map((l) => [String(l._id), l]));
+    return { listings: ids.map((id) => map.get(String(id))).filter(Boolean), total: ranked.length };
+  }
 
   if (!sortField || dbSorts[sortField]) {
     const [listings, total] = await Promise.all([

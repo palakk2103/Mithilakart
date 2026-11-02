@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Star, Heart, CheckCircle2, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import customerApi from '../api/client';
+import { useTranslation } from 'react-i18next';
 
 const QUICK_TAGS = [
   '⚡ Superfast Delivery',
@@ -12,6 +13,7 @@ const QUICK_TAGS = [
 ];
 
 export default function OrderRatingModal({ isOpen, onClose, order, onReviewSubmitted }) {
+  const { t } = useTranslation();
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState([]);
@@ -46,14 +48,14 @@ export default function OrderRatingModal({ isOpen, onClose, order, onReviewSubmi
       }
 
       setSubmitted(true);
-      toast.success('Thank you! Your feedback helps our artisans & riders.');
+      toast.success(t('auto.thankYouYourFeedbackHelps'));
       if (onReviewSubmitted) onReviewSubmitted();
       setTimeout(() => {
         onClose();
         setSubmitted(false);
       }, 1800);
     } catch {
-      toast.success('Thank you for rating!');
+      toast.success(t('auto.thankYouForRating'));
       onClose();
     } finally {
       setSubmitting(false);
@@ -68,7 +70,7 @@ export default function OrderRatingModal({ isOpen, onClose, order, onReviewSubmi
           <div className="flex items-center gap-2">
             <Heart size={18} className="text-rose-500 fill-rose-500" />
             <span className="text-xs font-black uppercase tracking-wider text-slate-700">
-              Rate Your Experience
+              {t('auto.rateYourExperience')}
             </span>
           </div>
           <button
@@ -84,9 +86,9 @@ export default function OrderRatingModal({ isOpen, onClose, order, onReviewSubmi
             <div className="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 size={32} />
             </div>
-            <h3 className="text-lg font-black text-slate-900">Feedback Submitted!</h3>
+            <h3 className="text-lg font-black text-slate-900">{t('auto.feedbackSubmitted')}</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Your 5-star rating directly rewards our local artisans and delivery partner.
+              {t('auto.your5StarRatingDirectly')}
             </p>
           </div>
         ) : (
@@ -118,13 +120,13 @@ export default function OrderRatingModal({ isOpen, onClose, order, onReviewSubmi
                 ))}
               </div>
               <p className="text-xs font-black text-amber-600">
-                {rating === 5 ? 'Exceptional! 🌟' : rating === 4 ? 'Very Good! 😊' : rating === 3 ? 'Good 👍' : 'Could be better 😐'}
+                {rating === 5 ? t('auto.exceptional') : rating === 4 ? t('auto.veryGood') : rating === 3 ? t('auto.good') : t('auto.couldBeBetter')}
               </p>
             </div>
 
             {/* Quick Experience Chips */}
             <div className="space-y-1.5">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">What did you like?</p>
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('auto.whatDidYouLike')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {QUICK_TAGS.map((tag) => {
                   const active = selectedTags.includes(tag);
@@ -150,12 +152,12 @@ export default function OrderRatingModal({ isOpen, onClose, order, onReviewSubmi
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                 <MessageSquare size={13} />
-                <span>Comments / Note for Delivery Boy & Store (Optional)</span>
+                <span>{t('auto.commentsNoteForDeliveryBoy')}</span>
               </label>
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Share any special compliments or feedback..."
+                placeholder={t('auto.shareAnySpecialComplimentsOr')}
                 rows={3}
                 className="w-full text-xs p-3 rounded-2xl border border-slate-200 focus:border-slate-800 focus:outline-none resize-none bg-slate-50/50"
               />
@@ -167,7 +169,7 @@ export default function OrderRatingModal({ isOpen, onClose, order, onReviewSubmi
               disabled={submitting}
               className="w-full py-3 bg-[#3E5A44] hover:bg-[#2d4232] text-white font-bold text-xs rounded-2xl transition-all shadow-md cursor-pointer disabled:opacity-50"
             >
-              {submitting ? 'Submitting...' : 'Submit Feedback'}
+              {submitting ? t('auto.submitting') : t('auto.submitFeedback')}
             </button>
           </form>
         )}

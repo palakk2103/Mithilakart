@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getLegalPage } from '../services/storefrontApi';
+import { useTranslation } from 'react-i18next';
+import { translateHtml, translateText } from '../../../shared/utils/translateContent';
 
 // In-memory cache for legal pages to provide instant 0ms transitions
 const memoryCache = new Map();
@@ -69,5 +71,29 @@ export default function useLegalPage(type) {
     };
   }, [type]);
 
-  return { page, loading, error };
+  // Translate the CMS supplied title/content with the backend translator when the UI
+  // language is Hindi / Maithili. The English copy is shown until the result is ready.
+  const { i18n } = useTranslation();
+  const lang = (i18n.language || 'en').split('-')[0];
+  const [translated, setTranslated] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTranslated(null);
+    if (!page || lang === 'en') return undefined;
+    (async () => {
+      const [title, content] = await Promise.all([
+        translateText(page.title, lang),
+        translateHtml(page.content, lang),
+      ]);
+      if (!cancelled) setTranslated({ lang, title, content, src: page });
+    })();
+    return () => { cancelled = true; };
+  }, [page, lang]);
+
+  const shown = translated && translated.src === page && translated.lang === lang
+    ? { ...page, title: translated.title, content: translated.content }
+    : page;
+
+  return { page: shown, loading, error };
 }

@@ -24,8 +24,11 @@ import ImageBanner2 from '../../../../assets/TopBanner/ImageBanner2.jpg';
 import ImageBanner3 from '../../../../assets/TopBanner/ImageBanner3.webp';
 import ImageBanner4 from '../../../../assets/TopBanner/ImageBanner4.jpg';
 import { handleImageError } from '../../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../../shared/utils/translateName';
 
 const BannerCarousel = () => {
+  const { t } = useTranslation();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [isBannerLoaded, setIsBannerLoaded] = useState(false);
 
@@ -103,7 +106,7 @@ const BannerCarousel = () => {
                   animate={{ opacity: 1, x: 0 }}
                   className="flex items-center gap-2 mb-2"
               >
-                  <div className="bg-[#ffc107] text-slate-900 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">{banners[currentBanner].label}</div>
+                  <div className="bg-[#ffc107] text-slate-900 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">{tName(banners[currentBanner].label)}</div>
               </motion.div>
               <motion.h2 
                   initial={{ opacity: 0, x: -20 }}
@@ -111,7 +114,7 @@ const BannerCarousel = () => {
                   transition={{ delay: 0.1 }}
                   className="text-white text-[24px] font-black leading-tight drop-shadow-lg"
                 >
-                  {banners[currentBanner].title}
+                  {tName(banners[currentBanner].title)}
                 </motion.h2>
               <motion.p 
                   initial={{ opacity: 0, x: -20 }}
@@ -119,10 +122,10 @@ const BannerCarousel = () => {
                   transition={{ delay: 0.2 }}
                   className="text-white/90 text-[15px] font-medium mt-1 drop-shadow-md"
                 >
-                  {banners[currentBanner].desc}
+                  {tName(banners[currentBanner].desc)}
                 </motion.p>
               <button className="mt-5 w-fit bg-white text-slate-900 px-8 py-2.5 rounded-full text-[12px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform">
-                Shop Now
+                {t('auto.shopNow')}
               </button>
             </motion.div>
           )}
@@ -148,6 +151,7 @@ const BannerCarousel = () => {
 };
 
 const MyOrders = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { orders, setOrders } = useAccountStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -163,7 +167,7 @@ const MyOrders = () => {
     const orderId = showReviewModal;
     const currentOrder = orders.find(o => o.id === orderId);
     if (!currentOrder || !currentOrder.items || !currentOrder.items[0]) {
-      toast.error('Order details not found');
+      toast.error(t('auto.orderDetailsNotFound'));
       return;
     }
     const mainItem = currentOrder.items[0];
@@ -173,11 +177,11 @@ const MyOrders = () => {
     const currentReviewBody = ratings[orderId]?.review || '';
 
     if (currentRating === 0) {
-      toast.error('Please select a rating');
+      toast.error(t('auto.pleaseSelectARating'));
       return;
     }
     if (!currentReviewBody.trim()) {
-      toast.error('Please write a review message');
+      toast.error(t('auto.pleaseWriteAReviewMessage'));
       return;
     }
 
@@ -203,11 +207,11 @@ const MyOrders = () => {
         videos: uploadedVideos,
       });
 
-      toast.success('Review submitted successfully!');
+      toast.success(t('auto.reviewSubmittedSuccessfully'));
       setShowReviewModal(null);
       setSelectedFiles([]);
     } catch (err) {
-      toast.error(err.message || 'Failed to submit review');
+      toast.error(err.message || t('auto.failedToSubmitReview'));
     } finally {
       setIsSubmitting(false);
     }
@@ -225,7 +229,7 @@ const MyOrders = () => {
           setOrders(extractList(data).map(mapOrderForList));
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load orders');
+        if (!cancelled) setError(err.message || t('auto.failedToLoadOrders'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -329,7 +333,7 @@ const MyOrders = () => {
             <div className="flex justify-between items-start">
               <div className="flex-1 pr-2">
                 <p className={`text-[13px] font-bold mb-0.5 ${statusColor}`}>
-                  {isDelayed ? 'Shipment Delayed' : order.status} {order.date ? `· ${order.date}` : ''}
+                  {isDelayed ? t('auto.shipmentDelayed') : order.status} {order.date ? `· ${order.date}` : ''}
                 </p>
                 <h3 className="text-[12px] text-gray-500 line-clamp-1 leading-tight font-medium">
                   {mainItem.name}
@@ -342,7 +346,7 @@ const MyOrders = () => {
             <div className="mt-2 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
-                  {currentOrderRating.rating > 0 ? 'Your Rating' : 'Rate & Review'}
+                  {currentOrderRating.rating > 0 ? t('auto.yourRating') : t('auto.rateReview')}
                 </span>
                 <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -362,7 +366,7 @@ const MyOrders = () => {
                     className="flex items-center gap-1 px-2.5 py-1.5 border border-primary-green/30 bg-primary-light/50 rounded-lg text-primary-dark text-[10px] font-black uppercase tracking-tight active:scale-95 transition-transform"
                   >
                     <Edit3 size={11} />
-                    Review
+                    {t('auto.review')}
                   </button>
                 )}
                 <button
@@ -376,17 +380,17 @@ const MyOrders = () => {
                           await addCartItem({ productId: pId, quantity: item.quantity || 1 }).catch(() => {});
                         }
                       }
-                      toast.success('Items added to bag!');
+                      toast.success(t('auto.itemsAddedToBag'));
                       navigate('/cart');
                     } catch {
-                      toast.error('Could not reorder items');
+                      toast.error(t('auto.couldNotReorderItems'));
                     }
                   }}
                   className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-black uppercase tracking-tight active:scale-95 transition-transform cursor-pointer"
-                  title="Reorder items into cart"
+                  title={t('auto.reorderItemsIntoCart')}
                 >
                   <RotateCcw size={11} />
-                  Reorder
+                  {t('auto.reorder')}
                 </button>
               </div>
             </div>
@@ -444,7 +448,7 @@ const MyOrders = () => {
         <button onClick={() => navigate(-1)} className={`p-1 -ml-1 active:scale-90 transition-transform ${headerTextColor}`}>
           <ArrowLeft size={24} />
         </button>
-        <h1 className={`text-[18px] font-bold font-montserrat ${headerTextColor}`}>My Orders</h1>
+        <h1 className={`text-[18px] font-bold font-montserrat ${headerTextColor}`}>{t('auto.myOrders')}</h1>
       </div>
 
       <div className="w-full mx-auto relative z-10">
@@ -456,7 +460,7 @@ const MyOrders = () => {
            <div className="flex gap-3">
               <SearchInput
                 type="text" 
-                placeholder="Search your order here" 
+                placeholder={t('auto.searchYourOrderHere')} 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 rightElement={
@@ -472,7 +476,7 @@ const MyOrders = () => {
                 className={`bg-white border border-gray-200 rounded-xl px-4 flex items-center gap-2 shadow-sm active:scale-95 transition-all ${activeFilters.status !== 'All' ? 'border-blue-500 bg-primary-light' : ''}`}
               >
                  <ListFilter size={18} className={activeFilters.status !== 'All' ? 'text-primary-dark' : 'text-gray-600'} />
-                 <span className={`text-[13px] font-bold ${activeFilters.status !== 'All' ? 'text-primary-dark' : 'text-gray-700'}`}>Filters</span>
+                 <span className={`text-[13px] font-bold ${activeFilters.status !== 'All' ? 'text-primary-dark' : 'text-gray-700'}`}>{t('auto.filters')}</span>
                  {activeFilters.status !== 'All' && <div className="w-2 h-2 bg-primary-dark rounded-full" />}
               </button>
            </div>
@@ -494,15 +498,15 @@ const MyOrders = () => {
                   <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-gray-200 mb-8">
                     <ShoppingBag size={48} />
                   </div>
-                  <h3 className="text-[20px] font-black text-slate-800 uppercase tracking-tight">No Orders Found</h3>
+                  <h3 className="text-[20px] font-black text-slate-800 uppercase tracking-tight">{t('auto.noOrdersFound')}</h3>
                   <p className="text-[14px] text-gray-400 mt-3 max-w-[240px] mx-auto font-medium leading-relaxed">
-                    {searchQuery ? "We couldn't find anything matching your search." : "Looks like you haven't placed any orders recently."}
+                    {searchQuery ? t('orders.noMatch') : t('orders.noRecent')}
                   </p>
                   <button 
                     onClick={() => navigate('/home')}
                     className={`mt-10 ${primaryBg} text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest text-[12px] shadow-xl ${primaryShadow} active:scale-95 transition-transform`}
                   >
-                    Start Shopping
+                    {t('auto.startShopping')}
                   </button>
                 </motion.div>
               )}
@@ -526,7 +530,7 @@ const MyOrders = () => {
                className="relative w-full max-w-md bg-white rounded-[24px] overflow-hidden shadow-2xl p-6"
              >
                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-[18px] font-black text-slate-900 uppercase tracking-tight">Write a Review</h3>
+                    <h3 className="text-[18px] font-black text-slate-900 uppercase tracking-tight">{t('auto.writeAReview2')}</h3>
                     <button onClick={() => !isSubmitting && setShowReviewModal(null)} className="p-2 bg-gray-100 rounded-full" disabled={isSubmitting}>
                        <X size={18} className="text-gray-500" />
                     </button>
@@ -554,7 +558,7 @@ const MyOrders = () => {
 
                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 mb-6">
                     <textarea 
-                     placeholder="Share your experience with this product..."
+                     placeholder={t('auto.shareYourExperienceWithThis')}
                      className="w-full bg-transparent border-none outline-none text-[14px] text-slate-800 placeholder:text-gray-400 min-h-[120px] resize-none"
                      value={ratings[showReviewModal]?.review || ''}
                      onChange={(e) => setRatings(prev => ({ ...prev, [showReviewModal]: { ...prev[showReviewModal], review: e.target.value } }))}
@@ -564,11 +568,11 @@ const MyOrders = () => {
 
                  {/* Upload Media Section */}
                  <div className="mb-6">
-                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-2">Upload Photo or Video</label>
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 block mb-2">{t('auto.uploadPhotoOrVideo')}</label>
                     <div className="flex gap-2.5">
                        <label className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-250 hover:border-slate-400 rounded-2xl p-4 bg-gray-50 cursor-pointer transition-all active:scale-[0.98]">
                           <Upload size={20} className="text-gray-400 mb-1" />
-                          <span className="text-[10px] font-extrabold uppercase text-slate-700 tracking-tight">Choose Files</span>
+                          <span className="text-[10px] font-extrabold uppercase text-slate-700 tracking-tight">{t('auto.chooseFiles')}</span>
                           <input 
                              type="file" 
                              multiple 
@@ -624,12 +628,12 @@ const MyOrders = () => {
                     {isSubmitting ? (
                        <>
                           <Loader2 size={18} className="animate-spin" />
-                          Submitting Review...
+                          {t('auto.submittingReview')}
                        </>
                     ) : (
                        <>
                           <MessageSquare size={18} />
-                          Submit Review
+                          {t('auto.submitReview')}
                        </>
                     )}
                  </button>
@@ -660,7 +664,7 @@ const MyOrders = () => {
                          <div className="w-10 h-10 bg-primary-light rounded-xl flex items-center justify-center">
                             <Filter size={20} className="text-primary-dark" />
                          </div>
-                         <h2 className="text-[20px] font-black text-slate-900 uppercase tracking-tight">Filter Orders</h2>
+                         <h2 className="text-[20px] font-black text-slate-900 uppercase tracking-tight">{t('auto.filterOrders')}</h2>
                       </div>
                       <button onClick={() => setShowFilterSheet(false)} className="bg-gray-100 p-2 rounded-full active:scale-90 transition-transform">
                          <X size={20} className="text-gray-500" />
@@ -669,7 +673,7 @@ const MyOrders = () => {
 
                    <div className="mb-8">
                       <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Package size={14} /> Order Status
+                        <Package size={14} /> {t('x.orderStatus')}
                       </p>
                       <div className="flex flex-wrap gap-2.5">
                          {statusOptions.map(opt => (
@@ -690,7 +694,7 @@ const MyOrders = () => {
 
                    <div className="mb-10">
                       <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Calendar size={14} /> Timeframe
+                        <Calendar size={14} /> {t('x.timeframe')}
                       </p>
                       <div className="flex flex-wrap gap-2.5">
                          {timeOptions.map(opt => (
@@ -717,13 +721,13 @@ const MyOrders = () => {
                         }}
                         className="flex-1 py-4 border border-gray-200 rounded-2xl text-[13px] font-black uppercase tracking-widest text-slate-500 active:bg-gray-50 transition-colors"
                       >
-                         Clear All
+                         {t('auto.clearAll')}
                       </button>
                       <button 
                         onClick={() => setShowFilterSheet(false)}
                         className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[13px] font-black uppercase tracking-widest shadow-xl active:scale-[0.98] transition-transform"
                       >
-                         Apply Filters
+                         {t('auto.applyFilters')}
                       </button>
                    </div>
                 </div>

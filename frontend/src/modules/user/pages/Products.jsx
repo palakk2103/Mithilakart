@@ -10,8 +10,10 @@ import InfiniteScrollSentinel from '../../../shared/components/InfiniteScrollSen
 import { Filter, X, SlidersHorizontal, Star, RotateCcw } from 'lucide-react';
 
 import SamsungImg from '../../../assets/products/product01.jpg';
+import { useTranslation } from 'react-i18next';
 
 const Products = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const marketplaceTab = searchParams.get('tab') || getCurrentMarketplaceTab();
 
@@ -113,21 +115,21 @@ const Products = () => {
     <>
       <div className="flex items-center justify-between mb-4 border-b pb-2">
         <h2 className="font-bold text-lg text-slate-850 flex items-center gap-2">
-          <Filter size={18} /> Filters
+          <Filter size={18} /> {t('auto.filters')}
         </h2>
         {hasActiveFilters && (
           <button 
             onClick={clearAllFilters}
             className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"
           >
-            <RotateCcw size={12} /> Clear All
+            <RotateCcw size={12} /> {t('auto.clearAll')}
           </button>
         )}
       </div>
       
       {/* Category Filter */}
       <div className="mb-6">
-        <h3 className="font-bold text-xs mb-2.5 uppercase tracking-wider text-slate-600">Category</h3>
+        <h3 className="font-bold text-xs mb-2.5 uppercase tracking-wider text-slate-600">{t('auto.category')}</h3>
         <ul className="space-y-1.5 text-sm text-slate-700 max-h-48 overflow-y-auto no-scrollbar pr-1">
           {categories.map((cat) => (
             <li key={cat} className="flex items-center">
@@ -147,11 +149,11 @@ const Products = () => {
 
       {/* Price Filter */}
       <div className="mb-6">
-        <h3 className="font-bold text-xs mb-2.5 uppercase tracking-wider text-slate-600">Price Range</h3>
+        <h3 className="font-bold text-xs mb-2.5 uppercase tracking-wider text-slate-600">{t('auto.priceRange2')}</h3>
         <div className="flex items-center gap-2">
           <input 
             type="number" 
-            placeholder="Min" 
+            placeholder={t('auto.min')} 
             value={minPrice}
             onChange={(e) => setMinPrice(e.target.value)}
             className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-[#3E5A44]" 
@@ -159,7 +161,7 @@ const Products = () => {
           <span className="text-slate-400 font-bold">-</span>
           <input 
             type="number" 
-            placeholder="Max" 
+            placeholder={t('auto.max')} 
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.target.value)}
             className="w-full p-2 border border-slate-200 rounded text-xs outline-none focus:border-[#3E5A44]" 
@@ -188,7 +190,7 @@ const Products = () => {
 
       {/* Customer Ratings */}
       <div>
-        <h3 className="font-bold text-xs mb-2.5 uppercase tracking-wider text-slate-600">Customer Ratings</h3>
+        <h3 className="font-bold text-xs mb-2.5 uppercase tracking-wider text-slate-600">{t('auto.customerRatings')}</h3>
         <div className="space-y-1 text-xs">
           {[
             { label: 'Any Rating', value: 0 },
@@ -230,7 +232,7 @@ const Products = () => {
           />
           <div className="relative w-4/5 max-w-xs bg-white h-full p-5 flex flex-col shadow-xl z-10 overflow-y-auto">
             <div className="flex justify-between items-center mb-4 pb-2 border-b">
-              <h2 className="font-bold text-base text-slate-850">Filter Products</h2>
+              <h2 className="font-bold text-base text-slate-850">{t('auto.filterProducts')}</h2>
               <button onClick={() => setMobileFilterOpen(false)} className="p-1">
                 <X size={20} />
               </button>
@@ -240,7 +242,7 @@ const Products = () => {
               onClick={() => setMobileFilterOpen(false)}
               className="mt-6 w-full py-2.5 bg-[#3E5A44] text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm"
             >
-              Apply Filters ({filteredAndSortedProducts.length})
+              {t('auto.applyFilters')} ({filteredAndSortedProducts.length})
             </button>
           </div>
         </div>
@@ -256,29 +258,29 @@ const Products = () => {
               className="lg:hidden flex items-center gap-1 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 bg-slate-50"
             >
               <SlidersHorizontal size={14} />
-              Filters {hasActiveFilters && '•'}
+              {t('auto.filters')} {hasActiveFilters && '•'}
             </button>
             <h1 className="font-bold text-sm sm:text-base text-gray-800">
               {loading
-                ? 'Loading products...'
+                ? t('auto.loadingProducts2')
                 : error
-                  ? 'Could not load products'
-                  : `Showing ${filteredAndSortedProducts.length} of ${totalMatching ?? products.length} products`}
+                  ? t('auto.couldNotLoadProducts')
+                  : t('x.showingOfProducts', { shown: filteredAndSortedProducts.length, total: totalMatching ?? products.length })}
             </h1>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 hidden sm:inline">Sort:</span>
+            <span className="text-xs font-bold text-slate-500 hidden sm:inline">{t('auto.sort2')}</span>
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="border border-slate-200 p-1.5 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-[#3E5A44] bg-white cursor-pointer"
             >
-              <option value="Relevance">Sort by: Relevance</option>
-              <option value="Price: Low to High">Price: Low to High</option>
-              <option value="Price: High to Low">Price: High to Low</option>
-              <option value="Customer Rating">Customer Rating</option>
-              <option value="Newest First">Newest First</option>
+              <option value="Relevance">{t('auto.sortByRelevance')}</option>
+              <option value="Price: Low to High">{t('auto.priceLowToHigh')}</option>
+              <option value="Price: High to Low">{t('auto.priceHighToLow')}</option>
+              <option value="Customer Rating">{t('auto.customerRating')}</option>
+              <option value="Newest First">{t('auto.newestFirst')}</option>
             </select>
           </div>
         </div>
@@ -290,20 +292,20 @@ const Products = () => {
         {/* Empty State */}
         {!loading && filteredAndSortedProducts.length === 0 && (
           <div className="py-16 text-center bg-white rounded-xl border border-gray-200 p-6">
-            <p className="text-base font-bold text-slate-700">No products match your filter criteria</p>
-            <p className="text-xs text-slate-500 mt-1">Try resetting the filters to view all products.</p>
+            <p className="text-base font-bold text-slate-700">{t('auto.noProductsMatchYourFilter')}</p>
+            <p className="text-xs text-slate-500 mt-1">{t('auto.tryResettingTheFiltersTo')}</p>
             <button
               onClick={clearAllFilters}
               className="mt-4 px-4 py-2 bg-[#3E5A44] text-white text-xs font-bold rounded-lg shadow-sm hover:opacity-90 cursor-pointer"
             >
-              Clear All Filters
+              {t('auto.clearAllFilters')}
             </button>
           </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {loading ? (
-            <p className="text-sm text-gray-500 col-span-full">Loading...</p>
+            <p className="text-sm text-gray-500 col-span-full">{t('auto.loading2')}</p>
           ) : (
             filteredAndSortedProducts.map((product) => (
               <ProductCard key={product.id} product={product} />

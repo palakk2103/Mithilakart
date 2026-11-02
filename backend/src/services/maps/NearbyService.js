@@ -2,6 +2,7 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
 const { resolveTabFromQuery, isQuickCommerceTab } = require('../../utils/marketplaceTab');
+const { categoryMatchClause } = require('../../utils/productCategories');
 const { parseListingQuery, quickDeliveryCondition, resolveProductIds, runListingQuery, QUICK_DELIVERY_MAX_MINUTES } = require('../../utils/listingQuery');
 
 class NearbyService extends BaseService {
@@ -154,7 +155,7 @@ class NearbyService extends BaseService {
     const categoryIds = await this._categorySubtreeIds(query.categoryId);
     const filter = {
       sellerId: { $in: sellerIds },
-      ...(categoryIds ? { categoryId: { $in: categoryIds } } : {}),
+      ...(categoryIds ? { $and: [categoryMatchClause(categoryIds)] } : {}),
     };
 
     if (query.commerceFlow) {

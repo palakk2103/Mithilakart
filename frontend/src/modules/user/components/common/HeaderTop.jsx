@@ -4,8 +4,10 @@ import { motion } from 'framer-motion';
 import { Bell, Heart, ShoppingCart } from 'lucide-react';
 
 import useTabTheme from '../../../../shared/hooks/useTabTheme';
+import { useTranslation } from 'react-i18next';
 
 const HeaderTop = ({ cartCount = 0 }) => {
+  const { t } = useTranslation();
   const { primaryBadgeBg } = useTabTheme();
   const badgeBg = primaryBadgeBg;
 
@@ -24,19 +26,19 @@ const HeaderTop = ({ cartCount = 0 }) => {
       {/* ── Action Icons ── */}
       <div className="flex items-center gap-0 flex-shrink-0">
         <motion.div whileTap={{ scale: 0.82 }}>
-          <Link to="/notifications" aria-label="Notifications" className="p-1.5 block">
+          <Link to="/notifications" aria-label={t('auto.notifications')} className="p-1.5 block">
             <Bell size={20} strokeWidth={1.8} className="text-primary-dark" />
           </Link>
         </motion.div>
 
         <motion.div whileTap={{ scale: 0.82 }}>
-          <Link to="/wishlist" aria-label="Wishlist" className="p-1.5 block">
+          <Link to="/wishlist" aria-label={t('auto.wishlist')} className="p-1.5 block">
             <Heart size={20} strokeWidth={1.8} className="text-primary-dark" />
           </Link>
         </motion.div>
 
         <motion.div whileTap={{ scale: 0.82 }}>
-          <Link to="/cart" aria-label="Cart" className="relative p-1.5 block">
+          <Link to="/cart" aria-label={t('auto.cart')} className="relative p-1.5 block">
             <ShoppingCart size={20} strokeWidth={1.8} className="text-primary-dark" />
             {cartCount > 0 && (
               <span className={`absolute top-1 right-1 text-[8px] font-black min-w-[14px] h-3.5 rounded-full ${badgeBg} text-white flex items-center justify-center shadow-sm`}>

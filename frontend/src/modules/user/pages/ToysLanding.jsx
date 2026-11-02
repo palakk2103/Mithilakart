@@ -12,6 +12,7 @@ import { getCategories, getCategoryProducts } from '../services/catalogApi';
 import { getFlowHome } from '../services/storefrontApi';
 import { extractList, findCategoryByName, mapProductForCard, mapHomeBanners } from '../utils/mappers';
 import { handleImageError } from '../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
 
 
 
@@ -23,6 +24,7 @@ const DEFAULT_BANNERS = [
 ];
 
 const ToysLanding = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [cartCount, setCartCount] = useState(0);
   const [products, setProducts] = useState([]);
@@ -99,7 +101,7 @@ const ToysLanding = () => {
       <div className="px-4 py-6">
          <div className="flex items-center gap-4 mb-6">
             <div className="h-[1px] flex-1 bg-gray-100" />
-            <h2 className="text-[18px] font-black text-slate-800 tracking-tight">Great savings start here</h2>
+            <h2 className="text-[18px] font-black text-slate-800 tracking-tight">{t('auto.greatSavingsStartHere')}</h2>
             <div className="h-[1px] flex-1 bg-gray-100" />
          </div>
 
@@ -132,7 +134,7 @@ const ToysLanding = () => {
            </div>
          ) : (
            <div className="text-center py-12 bg-gray-50 rounded-2xl">
-             <p className="text-slate-500 font-medium">No toys or baby products found.</p>
+             <p className="text-slate-500 font-medium">{t('auto.noToysOrBabyProducts')}</p>
            </div>
          )}
       </div>
@@ -140,14 +142,14 @@ const ToysLanding = () => {
       {/* Sticky Bottom CTA for Cart */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex items-center justify-between z-50">
          <div className="flex flex-col">
-            <span className="text-[11px] text-gray-500 font-bold uppercase tracking-widest">Cart Total</span>
-            <span className="text-[18px] font-black text-slate-900">{cartCount} Products</span>
+            <span className="text-[11px] text-gray-500 font-bold uppercase tracking-widest">{t('auto.cartTotal')}</span>
+            <span className="text-[18px] font-black text-slate-900">{cartCount} {t('x.productsWord')}</span>
          </div>
          <button 
            onClick={() => navigate('/vendor/cart')}
            className="bg-[#3E5A44] text-white px-8 py-3.5 rounded-xl font-black text-[13px] uppercase tracking-wider shadow-lg shadow-emerald-100 active:scale-95 transition-transform"
          >
-            Go to Cart
+            {t('auto.goToCart')}
          </button>
       </div>
     </div>

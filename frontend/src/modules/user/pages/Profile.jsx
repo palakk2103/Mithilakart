@@ -140,7 +140,7 @@ const VendorProfile = () => {
           onClick={() => navigate('/home', { replace: false })}
           whileTap={{ scale: 0.88 }}
           className="p-1 rounded-full hover:bg-white/10 transition-colors"
-          aria-label="Go back"
+          aria-label={t('auto.goBack')}
         >
           <ChevronRight size={22} className={`${(isMithilakFlow || isFreshGroceryFlow || isQuickShopFlow) ? 'text-white' : 'text-slate-800'} rotate-180`} />
         </motion.button>
@@ -182,26 +182,26 @@ const VendorProfile = () => {
             </div>
             <div>
               <h1 className="text-[18px] font-black tracking-tight">
-                {authed ? (userProfile.name || (loadingProfile ? 'Loading...' : 'User')) : 'Guest User'}
+                {authed ? (userProfile.name || (loadingProfile ? t('auto.loading2') : t('auto.user'))) : t('auto.guestUser')}
               </h1>
               <p className="text-[11px] font-medium opacity-90 mt-1 leading-normal">
                 {authed
                   ? (formatContact(userProfile) || 'Add email in Edit Profile')
-                  : 'Please login to access all features'}
+                  : t('auto.pleaseLoginToAccessAll')}
               </p>
             </div>
           </div>
           
           <div className="mt-6 pt-5 border-t border-white/15 flex items-center justify-between">
             <div>
-              <p className="text-[9px] font-black opacity-80 uppercase tracking-widest leading-none">Status</p>
+              <p className="text-[9px] font-black opacity-80 uppercase tracking-widest leading-none">{t('auto.status')}</p>
               <p className="text-[13px] font-black text-yellow-400 mt-1 flex items-center gap-1.5">
-                {authed ? '★ VERIFIED MEMBER' : 'GUEST'}
+                {authed ? t('x.verifiedMember') : t('x.guest')}
               </p>
             </div>
             {authed && (
               <button className="bg-white/15 hover:bg-white/20 active:scale-95 transition-all text-white border border-white/10 px-4.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider">
-                {t('profile.loyaltyPoints') || 'Points'}
+                {t('profile.loyaltyPoints') || t('auto.points')}
               </button>
             )}
           </div>
@@ -253,13 +253,13 @@ const VendorProfile = () => {
 
       {/* Policies & Information */}
       <div className="px-4 pt-6 relative z-10">
-        <h2 className="text-[16px] font-bold text-slate-900 mb-3 px-1">Policies & Information</h2>
+        <h2 className="text-[16px] font-bold text-slate-900 mb-3 px-1">{t('auto.policiesInformation')}</h2>
         <div className="space-y-2">
           {[
-            { title: 'Privacy Policy', path: '/privacy' },
-            { title: 'Terms of Service', path: '/terms' },
-            { title: 'Cancellation & Returns', path: '/cancellation-returns' },
-            { title: 'Shipping Policy', path: '/shipping' }
+            { title: t('auto.privacyPolicy'), path: '/privacy' },
+            { title: t('auto2.termsOfService'), path: '/terms' },
+            { title: t('auto.cancellationsReturns'), path: '/cancellation-returns' },
+            { title: t('auto.shippingPolicy'), path: '/shipping' }
           ].map((item, idx) => (
             <motion.div
               key={idx}
@@ -286,7 +286,7 @@ const VendorProfile = () => {
               isMithilakFlow ? 'text-[#207C8A] hover:text-[#1a6874]' : isFreshGroceryFlow ? 'text-[#D9A21B] hover:text-[#c49218]' : isQuickShopFlow ? 'text-[#F26522] hover:text-[#d45014]' : 'text-[#6FAE4A] hover:text-[#5b953d]'
             }`}
           >
-            Log Out
+            {t('auto.logOut')}
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16 17 21 12 16 7"/>
@@ -300,7 +300,7 @@ const VendorProfile = () => {
               isMithilakFlow ? 'text-[#207C8A] hover:text-[#1a6874]' : isFreshGroceryFlow ? 'text-[#D9A21B] hover:text-[#c49218]' : isQuickShopFlow ? 'text-[#F26522] hover:text-[#d45014]' : 'text-[#6FAE4A] hover:text-[#5b953d]'
             }`}
           >
-            Login
+            {t('auto.login')}
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
               <polyline points="10 17 15 12 10 7"/>

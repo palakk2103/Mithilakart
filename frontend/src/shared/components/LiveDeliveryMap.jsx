@@ -1,5 +1,6 @@
 import React from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { useTranslation } from 'react-i18next';
 
 const mapStyle = {
   width: '100%',
@@ -31,6 +32,7 @@ function getDistanceKm(p1, p2) {
 }
 
 export default function LiveDeliveryMap({ destination, partnerLocation, className = '' }) {
+  const { t } = useTranslation();
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey,
@@ -59,7 +61,7 @@ export default function LiveDeliveryMap({ destination, partnerLocation, classNam
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
             <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400">
-              Live Satellite GPS Feed
+              {t('auto.liveSatelliteGpsFeed')}
             </span>
           </div>
           {distKm && (
@@ -81,7 +83,7 @@ export default function LiveDeliveryMap({ destination, partnerLocation, classNam
               <div className="w-10 h-10 rounded-xl bg-slate-800 border-2 border-emerald-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
                 🏪
               </div>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Store</span>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">{t('auto.store')}</span>
             </div>
 
             {/* Rider Node */}
@@ -89,7 +91,7 @@ export default function LiveDeliveryMap({ destination, partnerLocation, classNam
               <div className="w-11 h-11 rounded-2xl bg-emerald-500 border-2 border-white flex items-center justify-center text-white shadow-xl shadow-emerald-500/40 animate-bounce">
                 🛵
               </div>
-              <span className="text-[10px] font-black text-emerald-300 uppercase tracking-tight">Rider Live</span>
+              <span className="text-[10px] font-black text-emerald-300 uppercase tracking-tight">{t('auto.riderLive')}</span>
             </div>
 
             {/* Customer Destination Node */}
@@ -97,7 +99,7 @@ export default function LiveDeliveryMap({ destination, partnerLocation, classNam
               <div className="w-10 h-10 rounded-xl bg-slate-800 border-2 border-cyan-400 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
                 📍
               </div>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Your Home</span>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">{t('auto.yourHome')}</span>
             </div>
           </div>
         </div>
@@ -105,9 +107,9 @@ export default function LiveDeliveryMap({ destination, partnerLocation, classNam
         {/* Bottom Coordinates & Live Ping */}
         <div className="flex items-center justify-between z-10 pt-2 border-t border-slate-700/50 text-[10px] font-mono text-slate-400">
           <span>
-            {partner ? `Rider GPS: ${partner.lat.toFixed(4)}, ${partner.lng.toFixed(4)}` : 'Awaiting Next GPS Ping...'}
+            {partner ? `Rider GPS: ${partner.lat.toFixed(4)}, ${partner.lng.toFixed(4)}` : t('auto.awaitingNextGpsPing')}
           </span>
-          <span className="text-emerald-400 font-bold">100% Realtime</span>
+          <span className="text-emerald-400 font-bold">{t('auto.n100Realtime')}</span>
         </div>
       </div>
     );

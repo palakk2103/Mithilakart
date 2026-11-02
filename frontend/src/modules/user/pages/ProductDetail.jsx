@@ -13,12 +13,14 @@ import useAccountStore from '../../../store/useAccountStore';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
 import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 import { getProductById, getProductReviews, getProductQuestions, createProductReview, askProductQuestion, getCategoryProducts } from '../services/catalogApi';
 import { uploadReviewMedia } from '../../../shared/services/uploadService';
 import { getOrders } from '../services/ordersApi';
 import { addToWishlist, removeFromWishlist as removeWishlistItem } from '../services/userApi';
 import { mapProductForDetail, mapProductForCard, extractList, mapReview, mapQuestion } from '../utils/mappers';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import useWishlistToggle from '../hooks/useWishlistToggle';
 import { customerApi } from '../../../shared/api/client';
 import { toast } from 'react-hot-toast';
 import { addProductToCart, fetchCartCount } from '../utils/cartUtils';
@@ -65,6 +67,7 @@ const ProductDetail = () => {
   // Base state
   const [selectedSize, setSelectedSize] = useState('S');
   const { wishlist, addToWishlist: addToWishlistStore, removeFromWishlist } = useAccountStore();
+  useWishlistToggle(); // loads the server wishlist into the store so the heart persists on refresh
   const [product, setProduct] = useState(null);
   const isQuickProduct = Boolean(
     product?.commerceFlows?.includes('quick_shop') ||
@@ -173,14 +176,14 @@ const ProductDetail = () => {
       return;
     }
     if (!reviewForm.body.trim()) {
-      toast.error('Please write a review');
+      toast.error(t('auto.pleaseWriteAReview'));
       return;
     }
     setEngagementLoading(true);
     try {
       const orderId = await findDeliveredOrderId(resolvedProductId);
       if (!orderId) {
-        toast.error('You need a delivered order for this product to review');
+        toast.error(t('auto.youNeedADeliveredOrder'));
         return;
       }
 
@@ -203,13 +206,13 @@ const ProductDetail = () => {
         images: uploadedImages,
         videos: uploadedVideos,
       });
-      toast.success('Review submitted for moderation');
+      toast.success(t('auto.reviewSubmittedForModeration'));
       setReviewForm({ rating: 5, body: '' });
       setReviewFiles([]);
       const reviewData = await getProductReviews(resolvedProductId).catch(() => []);
       setReviews(extractList(reviewData).map(mapReview));
     } catch (err) {
-      toast.error(err?.message || 'Failed to submit review');
+      toast.error(err?.message || t('auto.failedToSubmitReview'));
     } finally {
       setEngagementLoading(false);
     }
@@ -221,18 +224,18 @@ const ProductDetail = () => {
       return;
     }
     if (!questionText.trim()) {
-      toast.error('Enter your question');
+      toast.error(t('auto.enterYourQuestion'));
       return;
     }
     setEngagementLoading(true);
     try {
       await askProductQuestion(resolvedProductId, { question: questionText.trim() });
-      toast.success('Question submitted');
+      toast.success(t('auto.questionSubmitted'));
       setQuestionText('');
       const questionData = await getProductQuestions(resolvedProductId).catch(() => []);
       setQuestions(extractList(questionData?.items || questionData).map(mapQuestion));
     } catch (err) {
-      toast.error(err?.message || 'Failed to submit question');
+      toast.error(err?.message || t('auto.failedToSubmitQuestion'));
     } finally {
       setEngagementLoading(false);
     }
@@ -297,11 +300,11 @@ const ProductDetail = () => {
             setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
           }
         } else if (!cancelled) {
-          setError('Product not found');
+          setError(t('auto.productNotFound'));
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err.message || 'Failed to load product');
+          setError(err.message || t('auto.failedToLoadProduct'));
           if (incomingProduct) {
             setProduct(mapProductForDetail(incomingProduct, PlumShampoo));
           }
@@ -458,7 +461,7 @@ const ProductDetail = () => {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     } catch (err) {
-      setToastMessage(err?.message || 'Could not add to cart');
+      setToastMessage(err?.message || t('auto.couldNotAddToCart'));
       setShowToast(true);
       // Errors explain what to do (e.g. mixed-tab cart) — leave time to read.
       setTimeout(() => setShowToast(false), 4500);
@@ -587,7 +590,7 @@ const ProductDetail = () => {
       ...prev,
       [id]: (prev[id] || 0) + 1
     }));
-    toast.success('Thank you for your feedback!');
+    toast.success(t('auto.thankYouForYourFeedback'));
   };
 
   // Q&A interactions
@@ -628,7 +631,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <>
-        {!loading && <SEO title="Product Not Found" noindex />}
+        {!loading && <SEO title={t('auto.productNotFound2')} noindex />}
         <div className="min-h-screen flex items-center justify-center bg-bg-cream">
           <p className="text-sm text-slate-655">{loading ? 'Loading product...' : error || 'Product not found'}</p>
         </div>
@@ -822,12 +825,12 @@ const ProductDetail = () => {
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 {productTags.includes('bestseller') && (
                   <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-red-100">
-                    <Flame size={10} /> BESTSELLER
+                    <Flame size={10} /> {t('auto.bestseller')}
                   </span>
                 )}
                 {productTags.includes('trending') && (
                   <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-100">
-                    <Award size={10} /> TRENDING
+                    <Award size={10} /> {t('auto.trending')}
                   </span>
                 )}
               </div>
@@ -860,15 +863,15 @@ const ProductDetail = () => {
                   )}
                 </div>
                 <div className="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100 font-extrabold">
-                  Inclusive of GST
+                  {t('auto.inclusiveOfGst')}
                 </div>
               </div>
               
               <div className="mt-2 text-xs text-slate-500 flex items-center justify-between">
                 {unitSavings > 0 ? (
-                  <div>You save <span className="text-slate-800 font-bold">{formatPrice(unitSavings)}</span> on this purchase</div>
+                  <div>{t('auto.youSave')} <span className="text-slate-800 font-bold">{formatPrice(unitSavings)}</span> {t('auto.onThisPurchase')}</div>
                 ) : (
-                  <div className="text-emerald-700 font-semibold">Direct Artisan & Verified Seller Deal</div>
+                  <div className="text-emerald-700 font-semibold">{t('auto.directArtisanVerifiedSellerDeal')}</div>
                 )}
               </div>
             </div>
@@ -877,30 +880,30 @@ const ProductDetail = () => {
           {/* Available Offers Carousel/Grid */}
           <div className="px-4 py-3 mt-1">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2.5">
-              Best Offers For You
+              {t('auto.bestOffersForYou')}
             </span>
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
               <div className="min-w-[200px] bg-slate-900 text-white rounded-2xl p-3 flex flex-col justify-between border border-slate-800 shadow-sm relative overflow-hidden">
                 <div className="absolute -right-4 -bottom-4 w-12 h-12 bg-white/5 rounded-full"></div>
                 <div>
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-[#FFD633] mb-1">Mithilakart Special</div>
-                  <div className="text-xs font-bold leading-tight">Flat ₹200 Cashback</div>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-[#FFD633] mb-1">{t('auto.mithilakartSpecial')}</div>
+                  <div className="text-xs font-bold leading-tight">{t('auto.flat200Cashback')}</div>
                 </div>
-                <div className="text-[9px] text-slate-300 mt-3">On orders above ₹999</div>
+                <div className="text-[9px] text-slate-300 mt-3">{t('auto.onOrdersAbove999')}</div>
               </div>
               <div className="min-w-[200px] bg-white rounded-2xl p-3 flex flex-col justify-between border border-slate-200 shadow-sm">
                 <div>
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 mb-1">Bank Offer</div>
-                  <div className="text-xs font-bold text-slate-800 leading-tight">10% Instant Discount</div>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 mb-1">{t('auto.bankOffer')}</div>
+                  <div className="text-xs font-bold text-slate-800 leading-tight">{t('auto.n10InstantDiscount')}</div>
                 </div>
-                <div className="text-[9px] text-slate-500 mt-3">Using HDFC Bank Debit/Credit Cards</div>
+                <div className="text-[9px] text-slate-500 mt-3">{t('auto.usingHdfcBankDebitCredit')}</div>
               </div>
               <div className="min-w-[200px] bg-white rounded-2xl p-3 flex flex-col justify-between border border-slate-200 shadow-sm">
                 <div>
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-blue-600 mb-1">Free Delivery</div>
-                  <div className="text-xs font-bold text-slate-800 leading-tight">Free Express Shipping</div>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-blue-600 mb-1">{t('auto.freeDelivery')}</div>
+                  <div className="text-xs font-bold text-slate-800 leading-tight">{t('auto.freeExpressShipping')}</div>
                 </div>
-                <div className="text-[9px] text-slate-500 mt-3">Valid for elite members</div>
+                <div className="text-[9px] text-slate-500 mt-3">{t('auto.validForEliteMembers')}</div>
               </div>
             </div>
           </div>
@@ -909,7 +912,7 @@ const ProductDetail = () => {
           {availableCoupons.length > 0 && (
             <div className="px-4 py-3">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
-                Apply Coupons
+                {t('auto.applyCoupons')}
               </span>
               <div className="grid grid-cols-1 gap-2.5">
                 {availableCoupons.map((coupon) => (
@@ -921,7 +924,7 @@ const ProductDetail = () => {
                         </span>
                         {copiedCoupon === coupon.code && (
                           <span className="text-emerald-600 text-[10px] font-black flex items-center gap-0.5">
-                            <Check size={10} /> Copied
+                            <Check size={10} /> {t('x.copied')}
                           </span>
                         )}
                       </div>
@@ -944,10 +947,10 @@ const ProductDetail = () => {
             <div className="px-4 py-3 mt-1">
               <div className="flex justify-between items-center mb-2.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                  {t('product.selectSize') || 'Select Size'}
+                  {t('product.selectSize') || t('auto.selectSize')}
                 </span>
                 <span className="text-[10px] text-slate-500 font-extrabold underline cursor-pointer hover:text-slate-800">
-                  Size Chart Helper
+                  {t('auto.sizeChartHelper')}
                 </span>
               </div>
               <div className="flex gap-3">
@@ -985,7 +988,7 @@ const ProductDetail = () => {
           {/* Desktop Quantity & Action Buttons */}
           <div className="hidden md:block px-4 py-3 mt-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2.5">
-              Quantity
+              {t('auto.quantity')}
             </span>
             <div className="flex items-center gap-4">
               <div className="flex items-center bg-white border border-slate-200 rounded-full px-2.5 py-1">
@@ -996,7 +999,7 @@ const ProductDetail = () => {
                     setQuantity(q => Math.max(1, q - 1));
                   }}
                   className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all cursor-pointer"
-                  aria-label="Decrease quantity"
+                  aria-label={t('auto.decreaseQuantity')}
                 >
                   <Minus size={14} className="stroke-[2.5]" />
                 </button>
@@ -1008,7 +1011,7 @@ const ProductDetail = () => {
                     setQuantity(q => q + 1);
                   }}
                   className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 active:scale-90 transition-all cursor-pointer"
-                  aria-label="Increase quantity"
+                  aria-label={t('auto.increaseQuantity')}
                 >
                   <Plus size={14} className="stroke-[2.5]" />
                 </button>
@@ -1034,13 +1037,13 @@ const ProductDetail = () => {
           {/* Delivery & Pincode Checker */}
           <div className="px-4 py-3 mt-2">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2.5">
-              Delivery Details
+              {t('auto.deliveryDetails')}
             </span>
             <div className="bg-white border border-slate-100 rounded-3xl p-4 space-y-4 shadow-xs">
               <div className="flex items-center gap-3">
                 <MapPin size={18} className="text-[#3E5A44] shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider leading-none">Deliver to Home</p>
+                  <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider leading-none">{t('auto.deliverToHome')}</p>
                   <p className="text-[12px] text-slate-500 font-medium truncate mt-1">{deliverTo.label}</p>
                 </div>
                 <ChevronRight size={16} className="text-gray-400" />
@@ -1057,25 +1060,25 @@ const ProductDetail = () => {
                     setPincode(e.target.value.replace(/\D/g, '').slice(0, 6));
                     setPincodeStatus(null);
                   }}
-                  placeholder="Enter 6-digit Pincode"
+                  placeholder={t('auto.enter6DigitPincode')}
                   className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-slate-900"
                 />
                 <button 
                   onClick={handlePincodeCheck}
                   className={`px-4 py-2 text-xs font-black rounded-xl text-white ${primaryBg} hover:opacity-90 active:scale-95 transition-all`}
                 >
-                  Check
+                  {t('auto.check')}
                 </button>
               </div>
 
-              {pincodeStatus === 'loading' && <p className="text-[10px] text-slate-500 font-bold">Verifying availability...</p>}
-              {pincodeStatus === 'invalid' && <p className="text-[10px] text-red-500 font-bold">Please enter a valid 6-digit Pincode.</p>}
-              {pincodeStatus === 'unavailable' && <p className="text-[10px] text-red-500 font-bold">Sorry, delivery is not available to this pincode.</p>}
+              {pincodeStatus === 'loading' && <p className="text-[10px] text-slate-500 font-bold">{t('auto.verifyingAvailability')}</p>}
+              {pincodeStatus === 'invalid' && <p className="text-[10px] text-red-500 font-bold">{t('auto.pleaseEnterAValid6')}</p>}
+              {pincodeStatus === 'unavailable' && <p className="text-[10px] text-red-500 font-bold">{t('auto.sorryDeliveryIsNotAvailable')}</p>}
               {pincodeStatus === 'available' && (
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-2.5 text-xs text-emerald-800 space-y-1">
-                  <p className="font-extrabold flex items-center gap-1"><Check size={12} /> Delivery Available to this location</p>
-                  <p className="text-[11px] font-medium text-emerald-700">Estimated Delivery: {product?.deliveryEtaText ? product.deliveryEtaText : (isQuickProduct ? '15-30 mins' : '2-4 business days')}</p>
-                  <p className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded w-fit">Serviceable</p>
+                  <p className="font-extrabold flex items-center gap-1"><Check size={12} /> {t('auto.deliveryAvailableToThisLocation')}</p>
+                  <p className="text-[11px] font-medium text-emerald-700">{t('checkout.estimatedDelivery')}: {product?.deliveryEtaText ? tName(product.deliveryEtaText) : (isQuickProduct ? tName('15-30 mins') : t('policy.days24'))}</p>
+                  <p className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded w-fit">{t('auto.serviceable')}</p>
                 </div>
               )}
 
@@ -1084,15 +1087,15 @@ const ProductDetail = () => {
                 <div>
                   <p className="text-[12px] font-black text-slate-800">
                     {product?.attributes?.deliveryEstimate
-                      ? `Estimated Delivery: ${product.attributes.deliveryEstimate}`
+                      ? `${t('checkout.estimatedDelivery')}: ${product.attributes.deliveryEstimate}`
                       : product?.deliveryEtaText
-                      ? `Delivery in ${product.deliveryEtaText}`
+                      ? t('checkout.deliveryIn', { time: tName(product.deliveryEtaText) })
                       : isQuickProduct
-                      ? '⚡ Quick Delivery (15-30 mins)'
-                      : 'Standard Delivery (2-4 business days)'}
+                      ? t('x.quickDelivery1530')
+                      : t('auto.standardDelivery24Business')}
                   </p>
                   {(product?.deliveryEtaText || isQuickProduct) && (
-                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5">⚡ Fast delivery available</p>
+                    <p className="text-[10px] text-emerald-600 font-bold mt-0.5">{t('auto.fastDeliveryAvailable')}</p>
                   )}
                 </div>
               </div>
@@ -1120,7 +1123,7 @@ const ProductDetail = () => {
                 <IndianRupee size={16} className="text-amber-700" />
               </div>
               <span className="text-[9.5px] font-black text-slate-700 text-center uppercase tracking-tighter leading-tight">
-                COD Available
+                {t('auto.codAvailable')}
               </span>
             </div>
             <div 
@@ -1131,7 +1134,7 @@ const ProductDetail = () => {
                 <span className="text-emerald-700 font-black text-[9px] uppercase tracking-tighter">24x7</span>
               </div>
               <span className="text-[9.5px] font-black text-slate-700 text-center uppercase tracking-tighter leading-tight">
-                Live Support
+                {t('auto.liveSupport')}
               </span>
             </div>
           </div>
@@ -1141,15 +1144,15 @@ const ProductDetail = () => {
             <div className="bg-slate-900 text-white rounded-3xl p-4 flex flex-wrap justify-between items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck size={16} className="text-[#FFD633]" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">100% Original</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{t('auto.n100Original')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <ShieldCheck size={16} className="text-[#FFD633]" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Verified Seller</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{t('auto.verifiedSeller')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <ShieldCheck size={16} className="text-[#FFD633]" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Secure Payments</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{t('auto.securePayments')}</span>
               </div>
             </div>
           </div>
@@ -1162,7 +1165,7 @@ const ProductDetail = () => {
                 onClick={() => setIsHighlightsOpen(!isHighlightsOpen)}
                 className="flex justify-between items-center cursor-pointer"
               >
-                <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-wider">Product Highlights</h3>
+                <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-wider">{t('auto.productHighlights')}</h3>
                 <ChevronRight
                   size={16}
                   className={`text-gray-400 transition-transform duration-300 ${isHighlightsOpen ? 'rotate-90' : ''}`}
@@ -1190,8 +1193,8 @@ const ProductDetail = () => {
                 className="flex justify-between items-center cursor-pointer"
               >
                 <div>
-                  <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-wider">Specifications & Info</h3>
-                  <p className="text-[10px] text-gray-400 font-bold mt-0.5 font-sans">Details, Description and Origin</p>
+                  <h3 className="text-[13px] font-black text-slate-900 uppercase tracking-wider">{t('auto.specificationsInfo')}</h3>
+                  <p className="text-[10px] text-gray-400 font-bold mt-0.5 font-sans">{t('auto.detailsDescriptionAndOrigin')}</p>
                 </div>
                 <ChevronRight 
                   size={16} 
@@ -1207,7 +1210,7 @@ const ProductDetail = () => {
                       type="text" 
                       value={specSearchQuery}
                       onChange={(e) => setSpecSearchQuery(e.target.value)}
-                      placeholder="Search specifications..."
+                      placeholder={t('auto.searchSpecifications')}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-slate-800"
                     />
                   </div>
@@ -1241,14 +1244,14 @@ const ProductDetail = () => {
                           </div>
                         ))
                       ) : (
-                        <p className="text-xs text-slate-400 col-span-2">No matching specifications found</p>
+                        <p className="text-xs text-slate-400 col-span-2">{t('auto.noMatchingSpecificationsFound')}</p>
                       )}
                     </div>
                   )}
 
                   {activeDetailTab === 'Description' && (
                     <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
-                      {product.description || 'No description available for this product.'}
+                      {product.description || t('auto.noDescriptionAvailableForThis')}
                     </p>
                   )}
                 </div>
@@ -1261,7 +1264,7 @@ const ProductDetail = () => {
       {/* Reviews, Ratings Breakdown & Writing Reviews */}
       <div className="mt-4 px-4 md:max-w-6xl md:mx-auto md:w-full space-y-4">
         <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-xs">
-          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900 mb-4">Customer Reviews</h3>
+          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900 mb-4">{t('auto.customerReviews')}</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center pb-6 border-b border-slate-100 mb-4">
             <div className="md:col-span-4 text-center">
@@ -1272,7 +1275,7 @@ const ProductDetail = () => {
                 ))}
               </div>
               <p className="text-[10px] text-slate-400 font-extrabold mt-1.5 uppercase">
-                {ratingCount ? `Based on ${ratingCount} ${ratingCount === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}
+                {ratingCount ? t('auto2.basedOnRatings', { count: ratingCount }) : t('auto.noRatingsYet')}
               </p>
             </div>
 
@@ -1307,24 +1310,24 @@ const ProductDetail = () => {
                       : 'bg-slate-50 text-slate-600 border-slate-150 hover:bg-slate-100'
                   }`}
                 >
-                  {f === 'all' && 'All Reviews'}
-                  {f === 'verified' && 'Verified Purchases'}
+                  {f === 'all' && t('auto.allReviews')}
+                  {f === 'verified' && t('auto.verifiedPurchases')}
                   {f === 'fiveStar' && '5 Stars'}
-                  {f === 'withImages' && 'With Photos'}
+                  {f === 'withImages' && t('auto.withPhotos')}
                 </button>
               ))}
             </div>
 
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase">Sort</span>
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase">{t('auto.sort')}</span>
               <select 
                 value={reviewSort} 
                 onChange={(e) => setReviewSort(e.target.value)}
                 className="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none"
               >
-                <option value="recent">Most Recent</option>
-                <option value="highest">Highest Rating</option>
-                <option value="lowest">Lowest Rating</option>
+                <option value="recent">{t('auto.mostRecent')}</option>
+                <option value="highest">{t('auto.highestRating')}</option>
+                <option value="lowest">{t('auto.lowestRating')}</option>
               </select>
             </div>
           </div>
@@ -1332,7 +1335,7 @@ const ProductDetail = () => {
           <div className="space-y-4 mb-5">
             {processedReviews.length === 0 && (
               <p className="text-xs text-slate-400 font-semibold text-center py-6">
-                No reviews yet — be the first to share your experience.
+                {t('auto.noReviewsYetBeThe')}
               </p>
             )}
             {processedReviews.map((review) => (
@@ -1346,7 +1349,7 @@ const ProductDetail = () => {
                   </div>
                   {review.isVerified && (
                     <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                      Verified Purchase
+                      {t('auto.verifiedPurchase')}
                     </span>
                   )}
                 </div>
@@ -1389,41 +1392,41 @@ const ProductDetail = () => {
                     className="flex items-center gap-1.5 text-[10px] font-extrabold text-slate-400 hover:text-slate-800 transition-colors"
                   >
                     <ThumbsUp size={11} />
-                    <span>Helpful ({helpfulReviews[review.id] || 0})</span>
+                    <span>{t('x.helpful')} ({helpfulReviews[review.id] || 0})</span>
                   </button>
                   <span className="text-[10px] text-slate-350">|</span>
-                  <span className="text-[10px] text-slate-400 font-bold">Report abuse</span>
+                  <span className="text-[10px] text-slate-400 font-bold">{t('auto.reportAbuse')}</span>
                 </div>
               </div>
             ))}
           </div>
 
           <div className="space-y-3 border-t border-slate-50 pt-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Write a review</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('auto.writeAReview')}</p>
             <select
               value={reviewForm.rating}
               onChange={(e) => setReviewForm((f) => ({ ...f, rating: e.target.value }))}
               className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:border-slate-800"
             >
               {[5, 4, 3, 2, 1].map((n) => (
-                <option key={n} value={n}>{n} Stars</option>
+                <option key={n} value={n}>{t('x.starsN', { n })}</option>
               ))}
             </select>
             <textarea
               value={reviewForm.body}
               onChange={(e) => setReviewForm((f) => ({ ...f, body: e.target.value }))}
               rows={3}
-              placeholder="Share your experience..."
+              placeholder={t('auto.shareYourExperience')}
               className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:border-slate-800"
               disabled={engagementLoading}
             />
             
             {/* Media Upload (Images/Videos) */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Upload Photos or Videos</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{t('auto.uploadPhotosOrVideos')}</label>
               <label className="w-full flex flex-col items-center justify-center border-2 border-dashed border-slate-200 hover:border-slate-400 rounded-xl p-3 bg-slate-50 cursor-pointer transition-all active:scale-[0.98]">
                 <Upload size={18} className="text-gray-400 mb-0.5" />
-                <span className="text-[10px] font-extrabold uppercase text-slate-700">Choose Files</span>
+                <span className="text-[10px] font-extrabold uppercase text-slate-700">{t('auto.chooseFiles')}</span>
                 <input 
                   type="file" 
                   multiple 
@@ -1477,7 +1480,7 @@ const ProductDetail = () => {
               {engagementLoading ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Submitting Review...
+                  {t('auto.submittingReview')}
                 </>
               ) : (
                 'Submit Review'
@@ -1488,13 +1491,13 @@ const ProductDetail = () => {
 
         {/* Questions & Answers Section */}
         <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm">
-          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900 mb-4">Questions & Answers</h3>
+          <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900 mb-4">{t('auto.questionsAnswers')}</h3>
           
           <div className="space-y-4.5 mb-5">
             {questions.length === 0 ? (
               <div className="py-6 text-center text-slate-400">
-                <p className="text-xs font-medium">No questions asked yet for this item.</p>
-                <p className="text-[11px] text-slate-400/80 mt-1">Have a query? Ask the artisan/seller below!</p>
+                <p className="text-xs font-medium">{t('auto.noQuestionsAskedYetFor')}</p>
+                <p className="text-[11px] text-slate-400/80 mt-1">{t('auto.haveAQueryAskThe')}</p>
               </div>
             ) : (
               questions.map((q) => (
@@ -1514,7 +1517,7 @@ const ProductDetail = () => {
                       <p className="text-[12px] text-slate-600">A: {q.answer}</p>
                       {q.isSellerAnswered && (
                         <span className="text-[8px] bg-slate-900 text-white font-black uppercase px-2 py-0.5 rounded-full inline-block mt-1">
-                          Seller Answer
+                          {t('auto.sellerAnswer')}
                         </span>
                       )}
                     </div>
@@ -1528,7 +1531,7 @@ const ProductDetail = () => {
             <input
               value={questionText}
               onChange={(e) => setQuestionText(e.target.value)}
-              placeholder="Ask about this product..."
+              placeholder={t('auto.askAboutThisProduct')}
               className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-slate-850"
             />
             <button
@@ -1546,7 +1549,7 @@ const ProductDetail = () => {
       {similarProducts.length > 0 && (
         <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
           <div className="flex justify-between items-center px-4 mb-3 md:px-0">
-            <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">Similar Products</h3>
+            <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">{t('auto.similarProducts')}</h3>
           </div>
           <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
             {similarProducts.map((item) => (
@@ -1612,7 +1615,7 @@ const ProductDetail = () => {
               }} className="text-slate-800">
                 <X size={24} />
               </button>
-              <h2 className="text-[18px] font-bold text-slate-800">Easy Returns Policy</h2>
+              <h2 className="text-[18px] font-bold text-slate-800">{t('auto.easyReturnsPolicy')}</h2>
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 pb-10">
@@ -1626,7 +1629,7 @@ const ProductDetail = () => {
                       <span className="text-white text-[10px] font-bold">✓</span>
                     </div>
                   </div>
-                  <span className="text-[13px] font-bold text-slate-700">Replacement</span>
+                  <span className="text-[13px] font-bold text-slate-700">{t('auto.replacement')}</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <div className="w-14 h-14 bg-gray-50 rounded-sm flex items-center justify-center relative">
@@ -1637,7 +1640,7 @@ const ProductDetail = () => {
                       <span className="text-white text-[10px] font-bold">✓</span>
                     </div>
                   </div>
-                  <span className="text-[13px] font-bold text-slate-700">Refund</span>
+                  <span className="text-[13px] font-bold text-slate-700">{t('auto.refund')}</span>
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <div className="w-14 h-14 bg-gray-50 rounded-sm flex items-center justify-center relative">
@@ -1648,12 +1651,12 @@ const ProductDetail = () => {
                       <span className="text-white text-[10px] font-bold">✓</span>
                     </div>
                   </div>
-                  <span className="text-[13px] font-bold text-slate-700">Exchange</span>
+                  <span className="text-[13px] font-bold text-slate-700">{t('auto.exchange')}</span>
                 </div>
               </div>
 
               <div className="mb-10">
-                <h3 className="text-[17px] font-black text-slate-900 mb-6">What are the conditions for return?</h3>
+                <h3 className="text-[17px] font-black text-slate-900 mb-6">{t('auto.whatAreTheConditionsFor')}</h3>
                 <div className="space-y-5">
                   {[
                     'Received damaged product',
@@ -1665,14 +1668,14 @@ const ProductDetail = () => {
                       <div className={`w-5 h-5 border ${accentBorder} rounded-sm flex items-center justify-center`}>
                         <span className={`${accentText} text-[12px] font-bold`}>✓</span>
                       </div>
-                      <span className="text-[15px] font-bold text-slate-700">{text}</span>
+                      <span className="text-[15px] font-bold text-slate-700">{tName(text)}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-[17px] font-black text-slate-900 mb-8">How to place a return?</h3>
+                <h3 className="text-[17px] font-black text-slate-900 mb-8">{t('auto.howToPlaceAReturn')}</h3>
                 
                 <div className="space-y-12 pl-4 border-l-2 border-dashed border-gray-200 ml-2">
                   <div className="relative">
@@ -1681,13 +1684,13 @@ const ProductDetail = () => {
                     </div>
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <h4 className="text-[15px] font-black text-slate-800 mb-2">Select issue</h4>
-                        <p className="text-[14px] font-medium text-gray-500 mb-1">• Go to My Orders &gt; Order Details</p>
-                        <p className="text-[14px] font-medium text-gray-500">• Return &gt; Select Issue</p>
+                        <h4 className="text-[15px] font-black text-slate-800 mb-2">{t('auto.selectIssue')}</h4>
+                        <p className="text-[14px] font-medium text-gray-500 mb-1">• {t('x.goMyOrdersDetails')}</p>
+                        <p className="text-[14px] font-medium text-gray-500">• {t('x.returnSelectIssue')}</p>
                       </div>
                       <div className="w-20 h-16 bg-gray-50 rounded-sm flex flex-col items-center justify-center relative border border-gray-100">
                         <div className="w-10 h-10 border border-gray-300 rounded-sm flex items-center justify-center">
-                          <span className="text-[8px] font-bold text-gray-400 absolute top-1 right-1">Return</span>
+                          <span className="text-[8px] font-bold text-gray-400 absolute top-1 right-1">{t('auto.return')}</span>
                         </div>
                         <div className={`absolute -top-1 -right-1 w-4 h-4 ${accentBg} rounded-full border-2 border-white`} />
                       </div>
@@ -1700,8 +1703,8 @@ const ProductDetail = () => {
                     </div>
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <h4 className="text-[15px] font-black text-slate-800 mb-2">Get an approval</h4>
-                        <p className="text-[14px] font-medium text-gray-500 leading-relaxed">• Seller will approve based on<br/>condition</p>
+                        <h4 className="text-[15px] font-black text-slate-800 mb-2">{t('auto.getAnApproval')}</h4>
+                        <p className="text-[14px] font-medium text-gray-500 leading-relaxed">{t('auto.sellerWillApproveBasedOn')}<br/>condition</p>
                       </div>
                       <div className="w-20 h-16 bg-gray-50 rounded-sm flex items-center justify-center relative border border-gray-100">
                          <div className="w-10 h-10 bg-slate-200 rounded-full" />
@@ -1716,8 +1719,8 @@ const ProductDetail = () => {
                     </div>
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <h4 className="text-[15px] font-black text-slate-800 mb-2">Product will be picked up</h4>
-                        <p className="text-[14px] font-medium text-gray-500 leading-relaxed">• Product must be in original<br/>condition with tags and packaging</p>
+                        <h4 className="text-[15px] font-black text-slate-800 mb-2">{t('auto.productWillBePickedUp')}</h4>
+                        <p className="text-[14px] font-medium text-gray-500 leading-relaxed">{t('auto.productMustBeInOriginal')}<br/>{t('auto.conditionWithTagsAndPackaging')}</p>
                       </div>
                       <div className="w-20 h-16 bg-gray-50 rounded-sm flex items-center justify-center relative border border-gray-100">
                         <Truck size={30} className="text-gray-300" />
@@ -1760,7 +1763,7 @@ const ProductDetail = () => {
               }} className="text-slate-800">
                 <X size={24} />
               </button>
-              <h2 className="text-[18px] font-bold text-slate-800">Payments Options</h2>
+              <h2 className="text-[18px] font-bold text-slate-800">{t('auto.paymentsOptions')}</h2>
             </div>
 
             <div className="sticky top-[53px] bg-white flex border-b border-gray-100 z-10">
@@ -1789,21 +1792,21 @@ const ProductDetail = () => {
             <div className="flex-1 overflow-y-auto p-6 bg-white">
               {activePaymentTab === 'COD' ? (
                 <p className="text-[15px] text-slate-700 font-medium leading-relaxed">
-                  Available. Select Cash on Delivery (CoD) payment option while placing the order and later, pay in cash at the time of actual delivery of product. No advance payment needed.
+                  {t('auto.availableSelectCashOnDelivery')}
                 </p>
               ) : (
                 <div className="space-y-6">
                   <p className="text-[15px] text-slate-700 font-medium leading-relaxed">
-                    Provide your UPI ID to process the payment. No extra charges on this transaction.
+                    {t('auto.provideYourUpiIdTo')}
                   </p>
                   {isPaymentExpanded && (
                     <div className="space-y-4 animate-in fade-in duration-500">
                       <div className="bg-primary-light p-4 rounded-sm border border-primary-green/30">
-                        <p className="text-[13px] text-blue-800 font-bold mb-1">Instant Refund Policy</p>
-                        <p className="text-[12px] text-primary-dark">UPI payments are eligible for instant refunds upon cancellation.</p>
+                        <p className="text-[13px] text-blue-800 font-bold mb-1">{t('auto.instantRefundPolicy')}</p>
+                        <p className="text-[12px] text-primary-dark">{t('auto.upiPaymentsAreEligibleFor')}</p>
                       </div>
                       <div className="border border-gray-100 rounded-sm p-4">
-                        <p className="text-[13px] font-bold text-gray-400 mb-3 uppercase tracking-wider">Secure Payment</p>
+                        <p className="text-[13px] font-bold text-gray-400 mb-3 uppercase tracking-wider">{t('auto.securePayment')}</p>
                         <div className="flex gap-4">
                           <div className="w-12 h-8 bg-gray-50 rounded-sm border border-gray-200" />
                           <div className="w-12 h-8 bg-gray-50 rounded-sm border border-gray-200" />
@@ -1841,7 +1844,7 @@ const ProductDetail = () => {
             </div>
 
             <div className="sticky top-0 bg-white px-4 py-3.5 flex items-center justify-between border-b border-gray-100 z-10">
-              <h2 className="text-[18px] font-bold text-slate-800">24x7 Customer Support</h2>
+              <h2 className="text-[18px] font-bold text-slate-800">{t('auto.n24x7CustomerSupport')}</h2>
               <button onClick={() => {
                 setShowSupportInfo(false);
                 setIsSupportExpanded(false);
@@ -1852,7 +1855,7 @@ const ProductDetail = () => {
 
             <div className="flex-1 overflow-y-auto p-6 bg-white">
               <p className="text-[15px] text-slate-700 font-medium leading-relaxed mb-6">
-                Mithilakart Help Centre offers quick support for order tracking, returns, refunds, and delivery updates. Find Help Centre in "My Account" on mobile app or in the main menu on the desktop app.
+                {t('auto.mithilakartHelpCentreOffersQuick')}
               </p>
               
               {isSupportExpanded && (
@@ -1862,22 +1865,22 @@ const ProductDetail = () => {
                       <div className={`w-12 h-12 ${primaryLightBg} rounded-full flex items-center justify-center`}>
                         <Send size={22} className={primaryText} />
                       </div>
-                      <span className="text-[13px] font-bold text-slate-700">Chat with us</span>
+                      <span className="text-[13px] font-bold text-slate-700">{t('auto.chatWithUs')}</span>
                     </button>
                     <button className="flex flex-col items-center gap-2 p-4 border border-gray-100 rounded-sm active:bg-gray-50 transition-colors">
                       <div className={`w-12 h-12 ${primaryLightBg} rounded-full flex items-center justify-center`}>
                         <Star size={22} className={primaryText} />
                       </div>
-                      <span className="text-[13px] font-bold text-slate-700">Help Center</span>
+                      <span className="text-[13px] font-bold text-slate-700">{t('auto.helpCenter')}</span>
                     </button>
                   </div>
                   
                   <div className={`bg-gray-50 p-4 border-l-4 ${primaryBorder} rounded-r-sm`}>
-                    <p className="text-[12px] font-bold text-slate-500 uppercase mb-3 tracking-wider">Common Topics</p>
+                    <p className="text-[12px] font-bold text-slate-500 uppercase mb-3 tracking-wider">{t('auto.commonTopics')}</p>
                     <ul className="space-y-4">
                       {['Track Order', 'Refund Status', 'Cancel Items'].map(item => (
                         <li key={item} className="flex items-center justify-between text-[15px] font-bold text-slate-700">
-                          {item} <ChevronRight size={18} className="text-gray-400" />
+                          {tName(item)} <ChevronRight size={18} className="text-gray-400" />
                         </li>
                       ))}
                     </ul>
@@ -1908,11 +1911,11 @@ const ProductDetail = () => {
           </div>
           {totalSavings > 0 ? (
             <span className="text-[9px] text-emerald-600 font-bold mt-0.5 leading-none">
-              You save {formatPrice(totalSavings)}
+              {t('auto.youSave')} {formatPrice(totalSavings)}
             </span>
           ) : (
             <span className="text-[9px] text-slate-500 font-semibold mt-0.5 leading-none">
-              Inclusive of GST
+              {t('auto.inclusiveOfGst')}
             </span>
           )}
         </div>
@@ -1928,7 +1931,7 @@ const ProductDetail = () => {
                 setQuantity(q => Math.max(1, q - 1));
               }}
               className="w-7 h-7 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 active:scale-90 transition-all text-slate-700 shadow-xs cursor-pointer select-none"
-              aria-label="Decrease quantity"
+              aria-label={t('auto.decreaseQuantity')}
             >
               <Minus size={14} className="text-slate-700 stroke-[2.5]" />
             </button>
@@ -1943,7 +1946,7 @@ const ProductDetail = () => {
                 setQuantity(q => q + 1);
               }}
               className="w-7 h-7 flex items-center justify-center rounded-lg bg-white hover:bg-slate-200 active:scale-90 transition-all text-slate-700 shadow-xs cursor-pointer select-none"
-              aria-label="Increase quantity"
+              aria-label={t('auto.increaseQuantity')}
             >
               <Plus size={14} className="text-slate-700 stroke-[2.5]" />
             </button>
@@ -1954,7 +1957,7 @@ const ProductDetail = () => {
             onClick={handleAddToCart}
             className={`${primaryBg} ${primaryBgHover} text-white font-extrabold px-5 py-2.5 rounded-[12px] active:scale-95 transition-all text-[12px] flex items-center justify-center cursor-pointer shadow-sm`}
           >
-            {t('cart.addToCart') || 'Add to Bag'}
+            {t('cart.addToCart') || t('auto.addToBag')}
           </button>
         </div>
       </div>
@@ -2033,7 +2036,7 @@ const ProductDetail = () => {
             onClick={() => navigate('/cart')}
             className="bg-[#E25822] text-white text-[11px] font-black px-3 py-1 rounded-full active:scale-95 transition-transform cursor-pointer shadow-xs hover:bg-[#d04a16]"
           >
-            View Cart →
+            {t('auto.viewCart')}
           </button>
         </div>
       )}

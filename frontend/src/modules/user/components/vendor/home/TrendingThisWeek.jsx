@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import useVendorStore from '../../../../../store/useVendorStore';
 import { handleImageError, getProductImage } from '../../../../../shared/utils/imageUtils';
 import { useTranslation } from 'react-i18next';
+import AddToCartButton from '../../common/AddToCartButton';
 import { useLanguage } from '../../../../../shared/context/LanguageContext';
 
 const HeaderFlower = ({ isMithilak }) => (
@@ -77,7 +78,7 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
       || item.label 
       || prod.title 
       || prod.name 
-      || 'Trending Product';
+      || t('auto.trendingProduct');
     const image = getProductImage(item.img || item.image || prod.image || (Array.isArray(prod.images) ? prod.images[0]?.url : null));
     const price = item.price ?? prod.price;
 
@@ -114,25 +115,27 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
       <div className={`transition-all duration-300 font-raleway ${
         isMithilak
           ? 'bg-gradient-to-r from-[#EBF7F9] to-[#F5FAFA] rounded-[18px] md:rounded-[22px] p-3 md:p-4 text-slate-800 shadow-[0_2px_12px_rgba(32,124,138,0.06)] border border-[#BCE3E8]'
-          : 'bg-[#FCF7EE] rounded-[16px] md:rounded-[20px] p-2 md:p-3 text-slate-800 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] border border-[#F3E3CD]/60'
+          : 'bg-[#FCF7EE] rounded-[18px] md:rounded-[22px] p-3 md:p-4 text-slate-800 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] border border-[#F3E3CD]/60'
       }`}>
-        <div className="flex justify-between items-center mb-2 px-1">
-          <div className="flex items-center">
+        <div className="flex justify-between items-center gap-2 mb-2 px-1 flex-nowrap">
+          <div className="flex items-center min-w-0 whitespace-nowrap">
             <HeaderFlower isMithilak={isMithilak} />
-            <h3 className={`text-[11px] md:text-sm font-black uppercase tracking-wide font-montserrat ${
-              isMithilak ? 'text-[#1A4B53]' : 'text-[#3C2415]'
+            <h3 className={`font-black uppercase font-montserrat ${
+              isMithilak ? 'text-[12.5px] md:text-lg tracking-normal text-[#0F3D45]' : 'text-[12.5px] md:text-lg tracking-normal text-[#3C2415]'
             }`}>
-              {t('home.trendingThisWeek', { defaultValue: 'Trending This Week' })}
+              {t('home.trendingThisWeek', { defaultValue: t('auto.trendingThisWeek') })}
             </h3>
             <HeaderFlower isMithilak={isMithilak} />
           </div>
           <button
             onClick={() => navigate('/all-offers')}
-            className={`text-[9px] md:text-xs font-bold flex items-center transition-colors duration-200 ${
-              isMithilak ? 'text-[#207C8A] hover:text-[#165A64]' : 'text-[#4B6C36] hover:text-[#385227]'
+            className={`font-bold flex items-center flex-shrink-0 whitespace-nowrap transition-colors duration-200 ${
+              isMithilak
+                ? 'text-[11px] md:text-sm px-2 py-0.5 rounded-full bg-white border border-[#207C8A]/40 text-[#207C8A] hover:bg-[#207C8A] hover:text-white'
+                : 'text-[11px] md:text-sm px-2 py-0.5 rounded-full bg-white border border-[#4B6C36]/40 text-[#4B6C36] hover:bg-[#4B6C36] hover:text-white'
             }`}
           >
-            {t('common.viewAll', { defaultValue: 'View All' })}
+            {t('common.viewAll', { defaultValue: t('auto.viewAll') })}
             <ViewAllIcon isMithilak={isMithilak} />
           </button>
         </div>
@@ -144,18 +147,20 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
               onClick={() => handleProductClick(item)}
               className={`flex-shrink-0 flex flex-col items-center cursor-pointer transition-all duration-300 group ${
                 isMithilak
-                  ? 'w-[96px] min-[375px]:w-[108px] md:w-[145px] bg-white rounded-t-[75px] md:rounded-t-[90px] rounded-b-[14px] md:rounded-b-[18px] p-2 pt-3.5 md:p-2.5 md:pt-4.5 border border-[#BCE3E8]/80 hover:border-[#207C8A] hover:shadow-sm'
-                  : 'w-[84px] min-[375px]:w-[94px] md:w-[130px] bg-[#FCF7EE] rounded-t-[75px] md:rounded-t-[90px] rounded-b-[12px] md:rounded-b-[15px] p-1.5 pt-3 md:p-2 md:pt-4 border border-[#F1E1CE] hover:shadow-xs hover:border-[#E5D2BA]'
+                  ? 'w-[126px] min-[375px]:w-[136px] md:w-[168px] bg-gradient-to-b from-white to-[#F2FAFB] rounded-t-[75px] md:rounded-t-[90px] rounded-b-[16px] md:rounded-b-[20px] px-3 pb-2 pt-7 md:px-3 md:pt-9 border border-[#BCE3E8] shadow-[0_3px_10px_rgba(32,124,138,0.12)] hover:border-[#207C8A] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(32,124,138,0.22)]'
+                  : 'w-[126px] min-[375px]:w-[136px] md:w-[168px] bg-gradient-to-b from-white to-[#FCF7EE] rounded-t-[75px] md:rounded-t-[90px] rounded-b-[16px] md:rounded-b-[20px] px-3 pb-2 pt-7 md:px-3 md:pt-9 border border-[#F1E1CE] shadow-[0_3px_10px_rgba(211,84,0,0.10)] hover:border-[#E5D2BA] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(211,84,0,0.18)]'
               }`}
             >
-              <span className={`text-[8px] min-[375px]:text-[9px] md:text-xs font-black text-center mt-1 mb-0.5 transition-colors duration-200 line-clamp-2 w-full px-0.5 leading-tight ${
-                isMithilak ? 'text-[#1A4B53] group-hover:text-[#207C8A]' : 'text-[#3C2415] group-hover:text-[#D35400]'
+              <span className={`font-black text-center mb-1 transition-colors duration-200 line-clamp-2 w-full leading-snug break-words ${
+                isMithilak
+                  ? 'text-[11px] md:text-[13px] min-h-[30px] md:min-h-[36px] px-1 text-[#0F3D45] group-hover:text-[#207C8A]'
+                  : 'text-[11px] md:text-[13px] min-h-[30px] md:min-h-[36px] px-1 text-[#3C2415] group-hover:text-[#D35400]'
               }`}>
                 {item.name}
               </span>
 
               <div className={`relative aspect-[1/1.25] flex items-center justify-center mb-0.5 ${
-                isMithilak ? 'w-[68px] min-[375px]:w-[78px] md:w-[105px]' : 'w-[60px] min-[375px]:w-[70px] md:w-[95px]'
+                isMithilak ? 'w-[70px] min-[375px]:w-[76px] md:w-[100px]' : 'w-[70px] min-[375px]:w-[76px] md:w-[100px]'
               }`}>
                 <svg className="absolute inset-0 w-full h-full pointer-events-none select-none" viewBox="0 0 100 125">
                   <ellipse cx="50" cy="62.5" rx="45" ry="56" fill="none" stroke={isMithilak ? "#207C8A" : "#D35400"} strokeWidth="1.2" strokeDasharray="2, 5" />
@@ -177,11 +182,18 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
 
               <CardFlowerGarland isMithilak={isMithilak} />
 
-              <span className={`text-[9px] md:text-[11px] font-black tracking-wider uppercase mt-0.5 transition-colors duration-200 ${
-                isMithilak ? 'text-[#207C8A] group-hover:text-[#165A64]' : 'text-[#4B6C36] group-hover:text-[#D35400]'
+              <span className={`font-black uppercase transition-colors duration-200 ${
+                isMithilak
+                  ? 'text-[9px] md:text-[11px] tracking-wider mt-0.5 text-[#207C8A] group-hover:text-[#165A64]'
+                  : 'text-[9px] md:text-[11px] tracking-wider mt-0.5 text-[#4B6C36] group-hover:text-[#D35400]'
               }`}>
-                {item.price ? `₹${item.price}` : t('product.viewProduct', { defaultValue: 'VIEW PRODUCT' })}
+                {item.price ? `₹${item.price}` : t('product.viewProduct', { defaultValue: t('auto.viewProduct') })}
               </span>
+              {item.price > 0 && (
+                <div className="w-full mt-1 px-0.5">
+                  <AddToCartButton product={item} className={isMithilak ? '!py-1 !text-[11px] md:!text-[12px] !font-bold' : '!py-1 !text-[11px] md:!text-[12px] !font-bold'} />
+                </div>
+              )}
               <ViewStoreDivider isMithilak={isMithilak} />
             </div>
           ))}

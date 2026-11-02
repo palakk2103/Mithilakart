@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Heart, Star, ShoppingBag, Tag, X, SlidersHorizontal, Layers, Check } from 'lucide-react';
+import useWishlistToggle from '../../hooks/useWishlistToggle';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ScrollRow from './home/ScrollRow';
 import { getCategories, getCategoryProducts } from '../../services/catalogApi';
@@ -10,6 +11,7 @@ import { getCurrentMarketplaceTab } from '../../../../shared/utils/marketplaceHe
 import { allCategoryProducts } from '../../../../data/categoryData';
 import { getImageUrl, handleImageError } from '../../../../shared/utils/imageUtils';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import InfiniteScrollSentinel from '../../../../shared/components/InfiniteScrollSentinel';
 import { getFashionFallbackImage } from './home/SubCategoryGrid';
 
@@ -63,7 +65,9 @@ const CardBottomDivider = () => (
 );
 
 const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { t } = useTranslation();
+  const { isWishlisted: checkWishlisted, toggle: toggleWishlist } = useWishlistToggle();
+  const isWishlisted = checkWishlisted(product);
   const { primaryText } = useTabTheme();
 
   return (
@@ -94,7 +98,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setIsWishlisted(!isWishlisted);
+            toggleWishlist(product);
           }}
           className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-6 h-6 md:w-7 md:h-7 rounded-full bg-white/90 backdrop-blur-xs shadow-sm flex items-center justify-center text-slate-700 hover:text-red-500 z-10 transition-all duration-200 active:scale-85"
         >
@@ -143,7 +147,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
             className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs"
           >
             <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>Add to Cart</span>
+            <span>{t('common.addToCart')}</span>
           </button>
         </div>
 
@@ -161,8 +165,12 @@ const hasMoreFromMeta = (data, count, limit) => {
 };
 
 const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSubcategory = searchParams.get('subcategory');
+  // Id of the parent the shopper entered a child category through. A category can have
+  // several parents, so the child id alone cannot say which path (and breadcrumb) is active.
+  const urlParent = searchParams.get('parent');
 
   const [allProducts, setAllProducts] = useState([]);
   const [adminSubcategories, setAdminSubcategories] = useState([]);
@@ -322,7 +330,19 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       return { activeParentSub: directMatch, activeChildSub: null };
     }
 
-    // 2. Match with a child of one of the subcategories (e.g. Casual Shirts under Men's Wear)
+    // 2. Match with a child of one of the subcategories (e.g. Casual Shirts under Men's Wear).
+    // Exact id match across all parents wins first, so duplicate names can't resolve to the wrong parent.
+    // The path the shopper came through (?parent=) wins, so a child shared by several parents
+    // (e.g. Lassi under Dairy and under Beverages) never jumps to the first parent in the list.
+    if (urlParent) {
+      const viaParent = subcategoriesToDisplay.find((p) => p.id === urlParent);
+      const viaChild = viaParent && Array.isArray(viaParent.children) && viaParent.children.find((c) => c.id === selectedSubcategory);
+      if (viaChild) return { activeParentSub: viaParent, activeChildSub: viaChild };
+    }
+    for (const parent of subcategoriesToDisplay) {
+      const idMatch = Array.isArray(parent.children) && parent.children.find((c) => c.id === selectedSubcategory);
+      if (idMatch) return { activeParentSub: parent, activeChildSub: idMatch };
+    }
     for (const parent of subcategoriesToDisplay) {
       if (Array.isArray(parent.children) && parent.children.length > 0) {
         const childMatch = parent.children.find(
@@ -335,7 +355,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     }
 
     return { activeParentSub: null, activeChildSub: null };
-  }, [selectedSubcategory, subcategoriesToDisplay]);
+  }, [selectedSubcategory, subcategoriesToDisplay, urlParent]);
 
   // Active Subcategory Object
   const currentSubcategoryObj = useMemo(() => {
@@ -413,6 +433,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       } else {
         next.delete('subcategory');
       }
+      next.delete('parent'); // a top-level subcategory has no parent context
       return next;
     }, { replace: true });
 
@@ -427,22 +448,20 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
   // Click handler for nested / child subcategory (e.g. Casual Shirts, Jeans under Men's Wear)
   const handleChildSubcategoryClick = useCallback((child, parent) => {
-    const isAlreadySelected =
-      selectedSubcategory === child.id ||
-      selectedSubcategory === child.name ||
-      selectedSubcategory === child.slug;
+    // Compare by id only: identically-named children under different parents
+    // (e.g. "Kurta Sets" under Men's vs Boys Ethnic) must never be treated as the same node.
+    const isAlreadySelected = selectedSubcategory === child.id && (!urlParent || urlParent === parent.id);
 
-    const nextVal = isAlreadySelected ? (parent.name || parent.slug || parent.id) : (child.name || child.slug || child.id);
+    const nextVal = isAlreadySelected ? (parent.id || parent.slug || parent.name) : (child.id || child.slug || child.name);
 
     setSelectedSubcategory(nextVal);
 
     setSearchParams((prevParams) => {
       const next = new URLSearchParams(prevParams);
-      if (nextVal) {
-        next.set('subcategory', nextVal);
-      } else {
-        next.delete('subcategory');
-      }
+      next.set('subcategory', nextVal);
+      // Remember the path used to reach this child; cleared when going back up to the parent.
+      if (isAlreadySelected) next.delete('parent');
+      else next.set('parent', parent.id);
       return next;
     }, { replace: true });
 
@@ -452,13 +471,14 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }, 50);
-  }, [selectedSubcategory, setSearchParams]);
+  }, [selectedSubcategory, urlParent, setSearchParams]);
 
   const handleClearSubcategory = useCallback(() => {
     setSelectedSubcategory(null);
     setSearchParams((prevParams) => {
       const next = new URLSearchParams(prevParams);
       next.delete('subcategory');
+      next.delete('parent');
       return next;
     }, { replace: true });
   }, [setSearchParams]);
@@ -569,7 +589,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         return (prev || []).concat(incoming.filter((x) => !seen.has(x.id)));
       });
     } catch (err) {
-      if (gen === paging.gen) setMoreError(err?.message || 'Failed to load more products');
+      if (gen === paging.gen) setMoreError(err?.message || t('common.failedLoadMore'));
     } finally {
       if (gen === paging.gen) {
         paging.busy = false;
@@ -587,9 +607,9 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         price: product.price,
         image: product.image || product.img,
       });
-      toast.success(`${product.name} added to cart!`);
+      toast.success(t('common.addedToCart', { name: product.name }));
     } catch {
-      toast.error('Could not add to cart');
+      toast.error(t('common.couldNotAddToCart'));
     }
   }, []);
 
@@ -631,7 +651,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             <p className="text-[10px] text-slate-500 font-semibold">
               {adminSubcategories.length > 0 
                 ? `${adminSubcategories.length} subcategories from Admin`
-                : 'Showing curated collections & products'}
+                : t('auto.showingCuratedCollectionsProducts')}
             </p>
           </div>
         </div>
@@ -642,7 +662,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             className="flex items-center gap-1 text-[11px] font-bold text-[#3E5A44] hover:text-[#2d4232] bg-[#FFF8EE] border border-[#3E5A44]/30 px-3 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs"
           >
             <X size={13} />
-            <span>Show All</span>
+            <span>{t('common.showAll')}</span>
           </button>
         )}
       </div>
@@ -653,10 +673,10 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
           <div className="flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-2">
               <h3 className="text-[15px] font-black text-[#3F2A20] tracking-tight flex items-center gap-1.5">
-                <span>{selectedCategory} Subcategories</span>
+                <span>{t('common.subcategoriesOf', { name: selectedCategory })}</span>
               </h3>
               <span className="text-[10.5px] font-semibold text-slate-500 bg-[#EADCC9]/40 px-2 py-0.5 rounded-md">
-                Click to filter products
+                {t('common.clickToFilter')}
               </span>
             </div>
             {selectedSubcategory && (
@@ -664,7 +684,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                 onClick={handleClearSubcategory}
                 className="text-[11px] font-bold text-[#3E5A44] hover:underline flex items-center gap-1 cursor-pointer bg-[#FFF8EE] px-2.5 py-1 rounded-full border border-[#3E5A44]/20 active:scale-95 transition-transform"
               >
-                <X size={12} /> Clear Filter
+                <X size={12} /> {t('x.clearFilter')}
               </button>
             )}
           </div>
@@ -685,7 +705,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               }`}>
                 <Layers size={17} />
               </div>
-              <span className="text-[12px] md:text-[13px] font-black leading-tight text-center">All Items</span>
+              <span className="text-[12px] md:text-[13px] font-black leading-tight text-center">{t('common.allItems')}</span>
               <span className={`text-[10.5px] mt-0.5 ${!selectedSubcategory ? 'text-[#FDE68A]' : 'text-slate-400'}`}>
                 {allProducts.length} items
               </span>
@@ -693,13 +713,11 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
             {/* Subcategories (Clickable to Filter in-place) */}
             {subcategoriesToDisplay.map((sub) => {
+              // Identity is the category id (slug for legacy links) - never the display name, which repeats across parents.
               const isSelected =
                 selectedSubcategory === sub.id ||
-                selectedSubcategory === sub.name ||
-                selectedSubcategory === sub.slug ||
-                activeParentSub?.id === sub.id ||
-                activeParentSub?.name === sub.name ||
-                activeParentSub?.slug === sub.slug;
+                (sub.slug && selectedSubcategory === sub.slug) ||
+                activeParentSub?.id === sub.id;
 
               return (
                 <button
@@ -738,7 +756,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                       </span>
                     ) : (
                       <span className={`text-[10.5px] font-semibold block mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
-                        {isSelected ? 'Selected' : 'Filter by this'}
+                        {isSelected ? t('common.selected') : t('common.filterByThis')}
                       </span>
                     )}
                   </div>
@@ -758,6 +776,9 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               <h4 className="text-[13px] font-black text-[#3F2A20]">
                 {activeParentSub.name} Collections ({activeParentSub.children.length})
               </h4>
+              <nav aria-label="Category path" data-testid="category-breadcrumb" className="text-[11px] font-semibold text-slate-400 truncate">
+                {[selectedCategory, activeParentSub.name, activeChildSub?.name].filter(Boolean).join(' / ')}
+              </nav>
             </div>
             {activeChildSub && (
               <button
@@ -765,7 +786,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                 onClick={() => handleSubcategoryClick(activeParentSub)}
                 className="text-[10.5px] font-bold text-[#3E5A44] hover:underline flex items-center gap-1 cursor-pointer"
               >
-                <X size={11} /> View All {activeParentSub.name}
+                <X size={11} /> {t('common.viewAll')} {activeParentSub.name}
               </button>
             )}
           </div>
@@ -775,7 +796,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             <button
               type="button"
               onClick={() => handleSubcategoryClick(activeParentSub)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-black cursor-pointer transition-all active:scale-95 border ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[13px] sm:text-[14px] md:text-[15px] font-black cursor-pointer transition-all active:scale-95 border ${
                 !activeChildSub
                   ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
                   : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:bg-[#FFF8EE]'
@@ -788,11 +809,8 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             {activeParentSub.children.map((child) => {
               const isChildSelected =
                 activeChildSub?.id === child.id ||
-                activeChildSub?.name === child.name ||
-                activeChildSub?.slug === child.slug ||
-                selectedSubcategory === child.name ||
-                selectedSubcategory === child.slug ||
-                selectedSubcategory === child.id;
+                selectedSubcategory === child.id ||
+                (child.slug && selectedSubcategory === child.slug);
 
               const fallbackImg = getFashionFallbackImage(child.name);
 
@@ -801,7 +819,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                   key={child.id}
                   type="button"
                   onClick={() => handleChildSubcategoryClick(child, activeParentSub)}
-                  className={`flex-shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[11px] font-bold cursor-pointer transition-all active:scale-95 border ${
+                  className={`flex-shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[13px] sm:text-[14px] md:text-[15px] font-bold cursor-pointer transition-all active:scale-95 border ${
                     isChildSelected
                       ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
                       : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:border-[#3E5A44]/60 hover:bg-[#FFF8EE]'
@@ -829,16 +847,16 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             <h3 className="text-[15px] font-black text-[#3F2A20] tracking-tight">
               {currentSubcategoryObj
                 ? `${currentSubcategoryObj.name}`
-                : `All ${selectedCategory} Products`}
+                : t('common.allProductsOf', { name: selectedCategory })}
             </h3>
             {currentSubcategoryObj && (
               <div className="flex items-center gap-1 bg-[#FFF8EE] border border-[#3E5A44]/30 text-[#3E5A44] px-2 py-0.5 rounded-full text-[9.5px] font-bold">
-                <span>Filter active</span>
+                <span>{t('common.filterActive')}</span>
                 <button
                   type="button"
                   onClick={handleClearSubcategory}
                   className="hover:text-red-500 cursor-pointer ml-0.5"
-                  title="Remove filter"
+                  title={t('common.removeFilter')}
                 >
                   <X size={11} strokeWidth={2.5} />
                 </button>
@@ -846,14 +864,14 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             )}
           </div>
           <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-            Showing {displayedProducts.length} of {filteredAndSortedProducts.length} items
+            {t('common.showingOf', { shown: displayedProducts.length, total: filteredAndSortedProducts.length })}
           </p>
         </div>
 
         {/* Sort Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <span className="text-[10px] font-bold text-slate-500 flex items-center gap-0.5 flex-shrink-0">
-            <SlidersHorizontal size={11} /> Sort:
+            <SlidersHorizontal size={11} /> {t('common.sort')}:
           </span>
           {['Popularity', 'Price: Low to High', 'Price: High to Low', 'Customer Rating'].map((sortKey) => (
             <button
@@ -865,7 +883,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                   : 'bg-white border border-[#EADCC9] text-slate-700 hover:bg-slate-50'
               }`}
             >
-              {sortKey}
+              {t('sortOptions.' + ({ 'Popularity': 'popularity', 'Price: Low to High': 'priceLow', 'Price: High to Low': 'priceHigh', 'Customer Rating': 'rating' }[sortKey]), { defaultValue: sortKey })}
             </button>
           ))}
         </div>
@@ -877,8 +895,8 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
           <div className="w-8 h-8 rounded-full border-2 border-[#3E5A44] border-t-transparent animate-spin" />
           <span className="text-xs font-bold text-slate-500">
             {subLoading
-              ? `Filtering ${currentSubcategoryObj?.name || 'subcategory'}...`
-              : `Loading ${selectedCategory} products...`}
+              ? t('common.filtering', { name: currentSubcategoryObj?.name || t('common.subcategory') })
+              : t('common.loadingProductsOf', { name: selectedCategory })}
           </span>
         </div>
       ) : displayedProducts.length === 0 ? (
@@ -887,17 +905,17 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             <Layers size={22} />
           </div>
           <h4 className="text-[14px] font-black text-[#3F2A20]">
-            No products found in "{currentSubcategoryObj?.name || selectedSubcategory}"
+            {t('common.noProductsIn', { name: currentSubcategoryObj?.name || selectedSubcategory })}
           </h4>
           <p className="text-[11px] text-slate-500 mt-1 max-w-xs mx-auto">
-            There are currently no products under this subcategory. You can explore all {selectedCategory} products below.
+            {t('common.noProductsHint', { name: selectedCategory })}
           </p>
           <button
             type="button"
             onClick={handleClearSubcategory}
             className="mt-3.5 px-4 py-1.5 bg-[#3E5A44] hover:bg-[#2e4433] text-white text-[11px] font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
           >
-            View All {selectedCategory} ({allProducts.length} items)
+            {t('common.viewAllOf', { name: selectedCategory, count: allProducts.length })}
           </button>
         </div>
       ) : (

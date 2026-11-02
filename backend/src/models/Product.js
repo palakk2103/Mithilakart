@@ -30,6 +30,8 @@ const productSchema = new mongoose.Schema(
     stock: { type: Number, default: 0, min: 0 },
     reservedStock: { type: Number, default: 0, min: 0 },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+    // Extra categories the same product is also listed under (primary stays in categoryId).
+    categoryIds: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }], default: [] },
     status: { type: String, enum: PRODUCT_STATUS_VALUES, default: 'pending' },
     masterStatus: { type: String, enum: PRODUCT_STATUS_VALUES, default: 'pending' },
     moderationNote: { type: String, default: null },
@@ -86,6 +88,7 @@ const productSchema = new mongoose.Schema(
 
 productSchema.index({ sellerId: 1, status: 1, createdAt: -1 });
 productSchema.index({ categoryId: 1, status: 1, commerceFlows: 1 });
+productSchema.index({ categoryIds: 1, status: 1 });
 productSchema.index({ status: 1, createdAt: -1 });
 // Public listing / category infinite scroll: filter + createdAt/_id order
 productSchema.index({ status: 1, deletedAt: 1, categoryId: 1, createdAt: -1, _id: -1 });

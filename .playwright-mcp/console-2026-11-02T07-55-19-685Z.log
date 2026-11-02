@@ -1,0 +1,62 @@
+[     222ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5199/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[     681ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     682ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:5199/src/config/userAppTabs.js:112
+[     682ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[     683ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     704ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[     704ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/cart' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     705ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/cart:0
+[     705ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     705ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart:0
+[     705ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     706ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:5199/src/config/userAppTabs.js:112
+[     706ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[     706ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     744ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[     750ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/cart' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     751ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/cart:0
+[     751ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     752ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart:0
+[     755ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     755ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:5199/src/config/userAppTabs.js:112
+[     756ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[     756ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     877ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[     901ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/header-tabs' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     902ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:5199/src/config/userAppTabs.js:112
+[     903ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[     903ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/storefront/home?commerceFlow=standard' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[     932ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[    5205ms] [ERROR] Access to XMLHttpRequest at 'http://localhost:5000/api/v1/maps/reverse-geocode?lat=22.717582443933377&lng=75.87191536946987' from origin 'http://localhost:5199' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. @ http://localhost:5199/home?category=Fashion:0
+[    5205ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/maps/reverse-geocode?lat=22.717582443933377&lng=75.87191536946987:0
+[   15777ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   16501ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   16504ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Something went wrong @ http://localhost:5173/src/config/userAppTabs.js:112
+[   16505ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   16506ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Something went wrong @ http://localhost:5173/src/config/userAppTabs.js:112
+[   16507ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   16525ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/cart:0
+[   16526ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   16571ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   16572ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Something went wrong @ http://localhost:5173/src/config/userAppTabs.js:112
+[   16572ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   16573ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Something went wrong @ http://localhost:5173/src/config/userAppTabs.js:112
+[   16574ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   16599ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/cart:0
+[   16610ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   16688ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart:0
+[   16689ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5000/api/v1/categories?marketplaceTab=mithilakart:0
+[   29109ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   40028ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   56866ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   79956ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   84970ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   87502ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   98860ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  102856ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  104268ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5000/uploads/cms/sample-banner.jpg:0
+[  106874ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  108121ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5000/uploads/cms/sample-banner.jpg:0
+[  110938ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  112361ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5000/uploads/cms/sample-banner.jpg:0
+[  114942ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102

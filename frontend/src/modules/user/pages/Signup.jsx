@@ -83,11 +83,11 @@ const Signup = () => {
       const trimmedEmail = email.trim();
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!trimmedEmail) {
-        setError('Email address is required');
+        setError(t('auto.emailAddressIsRequired'));
         return;
       }
       if (!emailRegex.test(trimmedEmail)) {
-        setError('Please enter a valid email address');
+        setError(t('auto.pleaseEnterAValidEmail'));
         return;
       }
       
@@ -98,25 +98,25 @@ const Signup = () => {
         setTimer(60);
         setSuccess('OTP sent successfully to your email');
       } catch (err) {
-        setError(err.message || 'Failed to send OTP');
+        setError(err.message || t('auto.failedToSendOtp'));
       } finally {
         setIsSendingOtp(false);
       }
     } else {
       if (!countryCode) {
-        setError('Country code is required');
+        setError(t('auto.countryCodeIsRequired'));
         return;
       }
       if (!/^\+?\d{1,4}$/.test(countryCode)) {
-        setError('Invalid country code');
+        setError(t('auto.invalidCountryCode'));
         return;
       }
       if (!phoneNumber) {
-        setError('Phone number is required');
+        setError(t('auto.phoneNumberIsRequired'));
         return;
       }
       if (phoneNumber.length < 8 || phoneNumber.length > 11) {
-        setError('Phone number must be between 8 and 11 digits');
+        setError(t('auto.phoneNumberMustBeBetween'));
         return;
       }
       
@@ -125,7 +125,7 @@ const Signup = () => {
         const result = await sendPhoneOtp(countryCode, phoneNumber);
         applyOtpSendResult(result, { setOtp, setSuccess, setOtpSent, setTimer });
       } catch (err) {
-        setError(err.message || 'Failed to send OTP');
+        setError(err.message || t('auto.failedToSendOtp'));
       } finally {
         setIsSendingOtp(false);
       }
@@ -137,15 +137,15 @@ const Signup = () => {
     setSuccess('');
     
     if (!name.trim()) {
-      setError('Full Name is required');
+      setError(t('auto.fullNameIsRequired'));
       return;
     }
     if (!otp) {
-      setError('OTP cannot be empty');
+      setError(t('auto.otpCannotBeEmpty'));
       return;
     }
     if (!/^\d{6}$/.test(otp)) {
-      setError('OTP must be a 6-digit number');
+      setError(t('auto.otpMustBeA6'));
       return;
     }
     
@@ -170,7 +170,7 @@ const Signup = () => {
         }, 800);
       }
     } catch (err) {
-      setError(err.message || 'Invalid OTP. Please try again.');
+      setError(err.message || t('auto.invalidOtpPleaseTryAgain'));
     } finally {
       setIsVerifyingOtp(false);
     }
@@ -265,7 +265,7 @@ const Signup = () => {
           <div className="text-center mb-4 md:mb-6 z-10 relative">
             <h2 className="text-2xl md:text-3xl font-extrabold font-serif text-[#321c13] flex items-center justify-center gap-2">
               <FlowerIcon className="w-5 h-5" color={theme.primaryHex} />
-              <span>Create account</span>
+              <span>{t('auto.createAccount')}</span>
               <FlowerIcon className="w-5 h-5" color={theme.primaryHex} />
             </h2>
             {/* Divider */}
@@ -275,7 +275,7 @@ const Signup = () => {
               <div className="w-16 border-t border-dashed" style={{ borderColor: `${theme.primaryHex}66` }}></div>
             </div>
             <p className="text-[#705c53] text-[13px] font-semibold mt-1">
-              Fresh Food & Handcrafted Items Delivered
+              {t('auto.freshFoodHandcraftedItemsDelivered')}
             </p>
           </div>
 
@@ -301,7 +301,7 @@ const Signup = () => {
                 <div className="absolute inset-0.5 border border-dashed border-white/40 rounded-lg pointer-events-none" />
               )}
               <Phone size={14} />
-              <span>Continue With Phone</span>
+              <span>{t('auto.continueWithPhone')}</span>
             </button>
             <button
               type="button"
@@ -323,7 +323,7 @@ const Signup = () => {
                 <div className="absolute inset-0.5 border border-dashed border-white/40 rounded-lg pointer-events-none" />
               )}
               <Mail size={14} />
-              <span>Continue With Email</span>
+              <span>{t('auto.continueWithEmail')}</span>
             </button>
           </div>
 
@@ -342,7 +342,7 @@ const Signup = () => {
             {/* Name Field */}
             <div>
               <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
-                Full Name
+                {t('auto.fullName')}
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b8a090]">
@@ -352,7 +352,7 @@ const Signup = () => {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your full name"
+                  placeholder={t('auto.enterYourFullName')}
                   className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
                   style={{ borderColor: `${theme.primaryHex}40` }}
                   disabled={isVerifyingOtp}
@@ -365,7 +365,7 @@ const Signup = () => {
             {!useEmail ? (
               <div>
                 <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
-                  Phone Number
+                  {t('auto.phoneNumber')}
                 </label>
                 <div className="flex gap-2">
                   <div className="w-[85px] relative">
@@ -406,7 +406,7 @@ const Signup = () => {
             ) : (
               <div>
                 <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
-                  Email Address
+                  {t('auto.emailAddress')}
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${theme.primaryHex}b3` }}>
@@ -431,7 +431,7 @@ const Signup = () => {
               <div className="space-y-2">
                 <div>
                   <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
-                    6-Digit OTP
+                    {t('x.sixDigitOtp')}
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${theme.primaryHex}b3` }}>
@@ -453,7 +453,7 @@ const Signup = () => {
 
                 {/* Resend Timer */}
                 <div className="flex items-center justify-between text-[12px] font-bold px-1" style={{ color: `${theme.primaryHex}cc` }}>
-                  <span>OTP expires in: {timer}s</span>
+                  <span>{t('x.otpExpiresIn')}: {timer}s</span>
                   <button
                     type="button"
                     onClick={handleResendOtp}
@@ -461,7 +461,7 @@ const Signup = () => {
                     className="hover:underline font-bold transition-all cursor-pointer"
                     style={{ color: theme.primaryHex }}
                   >
-                    Resend OTP
+                    {t('auto.resendOtp')}
                   </button>
                 </div>
               </div>
@@ -476,27 +476,27 @@ const Signup = () => {
             >
               <div className="absolute inset-1 border border-dashed border-white/50 rounded-xl pointer-events-none" />
               {isSendingOtp || isVerifyingOtp ? (
-                <span>Processing...</span>
+                <span>{t('auto.processing')}</span>
               ) : otpSent ? (
-                <span>Verify OTP & Create Account</span>
+                <span>{t('auto.verifyOtpCreateAccount')}</span>
               ) : (
-                <span>Send OTP</span>
+                <span>{t('auto.sendOtp')}</span>
               )}
             </motion.button>
           </form>
 
           {/* Link to Login */}
           <div className="text-center mt-5 text-[12px] font-bold text-[#705c53] z-10 relative">
-            Already have an account?{' '}
+            {t('auth.alreadyHaveAccount')}{' '}
             <Link to="/login" state={location.state} className="hover:underline" style={{ color: theme.primaryHex }}>
-              Log in here!
+              {t('auto.logInHere')}
             </Link>
           </div>
 
           {/* Social Icons */}
           <div className="mt-4 pt-3.5 border-t border-dashed z-10 relative flex flex-col items-center gap-2.5" style={{ borderColor: `${theme.primaryHex}33` }}>
             <p className="text-center text-[10px] font-extrabold text-[#705c53] uppercase tracking-wider">
-              Connect With Us
+              {t('auto.connectWithUs')}
             </p>
             <SocialIcons />
           </div>

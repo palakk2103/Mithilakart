@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 import { 
   ArrowLeft, CheckCircle2, ChevronRight, ShieldCheck, 
   Star, Truck, CheckCircle, Zap, Loader2, IndianRupee, CreditCard
@@ -211,9 +212,9 @@ const Checkout = () => {
     type: defaultAddress.type || 'HOME',
     address: defaultAddress.address || defaultAddress.addressLine,
   } : {
-    name: 'Guest',
+    name: t('auto.guestUser'),
     type: 'HOME',
-    address: 'No address provided',
+    address: t('x.noAddressProvided'),
     phone: '—',
   };
 
@@ -232,7 +233,7 @@ const Checkout = () => {
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
-      toast.error('Enter a coupon code');
+      toast.error(t('checkout.enterCoupon'));
       return;
     }
     try {
@@ -243,24 +244,24 @@ const Checkout = () => {
       const discount = result?.discountAmount ?? result?.discount ?? 0;
       setCouponDiscount(Number(discount) || 0);
       setCouponApplied(true);
-      toast.success(result?.message || 'Coupon applied');
+      toast.success(result?.message || t('checkout.couponApplied'));
     } catch (err) {
       setCouponDiscount(0);
       setCouponApplied(false);
-      toast.error(err?.message || 'Invalid coupon');
+      toast.error(err?.message || t('checkout.invalidCoupon'));
     }
   };
 
   const handleContinue = async () => {
     if (currentStep === 2) {
       if (isEcommerceFlow && courierServiceable === false) {
-        toast.error('Courier delivery is not available for this pincode. Please choose another address.');
+        toast.error(t('checkout.courierUnavailableChoose'));
         return;
       }
       setCurrentStep(3);
     } else if (currentStep === 3) {
       if (isEcommerceFlow && courierServiceable === false) {
-        toast.error('Courier delivery is not available for this pincode.');
+        toast.error(t('checkout.courierUnavailable'));
         return;
       }
       setOrderStatus('processing');
@@ -268,7 +269,7 @@ const Checkout = () => {
       try {
         const addressId = defaultAddress?.id || defaultAddress?._id;
         if (!addressId) {
-          throw new Error('Please add a delivery address before checkout');
+          throw new Error(t('checkout.addAddressFirst'));
         }
 
         const paymentMethod = PAYMENT_METHOD_MAP[selectedPayment] || 'upi';
@@ -330,12 +331,12 @@ const Checkout = () => {
             });
             paymentStatus = verified.paymentStatus;
           } else {
-            throw new Error('Online payment is unavailable. Please choose Cash on Delivery.');
+            throw new Error(t('checkout.onlineUnavailable'));
           }
         }
 
         if (paymentMethod !== 'cod' && paymentStatus !== 'paid') {
-          throw new Error('Payment was not completed');
+          throw new Error(t('checkout.paymentNotCompleted'));
         }
 
         const newOrder = {
@@ -362,11 +363,11 @@ const Checkout = () => {
         setOrderStatus('idle');
       } catch (err) {
         console.error('Order failed', err);
-        const message = err?.message || 'Could not place order. Please try again.';
+        const message = err?.message || t('checkout.couldNotPlace');
         toast.error(message.includes('Insufficient stock')
-          ? 'Some items are out of stock. Please update your cart and try again.'
+          ? t('checkout.itemsOutOfStock')
           : message.includes('Payment') || message.includes('payment') || message.includes('Razorpay') || message.includes('another method')
-            ? 'Online payment failed. Please use Cash on Delivery (COD) for testing.'
+            ? t('checkout.onlinePaymentFailed')
             : message);
         setOrderStatus('idle');
       }
@@ -431,16 +432,16 @@ const Checkout = () => {
             {checkingServiceability ? (
               <p className="text-[11px] font-bold text-slate-500 flex items-center gap-2">
                 <Loader2 size={14} className="animate-spin" />
-                Checking courier delivery to {defaultAddress.pincode}…
+                {t('checkout.checkingCourier', { pin: defaultAddress.pincode })}
               </p>
             ) : courierServiceable === false ? (
               <p className="text-[11px] font-black text-red-600 uppercase tracking-wide">
-                Courier delivery unavailable for pincode {defaultAddress.pincode}
+                {t('checkout.courierUnavailablePin', { pin: defaultAddress.pincode })}
               </p>
             ) : courierServiceable ? (
               <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
                 <Truck size={14} />
-                Courier delivery available to {defaultAddress.pincode}
+                {t('checkout.courierAvailablePin', { pin: defaultAddress.pincode })}
               </p>
             ) : null}
           </div>
@@ -475,7 +476,7 @@ const Checkout = () => {
                   {item.oldPrice && <span className="text-[13px] text-slate-405 line-through">{t('product.mrp')} {formatPrice(item.oldPrice)}</span>}
                   {item.discount && (
                     <span className="border border-[#e47911] text-[#e47911] text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tight">
-                      {item.discount}
+                      {tName(item.discount)}
                     </span>
                   )}
                   <span className="text-[11px] text-slate-500 ml-auto font-bold">{t('common.quantity') || 'Qty'}: {item.qty || 1}</span>
@@ -487,19 +488,19 @@ const Checkout = () => {
               <p className="text-[12px] text-slate-800 font-medium">
                 {item.deliveryEtaText ? (
                   <>
-                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in {item.deliveryEtaText}
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ {t('checkout.quick')}</span> {t('checkout.deliveryIn', { time: item.deliveryEtaText })}
                   </>
                 ) : item.deliveryPromiseMinutes ? (
                   <>
-                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in {item.deliveryPromiseMinutes} mins
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ {t('checkout.quick')}</span> {t('checkout.deliveryIn', { time: `${item.deliveryPromiseMinutes} ${t('checkout.mins')}` })}
                   </>
                 ) : (isQuickShopFlow || isFreshGroceryFlow) && !STANDARD_TABS.has(item.marketplaceTab) ? (
                   <>
-                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ Quick</span> Delivery in 15-30 mins
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>⚡ {t('checkout.quick')}</span> {t('checkout.deliveryIn', { time: `15-30 ${t('checkout.mins')}` })}
                   </>
                 ) : (
                   <>
-                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>Standard</span> {t('checkout.deliveryText') || 'Estimated delivery in 2-4 business days'}
+                    <span className={`italic font-black text-[10px] uppercase tracking-tighter mr-1 ${primaryText}`}>{t('checkout.standard')}</span> {t('checkout.deliveryText') || 'Estimated delivery in 2-4 business days'}
                   </>
                 )}
               </p>
@@ -510,12 +511,12 @@ const Checkout = () => {
 
       {/* Coupon */}
       <div className="bg-white rounded-[24px] p-4 border border-slate-100/50 shadow-[0_4px_16px_rgba(0,0,0,0.01)]">
-        <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-3">Apply Coupon</h3>
+        <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-wider mb-3">{t('cart.applyCoupon')}</h3>
         <div className="flex gap-2">
           <input
             value={couponCode}
             onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-            placeholder="Enter code"
+            placeholder={t('checkout.enterCode')}
             className="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold uppercase"
           />
           <button
@@ -523,11 +524,11 @@ const Checkout = () => {
             onClick={handleApplyCoupon}
             className={`px-4 py-2.5 rounded-xl text-white text-[11px] font-black uppercase ${primaryBg}`}
           >
-            Apply
+            {t('auto.apply')}
           </button>
         </div>
         {couponApplied && couponDiscount > 0 && (
-          <p className="text-[11px] font-bold text-green-700 mt-2">Coupon applied — saved {formatPrice(couponDiscount)}</p>
+          <p className="text-[11px] font-bold text-green-700 mt-2">{t('x.couponSaved', { amount: formatPrice(couponDiscount) })}</p>
         )}
       </div>
 
@@ -551,13 +552,13 @@ const Checkout = () => {
         )}
         {taxAmount > 0 && (
           <div className="flex justify-between items-center text-[13px] text-slate-500 font-bold">
-            <span>Taxes & GST</span>
+            <span>{t('checkout.taxesGst')}</span>
             <span className="text-slate-800 font-black">{formatPrice(taxAmount)}</span>
           </div>
         )}
         {couponDiscount > 0 && (
           <div className="flex justify-between items-center text-[13px] text-green-700 font-bold">
-            <span>Coupon Discount</span>
+            <span>{t('cart.couponDiscount')}</span>
             <span className="font-black">-{formatPrice(couponDiscount)}</span>
           </div>
         )}
@@ -588,7 +589,7 @@ const Checkout = () => {
       {/* Price Summary Card */}
       <div className="bg-[#f4faf6] px-4 py-4 border border-[#e1f0e7] shadow-[0_4px_16px_rgba(8,66,36,0.02)] mx-4 mt-2 rounded-[24px]">
         <div className="flex justify-between items-center">
-          <span className="text-[13.5px] font-black text-slate-600">Total Amount</span>
+          <span className="text-[13.5px] font-black text-slate-600">{t('cart.totalAmount')}</span>
           <span className="text-[18px] font-black text-slate-900 tracking-tight">{formatPrice(payableTotal)}</span>
         </div>
       </div>
@@ -597,7 +598,7 @@ const Checkout = () => {
       <div className="mt-5 px-4 space-y-3">
         {import.meta.env.DEV && (
           <div className="bg-blue-50 border border-blue-200 rounded-[20px] px-4 py-3 text-[11.5px] font-semibold text-blue-900 leading-relaxed">
-            Razorpay test mode: UPI/Netbanking fail ho to <span className="font-black">Card</span> use karo —
+            Razorpay test mode: UPI/Netbanking fail ho to <span className="font-black">{t('auto.card')}</span> use karo —
             <span className="font-mono"> 4111 1111 1111 1111</span>, koi bhi future expiry/CVV.
             UPI test: <span className="font-mono">success@razorpay</span>
           </div>
@@ -611,7 +612,7 @@ const Checkout = () => {
            >
              <div className="flex items-center gap-3.5">
                 <div className={`w-8 h-6 border ${primaryBorder} rounded-md flex items-center justify-center text-[7.5px] font-black tracking-tight ${primaryText} bg-pink-50/30 uppercase`}>UPI</div>
-                <h3 className="text-[14px] font-black text-slate-850">UPI Options</h3>
+                <h3 className="text-[14px] font-black text-slate-850">{t('checkout.upiOptions')}</h3>
              </div>
              <ChevronRight size={18} className={`text-slate-400 transition-transform ${selectedPayment === 'UPI' ? 'rotate-90' : ''}`} />
            </div>
@@ -634,7 +635,7 @@ const Checkout = () => {
                                 onClick={handleContinue}
                                 className={`w-full ${primaryBgHover} text-white py-3.5 rounded-full font-black uppercase text-[12px] tracking-widest mt-4 shadow-md active:scale-95 transition-transform`}
                              >
-                               Pay {formatPrice(payableTotal)}
+                               {t('checkout.pay')} {formatPrice(payableTotal)}
                              </button>
                           )}
                        </div>
@@ -666,7 +667,7 @@ const Checkout = () => {
              <div className="flex items-center gap-3.5">
                 <CreditCard size={18} className="text-slate-800" />
                 <div className="flex flex-col">
-                  <h3 className="text-[14px] font-black text-slate-850">Credit / Debit / ATM Card</h3>
+                  <h3 className="text-[14px] font-black text-slate-850">{t('checkout.cardOption')}</h3>
                 </div>
              </div>
              <ChevronRight size={18} className={`text-slate-400 transition-transform ${selectedPayment === 'CARD' ? 'rotate-90' : ''}`} />
@@ -684,7 +685,7 @@ const Checkout = () => {
                    onClick={handleContinue}
                    className={`w-full ${primaryBgHover} text-white py-3.5 rounded-full font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
                  >
-                   Pay with Card
+                   {t('checkout.payWithCard')}
                  </button>
                </div>
              </div>
@@ -699,7 +700,7 @@ const Checkout = () => {
            >
              <div className="flex items-center gap-3.5">
                 <IndianRupee size={18} className="text-slate-800" />
-                <h3 className="text-[14px] font-black text-slate-850">Cash on Delivery</h3>
+                <h3 className="text-[14px] font-black text-slate-850">{t('checkout.cod')}</h3>
              </div>
              <ChevronRight size={18} className={`text-slate-400 transition-transform ${selectedPayment === 'COD' ? 'rotate-90' : ''}`} />
            </div>
@@ -708,13 +709,13 @@ const Checkout = () => {
              <div className="px-4 pb-5 pt-1 animate-in slide-in-from-top duration-200">
                 <div className="border border-slate-100 rounded-2xl p-5 bg-white">
                   <p className="text-[11.5px] text-slate-400 font-bold leading-relaxed mb-4">
-                    A Cash on Delivery handling fee may apply and will be shown in your order total before you place the order.
+                    {t('checkout.codFeeNote')}
                   </p>
                   <button 
                     onClick={handleContinue}
                     className={`w-full ${primaryBgHover} text-white py-3.5 rounded-full font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
                   >
-                    Place Order
+                    {t('checkout.placeOrder')}
                   </button>
                 </div>
              </div>
@@ -726,16 +727,16 @@ const Checkout = () => {
            <div className="px-4 py-4 flex items-center justify-between">
              <div className="flex items-center gap-3.5">
                 <ShieldCheck size={18} className="text-slate-800" />
-                <h3 className="text-[13.5px] font-black text-slate-850">Mithilakart Gift Card</h3>
+                <h3 className="text-[13.5px] font-black text-slate-850">{t('checkout.giftCard')}</h3>
              </div>
-             <button className={`${primaryText} text-[11px] font-black uppercase tracking-wider`}>Add Card</button>
+             <button className={`${primaryText} text-[11px] font-black uppercase tracking-wider`}>{t('checkout.addCard')}</button>
            </div>
         </div>
       </div>
 
       {/* Trust Message */}
       <div className="mt-8 mb-20 text-center px-8">
-         <p className="text-[14px] font-black text-slate-450 tracking-tight">35 Crore happy customers and counting!</p>
+         <p className="text-[14px] font-black text-slate-450 tracking-tight">{t('checkout.happyCustomers')}</p>
       </div>
     </div>
   );
@@ -756,8 +757,8 @@ const Checkout = () => {
         {orderStatus === 'processing' ? (
           <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-xl max-w-sm w-full text-center flex flex-col items-center">
             <Loader2 size={48} className={`${primaryText} animate-spin mb-6`} />
-            <p className="text-lg font-black text-slate-900 uppercase tracking-tight">Processing Your Order</p>
-            <p className="text-sm text-slate-500 mt-2 font-medium">Please do not close this window</p>
+            <p className="text-lg font-black text-slate-900 uppercase tracking-tight">{t('checkout.processingOrder')}</p>
+            <p className="text-sm text-slate-500 mt-2 font-medium">{t('checkout.doNotClose')}</p>
           </div>
         ) : (
           <div className="bg-white rounded-[32px] p-6 border border-slate-100/50 shadow-xl max-w-md w-full text-center animate-in zoom-in duration-500 space-y-6">
@@ -765,10 +766,10 @@ const Checkout = () => {
               <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-green-100 mx-auto">
                 <CheckCircle size={32} className="text-white" strokeWidth={2.5} />
               </div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Order Placed Successfully!</h2>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t('checkout.orderPlaced')}</h2>
               {placedOrder && (
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                  Order ID: {placedOrder.id}
+                  {t('orders.orderId')}: {placedOrder.id}
                 </p>
               )}
             </div>
@@ -783,7 +784,7 @@ const Checkout = () => {
                   <h4 className="text-[13.5px] font-black text-slate-800 line-clamp-2 leading-snug">{firstItem.name}</h4>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-[14px] font-black text-slate-900">{formatPrice(firstItem.price)}</span>
-                    <span className="text-[11px] text-slate-400 font-bold">Qty: {firstItem.qty || 1}</span>
+                    <span className="text-[11px] text-slate-400 font-bold">{t('common.quantity')}: {firstItem.qty || 1}</span>
                   </div>
                 </div>
               </div>
@@ -791,7 +792,7 @@ const Checkout = () => {
               <div className="border-t border-dashed border-slate-200 pt-3 flex items-center gap-2">
                 <Truck size={16} className={primaryText} />
                 <p className="text-[12.5px] text-slate-705 font-medium">
-                  Estimated Delivery: <span className={`font-black ${primaryText}`}>{estDeliveryStr}</span>
+                  {t('checkout.estimatedDelivery')}: <span className={`font-black ${primaryText}`}>{estDeliveryStr}</span>
                 </p>
               </div>
             </div>
@@ -802,13 +803,13 @@ const Checkout = () => {
                 onClick={() => navigate(`/vendor/profile/orders/${placedOrder?.id || ''}`)}
                 className={`w-full ${primaryBgHover} text-white py-4 rounded-full font-black uppercase text-[12px] tracking-widest shadow-md active:scale-95 transition-transform`}
               >
-                Track Order
+                {t('orders.track')}
               </button>
               <button 
                 onClick={() => navigate(shopNowLink)}
                 className="w-full bg-white border-2 border-slate-200 text-slate-750 hover:bg-slate-50 py-4 rounded-full font-black uppercase text-[12px] tracking-widest active:scale-95 transition-transform"
               >
-                Continue Shopping
+                {t('checkout.continueShopping')}
               </button>
             </div>
           </div>
@@ -849,7 +850,7 @@ const Checkout = () => {
           >
             <ArrowLeft size={18} strokeWidth={2.5} className="text-slate-800" />
           </button>
-          <h1 className={`text-[17px] font-black tracking-tight ${isFreshGroceryFlow || isMithilakFlow || isQuickShopFlow ? 'text-white' : 'text-slate-800'}`}>Order Summary</h1>
+          <h1 className={`text-[17px] font-black tracking-tight ${isFreshGroceryFlow || isMithilakFlow || isQuickShopFlow ? 'text-white' : 'text-slate-800'}`}>{t('checkout.orderSummaryTitle')}</h1>
         </div>
       </div>
 
@@ -862,7 +863,7 @@ const Checkout = () => {
       {/* Fixed Bottom Action Bar */}
       <div className="fixed bottom-3 left-4 right-4 bg-white/95 backdrop-blur-md border border-slate-100 px-5 py-3.5 flex items-center justify-between z-50 shadow-[0_10px_30px_rgba(8,66,36,0.08)] rounded-[24px]">
         <div className="flex flex-col">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Amount</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('cart.totalAmount')}</span>
           <div className="flex items-baseline gap-1">
             <span className="text-[18px] font-black text-slate-900">
               {formatPrice(payableTotal)}
@@ -874,7 +875,7 @@ const Checkout = () => {
           disabled={isEcommerceFlow && (checkingServiceability || courierServiceable === false)}
           className={`${primaryBgHover} text-white rounded-full px-8 py-3.5 font-black uppercase text-[12px] tracking-widest shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {currentStep === 3 ? 'Place Order' : 'Continue'}
+          {currentStep === 3 ? t('checkout.placeOrder') : t('auth.continue')}
         </button>
       </div>
     </div>

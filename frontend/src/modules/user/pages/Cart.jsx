@@ -326,10 +326,10 @@ const Cart = () => {
               <div className="bg-white rounded-[24px] p-4 flex items-center justify-between border border-slate-100/50 shadow-[0_4px_16px_rgba(0,0,0,0.01)]">
                 <div className="flex-1 min-w-0 pr-4">
                   <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider">
-                    {address ? 'Deliver to Home' : 'Delivery Address'}
+                    {address ? t('cart.deliverToHome') : t('cart.deliveryAddress')}
                   </p>
                   <p className="text-[12px] text-slate-500 font-medium mt-1 leading-normal">
-                    {address ? `${address.name} | ${address.address} | Phone: ${address.phone}` : 'Please login and add an address to proceed.'}
+                    {address ? `${address.name} | ${address.address} | ${t('cart.phoneShort')}: ${address.phone}` : t('cart.loginAddAddress')}
                   </p>
                 </div>
                 {address ? (
@@ -342,7 +342,7 @@ const Cart = () => {
                     }}
                     className={`${primaryText} text-[11px] font-black uppercase tracking-wider border border-slate-100 hover:bg-slate-50 px-4 py-2 rounded-full active:scale-95 transition-transform`}
                   >
-                    Change
+                    {t('auto.change')}
                   </button>
                 ) : (
                   isAuthenticated && (
@@ -350,7 +350,7 @@ const Cart = () => {
                       onClick={() => setShowAddressModal(true)}
                       className={`${primaryText} text-[11px] font-black uppercase tracking-wider border border-slate-150 hover:bg-slate-50 px-4 py-2 rounded-full active:scale-95 transition-transform`}
                     >
-                      Add Address
+                      {t('cart.addAddress')}
                     </button>
                   )
                 )}
@@ -412,11 +412,11 @@ const Cart = () => {
                     <div className="flex items-center gap-2">
                       <Heart size={18} className="text-rose-500 fill-rose-500" />
                       <h3 className="text-[14px] font-black text-slate-800 tracking-tight">
-                        Items in Your Wishlist ({localWishlist.length})
+                        {t('cart.wishlistItems', { count: localWishlist.length })}
                       </h3>
                     </div>
                     <Link to="/wishlist" className={`text-[11px] font-black uppercase tracking-wider ${primaryText}`}>
-                      View All
+                      {t('common.viewAll')}
                     </Link>
                   </div>
 
@@ -433,7 +433,7 @@ const Cart = () => {
                           className={`mt-2.5 w-full py-1.5 ${primaryBg} text-white font-black text-[10.5px] uppercase tracking-wider rounded-xl shadow-xs active:scale-95 transition-transform flex items-center justify-center gap-1`}
                         >
                           <ShoppingCart size={12} />
-                          Add to Cart
+                          {t('common.addToCart')}
                         </button>
                       </div>
                     ))}
@@ -471,21 +471,21 @@ const Cart = () => {
                   onClick={() => navigate('/login', { state: { from: '/cart', flow: theme.activeFlow } })}
                   className={`hidden md:flex w-full ${primaryBg} text-white font-black py-4 rounded-full active:scale-[0.98] transition-all items-center justify-center text-[14px] shadow-md cursor-pointer`}
                 >
-                  Login to Proceed
+                  {t('cart.loginToProceed')}
                 </button>
               ) : !address ? (
                 <button 
                   onClick={() => setShowAddressModal(true)}
                   className={`hidden md:flex w-full ${primaryBg} text-white font-black py-4 rounded-full active:scale-[0.98] transition-all items-center justify-center text-[14px] shadow-md cursor-pointer`}
                 >
-                  Add Address
+                  {t('cart.addAddress')}
                 </button>
               ) : (
                 <button 
                   onClick={() => navigate('/vendor/checkout')}
                   className={`hidden md:flex w-full ${primaryBg} text-white font-black py-4 rounded-full active:scale-[0.98] transition-all items-center justify-center text-[14px] shadow-md cursor-pointer`}
                 >
-                  Proceed to Checkout
+                  {t('cart.checkout')}
                 </button>
               )}
             </div>
@@ -505,21 +505,21 @@ const Cart = () => {
               onClick={() => navigate('/login', { state: { from: '/cart', flow: theme.activeFlow } })}
               className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
             >
-              Login to Proceed
+              {t('cart.loginToProceed')}
             </button>
           ) : !address ? (
             <button 
               onClick={() => setShowAddressModal(true)}
               className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
             >
-              Add Address
+              {t('cart.addAddress')}
             </button>
           ) : (
             <button 
               onClick={() => navigate('/vendor/checkout')}
               className={`${primaryBg} text-white rounded-full px-6 py-3.5 font-black uppercase text-[11px] tracking-wider shadow-[0_4px_16px_rgba(8,66,36,0.22)] active:scale-95 transition-transform`}
             >
-              Proceed to Checkout
+              {t('cart.checkout')}
             </button>
           )}
         </div>
@@ -536,7 +536,7 @@ const Cart = () => {
               <X size={20} />
             </button>
             <h3 className="text-[20px] font-black text-slate-800 tracking-tight mb-5">
-              Add Delivery Address
+              {t('cart.addDeliveryAddress')}
             </h3>
             <form onSubmit={(e) => {
               e.preventDefault();
@@ -545,33 +545,33 @@ const Cart = () => {
               setShowAddressModal(false);
             }} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Receiver's Name</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">{t('cart.receiverName')}</label>
                 <input 
                   type="text" 
                   value={addrName} 
                   onChange={(e) => setAddrName(e.target.value)} 
-                  placeholder="Your name"
+                  placeholder={t('cart.yourName')}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Phone Number</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">{t('cart.phoneNumber')}</label>
                 <input 
                   type="tel" 
                   value={addrPhone} 
                   onChange={(e) => setAddrPhone(e.target.value)} 
-                  placeholder="e.g. 9876543210"
+                  placeholder={t('cart.phonePlaceholder')}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Full Address</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">{t('cart.fullAddress')}</label>
                 <textarea 
                   value={addrDetails} 
                   onChange={(e) => setAddrDetails(e.target.value)} 
-                  placeholder="Street, Landmark, City, Pincode"
+                  placeholder={t('cart.addressPlaceholder')}
                   rows="3"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition-all resize-none"
                   required
@@ -581,7 +581,7 @@ const Cart = () => {
                 type="submit"
                 className={`w-full py-4 mt-2 ${primaryBg} text-white font-black rounded-2xl text-[13px] uppercase tracking-wider shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer`}
               >
-                Save & Continue
+                {t('cart.saveContinue')}
               </button>
             </form>
           </div>
@@ -605,10 +605,10 @@ const Cart = () => {
             </div>
 
             <h3 className="text-[18px] font-black text-slate-800 tracking-tight leading-snug">
-              Remove Item from Cart?
+              {t('cart.removeItemTitle')}
             </h3>
             <p className="text-[12.5px] text-slate-500 font-medium mt-1 mb-6 px-2">
-              "{itemToRemove.name}" can be saved to your Wishlist for later or deleted.
+              {t('cart.removeItemHint', { name: itemToRemove.name })}
             </p>
 
             <div className="space-y-2.5">
@@ -617,7 +617,7 @@ const Cart = () => {
                 className={`w-full py-3.5 ${primaryBg} text-white font-black rounded-2xl text-[12px] uppercase tracking-wider shadow-md active:scale-[0.98] transition-transform flex items-center justify-center gap-2 cursor-pointer`}
               >
                 <Heart size={16} className="fill-white text-white" />
-                Move to Wishlist
+                {t('cart.moveToWishlist')}
               </button>
 
               <button 
@@ -625,14 +625,14 @@ const Cart = () => {
                 className="w-full py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-black rounded-2xl text-[12px] uppercase tracking-wider border border-rose-100 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Trash2 size={16} />
-                Remove from Cart
+                {t('cart.removeFromCart')}
               </button>
 
               <button 
                 onClick={() => setItemToRemove(null)}
                 className="w-full py-2 text-slate-400 hover:text-slate-600 font-bold text-[12px] active:scale-[0.98] transition-transform cursor-pointer"
               >
-                Cancel
+                {t('auto.cancel')}
               </button>
             </div>
           </div>

@@ -1,8 +1,10 @@
 import React from 'react';
 import { MapPinOff } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const ShippingUnavailable = ({ onChangeLocation }) => {
+  const { t } = useTranslation();
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
@@ -34,18 +36,18 @@ const ShippingUnavailable = ({ onChangeLocation }) => {
       </div>
       
       <p className="text-xs font-bold text-slate-800 leading-snug">
-        Currently this product cannot be delivered to your location.
+        {t('auto.currentlyThisProductCannotBe')}
       </p>
       
       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 mb-4">
-        Try checking another address or pincode
+        {t('auto.tryCheckingAnotherAddressOr')}
       </p>
 
       <button
         onClick={onChangeLocation}
         className={`px-5 py-2 rounded-xl ${buttonBg} text-white font-black uppercase tracking-widest text-[9px] active:scale-95 transition-all shadow-xs`}
       >
-        Change Location
+        {t('auto.changeLocation')}
       </button>
     </motion.div>
   );

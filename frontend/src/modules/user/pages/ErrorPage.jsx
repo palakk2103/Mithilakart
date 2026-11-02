@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Home, RefreshCw, ChevronDown, ChevronUp, LifeBuoy } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const ErrorPage = ({ error, resetErrorBoundary }) => {
+  const { t } = useTranslation();
   const [showDetails, setShowDetails] = useState(false);
 
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -77,11 +79,11 @@ const ErrorPage = ({ error, resetErrorBoundary }) => {
         <h1 className="text-6xl font-black tracking-tighter text-slate-800 mb-1">500</h1>
         
         <h2 className={`text-xs font-black uppercase tracking-widest ${textPrimary} mb-3`}>
-          Something Went Wrong
+          {t('auto.somethingWentWrong')}
         </h2>
         
         <p className="text-slate-500 text-xs font-semibold leading-relaxed mb-6 max-w-xs mx-auto">
-          We encountered an unexpected issue while loading this page. Don't worry, your data is safe!
+          {t('auto.weEncounteredAnUnexpectedIssue')}
         </p>
 
         {/* Action Buttons */}
@@ -91,7 +93,7 @@ const ErrorPage = ({ error, resetErrorBoundary }) => {
             className={`w-full sm:w-auto px-6 py-3 rounded-2xl ${buttonBg} text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md`}
           >
             <RefreshCw size={14} />
-            Try Again
+            {t('auto.tryAgain')}
           </button>
 
           <button
@@ -99,7 +101,7 @@ const ErrorPage = ({ error, resetErrorBoundary }) => {
             className={`w-full sm:w-auto px-6 py-3 rounded-2xl border ${borderPrimary} font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm`}
           >
             <Home size={14} />
-            Go Home
+            {t('auto.goHome')}
           </button>
         </div>
 
@@ -111,7 +113,7 @@ const ErrorPage = ({ error, resetErrorBoundary }) => {
               className="w-full flex items-center justify-between text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
             >
               <span className="flex items-center gap-1.5">
-                <LifeBuoy size={13} /> Technical Details
+                <LifeBuoy size={13} /> {t('x.technicalDetails')}
               </span>
               {showDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>

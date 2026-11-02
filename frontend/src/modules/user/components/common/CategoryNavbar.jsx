@@ -191,7 +191,7 @@ const CategoryNavbar = ({ selectedCategory, setSelectedCategory }) => {
     <div
       className={`flex items-center overflow-x-auto no-scrollbar pt-0.5 pb-1.5 px-2 gap-1 md:pt-1 md:pb-2 md:px-3 md:gap-1.5 transition-colors duration-300 ${getMithilakartHeaderBg(selectedCategory)}`}
       role="navigation"
-      aria-label="Product categories"
+      aria-label={t('auto.productCategories')}
     >
       {navItems.map((cat) => {
         const isActive = selectedCategory === cat.label;

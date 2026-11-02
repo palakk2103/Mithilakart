@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getMyCoupons } from '../../services/userApi';
 import { extractList, mapCoupon } from '../../utils/mappers';
+import { useTranslation } from 'react-i18next';
 
 const Coupons = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +25,7 @@ const Coupons = () => {
           setCoupons(extractList(data).map(mapCoupon));
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load coupons');
+        if (!cancelled) setError(err.message || t('auto.failedToLoadCoupons'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -73,11 +75,11 @@ const Coupons = () => {
         <button onClick={() => navigate(-1)} className={`hover:opacity-85 transition-opacity ${headerTextColor}`}>
           <ArrowLeft size={24} />
         </button>
-        <h1 className={`text-lg font-bold tracking-wider ${headerTextColor}`}>My Coupons</h1>
+        <h1 className={`text-lg font-bold tracking-wider ${headerTextColor}`}>{t('auto.myCoupons')}</h1>
       </div>
 
       <div className="container mx-auto px-4 py-6 w-full space-y-6 relative z-10">
-        {loading && <p className="text-sm text-gray-500">Loading coupons...</p>}
+        {loading && <p className="text-sm text-gray-500">{t('auto.loadingCoupons')}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
         {coupons.map((coupon, idx) => (
           <div key={idx} className="relative group overflow-hidden bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
@@ -89,7 +91,7 @@ const Coupons = () => {
                 </div>
                 <div className="text-right">
                    <h2 className={`text-2xl font-black ${primaryText} italic leading-none mb-1`}>{coupon.discount}</h2>
-                   <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Min Order {coupon.minOrder}</p>
+                   <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{t('x.minOrder')} {coupon.minOrder}</p>
                 </div>
               </div>
               
@@ -107,7 +109,7 @@ const Coupons = () => {
                     <span className={`text-xs font-black uppercase tracking-[3px] ${primaryText}`}>{coupon.code}</span>
                     <Copy size={16} className={`${primaryText}/70 cursor-pointer hover:${primaryText} transition-colors`} />
                   </div>
-                  <button className={`${primaryBg} text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-sm ${primaryBgHover} active:scale-95 transition-all`}>Apply</button>
+                  <button className={`${primaryBg} text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-sm ${primaryBgHover} active:scale-95 transition-all`}>{t('auto.apply')}</button>
                 </div>
               </div>
             </div>
@@ -119,8 +121,8 @@ const Coupons = () => {
              <div className={`w-20 h-20 ${primaryLightBgColor} rounded-full flex items-center justify-center ${primaryText}`}>
                 <Ticket size={40} />
              </div>
-             <h3 className={`text-lg font-black uppercase tracking-widest ${primaryText}`}>No Active Coupons</h3>
-             <p className="text-sm text-gray-500 font-bold max-w-xs">Don't worry, keep shopping and check back soon for exclusive deals!</p>
+             <h3 className={`text-lg font-black uppercase tracking-widest ${primaryText}`}>{t('auto.noActiveCoupons')}</h3>
+             <p className="text-sm text-gray-500 font-bold max-w-xs">{t('auto.donTWorryKeepShopping')}</p>
           </div>
         )}
       </div>

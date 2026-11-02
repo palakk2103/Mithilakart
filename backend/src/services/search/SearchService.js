@@ -5,6 +5,7 @@ const { parsePagination, buildPaginationMeta } = require('../../utils/pagination
 const { CACHE_KEYS, CACHE_TTL } = require('../../constants/catalog');
 
 const { resolveTabFromQuery } = require('../../utils/marketplaceTab');
+const { normalizeTerm } = require('../../utils/searchMatch');
 
 class SearchService extends BaseService {
   constructor({ productService, categoryRepository, cacheService }) {
@@ -25,7 +26,7 @@ class SearchService extends BaseService {
 
   async searchProducts(query = {}) {
     const pagination = parsePagination(query);
-    const term = String(query.q || query.search || '').trim();
+    const term = normalizeTerm(query.q || query.search || '');
     const tab = resolveTabFromQuery(query) || '';
 
     if (!term) {

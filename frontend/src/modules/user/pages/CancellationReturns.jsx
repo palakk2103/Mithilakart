@@ -4,15 +4,15 @@ import { ArrowLeft, Package, RotateCcw, Clock, CheckCircle, XCircle, AlertCircle
 import Footer from '../../../shared/components/Footer';
 import useLegalPage from '../hooks/useLegalPage';
 import LegalContentRenderer from '../components/LegalContentRenderer';
+import { useTranslation } from 'react-i18next';
 
 const CancellationReturns = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { page, loading } = useLegalPage('cancellation');
 
-  const pageTitle = page?.title || 'Cancellation & Returns';
-  const updatedDate = page?.updatedAt
-    ? new Date(page.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    : 'May 8, 2026';
+  const pageTitle = t('auto.cancellationAndReturns', 'Cancellation & Returns');
+  const updatedDate = t('auto.may82026');
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between">
@@ -32,21 +32,20 @@ const CancellationReturns = () => {
         <main className="flex-1 px-6 py-6 space-y-6 max-w-4xl mx-auto w-full">
           {/* Last Updated */}
           <div className="text-[11px] text-gray-400">
-            Last Updated: {updatedDate}
+            {t('policy.lastUpdated')}: {updatedDate}
           </div>
 
         <LegalContentRenderer
-          content={page?.content}
+          content={null}
           loading={loading}
           fallbackContent={(
             <div className="space-y-6">
 
         {/* Introduction */}
         <section>
-          <h2 className="text-[16px] font-bold text-slate-900 mb-3">Introduction</h2>
+          <h2 className="text-[16px] font-bold text-slate-900 mb-3">{t('auto.introduction')}</h2>
           <p className="text-[13px] text-gray-600 leading-relaxed">
-            At Mithilakart, we are committed to completely satisfying you with your purchase. This policy outlines our 
-            cancellation and return procedures to ensure a smooth and hassle-free experience.
+            {t('auto.atMithilakartWeAreCommitted3')}
           </p>
         </section>
 
@@ -54,13 +53,13 @@ const CancellationReturns = () => {
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-primary-light border border-primary-green/30 rounded-xl p-4 text-center">
             <Clock size={24} className="text-[#3E5A44] mx-auto mb-2" />
-            <p className="text-[12px] font-bold text-slate-900">10 Days</p>
-            <p className="text-[10px] text-gray-500">Return Window</p>
+            <p className="text-[12px] font-bold text-slate-900">{t('auto.n10Days')}</p>
+            <p className="text-[10px] text-gray-500">{t('auto.returnWindow')}</p>
           </div>
           <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
             <RotateCcw size={24} className="text-green-600 mx-auto mb-2" />
-            <p className="text-[12px] font-bold text-slate-900">Easy Returns</p>
-            <p className="text-[10px] text-gray-500">Hassle-free Process</p>
+            <p className="text-[12px] font-bold text-slate-900">{t('auto.easyReturns')}</p>
+            <p className="text-[10px] text-gray-500">{t('auto.hassleFreeProcess')}</p>
           </div>
         </div>
 
@@ -68,28 +67,26 @@ const CancellationReturns = () => {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <XCircle size={20} className="text-[#3E5A44]" />
-            <h2 className="text-[16px] font-bold text-slate-900">Order Cancellation</h2>
+            <h2 className="text-[16px] font-bold text-slate-900">{t('auto.orderCancellation')}</h2>
           </div>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">1.1 When Can I Cancel?</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n11WhenCanI')}</h3>
           <p className="text-[13px] text-gray-600 leading-relaxed mb-2">
-            You can cancel your order anytime before it is shipped. Once the order is shipped, 
-            cancellation is not possible, but you can return the product after delivery.
+            {t('auto.youCanCancelYourOrder')}
           </p>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">1.2 How to Cancel</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n12HowToCancel')}</h3>
           <ul className="list-disc list-inside text-[13px] text-gray-600 space-y-1 ml-2">
-            <li>Go to "My Orders" section in your account</li>
-            <li>Select the order you want to cancel</li>
-            <li>Click on "Cancel Order" button</li>
-            <li>Choose a cancellation reason</li>
-            <li>Confirm cancellation</li>
+            <li>{t('auto.goToMyOrdersSection')}</li>
+            <li>{t('auto.selectTheOrderYouWant')}</li>
+            <li>{t('auto.clickOnCancelOrderButton')}</li>
+            <li>{t('auto.chooseACancellationReason')}</li>
+            <li>{t('auto.confirmCancellation')}</li>
           </ul>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">1.3 Cancellation Refund</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n13CancellationRefund')}</h3>
           <p className="text-[13px] text-gray-600 leading-relaxed">
-            Refunds for cancelled orders will be processed within 3-5 business days to your original 
-            payment method. For Cash on Delivery orders, no payment is required.
+            {t('auto.refundsForCancelledOrdersWill')}
           </p>
         </section>
 
@@ -97,59 +94,58 @@ const CancellationReturns = () => {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <RotateCcw size={20} className="text-[#3E5A44]" />
-            <h2 className="text-[16px] font-bold text-slate-900">Return Policy</h2>
+            <h2 className="text-[16px] font-bold text-slate-900">{t('auto.returnPolicy')}</h2>
           </div>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">2.1 Return Window</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n21ReturnWindow')}</h3>
           <p className="text-[13px] text-gray-600 leading-relaxed mb-2">
-            You have <strong>10 days</strong> from the date of delivery to initiate a return. Returns 
-            requested after this period will not be accepted.
+            {t('policy.youHave')} <strong>{t('auto.n10Days2')}</strong> {t('policy.fromDelivery')}
           </p>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">2.2 Eligible Items for Return</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n22EligibleItemsFor')}</h3>
           <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg mb-3">
             <div className="flex items-start gap-2">
               <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-[12px] font-bold text-slate-900 mb-2">Items that can be returned:</p>
+                <p className="text-[12px] font-bold text-slate-900 mb-2">{t('auto.itemsThatCanBeReturned')}</p>
                 <ul className="list-disc list-inside text-[12px] text-gray-600 space-y-1 ml-2">
-                  <li>Defective or damaged products</li>
-                  <li>Wrong item delivered</li>
-                  <li>Products not matching description</li>
-                  <li>Unused items in original packaging</li>
-                  <li>Items with all tags and labels intact</li>
+                  <li>{t('auto.defectiveOrDamagedProducts')}</li>
+                  <li>{t('auto.wrongItemDelivered')}</li>
+                  <li>{t('auto.productsNotMatchingDescription')}</li>
+                  <li>{t('auto.unusedItemsInOriginalPackaging')}</li>
+                  <li>{t('auto.itemsWithAllTagsAnd')}</li>
                 </ul>
               </div>
             </div>
           </div>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">2.3 Non-Returnable Items</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n23NonReturnableItems')}</h3>
           <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-3">
             <div className="flex items-start gap-2">
               <XCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-[12px] font-bold text-slate-900 mb-2">Items that cannot be returned:</p>
+                <p className="text-[12px] font-bold text-slate-900 mb-2">{t('auto.itemsThatCannotBeReturned')}</p>
                 <ul className="list-disc list-inside text-[12px] text-gray-600 space-y-1 ml-2">
-                  <li>Innerwear and lingerie</li>
-                  <li>Cosmetics and personal care items</li>
-                  <li>Perishable goods</li>
-                  <li>Customized or personalized products</li>
-                  <li>Items marked as "Non-Returnable"</li>
-                  <li>Software and digital products</li>
+                  <li>{t('auto.innerwearAndLingerie')}</li>
+                  <li>{t('auto.cosmeticsAndPersonalCareItems')}</li>
+                  <li>{t('auto.perishableGoods')}</li>
+                  <li>{t('auto.customizedOrPersonalizedProducts')}</li>
+                  <li>{t('auto.itemsMarkedAsNonReturnable')}</li>
+                  <li>{t('auto.softwareAndDigitalProducts')}</li>
                 </ul>
               </div>
             </div>
           </div>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">2.4 How to Return</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n24HowToReturn')}</h3>
           <div className="space-y-3">
             <div className="flex gap-3">
               <div className="w-8 h-8 bg-[#3E5A44] text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[14px]">
                 1
               </div>
               <div>
-                <p className="text-[13px] font-bold text-slate-900">Initiate Return</p>
-                <p className="text-[12px] text-gray-600">Go to "My Orders" and select "Return" for the item</p>
+                <p className="text-[13px] font-bold text-slate-900">{t('auto.initiateReturn')}</p>
+                <p className="text-[12px] text-gray-600">{t('auto.goToMyOrdersAnd')}</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -157,8 +153,8 @@ const CancellationReturns = () => {
                 2
               </div>
               <div>
-                <p className="text-[13px] font-bold text-slate-900">Choose Reason</p>
-                <p className="text-[12px] text-gray-600">Select the reason for return and provide details</p>
+                <p className="text-[13px] font-bold text-slate-900">{t('auto.chooseReason')}</p>
+                <p className="text-[12px] text-gray-600">{t('auto.selectTheReasonForReturn')}</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -166,8 +162,8 @@ const CancellationReturns = () => {
                 3
               </div>
               <div>
-                <p className="text-[13px] font-bold text-slate-900">Schedule Pickup</p>
-                <p className="text-[12px] text-gray-600">Our delivery partner will pick up the item from your address</p>
+                <p className="text-[13px] font-bold text-slate-900">{t('auto.schedulePickup')}</p>
+                <p className="text-[12px] text-gray-600">{t('auto.ourDeliveryPartnerWillPick')}</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -175,8 +171,8 @@ const CancellationReturns = () => {
                 4
               </div>
               <div>
-                <p className="text-[13px] font-bold text-slate-900">Quality Check</p>
-                <p className="text-[12px] text-gray-600">Item will be inspected at our warehouse</p>
+                <p className="text-[13px] font-bold text-slate-900">{t('auto.qualityCheck')}</p>
+                <p className="text-[12px] text-gray-600">{t('auto.itemWillBeInspectedAt')}</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -184,8 +180,8 @@ const CancellationReturns = () => {
                 5
               </div>
               <div>
-                <p className="text-[13px] font-bold text-slate-900">Refund Processed</p>
-                <p className="text-[12px] text-gray-600">Refund will be initiated within 7-10 business days</p>
+                <p className="text-[13px] font-bold text-slate-900">{t('auto.refundProcessed')}</p>
+                <p className="text-[12px] text-gray-600">{t('auto.refundWillBeInitiatedWithin')}</p>
               </div>
             </div>
           </div>
@@ -195,38 +191,37 @@ const CancellationReturns = () => {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <Package size={20} className="text-[#3E5A44]" />
-            <h2 className="text-[16px] font-bold text-slate-900">Refund Policy</h2>
+            <h2 className="text-[16px] font-bold text-slate-900">{t('auto.refundPolicy')}</h2>
           </div>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">3.1 Refund Timeline</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n31RefundTimeline')}</h3>
           <p className="text-[13px] text-gray-600 leading-relaxed mb-2">
-            Once we receive and inspect your returned item, we will process your refund within 
-            7-10 business days.
+            {t('auto.onceWeReceiveAndInspect')}
           </p>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">3.2 Refund Method</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n32RefundMethod')}</h3>
           <ul className="list-disc list-inside text-[13px] text-gray-600 space-y-1 ml-2">
-            <li><strong>Online Payments:</strong> Refund to original payment method (Credit/Debit Card, UPI, Wallet)</li>
-            <li><strong>Cash on Delivery:</strong> Bank transfer to your registered account</li>
-            <li><strong>Store Credit:</strong> Instant credit to your Mithilakart wallet (optional)</li>
+            <li><strong>{t('auto.onlinePayments')}</strong> {t('auto.refundToOriginalPaymentMethod')}</li>
+            <li><strong>{t('auto.cashOnDelivery')}</strong> {t('auto.bankTransferToYourRegistered')}</li>
+            <li><strong>{t('auto.storeCredit')}</strong> {t('auto.instantCreditToYourMithilakart')}</li>
           </ul>
 
-          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">3.3 Partial Refunds</h3>
+          <h3 className="text-[14px] font-bold text-slate-800 mb-2 mt-4">{t('auto.n33PartialRefunds')}</h3>
           <p className="text-[13px] text-gray-600 leading-relaxed">
-            Partial refunds may be issued if the item shows signs of use, damage, or missing accessories.
+            {t('auto.partialRefundsMayBeIssued')}
           </p>
         </section>
 
         {/* Exchange Policy */}
         <section>
-          <h2 className="text-[16px] font-bold text-slate-900 mb-3">4. Exchange Policy</h2>
+          <h2 className="text-[16px] font-bold text-slate-900 mb-3">{t('auto.n4ExchangePolicy')}</h2>
           <p className="text-[13px] text-gray-600 leading-relaxed mb-2">
-            We currently do not offer direct exchanges. If you wish to exchange an item:
+            {t('auto.weCurrentlyDoNotOffer')}
           </p>
           <ol className="list-decimal list-inside text-[13px] text-gray-600 space-y-1 ml-2">
-            <li>Return the original item following our return process</li>
-            <li>Place a new order for the desired item</li>
-            <li>Refund from the returned item will be processed separately</li>
+            <li>{t('auto.returnTheOriginalItemFollowing')}</li>
+            <li>{t('auto.placeANewOrderFor')}</li>
+            <li>{t('auto.refundFromTheReturnedItem')}</li>
           </ol>
         </section>
 
@@ -234,31 +229,31 @@ const CancellationReturns = () => {
         <section>
           <div className="flex items-center gap-2 mb-3">
             <AlertCircle size={20} className="text-orange-500" />
-            <h2 className="text-[16px] font-bold text-slate-900">Important Notes</h2>
+            <h2 className="text-[16px] font-bold text-slate-900">{t('auto.importantNotes')}</h2>
           </div>
           <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
             <ul className="list-disc list-inside text-[12px] text-gray-700 space-y-2">
-              <li>Return shipping is free for defective or wrong items</li>
-              <li>For other returns, shipping charges may apply</li>
-              <li>Items must be returned in original packaging with all accessories</li>
-              <li>Refunds do not include original shipping charges (if any)</li>
-              <li>Sale and clearance items may have different return policies</li>
-              <li>Return requests are subject to verification and approval</li>
+              <li>{t('auto.returnShippingIsFreeFor')}</li>
+              <li>{t('auto.forOtherReturnsShippingCharges')}</li>
+              <li>{t('auto.itemsMustBeReturnedIn')}</li>
+              <li>{t('auto.refundsDoNotIncludeOriginal')}</li>
+              <li>{t('auto.saleAndClearanceItemsMay')}</li>
+              <li>{t('auto.returnRequestsAreSubjectTo')}</li>
             </ul>
           </div>
         </section>
 
         {/* Contact Support */}
         <section className="pb-8">
-          <h2 className="text-[16px] font-bold text-slate-900 mb-3">Need Help?</h2>
+          <h2 className="text-[16px] font-bold text-slate-900 mb-3">{t('auto.needHelp')}</h2>
           <p className="text-[13px] text-gray-600 leading-relaxed mb-3">
-            If you have any questions about cancellations or returns, our customer support team is here to help.
+            {t('auto.ifYouHaveAnyQuestions')}
           </p>
           <div className="bg-primary-light border border-blue-200 rounded-xl p-4">
             <div className="text-[13px] text-gray-700 space-y-2">
-              <p><strong>Email:</strong> returns@mithilakart.com</p>
-              <p><strong>Phone:</strong> +91 1800-123-4567</p>
-              <p><strong>Hours:</strong> Monday - Saturday, 9:00 AM - 6:00 PM</p>
+              <p><strong>{t('auto.email')}</strong> returns@mithilakart.com</p>
+              <p><strong>{t('auto.phone')}</strong> +91 1800-123-4567</p>
+              <p><strong>{t('auto.hours2')}</strong> {t('auto.mondaySaturday900Am2')}</p>
             </div>
           </div>
         </section>

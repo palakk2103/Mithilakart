@@ -3,12 +3,14 @@ import { MapPin, Navigation, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation as useRouterLocation } from 'react-router-dom';
 import { useLocation } from '../context/LocationContext';
+import { useTranslation } from 'react-i18next';
 
 // Delivery location only matters to shoppers; on the admin, seller and
 // delivery portals the prompt just blocked the screen.
 const NON_SHOPPER_PORTALS = /^\/(admin|seller|delivery)(\/|$)/;
 
 const LocationPrompt = () => {
+  const { t } = useTranslation();
   const { pathname } = useRouterLocation();
   const {
     promptOpen,
@@ -52,15 +54,15 @@ const LocationPrompt = () => {
                   <MapPin size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-slate-900">Use live location</p>
-                  <p className="text-[11px] font-semibold text-slate-500">Nearby sellers & faster delivery</p>
+                  <p className="text-sm font-black text-slate-900">{t('auto.useLiveLocation')}</p>
+                  <p className="text-[11px] font-semibold text-slate-500">{t('auto.nearbySellersFasterDelivery')}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleDismiss}
                 className="p-2 rounded-full hover:bg-slate-100"
-                aria-label="Close"
+                aria-label={t('auto.close')}
               >
                 <X size={18} />
               </button>
@@ -68,8 +70,7 @@ const LocationPrompt = () => {
 
             <div className="px-5 py-5 space-y-4">
               <p className="text-[13px] leading-relaxed text-slate-600 font-medium">
-                Allow Mithilakart to access your current location so we can show nearby seller products,
-                accurate delivery address, and local offers.
+                {t('nav.locationPromptBody')}
               </p>
 
               {label && label !== 'Set delivery location' && (
@@ -80,7 +81,7 @@ const LocationPrompt = () => {
 
               {permissionDenied && (
                 <p className="text-[12px] font-bold text-red-500">
-                  Location blocked. Enable location permission in browser settings and try again.
+                  {t('auto.locationBlockedEnableLocationPermiss')}
                 </p>
               )}
 
@@ -93,7 +94,7 @@ const LocationPrompt = () => {
                 className="w-full py-3.5 rounded-2xl bg-[#65B842] hover:bg-[#529C33] text-white font-black text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <Navigation size={16} />
-                {loading ? 'Detecting location…' : 'Allow live location'}
+                {loading ? t('auto.detectingLocation') : t('auto.allowLiveLocation')}
               </button>
 
               <button
@@ -101,7 +102,7 @@ const LocationPrompt = () => {
                 onClick={handleDismiss}
                 className="w-full py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm"
               >
-                Not now
+                {t('auto.notNow')}
               </button>
             </div>
           </motion.div>

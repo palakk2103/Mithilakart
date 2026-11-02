@@ -1,0 +1,35 @@
+- main [ref=f2e7]:
+  - generic [ref=f2e80]:
+    - generic [ref=f2e81]:
+      - generic [ref=f2e82]:
+        - button [ref=f2e83]
+        - generic [ref=f2e86]:
+          - heading "Wellness & Hygiene" [level=1] [ref=f2e87]
+          - 'button "Delivering to : Set delivery location" [ref=f2e88]':
+            - text: "Delivering to :"
+            - generic [ref=f2e89]: Set delivery location
+      - generic [ref=f2e92]:
+        - button [ref=f2e93]
+        - button [ref=f2e97]
+    - generic [ref=f2e104]:
+      - generic [ref=f2e105]:
+        - button "Filters" [ref=f2e106] [cursor=pointer]
+        - button "Sort" [ref=f2e111] [cursor=pointer]
+        - button "Type" [ref=f2e114] [cursor=pointer]
+      - generic [ref=f2e117]:
+        - generic [ref=f2e119] [cursor=pointer]:
+          - img "All" [ref=f2e122]
+          - generic [ref=f2e123]: All
+        - generic [ref=f2e124]:
+          - generic [ref=f2e125]:
+            - generic [ref=f2e126]:
+              - generic [ref=f2e127]: Fresh & Premium Products
+              - generic [ref=f2e128]: Nutritional goodness in every bite
+            - img "Promo Basket" [ref=f2e129]
+          - generic [ref=f2e131]:
+            - generic [ref=f2e132]: Browse Categories
+            - generic [ref=f2e133]: 0 items
+          - generic [ref=f2e135]:
+            - paragraph [ref=f2e136]: No products here yet
+            - paragraph [ref=f2e137]: Try browsing other subcategories.
+            - button "Back to Subcategories" [ref=f2e138]

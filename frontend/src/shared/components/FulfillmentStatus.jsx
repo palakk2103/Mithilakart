@@ -1,5 +1,6 @@
 import { Loader2, Package, Truck, Zap, AlertCircle } from 'lucide-react';
 import useFulfillmentStatus from '../hooks/useFulfillmentStatus';
+import { useTranslation } from 'react-i18next';
 
 /**
  * CR-002 — customer-facing fulfillment status.
@@ -60,6 +61,7 @@ function etaText(fulfillment) {
 }
 
 export default function FulfillmentStatus({ orderId, enabled = true, className = '' }) {
+  const { t } = useTranslation();
   const { fulfillment, loading, error } = useFulfillmentStatus(orderId, { enabled });
 
   if (!enabled || !orderId) return null;
@@ -68,7 +70,7 @@ export default function FulfillmentStatus({ orderId, enabled = true, className =
     return (
       <div className={`flex items-center gap-2 text-[11px] font-bold text-slate-400 ${className}`}>
         <Loader2 size={14} className="animate-spin" />
-        <span>Loading delivery status…</span>
+        <span>{t('auto.loadingDeliveryStatus')}</span>
       </div>
     );
   }

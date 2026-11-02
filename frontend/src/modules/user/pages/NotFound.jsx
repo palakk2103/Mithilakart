@@ -2,8 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Compass, Home, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const NotFound = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -63,11 +65,11 @@ const NotFound = () => {
         <h1 className="text-7xl font-black tracking-tighter text-slate-800 mb-2">404</h1>
         
         <h2 className={`text-lg font-black uppercase tracking-widest ${textPrimary} mb-4`}>
-          Page Not Found
+          {t('auto.pageNotFound')}
         </h2>
         
         <p className="text-slate-500 text-sm font-semibold leading-relaxed mb-8 max-w-xs mx-auto">
-          The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
+          {t('auto.thePageYouAreLooking')}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
@@ -76,7 +78,7 @@ const NotFound = () => {
             className={`w-full sm:w-auto px-6 py-3 rounded-2xl border ${borderPrimary} font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm`}
           >
             <ArrowLeft size={14} />
-            Back
+            {t('auto.back')}
           </button>
           
           <button
@@ -84,7 +86,7 @@ const NotFound = () => {
             className={`w-full sm:w-auto px-6 py-3 rounded-2xl ${buttonBg} text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md`}
           >
             <Home size={14} />
-            Go Home
+            {t('auto.goHome')}
           </button>
         </div>
       </motion.div>

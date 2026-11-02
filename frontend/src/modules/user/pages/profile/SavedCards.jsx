@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getSavedCards, createCard, deleteCard } from '../../services/userApi';
 import { extractList } from '../../utils/mappers';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 const cardColorForType = (type) => (
   type === 'MASTERCARD' ? 'from-gray-800 to-gray-900' : 'from-blue-600 to-indigo-700'
@@ -34,6 +35,7 @@ const toCardPayload = (formData) => {
 };
 
 const SavedCards = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [savedCards, setSavedCards] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,7 +53,7 @@ const SavedCards = () => {
       const data = await getSavedCards();
       setSavedCards(extractList(data).map(mapCardFromApi));
     } catch (err) {
-      toast.error(err?.message || 'Failed to load cards');
+      toast.error(err?.message || t('auto.failedToLoadCards'));
     }
   };
 
@@ -85,28 +87,28 @@ const SavedCards = () => {
 
   const handleSave = async () => {
     if (formData.number.length < 19 || formData.expiry.length < 5 || !formData.holder || formData.cvv.length < 3) {
-      toast.error('Invalid card details');
+      toast.error(t('auto.invalidCardDetails'));
       return;
     }
 
     try {
       await createCard(toCardPayload(formData));
-      toast.success('Card added successfully');
+      toast.success(t('auto.cardAddedSuccessfully'));
       setIsModalOpen(false);
       setFormData({ number: '', expiry: '', holder: '', cvv: '', type: 'VISA', color: 'from-blue-600 to-indigo-700' });
       await loadCards();
     } catch (err) {
-      toast.error(err?.message || 'Failed to save card');
+      toast.error(err?.message || t('auto.failedToSaveCard'));
     }
   };
 
   const handleDelete = async (id) => {
     try {
       await deleteCard(id);
-      toast.success('Card removed');
+      toast.success(t('auto.cardRemoved'));
       await loadCards();
     } catch (err) {
-      toast.error(err?.message || 'Failed to remove card');
+      toast.error(err?.message || t('auto.failedToRemoveCard'));
     }
   };
 
@@ -141,7 +143,7 @@ const SavedCards = () => {
           <button onClick={() => navigate(-1)} className={`hover:opacity-80 transition-colors ${headerTextColor}`}>
             <ArrowLeft size={24} />
           </button>
-          <h1 className={`text-lg font-black uppercase tracking-widest ${headerTextColor}`}>Saved Cards</h1>
+          <h1 className={`text-lg font-black uppercase tracking-widest ${headerTextColor}`}>{t('auto.savedCards')}</h1>
         </div>
         <button onClick={() => setIsModalOpen(true)} className={`text-current ${isMithilakFlow ? 'text-[#207C8A]' : isFreshGroceryFlow ? 'text-[#D9A21B]' : isQuickShopFlow ? 'text-[#F26522]' : 'text-[#6FAE4A]'}`}>
           <Plus size={24} />
@@ -182,11 +184,11 @@ const SavedCards = () => {
                       <div className="text-white text-xl font-black tracking-[4px]">{card.number}</div>
                       <div className="flex justify-between items-end">
                           <div>
-                            <p className="text-[8px] text-white/60 uppercase tracking-widest mb-1 font-black">Card Holder</p>
+                            <p className="text-[8px] text-white/60 uppercase tracking-widest mb-1 font-black">{t('auto.cardHolder')}</p>
                             <p className="text-sm text-white font-black uppercase tracking-widest">{card.holder}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-[8px] text-white/60 uppercase tracking-widest mb-1 font-black">Expires</p>
+                            <p className="text-[8px] text-white/60 uppercase tracking-widest mb-1 font-black">{t('auto.expires')}</p>
                             <p className="text-sm text-white font-black">{card.expiry}</p>
                           </div>
                       </div>
@@ -199,7 +201,7 @@ const SavedCards = () => {
           {savedCards.length === 0 && (
              <div className="text-center py-20 bg-black/10 rounded-3xl border border-dashed border-[var(--card-border)]">
                 <CreditCard size={40} className="mx-auto text-[var(--card-sub)] mb-4 opacity-20" />
-                <p className="text-sm text-[var(--card-sub)] font-bold uppercase tracking-widest">No saved cards found</p>
+                <p className="text-sm text-[var(--card-sub)] font-bold uppercase tracking-widest">{t('auto.noSavedCardsFound')}</p>
              </div>
           )}
         </div>
@@ -210,8 +212,8 @@ const SavedCards = () => {
               <ShieldCheck size={24} />
            </div>
            <div>
-              <h3 className="text-sm font-black text-[var(--card-text)] mb-1 uppercase tracking-widest italic">Mithilakart SECURE</h3>
-              <p className="text-[10px] text-[var(--card-sub)] font-bold leading-relaxed uppercase tracking-widest">Your card details are stored securely using industry-standard encryption. We never share your data.</p>
+              <h3 className="text-sm font-black text-[var(--card-text)] mb-1 uppercase tracking-widest italic">{t('policy.mithilakartSecure')}</h3>
+              <p className="text-[10px] text-[var(--card-sub)] font-bold leading-relaxed uppercase tracking-widest">{t('auto.yourCardDetailsAreStored')}</p>
            </div>
         </div>
 
@@ -219,7 +221,7 @@ const SavedCards = () => {
           onClick={() => setIsModalOpen(true)}
           className="w-full bg-[var(--color-gold)] text-black py-4 rounded-2xl font-black uppercase tracking-[3px] shadow-[0_10px_20px_rgba(226,167,80,0.2)] flex items-center justify-center gap-2 hover:scale-[1.01] transition-all active:scale-95"
         >
-          <Plus size={20} /> Add New Card
+          <Plus size={20} /> {t('auto.addNewCard')}
         </button>
       </div>
 
@@ -242,7 +244,7 @@ const SavedCards = () => {
               className="fixed bottom-0 left-0 right-0 bg-[var(--card-bg)] border-t border-[var(--card-border)] rounded-t-[32px] z-[70] p-6 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-xl font-black uppercase tracking-widest">Add New Card</h2>
+                <h2 className="text-xl font-black uppercase tracking-widest">{t('auto.addNewCard')}</h2>
                 <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
                   <X size={20} />
                 </button>
@@ -258,11 +260,11 @@ const SavedCards = () => {
                     <div className="text-lg font-black tracking-[4px]">{formData.number || '•••• •••• •••• ••••'}</div>
                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                        <div>
-                          <p className="opacity-60 mb-1">Holder</p>
+                          <p className="opacity-60 mb-1">{t('auto.holder')}</p>
                           <p>{formData.holder || 'YOUR NAME'}</p>
                        </div>
                        <div className="text-right">
-                          <p className="opacity-60 mb-1">Expires</p>
+                          <p className="opacity-60 mb-1">{t('auto.expires')}</p>
                           <p>{formData.expiry || 'MM/YY'}</p>
                        </div>
                     </div>
@@ -272,7 +274,7 @@ const SavedCards = () => {
               <div className="space-y-6">
                 {/* Card Number */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[var(--color-gold)] uppercase tracking-[3px] ml-1">Card Number</label>
+                  <label className="text-[10px] font-black text-[var(--color-gold)] uppercase tracking-[3px] ml-1">{t('auto.cardNumber')}</label>
                   <div className="relative">
                     <CreditCard size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--card-sub)]" />
                     <input 
@@ -287,12 +289,12 @@ const SavedCards = () => {
 
                 {/* Holder Name */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[var(--color-gold)] uppercase tracking-[3px] ml-1">Card Holder</label>
+                  <label className="text-[10px] font-black text-[var(--color-gold)] uppercase tracking-[3px] ml-1">{t('auto.cardHolder')}</label>
                   <div className="relative">
                     <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--card-sub)]" />
                     <input 
                       type="text" 
-                      placeholder="Full name as on card"
+                      placeholder={t('auto.fullNameAsOnCard')}
                       value={formData.holder}
                       onChange={(e) => setFormData({...formData, holder: e.target.value.toUpperCase()})}
                       className="w-full bg-black/20 border border-[var(--card-border)] rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none focus:border-[var(--color-gold)]/50 transition-all"
@@ -303,7 +305,7 @@ const SavedCards = () => {
                 {/* Expiry & CVV Row */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[var(--color-gold)] uppercase tracking-[3px] ml-1">Expiry Date</label>
+                    <label className="text-[10px] font-black text-[var(--color-gold)] uppercase tracking-[3px] ml-1">{t('auto.expiryDate')}</label>
                     <div className="relative">
                       <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--card-sub)]" />
                       <input 
@@ -337,7 +339,7 @@ const SavedCards = () => {
                     onClick={handleSave}
                     className="w-full bg-[var(--color-gold)] text-black py-4 rounded-2xl font-black uppercase tracking-[3px] shadow-[0_10px_20px_rgba(226,167,80,0.2)] hover:scale-[1.02] transition-all active:scale-95"
                   >
-                    Save Card
+                    {t('auto.saveCard')}
                   </button>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { getAlreadyBought } from '../../../services/userApi';
 import { addProductToCart } from '../../../utils/cartUtils';
 import { getTokens, getUser, isAuthenticated } from '../../../../../shared/api/tokenStorage';
@@ -19,6 +20,7 @@ const readSessionKey = () => {
  * or when the customer has no eligible purchases.
  */
 const AlreadyBoughtSection = ({ CardComponent }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [sessionKey, setSessionKey] = useState(readSessionKey);
   const [items, setItems] = useState([]);
@@ -65,7 +67,7 @@ const AlreadyBoughtSection = ({ CardComponent }) => {
     e.preventDefault();
     const it = deal.raw;
     if (!it.inStock) {
-      toast.error('This item is currently out of stock');
+      toast.error(t('common.outOfStockToast'));
       return;
     }
     try {
@@ -75,9 +77,9 @@ const AlreadyBoughtSection = ({ CardComponent }) => {
         variantId: it.variantId,
         marketplaceTab: it.marketplaceTab || 'mithilakart',
       }, 1, it.commerceFlow || undefined);
-      toast.success(`${deal.title} added to cart!`);
+      toast.success(t('common.addedToCart', { name: deal.title }));
     } catch (err) {
-      toast.error(err?.message || 'Could not add to cart');
+      toast.error(err?.message || t('common.couldNotAddToCart'));
     }
   }, []);
 
@@ -86,14 +88,14 @@ const AlreadyBoughtSection = ({ CardComponent }) => {
   return (
     <div className="py-2 px-3 w-full max-w-[1600px] mx-auto select-none">
       <div className="flex justify-between items-center mb-3.5 px-1">
-        <h2 className="text-[15.5px] font-black text-[#3F2A20] tracking-tight">Already Bought Products</h2>
+        <h2 className="text-[15.5px] font-black text-[#3F2A20] tracking-tight">{t('home.alreadyBought')}</h2>
       </div>
       <div className="flex items-stretch gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x pb-2 pt-1 -mx-1 px-1">
         {deals.map((deal) => (
           <div key={deal.id} className="w-[165px] sm:w-[195px] md:w-[220px] flex-shrink-0 snap-start flex flex-col">
             <CardComponent
               deal={deal}
-              ctaLabel={deal.raw.inStock ? 'Buy Again' : 'Out of stock'}
+              ctaLabel={deal.raw.inStock ? t('common.buyAgain') : t('common.outOfStock')}
               ctaDisabled={!deal.raw.inStock}
               onNavigate={(d) => navigate('/product-detail', { state: { productId: d.raw.productId } })}
               onAddToCart={handleBuyAgain}

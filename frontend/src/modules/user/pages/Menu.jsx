@@ -16,8 +16,11 @@ import {
   Smartphone
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 
 const Menu = () => {
+  const { t } = useTranslation();
   const menuItems = [
     { title: 'Prime', icon: <ShieldCheck className="text-primary-dark" size={32} />, path: '/profile' },
     { title: 'Orders', icon: <ShoppingBag className="text-orange-500" size={32} />, path: '/profile' },
@@ -42,7 +45,7 @@ const Menu = () => {
               <div className="p-2 bg-slate-50 rounded-xl">
                  {item.icon}
               </div>
-              <span className="font-bold text-slate-800 text-sm">{item.title}</span>
+              <span className="font-bold text-slate-800 text-sm">{tName(item.title)}</span>
             </Link>
           ))}
         </div>
@@ -53,14 +56,14 @@ const Menu = () => {
              <div className="p-4 flex items-center justify-between border-b border-slate-50 active:bg-slate-50 transition-colors">
                 <div className="flex items-center gap-3">
                    <HelpCircle size={20} className="text-slate-400" />
-                   <span className="font-medium text-slate-700">Customer Service</span>
+                   <span className="font-medium text-slate-700">{t('auto.customerService')}</span>
                 </div>
                 <ChevronRight size={18} className="text-slate-300" />
              </div>
              <div className="p-4 flex items-center justify-between active:bg-slate-50 transition-colors">
                 <div className="flex items-center gap-3 text-red-500">
                    <LogOut size={20} />
-                   <span className="font-bold">Sign Out</span>
+                   <span className="font-bold">{t('auto.signOut')}</span>
                 </div>
                 <ChevronRight size={18} className="text-slate-300" />
              </div>

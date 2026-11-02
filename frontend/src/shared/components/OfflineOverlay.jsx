@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { WifiOff, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function OfflineOverlay() {
+  const { t } = useTranslation();
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function OfflineOverlay() {
             textTransform: 'uppercase',
           }}
         >
-          You are Offline
+          {t('auto.youAreOffline')}
         </h1>
         
         <p 
@@ -107,7 +109,7 @@ export default function OfflineOverlay() {
             lineHeight: '1.6',
           }}
         >
-          It looks like you've lost your connection. Mithilakart will automatically restore when you're back online.
+          {t('auto.itLooksLikeYouVe')}
         </p>
 
         <button
@@ -138,7 +140,7 @@ export default function OfflineOverlay() {
           }}
         >
           <RefreshCw size={16} />
-          Check Connection
+          {t('auto.checkConnection')}
         </button>
       </div>
     </div>

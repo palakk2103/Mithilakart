@@ -31,6 +31,9 @@ import ToysTab from '../../../assets/products/product13.jpg';
 import StationeryTab from '../../../assets/products/product14.jpg';
 import ClothesImg from '../../../assets/products/product15.webp';
 import ScrollRow from '../components/vendor/home/ScrollRow';
+import AddToCartButton from '../components/common/AddToCartButton';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../shared/utils/translateName';
 
 
 // Custom SVG Icons for Grocery Redesign
@@ -161,6 +164,7 @@ const quickShopDataCache = {
 };
 
 const CountdownTimer = React.memo(({ endsAt }) => {
+  const { t } = useTranslation();
   const [timeLeft, setTimeLeft] = React.useState({ h: '02', m: '45', s: '12' });
   React.useEffect(() => {
     const updateTimer = () => {
@@ -198,7 +202,7 @@ const CountdownTimer = React.memo(({ endsAt }) => {
 
   return (
     <div className="text-slate-850 text-[11px] font-black flex items-center gap-1">
-      <span>Ends in</span>
+      <span>{t('auto.endsIn')}</span>
       <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.h}</span>
       <span>:</span>
       <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.m}</span>
@@ -209,6 +213,7 @@ const CountdownTimer = React.memo(({ endsAt }) => {
 });
 
 const QuickShop = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   // Same component serves /quick-shop and /fresh-grocery; React Router keeps the
@@ -443,10 +448,10 @@ const QuickShop = () => {
           {/* Banner Section */}
           <div className="mx-4 my-4 p-5 rounded-3xl border border-[#F6C453]/35 flex items-center justify-between shadow-xs overflow-hidden relative" style={{ backgroundImage: 'linear-gradient(135deg, #FFFDF8 0%, #FFF9F2 100%)' }}>
             <div className="flex-1 z-10 pr-2">
-              <h1 className="text-[20px] font-black text-[#3F2A20] leading-tight mb-1">Freshness You Can Trust</h1>
-              <p className="text-[12px] font-bold text-[#3F2A20]/75 mb-4">Farm Fresh Products</p>
+              <h1 className="text-[20px] font-black text-[#3F2A20] leading-tight mb-1">{t('auto.freshnessYouCanTrust')}</h1>
+              <p className="text-[12px] font-bold text-[#3F2A20]/75 mb-4">{t('auto.farmFreshProducts')}</p>
               <button className="bg-[#6FAE4A] text-white text-[12px] font-black px-6 py-2.5 rounded-full shadow-md active:scale-95 transition-transform hover:brightness-105">
-                Shop Now
+                {t('auto.shopNow')}
               </button>
             </div>
             <div className="w-[130px] h-[130px] flex items-center justify-center flex-shrink-0 relative">
@@ -457,7 +462,7 @@ const QuickShop = () => {
           {/* Categories Grid — the Fresh & Groceries tab's top-level categories from admin */}
           <div className="px-4 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">Browse by Category</h2>
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{t('auto.browseByCategory')}</h2>
               <span
                 onClick={() => {
                   localStorage.setItem('isFreshGroceryFlow', 'true');
@@ -467,7 +472,7 @@ const QuickShop = () => {
                 }}
                 className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline"
               >
-                View All
+                {t('auto.viewAll')}
               </span>
             </div>
 
@@ -492,7 +497,7 @@ const QuickShop = () => {
               ))}
               {!categoriesLoading && categoryTree.length === 0 && (
                 <div className="col-span-4 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#EADCC9]">
-                  <p className="text-[11.5px] font-bold text-[#3F2A20]/70">Categories are coming soon</p>
+                  <p className="text-[11.5px] font-bold text-[#3F2A20]/70">{t('auto.categoriesAreComingSoon')}</p>
                 </div>
               )}
             </div>
@@ -501,8 +506,8 @@ const QuickShop = () => {
           {/* Today's Best Offers */}
           <div className="px-4 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">Today's Best Offers</h2>
-              <span className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline">View All</span>
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{t('auto.todaySBestOffers')}</h2>
+              <span className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline">{t('auto.viewAll')}</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
@@ -518,7 +523,7 @@ const QuickShop = () => {
                   >
                     {discount && (
                       <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none">
-                        {discount}
+                        {tName(discount)}
                       </div>
                     )}
 
@@ -538,6 +543,9 @@ const QuickShop = () => {
                         )}
                         <span className="text-[12.5px] font-black text-[#3F2A20]">₹{prod.price}</span>
                       </div>
+                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                        <AddToCartButton product={prod} />
+                      </div>
                     </div>
                   </div>
                 );
@@ -545,7 +553,7 @@ const QuickShop = () => {
               {nearbyProducts.length === 0 && (
                 <div className="col-span-3 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#EADCC9]">
                   <p className="text-[11.5px] font-bold text-[#3F2A20]/70">
-                    {notDeliverable ? 'Share location to see offers from nearby stores' : 'Loading best offers...'}
+                    {notDeliverable ? t('auto.shareLocationToSeeOffers') : t('auto.loadingBestOffers')}
                   </p>
                 </div>
               )}
@@ -566,7 +574,7 @@ const QuickShop = () => {
                       : 'bg-white border-[#EADCC9]/55 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  {tab}
+                  {tName(tab)}
                 </button>
               );
             })}
@@ -575,19 +583,19 @@ const QuickShop = () => {
           {/* ── FLASH DEALS SECTION ── */}
           <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(217,162,27,0.015)]">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{activeFlashSale?.title || 'Flash Deals'}</h2>
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{activeFlashSale?.title || t('common.flashDeals')}</h2>
               <CountdownTimer endsAt={activeFlashSale?.endsAt} />
             </div>
 
             {/* Flash Deals Cards grid */}
             {dealsLoading && (
-              <p className="text-center text-[11px] text-slate-500 py-6">Loading flash deals...</p>
+              <p className="text-center text-[11px] text-slate-500 py-6">{t('auto.loadingFlashDeals')}</p>
             )}
 
             {!dealsLoading && flashDeals.length === 0 && (
               <div className="text-center py-6 px-4 bg-[#FFF8EE]/50 rounded-xl border border-dashed border-[#EADCC9]">
-                <p className="text-[12px] font-bold text-[#3F2A20]/70">No active flash deals at the moment.</p>
-                <p className="text-[10px] text-[#3F2A20]/50 mt-1">Check back soon for exclusive limited-time discounts!</p>
+                <p className="text-[12px] font-bold text-[#3F2A20]/70">{t('auto.noActiveFlashDealsAt')}</p>
+                <p className="text-[10px] text-[#3F2A20]/50 mt-1">{t('auto.checkBackSoonForExclusive')}</p>
               </div>
             )}
 
@@ -610,7 +618,7 @@ const QuickShop = () => {
                   >
                     {prod.discount && (
                       <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                        {prod.discount}
+                        {tName(prod.discount)}
                       </div>
                     )}
                     
@@ -630,6 +638,9 @@ const QuickShop = () => {
                         )}
                         <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
                       </div>
+                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                        <AddToCartButton product={prod} />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -641,10 +652,10 @@ const QuickShop = () => {
           <div className="bg-[#FFF8EE] border border-[#EADCC9]/55 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
             <div className="flex flex-col gap-3 flex-1 pr-2">
               <span className="text-[12.5px] font-extrabold text-[#3F2A20] leading-snug">
-                Share your location to access Grocery & explore offers
+                {t('auto.shareYourLocationToAccess')}
               </span>
               <button className="bg-[#D9A21B] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs">
-                Share Location
+                {t('auto.shareLocation')}
               </button>
             </div>
             <ChevronDown size={20} className="text-slate-550 flex-shrink-0 cursor-pointer" />
@@ -653,8 +664,8 @@ const QuickShop = () => {
           {/* ── TODAY'S SPECIAL DEALS ── */}
           <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(217,162,27,0.015)]">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">Today's Special Deals</h2>
-              <span className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline">View All</span>
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{t('auto.todaySSpecialDeals')}</h2>
+              <span className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline">{t('auto.viewAll')}</span>
             </div>
 
             {/* Deals grid */}
@@ -671,7 +682,7 @@ const QuickShop = () => {
                   >
                     {discount && (
                       <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                        {discount}
+                        {tName(discount)}
                       </div>
                     )}
                     
@@ -691,6 +702,9 @@ const QuickShop = () => {
                         )}
                         <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
                       </div>
+                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                        <AddToCartButton product={prod} />
+                      </div>
                     </div>
                   </div>
                 );
@@ -698,7 +712,7 @@ const QuickShop = () => {
               {nearbyProducts.length === 0 && (
                 <div className="col-span-3 text-center py-6 px-3 bg-[#FFF8EE]/50 rounded-xl border border-dashed border-[#EADCC9]">
                   <p className="text-[11.5px] font-bold text-[#3F2A20]/70">
-                    {notDeliverable ? 'Share location to explore special deals near you' : 'No deals available right now'}
+                    {notDeliverable ? t('auto.shareLocationToExploreSpecial2') : t('auto.noDealsAvailableRightNow')}
                   </p>
                 </div>
               )}
@@ -707,6 +721,14 @@ const QuickShop = () => {
 
           {/* ── RESTORED CATEGORY SECTIONS (Mobile View) ── */}
           <div className="md:hidden px-4 space-y-8">
+            {categorySections.length > 0 && (
+              <div className="pl-1 pt-2 pb-5 !mb-2">
+                <h2 className="text-[19px] font-black text-[#3F2A20] tracking-tight leading-tight">
+                  {t('auto.exploreAllCategories', 'Explore All Categories')}
+                </h2>
+                <div className="mt-1.5 h-[3px] w-14 rounded-full bg-[#D9A21B]" />
+              </div>
+            )}
             {categorySections.map((section, sIdx) => (
               <div key={sIdx} className="mb-6">
                 <h2 className="text-[15px] font-extrabold text-[#D9A21B] mb-3 tracking-tight pl-1">
@@ -797,13 +819,13 @@ const QuickShop = () => {
         >
           <div className="flex-1 z-10 pr-2">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F26522]/10 text-[#F26522] text-[10px] font-black uppercase tracking-wider mb-1.5">
-              <Zap size={11} className="fill-[#F26522]" /> Delivery in 15-30 Mins
+              <Zap size={11} className="fill-[#F26522]" /> {t('common.deliveryIn1530')}
             </div>
             <h1 className="text-[19px] md:text-[22px] font-black text-slate-900 leading-tight mb-1">
-              Quick Shop Essentials
+              {t('auto.quickShopEssentials')}
             </h1>
             <p className="text-[11.5px] md:text-[12.5px] font-bold text-slate-600 mb-3">
-              Groceries, Snacks & Daily Needs At Lightning Speed
+              {t('auto.groceriesSnacksDailyNeedsAt')}
             </p>
             <button
               onClick={() => {
@@ -812,7 +834,7 @@ const QuickShop = () => {
               }}
               className="bg-[#F26522] text-white text-[12px] font-black px-6 py-2.5 rounded-full shadow-md active:scale-95 transition-transform hover:brightness-105"
             >
-              Explore Categories
+              {t('auto.exploreCategories')}
             </button>
           </div>
           <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] flex items-center justify-center flex-shrink-0 relative">
@@ -827,7 +849,7 @@ const QuickShop = () => {
         {/* ── BROWSE BY CATEGORY GRID ── */}
         <div id="quick-categories-grid" className="px-4 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">Browse by Category</h2>
+            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{t('auto.browseByCategory')}</h2>
             <span
               onClick={() => {
                 localStorage.setItem('isQuickShopFlow', 'true');
@@ -835,7 +857,7 @@ const QuickShop = () => {
               }}
               className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
             >
-              View All
+              {t('auto.viewAll')}
             </span>
           </div>
 
@@ -864,7 +886,7 @@ const QuickShop = () => {
             ))}
             {!categoriesLoading && categoryTree.length === 0 && (
               <div className="col-span-4 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#FFD9C7]">
-                <p className="text-[11.5px] font-bold text-slate-600">Categories coming soon</p>
+                <p className="text-[11.5px] font-bold text-slate-600">{t('auto.categoriesComingSoon')}</p>
               </div>
             )}
           </div>
@@ -873,7 +895,7 @@ const QuickShop = () => {
         {/* ── TODAY'S BEST OFFERS ── */}
         <div className="px-4 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">Today's Best Offers</h2>
+            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{t('auto.todaySBestOffers')}</h2>
             <span
               onClick={() => {
                 localStorage.setItem('isQuickShopFlow', 'true');
@@ -881,7 +903,7 @@ const QuickShop = () => {
               }}
               className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
             >
-              View All
+              {t('auto.viewAll')}
             </span>
           </div>
 
@@ -901,7 +923,7 @@ const QuickShop = () => {
                 >
                   {discount && (
                     <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
-                      {discount}
+                      {tName(discount)}
                     </div>
                   )}
 
@@ -927,6 +949,9 @@ const QuickShop = () => {
                       )}
                       <span className="text-[12.5px] font-black text-slate-900">₹{prod.price}</span>
                     </div>
+                    <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                      <AddToCartButton product={prod} />
+                    </div>
                   </div>
                 </div>
               );
@@ -934,7 +959,7 @@ const QuickShop = () => {
             {!nearbyLoading && nearbyProducts.length === 0 && (
               <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
                 <p className="text-[11.5px] font-bold text-slate-700">
-                  {notDeliverable ? 'Share location to see offers from nearby stores' : 'Loading best offers...'}
+                  {notDeliverable ? t('auto.shareLocationToSeeOffers') : t('auto.loadingBestOffers')}
                 </p>
               </div>
             )}
@@ -955,7 +980,7 @@ const QuickShop = () => {
                     : 'bg-white border-[#EADCC9]/55 text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                {tab}
+                {tName(tab)}
               </button>
             );
           })}
@@ -964,22 +989,22 @@ const QuickShop = () => {
         {/* ── FLASH DEALS SECTION ── */}
         <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{activeFlashSale?.title || 'Flash Deals'}</h2>
+            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{activeFlashSale?.title || t('common.flashDeals')}</h2>
             <CountdownTimer endsAt={activeFlashSale?.endsAt} />
           </div>
 
           {/* Flash Deals Cards grid */}
           {dealsLoading && (
-            <p className="text-center text-[11px] text-slate-500 py-6">Loading flash deals...</p>
+            <p className="text-center text-[11px] text-slate-500 py-6">{t('auto.loadingFlashDeals')}</p>
           )}
 
           {!dealsLoading && ((activeFilter !== 'All' && displayedNearby.length === 0) || (activeFilter === 'All' && flashDeals.length === 0 && displayedNearby.length === 0 && nearbyProducts.length === 0)) && (
             <div className="text-center py-6 px-4 bg-[#FFF5EE]/60 rounded-xl border border-dashed border-[#FFD9C7]">
               <p className="text-[12px] font-bold text-slate-700">
-                {activeFilter !== 'All' ? `No products found under "${activeFilter}"` : 'No active flash deals at the moment.'}
+                {activeFilter !== 'All' ? `No products found under "${activeFilter}"` : t('auto.noActiveFlashDealsAt')}
               </p>
               <p className="text-[10px] text-slate-500 mt-1">
-                {activeFilter !== 'All' ? 'Try switching to another category or "All"' : 'Check back soon for exclusive limited-time discounts!'}
+                {activeFilter !== 'All' ? t('auto.trySwitchingToAnotherCategory') : t('auto.checkBackSoonForExclusive')}
               </p>
             </div>
           )}
@@ -1006,7 +1031,7 @@ const QuickShop = () => {
                   >
                     {discount && (
                       <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                        {discount}
+                        {tName(discount)}
                       </div>
                     )}
 
@@ -1026,6 +1051,9 @@ const QuickShop = () => {
                         )}
                         <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
                       </div>
+                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                        <AddToCartButton product={prod} />
+                      </div>
                     </div>
                   </div>
                 );
@@ -1038,14 +1066,14 @@ const QuickShop = () => {
         <div className="bg-[#FFF5EE] border border-[#FFD9C7]/55 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
           <div className="flex flex-col gap-3 flex-1 pr-2">
             <span className="text-[12.5px] font-extrabold text-slate-800 leading-snug">
-              Share your location to access Quick Shop & explore offers
+              {t('auto.shareYourLocationToAccess2')}
             </span>
             <button
               type="button"
               onClick={() => setPromptOpen(true)}
               className="bg-[#F26522] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs"
             >
-              Share Location
+              {t('auto.shareLocation')}
             </button>
           </div>
           <ChevronDown size={20} className="text-slate-500 flex-shrink-0 cursor-pointer" />
@@ -1054,7 +1082,7 @@ const QuickShop = () => {
         {/* ── TODAY'S SPECIAL DEALS ── */}
         <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">Today's Special Deals</h2>
+            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{t('auto.todaySSpecialDeals')}</h2>
             <span
               onClick={() => {
                 localStorage.setItem('isQuickShopFlow', 'true');
@@ -1062,7 +1090,7 @@ const QuickShop = () => {
               }}
               className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
             >
-              View All
+              {t('auto.viewAll')}
             </span>
           </div>
 
@@ -1083,7 +1111,7 @@ const QuickShop = () => {
                 >
                   {discount && (
                     <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                      {discount}
+                      {tName(discount)}
                     </div>
                   )}
 
@@ -1109,6 +1137,9 @@ const QuickShop = () => {
                       )}
                       <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
                     </div>
+                    <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                      <AddToCartButton product={prod} />
+                    </div>
                   </div>
                 </div>
               );
@@ -1116,7 +1147,7 @@ const QuickShop = () => {
             {!nearbyLoading && nearbyProducts.length === 0 && (
               <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
                 <p className="text-[11.5px] font-bold text-slate-700">
-                  Share location to explore special deals in your area
+                  {t('auto.shareLocationToExploreSpecial')}
                 </p>
               </div>
             )}
@@ -1137,6 +1168,14 @@ const QuickShop = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {!categoriesLoading && categorySections.length > 0 && (
+          <div className="pl-1 pt-2 pb-5 !mb-2">
+            <h2 className="text-[19px] font-black text-slate-900 tracking-tight leading-tight">
+              {t('auto.exploreAllCategories', 'Explore All Categories')}
+            </h2>
+            <div className="mt-1.5 h-[3px] w-14 rounded-full bg-[#F26522]" />
           </div>
         )}
         {!categoriesLoading && categorySections.map((section, sIdx) => (

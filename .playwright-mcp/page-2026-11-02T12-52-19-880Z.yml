@@ -1,0 +1,53 @@
+- main [ref=f1e7]:
+  - generic [ref=f1e10]:
+    - generic [ref=f1e11]:
+      - generic [ref=f1e12]:
+        - button [ref=f1e13]
+        - heading "Quick Categories" [level=1] [ref=f1e16]
+      - button [ref=f1e17]
+    - generic [ref=f1e21]:
+      - generic [ref=f1e22]:
+        - button "Grocery Grocery" [ref=f1e23]:
+          - img "Grocery" [ref=f1e25]
+          - generic [ref=f1e26]: Grocery
+        - button "Snacks & Drinks Snacks & Drinks" [ref=f1e27]:
+          - img "Snacks & Drinks" [ref=f1e29]
+          - generic [ref=f1e30]: Snacks & Drinks
+        - button "Beauty & Personal Care Beauty & Personal Care" [active] [ref=f1e31]:
+          - img "Beauty & Personal Care" [ref=f1e34]
+          - generic [ref=f1e35]: Beauty & Personal Care
+        - button "Household, Stationery & Lifestyle Household, Stationery & Lifestyle" [ref=f1e36]:
+          - img "Household, Stationery & Lifestyle" [ref=f1e38]
+          - generic [ref=f1e39]: Household, Stationery & Lifestyle
+        - button "Mobiles & Electronics Mobiles & Electronics" [ref=f1e40]:
+          - img "Mobiles & Electronics" [ref=f1e42]
+          - generic [ref=f1e43]: Mobiles & Electronics
+      - generic [ref=f1e45]:
+        - generic [ref=f1e46]:
+          - heading "Beauty & Personal Care" [level=2] [ref=f1e47]
+          - generic [ref=f1e48]:
+            - generic [ref=f1e49] [cursor=pointer]:
+              - img "Bath, Body & Grooming" [ref=f1e51]
+              - generic [ref=f1e52]: Bath, Body & Grooming
+            - generic [ref=f1e53] [cursor=pointer]:
+              - img "Baby Care" [ref=f1e55]
+              - generic [ref=f1e56]: Baby Care
+            - generic [ref=f1e57] [cursor=pointer]:
+              - img "Hair Care" [ref=f1e59]
+              - generic [ref=f1e60]: Hair Care
+            - generic [ref=f1e61] [cursor=pointer]:
+              - img "Healthcare & Pharma" [ref=f1e63]
+              - generic [ref=f1e64]: Healthcare & Pharma
+            - generic [ref=f1e65] [cursor=pointer]:
+              - img "Wellness & Hygiene" [ref=f1e67]
+              - generic [ref=f1e68]: Wellness & Hygiene
+            - generic [ref=f1e69] [cursor=pointer]:
+              - img "Beauty & Fragrances" [ref=f1e71]
+              - generic [ref=f1e72]: Beauty & Fragrances
+        - generic [ref=f1e73]:
+          - heading "Explore More" [level=3] [ref=f1e74]
+          - generic [ref=f1e75]:
+            - generic [ref=f1e76]:
+              - paragraph [ref=f1e77]: Trending in Beauty & Personal Care
+              - paragraph [ref=f1e78]: Check out the newest arrivals
+            - button "View All" [ref=f1e79]

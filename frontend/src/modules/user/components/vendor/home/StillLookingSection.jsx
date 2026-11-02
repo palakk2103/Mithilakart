@@ -1,8 +1,10 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { handleImageError, getProductImage } from '../../../../../shared/utils/imageUtils';
 
 const StillLookingSection = ({ items }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleCardClick = useCallback((item) => {
@@ -37,7 +39,7 @@ const StillLookingSection = ({ items }) => {
         }}></div>
 
         <h2 className="text-white text-[15px] md:text-[18px] md:text-center md:mb-4 font-black uppercase tracking-tight mb-2 pl-0.5 relative z-10">
-          Trending This Week
+          {t('home.trendingThisWeek')}
         </h2>
 
         <div className="flex overflow-x-auto w-full gap-1.5 pb-0.5 no-scrollbar snap-x relative z-10 md:justify-center md:gap-5 md:overflow-x-visible">
@@ -58,7 +60,7 @@ const StillLookingSection = ({ items }) => {
               </div>
               <div className="px-0.5">
                 <p className="text-[9px] md:text-[11px] font-bold text-gray-600 leading-tight truncate">{item.label}</p>
-                <p className="text-[8px] md:text-[9.5px] font-black text-[#6FAE4A] uppercase tracking-tighter mt-0.5">VIEW STORE</p>
+                <p className="text-[8px] md:text-[9.5px] font-black text-[#6FAE4A] uppercase tracking-tighter mt-0.5">{t('home.viewStore')}</p>
               </div>
             </div>
           ))}

@@ -113,12 +113,47 @@ const richLegalPages = [
 <h2>5. Data Security</h2>
 <p>We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
 
-<h2>6. Your Rights and Choices</h2>
-<p>You have the right to access and update your personal information, request deletion of your account and data, opt-out of marketing communications, or request a copy of your data.</p>
+<h2>6. Cookies and Tracking Technologies</h2>
+<p>We use cookies and similar technologies to:</p>
+<ul>
+  <li>Remember your preferences and settings</li>
+  <li>Analyze site traffic and usage patterns</li>
+  <li>Provide personalized content and advertisements</li>
+  <li>Improve Platform functionality</li>
+</ul>
+<p>You can control cookies through your browser settings, but disabling them may affect Platform functionality.</p>
 
-<h2>7. Contact Us</h2>
-<p>If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:</p>
-<p><strong>Email:</strong> privacy@mithilakart.com<br/><strong>Phone:</strong> +91 1800-123-4567<br/><strong>Address:</strong> Mithilakart Pvt Ltd, Data Protection Officer, Mumbai, India</p>`,
+<h2>7. Your Rights and Choices</h2>
+<p>You have the right to:</p>
+<ul>
+  <li>Access and update your personal information</li>
+  <li>Request deletion of your account and data</li>
+  <li>Opt-out of marketing communications</li>
+  <li>Disable location tracking</li>
+  <li>Request a copy of your data</li>
+  <li>Object to certain data processing activities</li>
+</ul>
+<p>To exercise these rights, please contact us using the information provided below.</p>
+
+<h2>8. Children's Privacy</h2>
+<p>Our Platform is not intended for children under 18 years of age. We do not knowingly collect personal information from children. If you believe we have collected information from a child, please contact us immediately.</p>
+
+<h2>9. Third-Party Links</h2>
+<p>Our Platform may contain links to third-party websites. We are not responsible for the privacy practices of these external sites. We encourage you to review their privacy policies before providing any personal information.</p>
+
+<h2>10. Data Retention</h2>
+<p>We retain your personal information for as long as necessary to fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is required by law. When we no longer need your information, we will securely delete or anonymize it.</p>
+
+<h2>11. International Data Transfers</h2>
+<p>Your information may be transferred to and processed in countries other than your country of residence. We ensure appropriate safeguards are in place to protect your information in accordance with this Privacy Policy.</p>
+
+<h2>12. Changes to This Privacy Policy</h2>
+<p>We may update this Privacy Policy from time to time. We will notify you of significant changes by posting the new policy on our Platform and updating the "Last Updated" date. Your continued use of the Platform after changes are posted constitutes acceptance of the updated policy.</p>
+
+<h2>13. Contact Us</h2>
+<p>If you have any questions or concerns about this Privacy Policy or our data practices, please contact us:</p>
+<p><strong>Email:</strong> privacy@mithilakart.com<br/><strong>Phone:</strong> +91 1800-123-4567<br/><strong>Address:</strong> Mithilakart Pvt Ltd, Data Protection Officer, Mumbai, India</p>
+<blockquote><strong>Your privacy matters to us.</strong> We are committed to protecting your personal information and being transparent about our data practices. If you have any concerns, please don't hesitate to reach out.</blockquote>`,
   },
   {
     type: LEGAL_PAGE_TYPES.SHIPPING,

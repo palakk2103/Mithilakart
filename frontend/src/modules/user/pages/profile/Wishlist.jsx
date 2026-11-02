@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ShoppingCart, Lock, Share2, Edit2, MoreVertical, Star, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Lock, Share2, Edit2, MoreVertical, Trash2, Star, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAccountStore from '../../../../store/useAccountStore';
@@ -7,8 +7,10 @@ import { getWishlist, removeFromWishlist as removeWishlistApi } from '../../serv
 import { extractList, mapWishlistItem } from '../../utils/mappers';
 import { addProductToCart, fetchCartCount } from '../../utils/cartUtils';
 import { handleImageError } from '../../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
 
 const Wishlist = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { wishlist, setWishlist, removeFromWishlist } = useAccountStore();
   const [cartCount, setCartCount] = useState(0);
@@ -96,19 +98,19 @@ const Wishlist = () => {
 
       {/* Title Section */}
       <div className="px-4 py-5 bg-transparent relative z-10">
-        <h1 className="text-[22px] font-bold text-slate-900 tracking-tight">Wishlist</h1>
+        <h1 className="text-[22px] font-bold text-slate-900 tracking-tight">{t('auto.wishlist')}</h1>
         <div className="flex items-center gap-1.5 mt-1 text-gray-500">
           <Lock size={14} />
-          <span className="text-[13px] font-medium">Private • {wishlist.length} items</span>
+          <span className="text-[13px] font-medium">{t('wishlistPage.privateItems', { count: wishlist.length })}</span>
         </div>
 
         {/* Share & Edit Buttons */}
         <div className="flex gap-3 mt-5">
           <button className="flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 rounded-sm text-[14px] font-bold text-[#3E5A44] active:bg-gray-50 transition-colors">
-            <Share2 size={16} /> Share
+            <Share2 size={16} /> {t('wishlistPage.share')}
           </button>
           <button className="flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 rounded-sm text-[14px] font-bold text-[#3E5A44] active:bg-gray-50 transition-colors">
-            <Edit2 size={16} /> Edit
+            <Edit2 size={16} /> {t('address.edit')}
           </button>
           <button className="w-10 flex items-center justify-center text-gray-400">
             <MoreVertical size={20} />
@@ -120,7 +122,7 @@ const Wishlist = () => {
         <div className="grid grid-cols-2">
           <AnimatePresence mode="popLayout">
             {loading ? (
-              <p className="col-span-2 p-8 text-center text-sm text-gray-500">Loading wishlist...</p>
+              <p className="col-span-2 p-8 text-center text-sm text-gray-500">{t('auto.loadingWishlist')}</p>
             ) : wishlist.map((item, idx) => (
               <motion.div 
                 layout
@@ -144,9 +146,10 @@ const Wishlist = () => {
                         // keep UI unchanged
                       }
                     }}
-                    className="absolute top-2 right-2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center text-gray-400 shadow-sm"
+                    aria-label="Remove from wishlist"
+                    className="absolute top-2 right-2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center text-red-500 shadow-sm active:scale-95 transition-transform"
                   >
-                    <MoreVertical size={18} />
+                    <Trash2 size={16} />
                   </button>
                 </div>
 
@@ -172,7 +175,7 @@ const Wishlist = () => {
                     </div>
                     <div className="bg-[#3E5A44] px-1 rounded-sm flex items-center gap-0.5">
                       <span className="text-[9px] text-white font-black italic">f</span>
-                      <span className="text-[8px] text-white font-bold">Assured</span>
+                      <span className="text-[8px] text-white font-bold">{t('auto.assured')}</span>
                     </div>
                   </div>
 
@@ -180,7 +183,7 @@ const Wishlist = () => {
                     onClick={(e) => addToCart(item, e)}
                     className="w-full mt-4 py-2 border border-gray-200 text-[#3E5A44] text-[14px] font-bold rounded-sm active:bg-primary-light transition-colors"
                   >
-                    Add to Cart
+                    {t('auto.addToCart')}
                   </button>
                 </div>
               </motion.div>
@@ -193,13 +196,13 @@ const Wishlist = () => {
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mb-4">
               <ShoppingBag size={40} />
             </div>
-            <h3 className="text-[18px] font-bold text-slate-800">Your Wishlist is Empty</h3>
-            <p className="text-[14px] text-gray-400 mt-1">Add items that you like to your wishlist.</p>
+            <h3 className="text-[18px] font-bold text-slate-800">{t('auto.yourWishlistIsEmpty')}</h3>
+            <p className="text-[14px] text-gray-400 mt-1">{t('auto.addItemsThatYouLike')}</p>
             <button 
               onClick={() => navigate('/vendor/home')}
               className="mt-6 bg-[#3E5A44] text-white px-8 py-2.5 rounded-sm font-bold text-[14px] shadow-lg active:scale-95 transition-all"
             >
-              Continue Shopping
+              {t('auto.continueShopping')}
             </button>
           </div>
         )}

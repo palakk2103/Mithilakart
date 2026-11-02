@@ -4,8 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SearchInput from '../../../../shared/components/SearchInput';
 import { createSupportTicket } from '../../services/userApi';
+import { useTranslation } from 'react-i18next';
+import { tName } from '../../../../shared/utils/translateName';
 
 const HelpCenter = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFaq, setExpandedFaq] = useState(null);
@@ -17,7 +20,7 @@ const HelpCenter = () => {
     try {
       await createSupportTicket({
         subject: 'Customer support request',
-        message: ticketMessage || searchQuery || 'Need help with my order',
+        message: ticketMessage || searchQuery || t('auto.needHelpWithMyOrder'),
         category: 'general',
       });
       setTicketMessage('');
@@ -110,7 +113,7 @@ const HelpCenter = () => {
           >
             <ArrowLeft size={24} strokeWidth={2.5} />
           </button>
-          <h1 className={`text-[18px] font-bold ${headerTextColor}`}>Help & Support</h1>
+          <h1 className={`text-[18px] font-bold ${headerTextColor}`}>{t('auto.helpSupport')}</h1>
         </div>
         
         {/* Search Bar */}
@@ -119,7 +122,7 @@ const HelpCenter = () => {
             type="text" 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for help..." 
+            placeholder={t('auto.searchForHelp')} 
           />
         </div>
       </div>
@@ -127,7 +130,7 @@ const HelpCenter = () => {
       <div className="px-4 py-6 space-y-8 pb-24 relative z-10">
         {/* Contact Methods */}
         <section>
-          <h2 className="text-[16px] font-bold text-slate-900 mb-4">How can we help you?</h2>
+          <h2 className="text-[16px] font-bold text-slate-900 mb-4">{t('auto.howCanWeHelpYou')}</h2>
           <div className="grid grid-cols-1 gap-3">
             {contactMethods.map((method, idx) => (
               <motion.div
@@ -139,9 +142,9 @@ const HelpCenter = () => {
                   {method.icon}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-[14px] font-bold text-slate-900">{method.title}</h3>
-                  <p className="text-[12px] text-gray-500 font-medium">{method.subtitle}</p>
-                  <p className="text-[13px] text-[#3E5A44] font-bold mt-1">{method.detail}</p>
+                  <h3 className="text-[14px] font-bold text-slate-900">{tName(method.title)}</h3>
+                  <p className="text-[12px] text-gray-500 font-medium">{tName(method.subtitle)}</p>
+                  <p className="text-[13px] text-[#3E5A44] font-bold mt-1">{tName(method.detail)}</p>
                 </div>
                 <ChevronRight size={20} className="text-gray-300" />
               </motion.div>
@@ -151,7 +154,7 @@ const HelpCenter = () => {
 
         {/* FAQs */}
         <section>
-          <h2 className="text-[16px] font-bold text-slate-900 mb-4">Frequently Asked Questions</h2>
+          <h2 className="text-[16px] font-bold text-slate-900 mb-4">{t('auto.frequentlyAskedQuestions')}</h2>
           <div className="space-y-2">
             {faqs.map((faq, idx) => (
               <div 
@@ -164,7 +167,7 @@ const HelpCenter = () => {
                 >
                   <div className="flex items-center gap-3 flex-1">
                     <HelpCircle size={18} className="text-[#3E5A44] flex-shrink-0" />
-                    <span className="text-[13px] font-bold text-slate-900">{faq.q}</span>
+                    <span className="text-[13px] font-bold text-slate-900">{tName(faq.q)}</span>
                   </div>
                   <ChevronRight 
                     size={18} 
@@ -179,7 +182,7 @@ const HelpCenter = () => {
                     className="px-4 pb-4"
                   >
                     <p className="text-[12px] text-gray-600 leading-relaxed pl-7">
-                      {faq.a}
+                      {tName(faq.a)}
                     </p>
                   </motion.div>
                 )}
@@ -194,11 +197,11 @@ const HelpCenter = () => {
             <div className="p-2 bg-[#3E5A44] rounded-full">
               <Send size={18} className="text-white" />
             </div>
-            <h2 className="text-[16px] font-bold text-slate-900">Contact Us</h2>
+            <h2 className="text-[16px] font-bold text-slate-900">{t('auto.contactUs')}</h2>
           </div>
           
           <p className="text-[13px] text-gray-600 mb-4 leading-relaxed">
-            Can't find what you're looking for? Our support team is here to help you 24/7.
+            {t('auto.canTFindWhatYou')}
           </p>
 
           <div className="space-y-3">
@@ -208,9 +211,9 @@ const HelpCenter = () => {
                 <Phone size={16} className="text-[#3E5A44]" />
               </div>
               <div>
-                <p className="text-[12px] font-bold text-slate-900">Phone Support</p>
+                <p className="text-[12px] font-bold text-slate-900">{t('auto.phoneSupport')}</p>
                 <p className="text-[13px] text-[#3E5A44] font-bold">+91 1800-123-4567</p>
-                <p className="text-[11px] text-gray-500">Mon-Sat: 9:00 AM - 6:00 PM</p>
+                <p className="text-[11px] text-gray-500">{t('auto.monSat900Am')}</p>
               </div>
             </div>
 
@@ -220,9 +223,9 @@ const HelpCenter = () => {
                 <Mail size={16} className="text-[#3E5A44]" />
               </div>
               <div>
-                <p className="text-[12px] font-bold text-slate-900">Email Support</p>
+                <p className="text-[12px] font-bold text-slate-900">{t('auto.emailSupport')}</p>
                 <p className="text-[13px] text-[#3E5A44] font-bold">support@mithilakart.com</p>
-                <p className="text-[11px] text-gray-500">Response within 24 hours</p>
+                <p className="text-[11px] text-gray-500">{t('auto.responseWithin24Hours')}</p>
               </div>
             </div>
 
@@ -232,11 +235,11 @@ const HelpCenter = () => {
                 <MapPin size={16} className="text-[#3E5A44]" />
               </div>
               <div>
-                <p className="text-[12px] font-bold text-slate-900">Office Address</p>
+                <p className="text-[12px] font-bold text-slate-900">{t('auto.officeAddress')}</p>
                 <p className="text-[12px] text-gray-600 leading-relaxed">
-                  Mithilakart Pvt Ltd<br />
-                  123 Business Park, Andheri East<br />
-                  Mumbai, Maharashtra 400069
+                  {t('x.companyName')}<br />
+                  {t('x.companyStreet')}<br />
+                  {t('auto.mumbaiMaharashtra400069')}
                 </p>
               </div>
             </div>
@@ -247,9 +250,9 @@ const HelpCenter = () => {
                 <Clock size={16} className="text-[#3E5A44]" />
               </div>
               <div>
-                <p className="text-[12px] font-bold text-slate-900">Business Hours</p>
-                <p className="text-[12px] text-gray-600">Monday - Saturday: 9:00 AM - 6:00 PM</p>
-                <p className="text-[12px] text-gray-600">Sunday: Closed</p>
+                <p className="text-[12px] font-bold text-slate-900">{t('auto.businessHours')}</p>
+                <p className="text-[12px] text-gray-600">{t('auto.mondaySaturday900Am')}</p>
+                <p className="text-[12px] text-gray-600">{t('auto.sundayClosed')}</p>
               </div>
             </div>
           </div>
@@ -261,19 +264,19 @@ const HelpCenter = () => {
             disabled={submitting}
             className="w-full mt-6 bg-[#3E5A44] text-white py-3 rounded-xl font-bold text-[14px] shadow-md active:shadow-sm transition-all disabled:opacity-60"
           >
-            {submitting ? 'Sending...' : 'Send us a message'}
+            {submitting ? t('auto.sending') : t('auto.sendUsAMessage')}
           </motion.button>
         </section>
 
         {/* Policies */}
         <section>
-          <h2 className="text-[16px] font-bold text-slate-900 mb-4">Policies & Information</h2>
+          <h2 className="text-[16px] font-bold text-slate-900 mb-4">{t('auto.policiesInformation')}</h2>
           <div className="space-y-2">
             {[
-              { title: 'Privacy Policy', path: '/privacy' },
-              { title: 'Terms of Service', path: '/terms' },
-              { title: 'Cancellation & Returns', path: '/cancellation-returns' },
-              { title: 'Shipping Policy', path: '/shipping' }
+              { title: t('auto.privacyPolicy'), path: '/privacy' },
+              { title: t('auto2.termsOfService'), path: '/terms' },
+              { title: t('auto.cancellationsReturns'), path: '/cancellation-returns' },
+              { title: t('auto.shippingPolicy'), path: '/shipping' }
             ].map((item, idx) => (
               <motion.div
                 key={idx}

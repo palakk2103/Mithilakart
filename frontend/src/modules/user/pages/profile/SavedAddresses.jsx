@@ -11,6 +11,7 @@ import useAccountStore from '../../../../store/useAccountStore';
 import { useLocation } from '../../../../shared/context/LocationContext';
 import { extractList } from '../../utils/mappers';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 const mapAddressFromApi = (addr) => ({
   id: addr.id || addr._id,
@@ -40,6 +41,7 @@ const toAddressPayload = (formData, liveLocation) => ({
 });
 
 const SavedAddresses = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { setSavedAddresses, setSelectedAddress } = useAccountStore();
   const { location: liveLocation, refreshLiveLocation } = useLocation();
@@ -64,7 +66,7 @@ const SavedAddresses = () => {
       const items = extractList(data).map(mapAddressFromApi);
       syncStore(items, items.find((a) => a.isDefault)?.id || items[0]?.id || null);
     } catch (err) {
-      toast.error(err?.message || 'Failed to load addresses');
+      toast.error(err?.message || t('auto.failedToLoadAddresses'));
     }
   };
 
@@ -93,7 +95,7 @@ const SavedAddresses = () => {
 
   const handleSave = async () => {
     if (!formData.name || !formData.phone || !formData.address) {
-      toast.error('All fields are required');
+      toast.error(t('auto.allFieldsAreRequired'));
       return;
     }
 
@@ -101,17 +103,17 @@ const SavedAddresses = () => {
       const payload = toAddressPayload(formData, liveLocation);
       if (editingAddress) {
         await updateAddress(editingAddress.id, payload);
-        toast.success('Address updated');
+        toast.success(t('auto.addressUpdated'));
       } else {
         const created = await createAddress(payload);
         const mapped = mapAddressFromApi(created);
         setSelectedAddressId(mapped.id);
-        toast.success('Address added & selected');
+        toast.success(t('auto.addressAddedSelected'));
       }
       setIsModalOpen(false);
       await loadAddresses();
     } catch (err) {
-      toast.error(err?.message || 'Failed to save address');
+      toast.error(err?.message || t('auto.failedToSaveAddress'));
     }
   };
 
@@ -120,10 +122,10 @@ const SavedAddresses = () => {
     try {
       await deleteAddress(id);
       if (selectedAddressId === id) setSelectedAddressId(null);
-      toast.success('Address removed');
+      toast.success(t('auto.addressRemoved'));
       await loadAddresses();
     } catch (err) {
-      toast.error(err?.message || 'Failed to delete address');
+      toast.error(err?.message || t('auto.failedToDeleteAddress'));
     }
   };
 
@@ -134,7 +136,7 @@ const SavedAddresses = () => {
       toast.success(`Deliver to ${addr.type} selected`);
       await loadAddresses();
     } catch (err) {
-      toast.error(err?.message || 'Failed to set default address');
+      toast.error(err?.message || t('auto.failedToSetDefaultAddress'));
     }
   };
 
@@ -176,16 +178,16 @@ const SavedAddresses = () => {
           <button
             onClick={() => navigate(-1)}
             className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Go back"
+            aria-label={t('auto.goBack')}
           >
             <ArrowLeft size={20} strokeWidth={2.5} className={headerTextColor} />
           </button>
-          <h1 className={`text-[15px] font-black uppercase tracking-widest ${headerTextColor}`}>Saved Addresses</h1>
+          <h1 className={`text-[15px] font-black uppercase tracking-widest ${headerTextColor}`}>{t('auto.savedAddresses')}</h1>
         </div>
         <button
           onClick={() => handleOpenModal()}
           className="p-1.5 rounded-full hover:bg-primary-light transition-colors"
-          aria-label="Add address"
+          aria-label={t('auto.addAddress')}
         >
           <Plus size={22} strokeWidth={2} className={primaryText} />
         </button>
@@ -198,13 +200,13 @@ const SavedAddresses = () => {
           onClick={() => handleOpenModal()}
           className={`w-full ${primaryBg} text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-[13px] ${shadowAccent} flex items-center justify-center gap-2 active:scale-95 transition-transform`}
         >
-          <Plus size={18} strokeWidth={2.5} /> Add New Address
+          <Plus size={18} strokeWidth={2.5} /> {t('address.addNew')}
         </button>
 
         {/* ── Section label ── */}
         <div className="flex items-center justify-between px-1">
-          <span className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px]`}>Your Addresses</span>
-          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Tap to select primary</span>
+          <span className={`text-[10px] font-black ${primaryText} uppercase tracking-[3px]`}>{t('auto.yourAddresses')}</span>
+          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{t('auto.tapToSelectPrimary')}</span>
         </div>
 
         {/* ── Address Cards ── */}
@@ -237,7 +239,7 @@ const SavedAddresses = () => {
                     {isSelected && (
                       <div className="flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
                         <CheckCircle2 size={10} className="text-green-500" />
-                        <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">Active</span>
+                        <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">{t('auto.active')}</span>
                       </div>
                     )}
                   </div>
@@ -261,13 +263,13 @@ const SavedAddresses = () => {
                     onClick={(e) => { e.stopPropagation(); handleOpenModal(addr); }}
                     className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest ${primaryText} hover:opacity-70 transition-opacity`}
                   >
-                    <Edit2 size={12} /> Edit
+                    <Edit2 size={12} /> {t('address.edit')}
                   </button>
                   <button
                     onClick={(e) => handleDelete(addr.id, e)}
                     className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-red-500 hover:opacity-70 transition-opacity"
                   >
-                    <Trash2 size={12} /> Delete
+                    <Trash2 size={12} /> {t('address.delete')}
                   </button>
                 </div>
               </motion.div>
@@ -279,7 +281,7 @@ const SavedAddresses = () => {
         {savedAddresses.length === 0 && (
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
             <MapPin size={36} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-[13px] text-gray-400 font-bold uppercase tracking-widest">No saved addresses</p>
+            <p className="text-[13px] text-gray-400 font-bold uppercase tracking-widest">{t('auto.noSavedAddresses')}</p>
           </div>
         )}
       </div>
@@ -305,7 +307,7 @@ const SavedAddresses = () => {
               {/* Modal header */}
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-[16px] font-black text-gray-800">
-                  {editingAddress ? 'Edit Address' : 'Add New Address'}
+                  {editingAddress ? t('auto.editAddress') : t('auto.addNewAddress')}
                 </h2>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -318,12 +320,12 @@ const SavedAddresses = () => {
               <div className="space-y-4">
                 {/* Name */}
                 <div className="space-y-1.5">
-                  <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>Receiver Name</label>
+                  <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>{t('auto.receiverName')}</label>
                   <div className="relative">
                     <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Enter full name"
+                      placeholder={t('auto.enterFullName')}
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-[13px] font-medium focus:outline-none ${focusBorder} transition-colors`}
@@ -333,12 +335,12 @@ const SavedAddresses = () => {
 
                 {/* Phone */}
                 <div className="space-y-1.5">
-                  <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>Phone Number</label>
+                  <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>{t('auto.phoneNumber')}</label>
                   <div className="relative">
                     <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="tel"
-                      placeholder="Enter 10-digit number"
+                      placeholder={t('auto.enter10DigitNumber')}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-[13px] font-medium focus:outline-none ${focusBorder} transition-colors`}
@@ -348,11 +350,11 @@ const SavedAddresses = () => {
 
                 {/* Address */}
                 <div className="space-y-1.5">
-                  <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>Complete Address</label>
+                  <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>{t('auto.completeAddress')}</label>
                   <div className="relative">
                     <MapPin size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
                     <textarea
-                      placeholder="House No, Building, Street, Area..."
+                      placeholder={t('auto.houseNoBuildingStreetArea')}
                       rows="3"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -364,7 +366,7 @@ const SavedAddresses = () => {
                 {/* Pincode & City */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>Pincode</label>
+                    <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>{t('auto.pincode')}</label>
                     <input
                       type="text"
                       maxLength="6"
@@ -375,10 +377,10 @@ const SavedAddresses = () => {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>City</label>
+                    <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>{t('auto.city')}</label>
                     <input
                       type="text"
-                      placeholder="City name"
+                      placeholder={t('auto.cityName')}
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-[13px] font-medium focus:outline-none ${focusBorder} transition-colors`}
@@ -388,7 +390,7 @@ const SavedAddresses = () => {
 
                 {/* Type */}
                 <div className="space-y-1.5">
-                  <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>Address Type</label>
+                  <label className={`text-[10px] font-black ${primaryText} uppercase tracking-[2px] ml-1`}>{t('auto.addressType')}</label>
                   <div className="flex gap-3">
                     {['HOME', 'WORK'].map((type) => (
                       <button
@@ -413,7 +415,7 @@ const SavedAddresses = () => {
                     onClick={handleSave}
                     className={`w-full ${primaryBg} text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-[13px] ${shadowAccent} active:scale-95 transition-transform`}
                   >
-                    {editingAddress ? 'Update Address' : 'Save Address'}
+                    {editingAddress ? t('auto.updateAddress') : t('auto.saveAddress')}
                   </button>
                 </div>
               </div>

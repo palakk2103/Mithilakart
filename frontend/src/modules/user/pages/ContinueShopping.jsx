@@ -5,8 +5,10 @@ import { getProductById, getCategoryProducts } from '../services/catalogApi';
 import { extractList, mapProductForCard } from '../utils/mappers';
 import { fetchCartCount } from '../utils/cartUtils';
 import { handleImageError } from '../../../shared/utils/imageUtils';
+import { useTranslation } from 'react-i18next';
 
 const ContinueShopping = () => {
+  const { t } = useTranslation();
   const { productId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -49,7 +51,7 @@ const ContinueShopping = () => {
           setSimilarProducts([]);
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load product');
+        if (!cancelled) setError(err.message || t('auto.failedToLoadProduct'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -124,7 +126,7 @@ const ContinueShopping = () => {
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-white/10 rounded-full active:scale-95 transition-transform">
             <ArrowLeft size={22} className="text-white" />
           </button>
-          <h1 className="text-[17px] font-black tracking-tight text-white">Continue Shopping</h1>
+          <h1 className="text-[17px] font-black tracking-tight text-white">{t('auto.continueShopping')}</h1>
         </div>
         <div className="flex items-center gap-3.5">
           <button onClick={() => navigate('/search')} className="p-1 hover:bg-white/10 rounded-full">
@@ -146,7 +148,7 @@ const ContinueShopping = () => {
 
       <div className="px-4 py-4 space-y-6">
         {loading && (
-          <div className="text-center py-16 text-slate-400 font-bold text-sm">Loading…</div>
+          <div className="text-center py-16 text-slate-400 font-bold text-sm">{t('auto.loading')}</div>
         )}
 
         {!loading && error && !clickedProduct && (
@@ -157,7 +159,7 @@ const ContinueShopping = () => {
           <>
             {/* Section 1: This Product */}
             <div>
-              <h2 className="text-[14px] font-black text-slate-900 mb-3 tracking-wider uppercase">This Product</h2>
+              <h2 className="text-[14px] font-black text-slate-900 mb-3 tracking-wider uppercase">{t('auto.thisProduct')}</h2>
               <div className="max-w-[220px]">
                 {renderProductCard(clickedProduct)}
               </div>
@@ -167,7 +169,7 @@ const ContinueShopping = () => {
             {sortedSimilarProducts.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-[14px] font-black text-slate-900 tracking-wider uppercase">Similar Products</h2>
+                  <h2 className="text-[14px] font-black text-slate-900 tracking-wider uppercase">{t('auto.similarProducts')}</h2>
                 </div>
 
                 {/* Filter Chips */}

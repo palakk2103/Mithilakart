@@ -13,6 +13,7 @@ const { parsePagination, buildPaginationMeta } = require('../../utils/pagination
 const { buildListFilters } = require('../../utils/filter');
 const { buildSortQuery } = require('../../utils/sort');
 const { eventBus } = require('../../events/EventBus');
+const { normalizeAdditionalCategoryIds } = require('../../utils/productCategories');
 
 const LOCAL_COMMERCE_FLOWS = new Set([COMMERCE_FLOWS.QUICK_SHOP, COMMERCE_FLOWS.FRESH_GROCERY]);
 
@@ -49,6 +50,16 @@ class SellerProductService extends BaseService {
     if (!product) throw AppError.notFound('Product not found');
     const variants = await this.productVariantRepository.findByProductId(productId);
     return { ...product.toObject(), variants };
+  }
+
+  /** Dedupes, drops the primary, and verifies every extra category exists. */
+  async _resolveAdditionalCategories(ids, primaryId) {
+    const unique = normalizeAdditionalCategoryIds(ids, primaryId);
+    for (const id of unique) {
+      const category = await this.categoryRepository.findById(id);
+      if (!category || category.deletedAt) throw AppError.notFound(`Category not found: ${id}`);
+    }
+    return unique;
   }
 
   async create(sellerId, data, listingOptions = {}) {
@@ -112,8 +123,11 @@ class SellerProductService extends BaseService {
       }
     }
 
+    const categoryIds = await this._resolveAdditionalCategories(data.categoryIds, data.categoryId);
+
     const product = await this.productRepository.create({
       ...data,
+      categoryIds,
       pickupCoordinates,
       pickupAddress,
       city,
@@ -199,6 +213,12 @@ class SellerProductService extends BaseService {
       if (!category || category.deletedAt) throw AppError.notFound('Category not found');
     }
 
+    if (data.categoryIds !== undefined || data.categoryId) {
+      const primary = data.categoryId || product.categoryId;
+      const extras = data.categoryIds !== undefined ? data.categoryIds : (product.categoryIds || []);
+      data.categoryIds = await this._resolveAdditionalCategories(extras, primary);
+    }
+
     if (data.sku) {
       const baseSku = String(data.sku).trim();
       let finalSku = baseSku;
@@ -259,6 +279,7 @@ class SellerProductService extends BaseService {
       mrp: product.mrp,
       stock: product.stock,
       categoryId: product.categoryId,
+      categoryIds: product.categoryIds || [],
       status: initialStatus,
       masterStatus: initialStatus,
       images: product.images,

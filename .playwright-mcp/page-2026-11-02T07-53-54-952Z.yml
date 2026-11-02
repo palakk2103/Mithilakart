@@ -1,0 +1,300 @@
+- generic [ref=f1e3]:
+  - generic [ref=f1e5]:
+    - link "Mithilakart" [ref=f1e6] [cursor=pointer]:
+      - /url: /home
+    - generic [ref=f1e9]:
+      - generic [ref=f1e10] [cursor=pointer]:
+        - img "Mithilakart" [ref=f1e12]
+        - generic [ref=f1e13]: Mithilakart
+      - generic [ref=f1e14] [cursor=pointer]: Quick Shop
+      - generic [ref=f1e20] [cursor=pointer]: Mithilak
+      - generic [ref=f1e26] [cursor=pointer]: Fresh & Groceries
+    - navigation [ref=f1e33]:
+      - link "Home" [ref=f1e34] [cursor=pointer]:
+        - /url: /home
+      - link "Categories" [ref=f1e35] [cursor=pointer]:
+        - /url: /categories?flow=mithilakart
+      - link "Cart 0" [ref=f1e36] [cursor=pointer]:
+        - /url: /cart
+        - generic [ref=f1e37]: Cart
+        - generic [ref=f1e38]: "0"
+      - link "Profile" [ref=f1e39] [cursor=pointer]:
+        - /url: /profile
+    - generic [ref=f1e40]:
+      - button "English English" [ref=f1e42] [cursor=pointer]:
+        - img "English" [ref=f1e43]
+        - generic [ref=f1e44]: English
+      - generic [ref=f1e45]:
+        - generic [ref=f1e46]: 📍 Deliver to
+        - button "Tap to set delivery location" [ref=f1e47]
+  - generic [ref=f1e48]:
+    - main [ref=f1e51]:
+      - generic [ref=f1e52]:
+        - generic [ref=f1e54]:
+          - button "You Buy" [ref=f1e55] [cursor=pointer]
+          - button "Fashion" [ref=f1e62] [cursor=pointer]
+          - button "Beauty" [ref=f1e68] [cursor=pointer]
+          - button "Electronics" [ref=f1e74] [cursor=pointer]
+          - button "Jewellery" [ref=f1e79] [cursor=pointer]
+          - button "Toys" [ref=f1e85] [cursor=pointer]
+          - button "Stationery" [ref=f1e90] [cursor=pointer]
+          - button "Gifting" [ref=f1e95] [cursor=pointer]
+          - button "Electrical" [ref=f1e102] [cursor=pointer]
+        - generic [ref=f1e107]:
+          - generic [ref=f1e108]:
+            - generic [ref=f1e114]:
+              - generic [ref=f1e115]:
+                - heading "Fashion" [level=2] [ref=f1e116]
+                - generic [ref=f1e117]: 10 items
+              - paragraph [ref=f1e118]: Showing curated collections & products
+            - button "Show All" [ref=f1e119] [cursor=pointer]
+          - generic [ref=f1e124]:
+            - generic [ref=f1e126]:
+              - heading "Fashion Subcategories" [level=3] [ref=f1e127]
+              - generic [ref=f1e129]: Click to filter products
+            - generic [ref=f1e130]:
+              - generic [ref=f1e131]:
+                - button "All Items 10 items" [ref=f1e132] [cursor=pointer]:
+                  - generic [ref=f1e138]: All Items
+                  - generic [ref=f1e139]: 10 items
+                - button "Sweaters Sweaters Min. 70% Off" [ref=f1e140] [cursor=pointer]:
+                  - img "Sweaters" [ref=f1e142]
+                  - generic [ref=f1e146]:
+                    - heading "Sweaters" [level=4] [ref=f1e147]
+                    - generic [ref=f1e148]: Min. 70% Off
+                - button "Jackets Jackets Min. 60% Off" [ref=f1e149] [cursor=pointer]:
+                  - img "Jackets" [ref=f1e151]
+                  - generic [ref=f1e155]:
+                    - heading "Jackets" [level=4] [ref=f1e156]
+                    - generic [ref=f1e157]: Min. 60% Off
+                - button "Men's boots Men's boots Min. 70% Off" [ref=f1e158] [cursor=pointer]:
+                  - img "Men's boots" [ref=f1e160]
+                  - generic [ref=f1e164]:
+                    - heading "Men's boots" [level=4] [ref=f1e165]
+                    - generic [ref=f1e166]: Min. 70% Off
+                - button "T-Shirts & Tops T-Shirts & Tops From ₹249" [ref=f1e167] [cursor=pointer]:
+                  - img "T-Shirts & Tops" [ref=f1e169]
+                  - generic [ref=f1e173]:
+                    - heading "T-Shirts & Tops" [level=4] [ref=f1e174]
+                    - generic [ref=f1e175]: From ₹249
+                - button "Blazers Blazers Min. 45% Off" [ref=f1e176] [cursor=pointer]:
+                  - img "Blazers" [ref=f1e178]
+                  - generic [ref=f1e182]:
+                    - heading "Blazers" [level=4] [ref=f1e183]
+                    - generic [ref=f1e184]: Min. 45% Off
+              - button "Scroll right" [ref=f1e185] [cursor=pointer]
+          - generic [ref=f1e188]:
+            - generic [ref=f1e189]:
+              - heading "All Fashion Products" [level=3] [ref=f1e191]
+              - paragraph [ref=f1e192]: Showing 10 of 10 items
+            - generic [ref=f1e193]:
+              - generic [ref=f1e194]: "Sort:"
+              - button "Popularity" [ref=f1e196] [cursor=pointer]
+              - 'button "Price: Low to High" [ref=f1e197] [cursor=pointer]'
+              - 'button "Price: High to Low" [ref=f1e198] [cursor=pointer]'
+              - button "Customer Rating" [ref=f1e199] [cursor=pointer]
+          - generic [ref=f1e200]:
+            - generic [ref=f1e201] [cursor=pointer]:
+              - generic [ref=f1e206]:
+                - img "Men's Denim Jacket" [ref=f1e207]
+                - button [ref=f1e208]
+                - generic [ref=f1e211]: 50% OFF
+                - generic [ref=f1e212]: "4.8"
+              - generic [ref=f1e216]:
+                - generic [ref=f1e217]:
+                  - generic [ref=f1e218]: Mithilakart
+                  - heading "Men's Denim Jacket" [level=3] [ref=f1e219]
+                  - generic [ref=f1e220]:
+                    - generic [ref=f1e221]: ₹1,499
+                    - generic [ref=f1e222]: ₹2,999
+                - button "Add to Cart" [ref=f1e224]
+            - generic [ref=f1e229] [cursor=pointer]:
+              - generic [ref=f1e234]:
+                - img "Women's Maxi Dress" [ref=f1e235]
+                - button [ref=f1e236]
+                - generic [ref=f1e239]: 48% OFF
+                - generic [ref=f1e240]: "4.7"
+              - generic [ref=f1e244]:
+                - generic [ref=f1e245]:
+                  - generic [ref=f1e246]: Mithilakart
+                  - heading "Women's Maxi Dress" [level=3] [ref=f1e247]
+                  - generic [ref=f1e248]:
+                    - generic [ref=f1e249]: ₹1,299
+                    - generic [ref=f1e250]: ₹2,499
+                - button "Add to Cart" [ref=f1e252]
+            - generic [ref=f1e257] [cursor=pointer]:
+              - generic [ref=f1e262]:
+                - img "Graphic Printed T-Shirt" [ref=f1e263]
+                - button [ref=f1e264]
+                - generic [ref=f1e267]: 50% OFF
+                - generic [ref=f1e268]: "4.6"
+              - generic [ref=f1e272]:
+                - generic [ref=f1e273]:
+                  - generic [ref=f1e274]: Mithilakart
+                  - heading "Graphic Printed T-Shirt" [level=3] [ref=f1e275]
+                  - generic [ref=f1e276]:
+                    - generic [ref=f1e277]: ₹499
+                    - generic [ref=f1e278]: ₹999
+                - button "Add to Cart" [ref=f1e280]
+            - generic [ref=f1e285] [cursor=pointer]:
+              - generic [ref=f1e290]:
+                - img "Casual Flip Flops" [ref=f1e291]
+                - button [ref=f1e292]
+                - generic [ref=f1e295]: 50% OFF
+                - generic [ref=f1e296]: "4.8"
+              - generic [ref=f1e300]:
+                - generic [ref=f1e301]:
+                  - generic [ref=f1e302]: Mithilakart
+                  - heading "Casual Flip Flops" [level=3] [ref=f1e303]
+                  - generic [ref=f1e304]:
+                    - generic [ref=f1e305]: ₹299
+                    - generic [ref=f1e306]: ₹599
+                - button "Add to Cart" [ref=f1e308]
+            - generic [ref=f1e313] [cursor=pointer]:
+              - generic [ref=f1e318]:
+                - img "Men's Chino Pants" [ref=f1e319]
+                - button [ref=f1e320]
+                - generic [ref=f1e323]: 50% OFF
+                - generic [ref=f1e324]: "4.5"
+              - generic [ref=f1e328]:
+                - generic [ref=f1e329]:
+                  - generic [ref=f1e330]: Mithilakart
+                  - heading "Men's Chino Pants" [level=3] [ref=f1e331]
+                  - generic [ref=f1e332]:
+                    - generic [ref=f1e333]: ₹999
+                    - generic [ref=f1e334]: ₹1,999
+                - button "Add to Cart" [ref=f1e336]
+            - generic [ref=f1e341] [cursor=pointer]:
+              - generic [ref=f1e346]:
+                - img "Polarized Sunglasses" [ref=f1e347]
+                - button [ref=f1e348]
+                - generic [ref=f1e351]: 60% OFF
+                - generic [ref=f1e352]: "4.6"
+              - generic [ref=f1e356]:
+                - generic [ref=f1e357]:
+                  - generic [ref=f1e358]: Mithilakart
+                  - heading "Polarized Sunglasses" [level=3] [ref=f1e359]
+                  - generic [ref=f1e360]:
+                    - generic [ref=f1e361]: ₹599
+                    - generic [ref=f1e362]: ₹1,499
+                - button "Add to Cart" [ref=f1e364]
+            - generic [ref=f1e369] [cursor=pointer]:
+              - generic [ref=f1e374]:
+                - img "Women's Formal Blazer" [ref=f1e375]
+                - button [ref=f1e376]
+                - generic [ref=f1e379]: 45% OFF
+                - generic [ref=f1e380]: "4.7"
+              - generic [ref=f1e384]:
+                - generic [ref=f1e385]:
+                  - generic [ref=f1e386]: Mithilakart
+                  - heading "Women's Formal Blazer" [level=3] [ref=f1e387]
+                  - generic [ref=f1e388]:
+                    - generic [ref=f1e389]: ₹1,899
+                    - generic [ref=f1e390]: ₹3,499
+                - button "Add to Cart" [ref=f1e392]
+            - generic [ref=f1e397] [cursor=pointer]:
+              - generic [ref=f1e402]:
+                - img "Analog Wrist Watch" [ref=f1e403]
+                - button [ref=f1e404]
+                - generic [ref=f1e407]: 62% OFF
+                - generic [ref=f1e408]: "4.8"
+              - generic [ref=f1e412]:
+                - generic [ref=f1e413]:
+                  - generic [ref=f1e414]: Mithilakart
+                  - heading "Analog Wrist Watch" [level=3] [ref=f1e415]
+                  - generic [ref=f1e416]:
+                    - generic [ref=f1e417]: ₹1,499
+                    - generic [ref=f1e418]: ₹3,999
+                - button "Add to Cart" [ref=f1e420]
+            - generic [ref=f1e425] [cursor=pointer]:
+              - generic [ref=f1e430]:
+                - img "Woolen Knit Winter Sweater" [ref=f1e431]
+                - button [ref=f1e432]
+                - generic [ref=f1e435]: 52% OFF
+                - generic [ref=f1e436]: "4.7"
+              - generic [ref=f1e440]:
+                - generic [ref=f1e441]:
+                  - generic [ref=f1e442]: Mithilakart
+                  - heading "Woolen Knit Winter Sweater" [level=3] [ref=f1e443]
+                  - generic [ref=f1e444]:
+                    - generic [ref=f1e445]: ₹1,199
+                    - generic [ref=f1e446]: ₹2,499
+                - button "Add to Cart" [ref=f1e448]
+            - generic [ref=f1e453] [cursor=pointer]:
+              - generic [ref=f1e458]:
+                - img "Men's Classic Leather Boots" [ref=f1e459]
+                - button [ref=f1e460]
+                - generic [ref=f1e463]: 51% OFF
+                - generic [ref=f1e464]: "4.8"
+              - generic [ref=f1e468]:
+                - generic [ref=f1e469]:
+                  - generic [ref=f1e470]: Mithilakart
+                  - heading "Men's Classic Leather Boots" [level=3] [ref=f1e471]
+                  - generic [ref=f1e472]:
+                    - generic [ref=f1e473]: ₹2,199
+                    - generic [ref=f1e474]: ₹4,499
+                - button "Add to Cart" [ref=f1e476]
+    - contentinfo [ref=f1e482]:
+      - img "Mithila Art Footer Border" [ref=f1e484]
+      - generic [ref=f1e485]:
+        - generic [ref=f1e486]:
+          - heading "About Mithilakart" [level=3] [ref=f1e487]
+          - paragraph [ref=f1e488]: Discover unique, high-quality handcrafted items and fresh goods directly from local artisans. We bridge the gap between traditional craftsmanship and modern convenience.
+        - generic [ref=f1e489]:
+          - heading "Customer Care" [level=3] [ref=f1e490]
+          - list [ref=f1e491]:
+            - listitem [ref=f1e492]:
+              - link "Help Center" [ref=f1e493] [cursor=pointer]:
+                - /url: /profile/help-center
+            - listitem [ref=f1e494]:
+              - link "Track Order" [ref=f1e495] [cursor=pointer]:
+                - /url: /profile/orders
+            - listitem [ref=f1e496]:
+              - link "Cancellations & Returns" [ref=f1e497] [cursor=pointer]:
+                - /url: /cancellation-returns
+            - listitem [ref=f1e498]:
+              - link "Shipping Policy" [ref=f1e499] [cursor=pointer]:
+                - /url: /shipping
+        - generic [ref=f1e500]:
+          - heading "Useful Links" [level=3] [ref=f1e501]
+          - list [ref=f1e502]:
+            - listitem [ref=f1e503]:
+              - link "Terms of Use" [ref=f1e504] [cursor=pointer]:
+                - /url: /terms
+            - listitem [ref=f1e505]:
+              - link "Privacy Policy" [ref=f1e506] [cursor=pointer]:
+                - /url: /privacy
+            - listitem [ref=f1e507]:
+              - link "Home Page" [ref=f1e508] [cursor=pointer]:
+                - /url: /home
+            - listitem [ref=f1e509]:
+              - link "Shop by Categories" [ref=f1e510] [cursor=pointer]:
+                - /url: /categories
+        - generic [ref=f1e511]:
+          - heading "Contact Us" [level=3] [ref=f1e512]
+          - list [ref=f1e513]:
+            - listitem [ref=f1e514]:
+              - strong [ref=f1e515]: "Email:"
+              - text: support@mithilakart.com
+            - listitem [ref=f1e516]:
+              - strong [ref=f1e517]: "Phone:"
+              - text: +91 1800-123-4567
+            - listitem [ref=f1e518]:
+              - strong [ref=f1e519]: "Address:"
+              - text: Mithilakart Pvt Ltd, Mumbai, India
+      - generic [ref=f1e520]:
+        - link [ref=f1e521] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=f1e524] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=f1e527] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=f1e531] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=f1e534] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=f1e537]:
+        - img "Mithilakart Logo" [ref=f1e538]
+        - generic [ref=f1e539]:
+          - text: Mithilakart
+          - generic [ref=f1e540]: ™

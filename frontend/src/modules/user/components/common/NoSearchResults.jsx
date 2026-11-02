@@ -1,8 +1,10 @@
 import React from 'react';
 import { Search, RotateCcw, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const NoSearchResults = ({ query, onClearSearch, onContinueShopping }) => {
+  const { t } = useTranslation();
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
@@ -44,11 +46,11 @@ const NoSearchResults = ({ query, onClearSearch, onContinueShopping }) => {
       </div>
 
       <h3 className={`text-lg font-black uppercase tracking-widest ${textPrimary}`}>
-        No results found
+        {t('auto.noResultsFound')}
       </h3>
       
       <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-2 max-w-xs mx-auto leading-relaxed">
-        We couldn't find any products matching "{query}". Try checking your spelling or use more general keywords.
+        {t('x.noProductsMatching', { query })}
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-8">
@@ -57,14 +59,14 @@ const NoSearchResults = ({ query, onClearSearch, onContinueShopping }) => {
           className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl border ${borderPrimary} font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm`}
         >
           <RotateCcw size={12} />
-          Clear Search
+          {t('auto.clearSearch')}
         </button>
         
         <button 
           onClick={onContinueShopping}
           className={`w-full sm:w-auto px-6 py-2.5 rounded-2xl ${buttonBg} text-white font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md`}
         >
-          Continue Shopping
+          {t('auto.continueShopping')}
           <ArrowRight size={12} />
         </button>
       </div>

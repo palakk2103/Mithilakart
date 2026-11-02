@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { Star, ChevronRight, Frown, Meh, Smile } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const RatingCard = React.memo(({ item }) => {
+  const { t } = useTranslation();
   const [selectedRating, setSelectedRating] = useState(0);
   const expressions = [Frown, Frown, Meh, Smile, Smile];
   const navigate = useNavigate();
@@ -55,8 +57,8 @@ const RatingCard = React.memo(({ item }) => {
       
       <div className="bg-gray-50/50 border border-gray-100/50 rounded-none p-2.5 flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-[12px] font-bold text-slate-800 leading-tight">Rate this</span>
-          <span className="text-[12px] font-bold text-slate-800 leading-tight">product</span>
+          <span className="text-[12px] font-bold text-slate-800 leading-tight">{t('home.rateThis')}</span>
+          <span className="text-[12px] font-bold text-slate-800 leading-tight">{t('home.rateProduct')}</span>
         </div>
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map((star) => {
@@ -90,11 +92,12 @@ const RatingCard = React.memo(({ item }) => {
 });
 
 const RatingSection = ({ items }) => {
+  const { t } = useTranslation();
   return (
     <div className="px-3 mt-4 mb-1">
       <div className="flex justify-between items-center mb-2 px-1">
         <h2 className="text-slate-900 flex-1 pr-4" style={{ fontFamily: "'Inter', Arial, sans-serif", fontWeight: 700, fontSize: '18px', lineHeight: 1.2, letterSpacing: '-0.3px' }}>
-          Help India make good choices
+          {t('home.helpIndia')}
         </h2>
         <button className="bg-black text-white p-1.5 rounded-full shadow-lg active:scale-90 transition-all">
           <ChevronRight size={14} strokeWidth={3} />

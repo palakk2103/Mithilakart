@@ -2,8 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wrench, Home } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const Maintenance = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -59,14 +61,14 @@ const Maintenance = () => {
           </motion.div>
         </div>
 
-        <h1 className="text-3xl font-black tracking-tight text-slate-800 mb-2">We'll be back soon</h1>
+        <h1 className="text-3xl font-black tracking-tight text-slate-800 mb-2">{t('auto.weLlBeBackSoon')}</h1>
         
         <h2 className={`text-[10px] font-black uppercase tracking-widest ${textPrimary} mb-4`}>
-          Under Maintenance
+          {t('auto.underMaintenance')}
         </h2>
         
         <p className="text-slate-500 text-xs font-semibold leading-relaxed mb-8 max-w-xs mx-auto">
-          We are currently performing scheduled maintenance to improve our services. We apologize for the inconvenience and appreciate your patience!
+          {t('auto.weAreCurrentlyPerformingScheduled')}
         </p>
 
         <div className="flex justify-center">
@@ -75,7 +77,7 @@ const Maintenance = () => {
             className={`w-full sm:w-auto px-8 py-3 rounded-2xl ${buttonBg} text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-md`}
           >
             <Home size={14} />
-            Home
+            {t('auto.home')}
           </button>
         </div>
       </motion.div>
