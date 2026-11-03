@@ -29,7 +29,7 @@ class StorefrontService extends BaseService {
     if (cached) return cached;
 
     const [banners, chips, categories, sections] = await Promise.all([
-      this.bannerRepository.findActive({ commerceFlow }, { sort: { sortOrder: 1 } }),
+      this.bannerRepository.findActive({ commerceFlow, categoryId: null }, { sort: { sortOrder: 1 } }),
       this.categoryChipRepository.findActive({ commerceFlow }, { sort: { sortOrder: 1 } }),
       this.categoryService.listPublicTree(commerceFlow, null, lang),
       this.homeSectionRepository.findByFlow(commerceFlow),
@@ -121,7 +121,7 @@ class StorefrontService extends BaseService {
 
   async getBanners(commerceFlow = COMMERCE_FLOWS.STANDARD) {
     const banners = await this.bannerRepository.findActive(
-      { commerceFlow },
+      { commerceFlow, categoryId: null },
       { sort: { sortOrder: 1 } }
     );
 
@@ -133,6 +133,11 @@ class StorefrontService extends BaseService {
       return {};
     }
     return this.platformConfigService.getPublicConfig();
+  }
+
+  async getYouPopup() {
+    if (!this.platformConfigService) return { items: [] };
+    return this.platformConfigService.getYouPopup();
   }
 
   async getHeaderTabs() {

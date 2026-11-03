@@ -106,6 +106,8 @@ export const refundsApi = {
 
 // Categories
 export const categoriesApi = {
+  // Customer-visible category tree for a tab (roots = main categories).
+  publicTree: (tab) => asyncHandler(() => customerApi.get('/categories', { params: { marketplaceTab: tab } })),
   getAll: (params) => asyncHandler(() => api.get('/categories', { params })),
   create: (data) => asyncHandler(() => api.post('/categories', data)),
   update: (id, data) => asyncHandler(() => api.put(`/categories/${id}`, data)),
@@ -114,9 +116,18 @@ export const categoriesApi = {
   bulkImport: (payload) => asyncHandler(() => api.post('/categories/bulk-import', payload, { timeout: 180000 })),
 };
 
+// Category landing pages (MithilaKart main categories)
+export const categoryLandingApi = {
+  get: (categoryId) => asyncHandler(() => api.get(`/category-landing/${categoryId}`)),
+  updateConfig: (categoryId, data) => asyncHandler(() => api.put(`/category-landing/${categoryId}/config`, data)),
+  createSection: (categoryId, data) => asyncHandler(() => api.post(`/category-landing/${categoryId}/sections`, data)),
+  updateSection: (id, data) => asyncHandler(() => api.put(`/category-landing/sections/${id}`, data)),
+  deleteSection: (id) => asyncHandler(() => api.delete(`/category-landing/sections/${id}`)),
+};
+
 // Banners / CMS
 export const bannersApi = {
-  getAll: () => asyncHandler(() => api.get('/banners')),
+  getAll: (params) => asyncHandler(() => api.get('/banners', { params })),
   create: (data) => asyncHandler(() => api.post('/banners', data)),
   update: (id, data) => asyncHandler(() => api.put(`/banners/${id}`, data)),
   delete: (id) => asyncHandler(() => api.delete(`/banners/${id}`)),
@@ -293,6 +304,7 @@ const adminApi = {
   refunds: refundsApi,
   categories: categoriesApi,
   banners: bannersApi,
+  categoryLanding: categoryLandingApi,
   chips: chipsApi,
   sections: sectionsApi,
   notifications: notificationsApi,

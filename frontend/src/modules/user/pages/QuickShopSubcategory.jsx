@@ -512,7 +512,23 @@ const QuickShopSubcategory = () => {
   }, [sortBy, filterPriceMin, filterPriceMax, filterFastDelivery, filterDiscountOnly, filterType, activeSub, activeNode, subCategories, rootId]);
   const listKey = JSON.stringify([listParams, sourceMode, effectiveLat.toFixed(3), effectiveLng.toFixed(3)]);
 
+  const listKeyRef = useRef(listKey);
+  listKeyRef.current = listKey;
+
+  // Switching to another category/child: drop the previous selection's leftovers
+  // (category-type filter, count, scroll) so the new list starts from a clean
+  // "All Items" state, then select the target. The list itself is cleared by
+  // useInfiniteProducts when the key changes.
+  const selectCategory = useCallback((id) => {
+    if (String(id) === String(activeSub)) return;
+    setListTotal(null);
+    setFilterType((ft) => (['all', 'veg', 'fresh', 'organic', 'deals'].includes(ft) ? ft : 'all'));
+    if (rightGridRef.current) rightGridRef.current.scrollTop = 0;
+    setActiveSub(id);
+  }, [activeSub]);
+
   const fetchList = useCallback(async (page, limit) => {
+    const requestKey = listKeyRef.current;
     const { params, categoryId } = listParams;
     if (!categoryId || !sourceMode) return { items: [], hasMore: false };
     const fromNearby = sourceMode === 'nearby';
@@ -521,7 +537,8 @@ const QuickShopSubcategory = () => {
       : await getCategoryProducts(categoryId, { marketplaceTab, page, limit, ...params });
     const list = extractList(res?.data ?? res);
     const meta = res?.meta ?? res?.data?.meta;
-    if (page === 1) setListTotal(meta?.total ?? list.length);
+    // Ignore the count of a superseded request (rapid category switching).
+    if (page === 1 && requestKey === listKeyRef.current) setListTotal(meta?.total ?? list.length);
     return {
       items: list.map((p) => toCard(p, sidebarIdOfRef.current, fromNearby)),
       hasMore: meta ? Boolean(meta.hasMore ?? (meta.page < meta.totalPages)) : list.length >= limit,
@@ -854,7 +871,7 @@ const QuickShopSubcategory = () => {
             return (
               <div
                 key={sub.id}
-                onClick={() => setActiveSub(sub.id)}
+                onClick={() => selectCategory(sub.id)}
                 className={`py-3.5 px-1 flex flex-col items-center gap-1.5 cursor-pointer relative transition-all ${
                   isActive ? (isFreshGroceryFlow ? 'bg-[#FFF0A0]/20' : 'bg-white') : 'bg-transparent'
                 }`}
@@ -923,9 +940,9 @@ const QuickShopSubcategory = () => {
             <>
               {/* Sibling subcategory pills for quick switching */}
               {siblingPills && (
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-2.5 px-0.5">
+                <div key={siblingPills.parent.id} className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-2.5 px-0.5">
                   <button
-                    onClick={() => setActiveSub(siblingPills.parent.id)}
+                    onClick={() => selectCategory(siblingPills.parent.id)}
                     className={`flex-shrink-0 px-3 py-1 rounded-full text-[13px] sm:text-[14px] md:text-[15px] font-bold transition-all border ${
                       activeSub === siblingPills.parent.id
                         ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
@@ -939,7 +956,7 @@ const QuickShopSubcategory = () => {
                     return (
                       <button
                         key={sibling.id}
-                        onClick={() => setActiveSub(sibling.id)}
+                        onClick={() => selectCategory(sibling.id)}
                         className={`flex-shrink-0 px-3 py-1 rounded-full text-[13px] sm:text-[14px] md:text-[15px] font-bold transition-all border ${
                           isSiblingActive
                             ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
@@ -958,7 +975,7 @@ const QuickShopSubcategory = () => {
                 <div className="flex items-center justify-between gap-2">
                   {activeSub !== 'all' ? (
                     <button
-                      onClick={() => setActiveSub(parentNode ? parentNode.id : 'all')}
+                      onClick={() => selectCategory(parentNode ? parentNode.id : 'all')}
                       className="inline-flex items-center gap-1 text-[11px] font-bold text-gray-700 hover:text-gray-900 bg-white border border-gray-200/80 rounded-full px-2.5 py-1 shadow-3xs active:scale-95 transition-all flex-shrink-0"
                     >
                       <ArrowLeft size={13} strokeWidth={2.5} /> {parentNode ? parentNode.name : 'All Categories'}
@@ -972,7 +989,7 @@ const QuickShopSubcategory = () => {
                   <span className="text-[10px] md:text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-white border border-gray-200/80 text-gray-500 shadow-3xs flex-shrink-0">
                     {!isAllItems && currentSubcategoriesToShow.length > 0
                       ? `${currentSubcategoriesToShow.length} categories`
-                      : `${listTotal ?? filteredProducts.length} items`}
+                      : (listLoading || loading ? '…' : `${listTotal ?? filteredProducts.length} items`)}
                   </span>
                 </div>
 
@@ -998,7 +1015,7 @@ const QuickShopSubcategory = () => {
                     return (
                       <div
                         key={sub.id}
-                        onClick={() => setActiveSub(sub.id)}
+                        onClick={() => selectCategory(sub.id)}
                         className="bg-white border border-gray-100 hover:border-amber-300 rounded-2xl p-2.5 md:p-3 flex flex-col items-center justify-between text-center cursor-pointer active:scale-95 transition-all shadow-3xs hover:shadow-2xs group"
                       >
                         <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-[#FFFDF8] border border-gray-100/70 flex items-center justify-center p-2 mb-2 group-hover:scale-105 transition-transform overflow-hidden">
@@ -1022,7 +1039,7 @@ const QuickShopSubcategory = () => {
                 /* Case 2: Specific Leaf Subcategory selected (No children) -> Show Products Grid */
                 <div>
 
-                  {filteredProducts.length > 0 || listLoading ? (
+                  {filteredProducts.length > 0 || listLoading || loading ? (
                     <>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {visibleProducts.map((product) => {
@@ -1160,7 +1177,7 @@ const QuickShopSubcategory = () => {
                       </p>
                       <button
                         type="button"
-                        onClick={() => setActiveSub(parentNode ? parentNode.id : 'all')}
+                        onClick={() => selectCategory(parentNode ? parentNode.id : 'all')}
                         className={`mt-3 px-4 py-1.5 rounded-xl text-xs font-bold text-white ${primaryBg} active:scale-95 transition-all shadow-xs`}
                       >
                         {t('x.backTo')} {parentNode ? parentNode.name : t('x.subcategories')}

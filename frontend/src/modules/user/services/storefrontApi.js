@@ -13,3 +13,6 @@ export const getCmsPage = (slug) => customerApi.get(`/cms/${slug}`);
 export const getLegalPage = (type) => customerApi.get(`/cms/legal/${type}`);
 
 export const getStorefrontConfig = () => customerApi.get('/storefront/config');
+
+export const getCategoryLanding = (categoryId, tab) =>
+  customerApi.get(`/storefront/category-landing/${categoryId}`, { params: tab ? { tab } : {} });

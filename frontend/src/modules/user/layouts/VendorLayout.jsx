@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import PageLoader from '../../../shared/components/PageLoader';
 import { Link, Outlet, useLocation as useRouterLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -17,6 +17,8 @@ import HeaderTabs from '../components/common/HeaderTabs';
 import SearchBar from '../components/common/SearchBar';
 import CategoryNavbar from '../components/common/CategoryNavbar';
 import LanguageSelector from '../components/common/LanguageSelector';
+import YouPopup from '../components/common/YouPopup';
+import { getCachedYouPopupItems, fetchYouPopupItems } from '../../../config/youPopup';
 import useAccountStore from '../../../store/useAccountStore';
 import useVendorStore from '../../../store/useVendorStore';
 import { fetchCartItems } from '../utils/cartUtils';
@@ -60,6 +62,24 @@ const VendorLayout = () => {
   const [cartItems, setCartItems] = useState([]);
   const [scrolled, setScrolled] = useState(false);
   const [isFloatingCartDismissed, setIsFloatingCartDismissed] = useState(false);
+  const [isYouOpen, setIsYouOpen] = useState(false);
+  const [youItems, setYouItems] = useState(() => getCachedYouPopupItems());
+  const [navHeight, setNavHeight] = useState(56);
+  const youBtnRef = useRef(null);
+  const bottomNavRef = useRef(null);
+  const closeYou = useCallback(() => setIsYouOpen(false), []);
+  useEffect(() => {
+    let alive = true;
+    fetchYouPopupItems().then((items) => { if (alive) setYouItems(items); });
+    return () => { alive = false; };
+  }, []);
+  const toggleYou = () => {
+    if (isYouOpen) { setIsYouOpen(false); return; }
+    if (bottomNavRef.current) setNavHeight(bottomNavRef.current.offsetHeight);
+    setIsYouOpen(true);
+    // Refreshes only if the cached config is older than 30s.
+    fetchYouPopupItems().then(setYouItems);
+  };
   const { savedAddresses, selectedAddressId, isDarkMode } = useAccountStore();
   const activeFlow = useVendorStore((state) => state.activeFlow);
   const setActiveFlow = useVendorStore((state) => state.setActiveFlow);
@@ -351,7 +371,7 @@ const VendorLayout = () => {
 
       {/* Mobile-First Bottom Navbar (Fixed) */}
       {!hideFooter && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t px-6 py-2 flex justify-between items-center z-50 bg-[#FFF8EE] border-[#EADCC9]/55 text-[#3F2A20] shadow-[0_-2px_10px_rgba(63,42,32,0.05)]">
+        <nav ref={bottomNavRef} className="md:hidden fixed bottom-0 left-0 right-0 border-t px-6 py-2 flex justify-between items-center z-50 bg-[#FFF8EE] border-[#EADCC9]/55 text-[#3F2A20] shadow-[0_-2px_10px_rgba(63,42,32,0.05)]">
         <Link 
           to={effectiveFlow === 'mithilak' ? "/mithilak" : effectiveFlow === 'freshgrocery' ? "/fresh-grocery" : effectiveFlow === 'quickshop' ? "/quick-shop" : "/home"} 
           className={`flex flex-col items-center transition-transform active:scale-90 ${
@@ -398,20 +418,28 @@ const VendorLayout = () => {
           </div>
           <span className={`text-[10px] ${location.pathname === '/cart' ? 'font-black' : 'font-semibold'}`}>{t('nav.cart', { defaultValue: 'Cart' })}</span>
         </Link>
-        <Link 
-          to="/profile" 
+        <button
+          type="button"
+          ref={youBtnRef}
+          data-testid="bottom-nav-you"
+          aria-haspopup="menu"
+          aria-expanded={isYouOpen}
+          onClick={toggleYou}
           className={`flex flex-col items-center transition-transform active:scale-90 ${
-            location.pathname === '/profile' 
-              ? (activeFlow === 'mithilak' 
-                  ? 'text-[#207C8A]' 
-                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : 'text-[#65B842]')) 
+            isYouOpen || location.pathname === '/profile'
+              ? (activeFlow === 'mithilak'
+                  ? 'text-[#207C8A]'
+                  : (activeFlow === 'freshgrocery' ? 'text-[#D9A21B]' : 'text-[#65B842]'))
               : 'text-[#3F2A20]/80'
           }`}
         >
           <User size={22} strokeWidth={2.2} />
-          <span className={`text-[10px] ${location.pathname === '/profile' ? 'font-black' : 'font-semibold'}`}>{t('nav.you', { defaultValue: 'Account' })}</span>
-        </Link>
+          <span className={`text-[10px] ${isYouOpen || location.pathname === '/profile' ? 'font-black' : 'font-semibold'}`}>{t('nav.you', { defaultValue: 'Account' })}</span>
+        </button>
       </nav>
+      )}
+      {!hideFooter && isYouOpen && (
+        <YouPopup items={youItems} onClose={closeYou} anchorRef={youBtnRef} bottom={navHeight} />
       )}
 
       {/* Floating Cart Pill (Shows on all pages when cart has items, except cart/checkout page) */}

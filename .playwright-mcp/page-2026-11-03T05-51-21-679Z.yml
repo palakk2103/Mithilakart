@@ -1,0 +1,506 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img "Mithilakart" [ref=e8]
+        - generic [ref=e9]: मिथिलाकार्ट
+      - generic [ref=e10] [cursor=pointer]: त्वरित दुकान
+      - generic [ref=e16] [cursor=pointer]: मिथिलाक
+      - generic [ref=e22] [cursor=pointer]: ताजा आ राशन
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - button "पहुंचाबी डिलीवरी स्थान सेट करबाक लेल टैप करू" [ref=e31]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: पहुंचाबी
+            - generic [ref=e37]: डिलीवरी स्थान सेट करबाक लेल टैप करू
+        - generic [ref=e40]:
+          - button "Maithili Maithili" [ref=e42] [cursor=pointer]:
+            - img "Maithili" [ref=e43]
+            - generic [ref=e44]: Maithili
+          - generic [ref=e45]: "3"
+      - generic [ref=e51]:
+        - searchbox "खोजू “आटा, चाउर, तेल, मैगी...”" [ref=e52]
+        - generic [ref=e54]:
+          - img [aria-hidden] [ref=e55] [cursor=pointer]
+          - img [aria-hidden] [ref=e58] [cursor=pointer]
+  - generic [ref=e61]:
+    - main [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e67]:
+          - button "सभ" [ref=e68] [cursor=pointer]
+          - button "आजुक सौदा" [ref=e208] [cursor=pointer]
+          - button "वेश-भूषा" [ref=e213] [cursor=pointer]
+          - button "आओर श्रेणी" [ref=e98] [cursor=pointer]:
+            - generic [ref=e104]: आओर
+        - generic [ref=e107]:
+          - generic [ref=e216]:
+            - img "बिक्री" [ref=e217]
+            - generic [ref=e218]:
+              - generic [ref=e219]: विशेष संग्रह
+              - heading "बिक्री" [level=3] [ref=e220]
+          - generic [aria-hidden]:
+            - generic:
+              - generic: विशेष संग्रह
+              - heading [level=3]: मिथिलाकर्म
+          - generic [aria-hidden]:
+            - generic:
+              - generic: विशेष संग्रह
+              - heading [level=3]: अहाँक दरबज्जाक सीढ़ी पर
+          - generic [aria-hidden]:
+            - generic:
+              - generic: विशेष संग्रह
+              - heading [level=3]: बिक्री
+          - generic [ref=e113]:
+            - button [ref=e114]
+            - button [ref=e115]
+            - button [ref=e116]
+            - button [ref=e117]
+        - generic [ref=e222]:
+          - generic [ref=e223]:
+            - heading "श्रेणी अनुसार खरीदारी करू" [level=2] [ref=e224]
+            - generic [ref=e225] [cursor=pointer]: सभ देखी
+          - generic [ref=e226]:
+            - button "सभ श्रेणी" [ref=e227] [cursor=pointer]
+            - button "पुरुष सभक वस्त्र 17" [ref=e228] [cursor=pointer]:
+              - generic [ref=e229]: पुरुष सभक वस्त्र
+              - generic [ref=e230]: "17"
+            - button "महिला सभक वस्त्र 19" [ref=e231] [cursor=pointer]:
+              - generic [ref=e232]: महिला सभक वस्त्र
+              - generic [ref=e233]: "19"
+          - generic [ref=e235]:
+            - generic [ref=e237] [cursor=pointer]:
+              - generic [ref=e238]: आजुक सौदा
+              - generic [ref=e240]: आ
+            - generic [ref=e243] [cursor=pointer]:
+              - generic [ref=e244]: वेश-भूषा
+              - img "वेश-भूषा" [ref=e247]
+            - generic [ref=e249] [cursor=pointer]:
+              - generic [ref=e250]: सौंदर्य एवं व्यक्तिगत देखभाल
+              - img "सौंदर्य एवं व्यक्तिगत देखभाल" [ref=e253]
+            - generic [ref=e255] [cursor=pointer]:
+              - generic [ref=e256]: गहना
+              - img "गहना" [ref=e259]
+            - generic [ref=e261] [cursor=pointer]:
+              - generic [ref=e262]: पूजा के जरूरत
+              - img "पूजा के जरूरत" [ref=e265]
+            - generic [ref=e267] [cursor=pointer]:
+              - generic [ref=e268]: कल्याण एवं स्वच्छता
+              - img "कल्याण एवं स्वच्छता" [ref=e271]
+            - generic [ref=e273] [cursor=pointer]:
+              - generic [ref=e274]: इलेक्ट्रॉनिक्स
+              - img "इलेक्ट्रॉनिक्स" [ref=e277]
+            - generic [ref=e279] [cursor=pointer]:
+              - generic [ref=e280]: विद्युत
+              - img "विद्युत" [ref=e283]
+            - generic [ref=e285] [cursor=pointer]:
+              - generic [ref=e286]: उपकरण
+              - generic [ref=e288]: उ
+            - generic [ref=e291] [cursor=pointer]:
+              - generic [ref=e292]: दैनिक आवश्यकता
+              - generic [ref=e294]: द
+            - generic [ref=e297] [cursor=pointer]:
+              - generic [ref=e298]: बच्चा एवं खिलौने
+              - img "बच्चा एवं खिलौने" [ref=e301]
+            - generic [ref=e303] [cursor=pointer]:
+              - generic [ref=e304]: घर एवं सजावट
+              - generic [ref=e306]: घ
+            - generic [ref=e309] [cursor=pointer]:
+              - generic [ref=e310]: स्टेशनरी के सामान
+              - img "स्टेशनरी के सामान" [ref=e313]
+            - generic [ref=e315] [cursor=pointer]:
+              - generic [ref=e316]: पुस्तक एवं पत्रिका
+              - img "पुस्तक एवं पत्रिका" [ref=e319]
+            - generic [ref=e321] [cursor=pointer]:
+              - generic [ref=e322]: डिस्पोजेबल
+              - generic [ref=e324]: ड
+            - generic [ref=e327] [cursor=pointer]:
+              - generic [ref=e328]: फर्नीचर
+              - img "फर्नीचर" [ref=e331]
+            - generic [ref=e333] [cursor=pointer]:
+              - generic [ref=e334]: घर के बर्तन
+              - generic [ref=e336]: घ
+            - generic [ref=e339] [cursor=pointer]:
+              - generic [ref=e340]: उपहार देब
+              - img "उपहार देब" [ref=e343]
+            - generic [ref=e345] [cursor=pointer]:
+              - generic [ref=e346]: ऑफर जोन
+              - generic [ref=e348]: ऑ
+            - generic [ref=e351] [cursor=pointer]:
+              - generic [ref=e352]: पालतू जानवर के भंडार
+              - generic [ref=e354]: प
+            - generic [ref=e357] [cursor=pointer]:
+              - generic [ref=e358]: पौधे एवं सजावट
+              - generic [ref=e360]: प
+            - generic [ref=e363] [cursor=pointer]:
+              - generic [ref=e364]: सौंदर्य आ देखभाल
+              - generic [ref=e366]: B
+            - generic [ref=e369] [cursor=pointer]:
+              - generic [ref=e370]: मोबाइल
+              - img "मोबाइल" [ref=e373]
+            - generic [ref=e375] [cursor=pointer]:
+              - generic [ref=e376]: पानक दोकान
+              - generic [ref=e378]: P
+            - generic [ref=e381] [cursor=pointer]:
+              - generic [ref=e382]: मिठाइ आ नमकीन
+              - generic [ref=e384]: S
+            - generic [ref=e387] [cursor=pointer]:
+              - generic [ref=e388]: खेल आ फिटनेस
+              - generic [ref=e390]: S
+            - generic [ref=e393] [cursor=pointer]:
+              - generic [ref=e394]: ऑटोमोबाइल आ कार एक्सेसरीज
+              - generic [ref=e396]: A
+            - generic [ref=e399] [cursor=pointer]:
+              - generic [ref=e400]: स्वास्थ्य आ कल्याण
+              - generic [ref=e402]: H
+            - generic [ref=e405] [cursor=pointer]:
+              - generic [ref=e406]: औजार आ हार्डवेयर
+              - generic [ref=e408]: T
+            - generic [ref=e411] [cursor=pointer]:
+              - generic [ref=e412]: वाद्य यंत्र
+              - generic [ref=e414]: M
+            - generic [ref=e417] [cursor=pointer]:
+              - generic [ref=e418]: गेमिंग आ वीडियो गेम
+              - generic [ref=e420]: G
+            - generic [ref=e423] [cursor=pointer]:
+              - generic [ref=e424]: सॉफ्टवेयर आ डिजिटल उत्पाद
+              - generic [ref=e426]: S
+            - generic [ref=e429] [cursor=pointer]:
+              - generic [ref=e430]: सामान आ यात्रा
+              - generic [ref=e432]: L
+            - generic [ref=e435] [cursor=pointer]:
+              - generic [ref=e436]: औद्योगिक सामग्री
+              - generic [ref=e438]: I
+            - generic [ref=e441] [cursor=pointer]:
+              - generic [ref=e442]: कार्यालय उत्पाद
+              - generic [ref=e444]: O
+            - generic [ref=e447] [cursor=pointer]:
+              - generic [ref=e448]: संग्रहणीय वस्तु
+              - generic [ref=e450]: C
+            - generic [ref=e453] [cursor=pointer]:
+              - generic [ref=e454]: हस्तनिर्मित उत्पाद
+              - generic [ref=e456]: H
+            - generic [ref=e459] [cursor=pointer]:
+              - generic [ref=e460]: बागवानी आ बाहरी
+              - generic [ref=e462]: G
+            - generic [ref=e465] [cursor=pointer]:
+              - generic [ref=e466]: डेयरी एवं रोटी
+              - img "डेयरी एवं रोटी" [ref=e469]
+            - generic [ref=e471] [cursor=pointer]:
+              - generic [ref=e472]: बेस्टसेलर
+              - generic [ref=e474]: ब
+            - generic [ref=e477] [cursor=pointer]:
+              - generic [ref=e478]: नए रिलीज
+              - generic [ref=e480]: न
+            - generic [ref=e483] [cursor=pointer]:
+              - generic [ref=e484]: 49 के तहत सौदा
+              - img "49 के तहत सौदा" [ref=e487]
+            - generic [ref=e489] [cursor=pointer]:
+              - generic [ref=e490]: 99 के तहत सौदा
+              - img "99 के तहत सौदा" [ref=e493]
+            - generic [ref=e495] [cursor=pointer]:
+              - generic [ref=e496]: 199 के तहत सौदा
+              - img "199 के तहत सौदा" [ref=e499]
+            - generic [ref=e501] [cursor=pointer]:
+              - generic [ref=e502]: 299 के तहत सौदा
+              - img "299 के तहत सौदा" [ref=e505]
+            - generic [ref=e507] [cursor=pointer]:
+              - generic [ref=e508]: 499 के तहत सौदा
+              - img "499 के तहत सौदा" [ref=e511]
+            - generic [ref=e513] [cursor=pointer]:
+              - generic [ref=e514]: 349 के तहत सौदा
+              - generic [ref=e516]: "3"
+            - generic [ref=e519] [cursor=pointer]:
+              - generic [ref=e520]: 649 के तहत सौदा
+              - generic [ref=e522]: "6"
+            - generic [ref=e525] [cursor=pointer]:
+              - generic [ref=e526]: स्प्रोट्स एवं फिटनेस
+              - generic [ref=e528]: स
+            - generic [ref=e531] [cursor=pointer]:
+              - generic [ref=e532]: अट्टा, आटा एवं अनाज
+              - img "अट्टा, आटा एवं अनाज" [ref=e535]
+            - generic [ref=e537] [cursor=pointer]:
+              - generic [ref=e538]: इलेक्ट्रॉनिक्स एवं गैजेट्स
+              - img "इलेक्ट्रॉनिक्स एवं गैजेट्स" [ref=e541]
+        - generic [ref=e544]:
+          - generic [ref=e545]:
+            - heading "ट्रेंडिंग उत्पाद" [level=3] [ref=e558]
+            - button "सभ देखी" [ref=e570]
+          - generic [ref=e574]:
+            - generic [ref=e575] [cursor=pointer]:
+              - generic [ref=e576]: बड़का मधुबनी माछ पेंटिंग क2
+              - img "बड़का मधुबनी माछ पेंटिंग क2" [ref=e579]
+              - generic [ref=e596]: ₹2499
+              - button "जोड़ू" [ref=e598]
+            - generic [ref=e601] [cursor=pointer]:
+              - generic [ref=e602]: कुमकुमाडी तैलाम ब्राइटनिंग फेस ऑयल 30ml
+              - img "कुमकुमाडी तैलाम ब्राइटनिंग फेस ऑयल 30ml" [ref=e605]
+              - generic [ref=e622]: ₹699
+              - button "जोड़ू" [ref=e624]
+            - generic [ref=e627] [cursor=pointer]:
+              - generic [ref=e628]: Handloom Pure Silk Saree Mithila Motif Border
+              - img "Handloom Pure Silk Saree Mithila Motif Border" [ref=e631]
+              - generic [ref=e648]: ₹4999
+              - button "जोड़ू" [ref=e650]
+            - generic [ref=e653] [cursor=pointer]:
+              - generic [ref=e654]: Wooden Hand-Carved Elephant Pair Madhubani Painted
+              - img "Wooden Hand-Carved Elephant Pair Madhubani Painted" [ref=e657]
+              - generic [ref=e674]: ₹799
+              - button "जोड़ू" [ref=e676]
+            - generic [ref=e679] [cursor=pointer]:
+              - generic [ref=e680]: घुंगरू के साथ ऑक्सीडाइज्ड सिल्वर पायल पायल जोड़ी
+              - img "घुंगरू के साथ ऑक्सीडाइज्ड सिल्वर पायल पायल जोड़ी" [ref=e683]
+              - generic [ref=e700]: ₹799
+              - button "जोड़ू" [ref=e702]
+            - generic [ref=e705] [cursor=pointer]:
+              - generic [ref=e706]: मिथिला डोकरा पीतल आभूषण सेट हार आ झुमका
+              - img "मिथिला डोकरा पीतल आभूषण सेट हार आ झुमका" [ref=e709]
+              - generic [ref=e726]: ₹899
+              - button "जोड़ू" [ref=e728]
+        - generic [ref=e118]:
+          - generic [ref=e119]:
+            - heading "आइ के खास ऑफर" [level=2] [ref=e120]
+            - generic [ref=e121] [cursor=pointer]: सभ देखी
+          - generic [ref=e124]:
+            - generic [ref=e732] [cursor=pointer]:
+              - generic [ref=e737]:
+                - img "मधुबनी मोर पेंटिंग ए3 फ्रेम में" [ref=e738]
+                - button [ref=e739]
+                - generic [ref=e742]: 35% छूट
+                - generic [ref=e743]: "4.7"
+              - generic [ref=e747]:
+                - generic [ref=e748]:
+                  - generic [ref=e749]: Mithila Art House
+                  - heading "मधुबनी मोर पेंटिंग ए3 फ्रेम में" [level=3] [ref=e750]
+                  - generic [ref=e751]:
+                    - generic [ref=e752]: ₹1299
+                    - generic [ref=e753]: ₹1999
+                - button "कार्ट में जोड़ू" [ref=e755]
+            - generic [ref=e761] [cursor=pointer]:
+              - generic [ref=e766]:
+                - img "10 प्रतिशत विटामिन सी ब्राइटनिंग फेस सीरम 50ml" [ref=e767]
+                - button [ref=e768]
+                - generic [ref=e771]: 31% छूट
+                - generic [ref=e772]: "4.6"
+              - generic [ref=e776]:
+                - generic [ref=e777]:
+                  - generic [ref=e778]: Priya Naturals
+                  - heading "10 प्रतिशत विटामिन सी ब्राइटनिंग फेस सीरम 50ml" [level=3] [ref=e779]
+                  - generic [ref=e780]:
+                    - generic [ref=e781]: ₹549
+                    - generic [ref=e782]: ₹799
+                - button "कार्ट में जोड़ू" [ref=e784]
+            - generic [ref=e790] [cursor=pointer]:
+              - generic [ref=e795]:
+                - img "दैनिक आवश्यक पदार्थ स्टार्टर किट टूथपेस्ट शैम्पू साबुन हैंडवॉश" [ref=e796]
+                - button [ref=e797]
+                - generic [ref=e800]: 31% छूट
+                - generic [ref=e801]: "4.5"
+              - generic [ref=e805]:
+                - generic [ref=e806]:
+                  - generic [ref=e807]: QuickMart
+                  - heading "दैनिक आवश्यक पदार्थ स्टार्टर किट टूथपेस्ट शैम्पू साबुन हैंडवॉश" [level=3] [ref=e808]
+                  - generic [ref=e809]:
+                    - generic [ref=e810]: ₹399
+                    - generic [ref=e811]: ₹580
+                - button "कार्ट में जोड़ू" [ref=e813]
+            - generic [ref=e819] [cursor=pointer]:
+              - generic [ref=e824]:
+                - img "Educational Wooden Puzzle 36 Pieces India Map" [ref=e825]
+                - button [ref=e826]
+                - generic [ref=e829]: 29% छूट
+                - generic [ref=e830]: "4.5"
+              - generic [ref=e834]:
+                - generic [ref=e835]:
+                  - generic [ref=e836]: PlayCraft Mithila
+                  - heading "Educational Wooden Puzzle 36 Pieces India Map" [level=3] [ref=e837]
+                  - generic [ref=e838]:
+                    - generic [ref=e839]: ₹499
+                    - generic [ref=e840]: ₹699
+                - button "कार्ट में जोड़ू" [ref=e842]
+            - generic [ref=e848] [cursor=pointer]:
+              - generic [ref=e853]:
+                - img "Mens Khadi Kurta Off-White Full Sleeve" [ref=e854]
+                - button [ref=e855]
+                - generic [ref=e858]: 33% छूट
+                - generic [ref=e859]: "4.3"
+              - generic [ref=e863]:
+                - generic [ref=e864]:
+                  - generic [ref=e865]: Mithila Handloom
+                  - heading "Mens Khadi Kurta Off-White Full Sleeve" [level=3] [ref=e866]
+                  - generic [ref=e867]:
+                    - generic [ref=e868]: ₹799
+                    - generic [ref=e869]: ₹1199
+                - button "कार्ट में जोड़ू" [ref=e871]
+            - generic [ref=e877] [cursor=pointer]:
+              - generic [ref=e882]:
+                - img "Organic Toor Dal Arhar 1kg Premium" [ref=e883]
+                - button [ref=e884]
+                - generic [ref=e887]: 25% छूट
+                - generic [ref=e888]: "4.6"
+              - generic [ref=e892]:
+                - generic [ref=e893]:
+                  - generic [ref=e894]: Fresh Farm Bihar
+                  - heading "Organic Toor Dal Arhar 1kg Premium" [level=3] [ref=e895]
+                  - generic [ref=e896]:
+                    - generic [ref=e897]: ₹149
+                    - generic [ref=e898]: ₹199
+                - button "कार्ट में जोड़ू" [ref=e900]
+        - generic [ref=e127]:
+          - generic [ref=e128]:
+            - heading "मुख्य चयन" [level=2] [ref=e141]
+            - button [ref=e153]
+          - generic [ref=e905]:
+            - generic [ref=e906] [cursor=pointer]:
+              - img "मिथिला विवाह समारोह पेंटिंग सीता स्वयंवर" [ref=e909]
+              - generic [ref=e910]:
+                - generic [ref=e911]: मिथिला विवाह समारोह पेंटिंग सीता स्वयंवर
+                - generic [ref=e912]: शीर्ष चयन
+                - generic [ref=e913]:
+                  - generic [ref=e914]: ₹3999
+                  - button "जोड़ू" [ref=e916]
+            - generic [ref=e917] [cursor=pointer]:
+              - img "कुमकुमाडी तैलाम ब्राइटनिंग फेस ऑयल 30ml" [ref=e920]
+              - generic [ref=e921]:
+                - generic [ref=e922]: कुमकुमाडी तैलाम ब्राइटनिंग फेस ऑयल 30ml
+                - generic [ref=e923]: शीर्ष चयन
+                - generic [ref=e924]:
+                  - generic [ref=e925]: ₹699
+                  - button "जोड़ू" [ref=e927]
+            - generic [ref=e928] [cursor=pointer]:
+              - img "Handloom Pure Silk Saree Mithila Motif Border" [ref=e931]
+              - generic [ref=e932]:
+                - generic [ref=e933]: Handloom Pure Silk Saree Mithila Motif Border
+                - generic [ref=e934]: शीर्ष चयन
+                - generic [ref=e935]:
+                  - generic [ref=e936]: ₹4999
+                  - button "जोड़ू" [ref=e938]
+            - generic [ref=e939] [cursor=pointer]:
+              - img "Wooden Hand-Carved Elephant Pair Madhubani Painted" [ref=e942]
+              - generic [ref=e943]:
+                - generic [ref=e944]: Wooden Hand-Carved Elephant Pair Madhubani Painted
+                - generic [ref=e945]: शीर्ष चयन
+                - generic [ref=e946]:
+                  - generic [ref=e947]: ₹799
+                  - button "जोड़ू" [ref=e949]
+        - generic [ref=e952]:
+          - heading "ब्रांड्स स्पॉटलाइट" [level=2] [ref=e953]
+          - generic [ref=e954]:
+            - generic [ref=e955] [cursor=pointer]:
+              - generic [ref=e956]:
+                - img "30% छूट" [ref=e957]
+                - generic [ref=e958]: विज्ञापन
+                - generic [ref=e959]: 30% छूट
+              - generic [ref=e960]:
+                - paragraph [ref=e961]: कुमकुमाडी तैलाम ब्राइटनिंग फेस ऑयल 30ml
+                - paragraph [ref=e962]: प्रायोजित
+            - generic [ref=e963] [cursor=pointer]:
+              - generic [ref=e964]:
+                - img "31% छूट" [ref=e965]
+                - generic [ref=e966]: विज्ञापन
+                - generic [ref=e967]: 31% छूट
+              - generic [ref=e968]:
+                - paragraph [ref=e969]: 10 प्रतिशत विटामिन सी ब्राइटनिंग फेस सीरम 50ml
+                - paragraph [ref=e970]: प्रायोजित
+            - generic [ref=e971] [cursor=pointer]:
+              - generic [ref=e972]:
+                - img "2% छूट" [ref=e973]
+                - generic [ref=e974]: विज्ञापन
+                - generic [ref=e975]: 2% छूट
+              - generic [ref=e976]:
+                - paragraph [ref=e977]: LOreal Paris Hyaluron Moisture Shampoo 200ml
+                - paragraph [ref=e978]: प्रायोजित
+            - generic [ref=e979] [cursor=pointer]:
+              - generic [ref=e980]:
+                - img "24% छूट" [ref=e981]
+                - generic [ref=e982]: विज्ञापन
+                - generic [ref=e983]: 24% छूट
+              - generic [ref=e984]:
+                - paragraph [ref=e985]: Wellcore Creatine Monohydrate 122g
+                - paragraph [ref=e986]: प्रायोजित
+            - generic [ref=e987] [cursor=pointer]:
+              - generic [ref=e988]:
+                - img "29% छूट" [ref=e989]
+                - generic [ref=e990]: विज्ञापन
+                - generic [ref=e991]: 29% छूट
+              - generic [ref=e992]:
+                - paragraph [ref=e993]: Handloom Pure Silk Saree Mithila Motif Border
+                - paragraph [ref=e994]: प्रायोजित
+            - generic [ref=e995] [cursor=pointer]:
+              - generic [ref=e996]:
+                - img "33% छूट" [ref=e997]
+                - generic [ref=e998]: विज्ञापन
+                - generic [ref=e999]: 33% छूट
+              - generic [ref=e1000]:
+                - paragraph [ref=e1001]: Wooden Hand-Carved Elephant Pair Madhubani Painted
+                - paragraph [ref=e1002]: प्रायोजित
+        - generic [ref=e1003]:
+          - generic [ref=e1004]:
+            - heading "सर्वोत्तम गुणवत्ताक गारंटी" [level=2] [ref=e1017]
+            - button [ref=e1029]
+          - generic [ref=e1032]:
+            - generic [ref=e1033] [cursor=pointer]:
+              - img "मिथिला विवाह समारोह पेंटिंग सीता स्वयंवर" [ref=e1036]
+              - generic [ref=e1037]:
+                - generic [ref=e1038]: मिथिला विवाह समारोह पेंटिंग सीता स्वयंवर
+                - generic [ref=e1039]: बेस्ट क्वालिटी गारंटीड
+                - generic [ref=e1040]:
+                  - generic [ref=e1041]: ₹3999
+                  - button "जोड़ू" [ref=e1043]
+            - generic [ref=e1044] [cursor=pointer]:
+              - img "Handloom Pure Silk Saree Mithila Motif Border" [ref=e1047]
+              - generic [ref=e1048]:
+                - generic [ref=e1049]: Handloom Pure Silk Saree Mithila Motif Border
+                - generic [ref=e1050]: बेस्ट क्वालिटी गारंटीड
+                - generic [ref=e1051]:
+                  - generic [ref=e1052]: ₹4999
+                  - button "जोड़ू" [ref=e1054]
+            - generic [ref=e1055] [cursor=pointer]:
+              - img "कुमकुमाडी तैलाम ब्राइटनिंग फेस ऑयल 30ml" [ref=e1058]
+              - generic [ref=e1059]:
+                - generic [ref=e1060]: कुमकुमाडी तैलाम ब्राइटनिंग फेस ऑयल 30ml
+                - generic [ref=e1061]: बेस्ट क्वालिटी गारंटीड
+                - generic [ref=e1062]:
+                  - generic [ref=e1063]: ₹699
+                  - button "जोड़ू" [ref=e1065]
+            - generic [ref=e1066] [cursor=pointer]:
+              - img "घुंगरू के साथ ऑक्सीडाइज्ड सिल्वर पायल पायल जोड़ी" [ref=e1069]
+              - generic [ref=e1070]:
+                - generic [ref=e1071]: घुंगरू के साथ ऑक्सीडाइज्ड सिल्वर पायल पायल जोड़ी
+                - generic [ref=e1072]: बेस्ट क्वालिटी गारंटीड
+                - generic [ref=e1073]:
+                  - generic [ref=e1074]: ₹799
+                  - button "जोड़ू" [ref=e1076]
+    - contentinfo [ref=e158]:
+      - img "Mithila Art Footer Border" [ref=e160]
+      - generic [ref=e161]:
+        - link [ref=e162] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=e165] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=e168] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=e172] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=e175] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=e178]:
+        - img "Mithilakart Logo" [ref=e179]
+        - generic [ref=e180]:
+          - text: Mithilakart
+          - generic [ref=e181]: ™
+  - navigation [ref=e182]:
+    - link "घर" [ref=e183] [cursor=pointer]:
+      - /url: /home
+    - link "श्रेणी सभ" [ref=e188] [cursor=pointer]:
+      - /url: /categories?flow=mithilakart
+    - link "0 कार्ट" [ref=e195] [cursor=pointer]:
+      - /url: /cart
+      - generic [ref=e196]: "0"
+      - generic [ref=e202]: कार्ट
+    - button "खाता" [expanded] [active] [ref=e203]
+  - menu "You menu" [ref=e1077]:
+    - generic [ref=e1078]:
+      - menuitem "Orders" [ref=e1079]
+      - menuitem "Buy Again" [ref=e1080]
+      - menuitem "Account" [ref=e1081]
+      - menuitem "Wishlist" [ref=e1082]

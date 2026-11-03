@@ -10,8 +10,10 @@ class CmsService extends BaseService {
     legalPageRepository,
     cmsPageRepository,
     cacheService,
+    categoryRepository = null,
   }) {
     super();
+    this.categoryRepository = categoryRepository;
     this.bannerRepository = bannerRepository;
     this.categoryChipRepository = categoryChipRepository;
     this.homeSectionRepository = homeSectionRepository;
@@ -38,18 +40,40 @@ class CmsService extends BaseService {
     return this._serializeLegalPage(page);
   }
 
-  async listBanners() {
-    return this.bannerRepository.find({ deletedAt: null }, { sort: { sortOrder: 1 } });
+  async listBanners(categoryId = null) {
+    const filter = { deletedAt: null };
+    if (categoryId) filter.categoryId = categoryId;
+    return this.bannerRepository.find(filter, { sort: { sortOrder: 1 } });
+  }
+
+  /** Normalises the optional category link (category banners are matched by categoryId, not by flow). */
+  async _prepareBannerPayload(data) {
+    const payload = { ...data };
+    if ('categoryId' in payload) {
+      payload.categoryId = payload.categoryId && String(payload.categoryId).trim() !== '' ? payload.categoryId : null;
+      if (payload.categoryId) {
+        if (!/^[a-f0-9]{24}$/i.test(String(payload.categoryId))) throw AppError.validation('Banner category id is invalid');
+        const category = this.categoryRepository ? await this.categoryRepository.findById(payload.categoryId) : null;
+        if (!category || category.deletedAt) throw AppError.validation('Banner category does not exist');
+        if ((category.parentIds && category.parentIds.length) || category.parentId) {
+          throw AppError.validation('Banners can only be assigned to main categories');
+        }
+      }
+    }
+    if ('mobileImageUrl' in payload && !payload.mobileImageUrl) payload.mobileImageUrl = null;
+    return payload;
   }
 
   async createBanner(data) {
-    const banner = await this.bannerRepository.create(data);
-    await this._invalidateStorefrontCache(data.commerceFlow);
+    const payload = await this._prepareBannerPayload(data);
+    const banner = await this.bannerRepository.create(payload);
+    await this._invalidateStorefrontCache(payload.commerceFlow);
     return banner;
   }
 
   async updateBanner(id, data) {
-    const banner = await this.bannerRepository.updateById(id, data);
+    const payload = await this._prepareBannerPayload(data);
+    const banner = await this.bannerRepository.updateById(id, payload);
     await this._invalidateStorefrontCache(banner.commerceFlow);
     return banner;
   }
@@ -213,6 +237,7 @@ class CmsService extends BaseService {
     const flows = commerceFlow
       ? [commerceFlow]
       : ['standard', 'mithilak', 'quick_shop', 'fresh_grocery'];
+    await this.cacheService.delByPattern('cache:storefront:landing:*');
     await Promise.all(
       // Cache keys carry a language suffix (cache:storefront:home:<flow>:<lang>)
       flows.map((flow) => this.cacheService.delByPattern(`cache:storefront:home:${flow}:*`))

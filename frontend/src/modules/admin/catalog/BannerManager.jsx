@@ -49,7 +49,8 @@ const BannerManager = () => {
   useEffect(() => { loadBanners(); }, [loadBanners]);
 
   const flowBanners = banners
-    .filter((b) => (b.commerceFlow || 'standard') === activeFlow)
+    // Category-specific banners are managed in Category Landing, not here.
+    .filter((b) => !b.categoryId && (b.commerceFlow || 'standard') === activeFlow)
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   const openCreate = () => {

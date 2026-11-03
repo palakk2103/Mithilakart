@@ -10,6 +10,7 @@ import { fetchCartItems, updateCartItemQuantity, removeCartItemById } from '../u
 import { isAuthenticated as checkAuth } from '../../../shared/api/tokenStorage';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/useDeliverToAddress';
+import toast from 'react-hot-toast';
 import useAccountStore from '../../../store/useAccountStore';
 import { getUser } from '../../../shared/api/tokenStorage';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
@@ -157,23 +158,24 @@ const Cart = () => {
           image: targetItem.image,
           brand: targetItem.brand,
         };
-        if (prodId) {
-          try {
-            await addToWishlistApi(prodId);
-          } catch {
-            // ignore offline / demo API errors
-          }
-        }
+        if (!prodId) throw new Error('Product ID missing');
+        await addToWishlistApi(prodId);
         if (typeof addToWishlistStore === 'function') {
-          addToWishlistStore(prod);
+          const already = Array.isArray(wishlist) && wishlist.some((w) => String(w.id) === String(prodId));
+          if (!already) addToWishlistStore(prod);
         }
         setLocalWishlist((prev) => {
           const list = Array.isArray(prev) ? prev : [];
           if (prod.id && list.some((w) => w.id === prod.id)) return list;
           return [prod, ...list];
         });
+        toast.success('Moved to wishlist');
       } catch (err) {
         console.warn('Could not add to wishlist:', err);
+        toast.error(err?.message || 'Could not add to wishlist');
+        // Keep the item in the cart: don't lose it when the wishlist save failed.
+        loadCart();
+        return;
       }
     }
 

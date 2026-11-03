@@ -80,7 +80,9 @@ const AdminLayout = () => {
       title: 'STOREFRONT',
       items: [
         { name: 'Header Tabs Manager', path: '/admin/storefront/tabs', icon: <LayoutGrid size={18} /> },
+        { name: 'You Popup Menu', path: '/admin/storefront/you-popup', icon: <LayoutGrid size={18} /> },
         { name: 'Banner Manager', path: '/admin/storefront/banners', icon: <Image size={18} /> },
+        { name: 'Category Landing', path: '/admin/storefront/category-landing', icon: <Layout size={18} /> },
         { name: 'Category Chips', path: '/admin/storefront/chips', icon: <LayoutGrid size={18} /> },
         { 
           name: 'Home Sections', 

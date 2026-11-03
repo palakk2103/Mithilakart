@@ -35,11 +35,13 @@ const ShippingPolicy = lazyWithRetry(() => import('../pages/ShippingPolicy'));
 const QuickShop = lazyWithRetry(() => import('../pages/QuickShop'));
 const QuickShopSubcategory = lazyWithRetry(() => import('../pages/QuickShopSubcategory'));
 const Mithilak = lazyWithRetry(() => import('../pages/Mithilak'));
+const CategoryLanding = lazyWithRetry(() => import('../pages/CategoryLanding'));
 
 // Profile Sub-pages
 const EditProfile = lazyWithRetry(() => import('../pages/profile/EditProfile'));
 const MyOrders = lazyWithRetry(() => import('../pages/profile/MyOrders'));
 const Wishlist = lazyWithRetry(() => import('../pages/profile/Wishlist'));
+const BuyAgain = lazyWithRetry(() => import('../pages/profile/BuyAgain'));
 const Coupons = lazyWithRetry(() => import('../pages/profile/Coupons'));
 const HelpCenter = lazyWithRetry(() => import('../pages/profile/HelpCenter'));
 const SavedAddresses = lazyWithRetry(() => import('../pages/profile/SavedAddresses'));
@@ -86,6 +88,7 @@ const MarketRoutes = () => {
         <Route path="/cart" element={<Cart />} />
         <Route path="/bag" element={<Bag />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/buy-again" element={<BuyAgain />} />
         <Route path="/profile" element={<Profile />} />
 
         {/* Profile Sub-routes */}
@@ -115,6 +118,7 @@ const MarketRoutes = () => {
         <Route path="/quick-shop/category" element={<QuickShopSubcategory />} />
         <Route path="/mithilak/category" element={<QuickShopSubcategory />} />
         <Route path="/mithilak" element={<Mithilak />} />
+        <Route path="/mithilak/c/:categoryId" element={<CategoryLanding />} />
         <Route path="/fresh-grocery" element={<QuickShop />} />
         <Route path="/fresh-grocery/category" element={<QuickShopSubcategory />} />
       </Route>

@@ -5,6 +5,9 @@ const {
   PLATFORM_CONFIG_CACHE_TTL,
 } = require('../../constants/platformSettings');
 
+const { YOU_POPUP_SETTING_KEY, YOU_POPUP_ITEMS } = require('../../constants/youPopup');
+const { mergeYouPopupItems } = require('./youPopupMerge');
+
 class PlatformConfigService extends BaseService {
   constructor({ platformSettingRepository, deliveryChargeRuleRepository, cacheService }) {
     super();
@@ -60,6 +63,17 @@ class PlatformConfigService extends BaseService {
       ecommerceEnabled: config.ecommerceEnabled !== false,
       razorpayEnabled: config.razorpayEnabled !== false,
       headerTabs: config.headerTabsConfig || null,
+    };
+  }
+
+  /** Customer-safe "You" popup items: enabled only, ordered, with fixed routes. */
+  async getYouPopup() {
+    const config = await this.getConfig();
+    const routes = new Map(YOU_POPUP_ITEMS.map((i) => [i.id, i.route]));
+    return {
+      items: mergeYouPopupItems(config[YOU_POPUP_SETTING_KEY])
+        .filter((i) => i.enabled)
+        .map((i) => ({ id: i.id, label: i.label, order: i.order, route: routes.get(i.id) })),
     };
   }
 

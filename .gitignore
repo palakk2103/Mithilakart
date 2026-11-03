@@ -3,8 +3,6 @@ temp_auto_push.bat
 temp_interactive_push.bat
 
 # Secrets / environment files (never commit real values — see .env.example)
-.env
-.env.*
 !.env.example
 !*/.env.example
 
@@ -24,3 +22,4 @@ logs/*
 !logs/.gitkeep
 uploads/*
 !uploads/.gitkeep
+config.bat

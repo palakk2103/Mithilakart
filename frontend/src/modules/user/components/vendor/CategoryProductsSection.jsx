@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import InfiniteScrollSentinel from '../../../../shared/components/InfiniteScrollSentinel';
 import { getFashionFallbackImage } from './home/SubCategoryGrid';
+import CategoryLandingBlocks from './landing/CategoryLandingBlocks';
 
 // Fallback images for subcategories when admin hasn't set an image yet
 import FashionHero from '../../../../assets/products/product06.jpg';
@@ -174,6 +175,8 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
   const [allProducts, setAllProducts] = useState([]);
   const [adminSubcategories, setAdminSubcategories] = useState([]);
+  // Main category the admin-configured landing blocks (banner / promo sections) belong to.
+  const [landingCategoryId, setLandingCategoryId] = useState(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState(urlSubcategory || null);
   const [subProducts, setSubProducts] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -232,6 +235,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
           if (!cancelled) {
             setAdminSubcategories(dynamicSubs);
+            setLandingCategoryId(String(match.id));
           }
 
           // Fetch products created in Database under this category
@@ -260,6 +264,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         } else {
           if (!cancelled) {
             setAdminSubcategories([]);
+            setLandingCategoryId(null);
             const fallback = allCategoryProducts[selectedCategory] || allCategoryProducts['Fashion'] || [];
             setAllProducts(fallback.map((p) => mapProductForCard(p)));
           }
@@ -628,6 +633,19 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     });
   }, [navigate]);
 
+  // Same product card + handlers as the main grid, for the admin promo sections.
+  const renderLandingProduct = useCallback((item) => {
+    const product = mapProductForCard(item);
+    return (
+      <ProductCard
+        key={product.listingId || product.id}
+        product={product}
+        onProductClick={handleProductClick}
+        onAddToCart={handleAddToCart}
+      />
+    );
+  }, [handleProductClick, handleAddToCart]);
+
   if (!selectedCategory) return null;
 
   return (
@@ -666,6 +684,17 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
           </button>
         )}
       </div>
+
+      {/* ── Admin landing blocks above the subcategory row (banner etc.); hidden once a subcategory is chosen ── */}
+      {!selectedSubcategory && landingCategoryId && (
+        <CategoryLandingBlocks
+          categoryId={landingCategoryId}
+          tab={getCurrentMarketplaceTab()}
+          part="before"
+          onNavigate={navigate}
+          renderProduct={renderLandingProduct}
+        />
+      )}
 
       {/* ── SECTION 1: Subcategories Horizontal Row (100% Dynamic & Clickable) ── */}
       {subcategoriesToDisplay.length > 0 && (
@@ -838,6 +867,17 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             })}
           </ScrollRow>
         </div>
+      )}
+
+      {/* ── Admin landing blocks below the subcategory row (promo sections) ── */}
+      {!selectedSubcategory && landingCategoryId && (
+        <CategoryLandingBlocks
+          categoryId={landingCategoryId}
+          tab={getCurrentMarketplaceTab()}
+          part="after"
+          onNavigate={navigate}
+          renderProduct={renderLandingProduct}
+        />
       )}
 
       {/* ── SECTION 2: Dynamic Products Grid & Real-time Sorting ── */}

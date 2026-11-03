@@ -6,6 +6,7 @@ import useVendorStore from '../../../store/useVendorStore';
 import { addProductToCart } from '../utils/cartUtils';
 import { getCategories } from '../services/catalogApi';
 import { mapMithilaCategoryCards, mapNavChips } from '../utils/mappers';
+import { openMithilaCategory, resolveChipCategory } from '../utils/categoryLandingNav';
 import { getHeaderChipIcon } from '../../../shared/constants/headerChipIcons';
 
 // Shared Home Components for Merchandising Pattern Alignment
@@ -69,7 +70,7 @@ const MithilaCardBottomDivider = () => (
 );
 
 // Styled Product Card matching the reference image layout and structure
-const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel, ctaDisabled = false }) => {
+export const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaLabel, ctaDisabled = false }) => {
   const { t } = useTranslation();
   const { isWishlisted: checkWishlisted, toggle: toggleWishlist } = useWishlistToggle();
   const wishlistTarget = prod.product?.id || prod.product?.productId ? prod.product : prod;
@@ -178,7 +179,7 @@ const CHIP_GAP = 8;
 const MORE_W = 56;
 const CHIP_MIN_W = 60;
 
-const MithilaChip = ({ chip, onClick, width = CHIP_W }) => {
+const MithilaChip = ({ chip, onClick, width = CHIP_W, active = false }) => {
   const DynamicIcon = getHeaderChipIcon(chip.iconKey);
   const label = chip.label ? tName(chip.label) : chip.rawLabel;
   return (
@@ -186,9 +187,11 @@ const MithilaChip = ({ chip, onClick, width = CHIP_W }) => {
       type="button"
       onClick={onClick}
       style={{ width }}
+      aria-current={active ? 'page' : undefined}
+      data-active={active ? 'true' : undefined}
       className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform outline-none"
     >
-      <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full flex items-center justify-center bg-white border border-[#207C8A]/30 text-[#207C8A] shadow-[0_1.5px_4px_rgba(32,124,138,0.06)]">
+      <div className={`w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full flex items-center justify-center border text-[#207C8A] shadow-[0_1.5px_4px_rgba(32,124,138,0.06)] ${active ? 'bg-[#E3F3F5] border-[#207C8A] ring-2 ring-[#207C8A]/40' : 'bg-white border-[#207C8A]/30'}`}>
         {chip.imageUrl ? (
           <img src={chip.imageUrl} alt={label} className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
         ) : DynamicIcon ? (
@@ -197,14 +200,14 @@ const MithilaChip = ({ chip, onClick, width = CHIP_W }) => {
           <ShoppingBag size={18} />
         )}
       </div>
-      <span className="w-full text-[11px] sm:text-[12px] mt-1.5 leading-[1.15] text-center line-clamp-2 break-words min-h-[2.3em] font-bold text-[#3F2A20]">
+      <span className={`w-full text-[11px] sm:text-[12px] mt-1.5 leading-[1.15] text-center line-clamp-2 break-words min-h-[2.3em] font-bold ${active ? 'text-[#207C8A]' : 'text-[#3F2A20]'}`}>
         {label}
       </span>
     </button>
   );
 };
 
-const MithilaHeaderChips = ({ chips, onSelect }) => {
+export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => {
   const { t } = useTranslation();
   const rowRef = useRef(null);
   const moreBtnRef = useRef(null);
@@ -278,7 +281,7 @@ const MithilaHeaderChips = ({ chips, onSelect }) => {
       <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F5F9FA]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(32,124,138,0.06)] border-b border-[#207C8A]/15 py-2">
         <div ref={rowRef} className="flex items-start overflow-hidden px-2 sm:px-3" style={{ gap: CHIP_GAP }}>
           {visible.map((chip) => (
-            <MithilaChip key={chip.id} chip={chip} width={chipW} onClick={() => onSelect(chip)} />
+            <MithilaChip key={chip.id} chip={chip} width={chipW} active={Boolean(isChipActive && isChipActive(chip))} onClick={() => onSelect(chip)} />
           ))}
           {hidden.length > 0 && (
             <button
@@ -400,10 +403,9 @@ const Mithilak = () => {
       <MithilaHeaderChips
         chips={headerChips}
         onSelect={(chip) => {
-          if (!chip.categoryId) return;
-          localStorage.setItem('isMithilakFlow', 'true');
-          localStorage.setItem('isQuickShopFlow', 'false');
-          navigate('/mithilak/category', { state: { category: chip.rawLabel || chip.label, categoryId: chip.categoryId } });
+          const target = resolveChipCategory(chip, mithilaCategories);
+          if (!target) return;
+          openMithilaCategory(navigate, target);
         }}
       />
 
@@ -497,11 +499,7 @@ const Mithilak = () => {
             {mithilaCategories.map((item, idx) => (
               <div
                 key={item.id || idx}
-                onClick={() => {
-                  localStorage.setItem('isMithilakFlow', 'true');
-                  localStorage.setItem('isQuickShopFlow', 'false');
-                  navigate('/mithilak/category', { state: { category: item.name, categoryId: item.id } });
-                }}
+                onClick={() => openMithilaCategory(navigate, { id: item.id, name: item.name })}
                 className="flex-shrink-0 w-[104px] sm:w-[120px] md:w-[140px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
               >
                 <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[#207C8A]/40 transition-all duration-300 transform">
