@@ -1,0 +1,93 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img "Mithilakart" [ref=e8]
+        - generic [ref=e9]: मिथिलाकार्ट
+      - generic [ref=e10] [cursor=pointer]: त्वरित दुकान
+      - generic [ref=e16] [cursor=pointer]: मिथिलाक
+      - generic [ref=e22] [cursor=pointer]: ताजा आ राशन
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - button "पहुंचाबी डिलीवरी स्थान सेट करबाक लेल टैप करू" [ref=e31]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: पहुंचाबी
+            - generic [ref=e37]: डिलीवरी स्थान सेट करबाक लेल टैप करू
+        - generic [ref=e40]:
+          - button "Maithili Maithili" [ref=e42] [cursor=pointer]:
+            - img "Maithili" [ref=e43]
+            - generic [ref=e44]: Maithili
+          - generic [ref=e45]: "3"
+      - generic [ref=e51]:
+        - searchbox "खोजू “आटा, चाउर, तेल, मैगी...”" [ref=e52]
+        - generic [ref=e54]:
+          - img [aria-hidden] [ref=e55] [cursor=pointer]
+          - img [aria-hidden] [ref=e58] [cursor=pointer]
+  - generic [ref=e61]:
+    - main [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e67]:
+          - button "सभ" [ref=e68] [cursor=pointer]
+          - button "फैशन" [ref=e76] [cursor=pointer]
+          - button "सौंदर्य" [ref=e81] [cursor=pointer]
+          - button "इलेक्ट्रॉनिक्स" [ref=e87] [cursor=pointer]
+          - button "गहना" [ref=e92] [cursor=pointer]
+          - button "आओर श्रेणी" [ref=e98] [cursor=pointer]:
+            - generic [ref=e104]: आओर
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - img "बेसी खरीदू, बेसी बचाउ" [ref=e109]
+            - generic [ref=e110]:
+              - generic [ref=e111]: विशेष संग्रह
+              - heading "बेसी खरीदू, बेसी बचाउ" [level=3] [ref=e112]
+          - generic [aria-hidden]:
+            - generic:
+              - generic: विशेष संग्रह
+              - heading [level=3]: असली मिथिला कलाकारी
+          - generic [aria-hidden]:
+            - generic:
+              - generic: विशेष संग्रह
+              - heading [level=3]: सांस्कृतिक धरोहर संग्रह
+          - generic [aria-hidden]:
+            - generic:
+              - generic: विशेष संग्रह
+              - heading [level=3]: खास पाबनि हस्तशिल्प
+          - generic [ref=e113]:
+            - button [ref=e114]
+            - button [ref=e115]
+            - button [ref=e116]
+            - button [ref=e117]
+        - generic [ref=e119]:
+          - heading "आइ के खास ऑफर" [level=2] [ref=e120]
+          - generic [ref=e121] [cursor=pointer]: सभ देखी
+        - generic [ref=e128]:
+          - heading "मुख्य चयन" [level=2] [ref=e141]
+          - button [ref=e153]
+    - contentinfo [ref=e158]:
+      - img "Mithila Art Footer Border" [ref=e160]
+      - generic [ref=e161]:
+        - link [ref=e162] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=e165] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=e168] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=e172] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=e175] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=e178]:
+        - img "Mithilakart Logo" [ref=e179]
+        - generic [ref=e180]:
+          - text: Mithilakart
+          - generic [ref=e181]: ™
+  - navigation [ref=e182]:
+    - link "घर" [ref=e183] [cursor=pointer]:
+      - /url: /home
+    - link "श्रेणी सभ" [ref=e188] [cursor=pointer]:
+      - /url: /categories?flow=mithilakart
+    - link "0 कार्ट" [ref=e195] [cursor=pointer]:
+      - /url: /cart
+      - generic [ref=e196]: "0"
+      - generic [ref=e202]: कार्ट
+    - button "खाता" [ref=e203]

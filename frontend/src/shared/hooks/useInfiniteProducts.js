@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 const DEFAULT_BATCH = 36;
+const EMPTY = [];
 
 /**
  * Scroll-driven batch loader (no pagination UI).
@@ -66,7 +67,15 @@ export default function useInfiniteProducts(fetchPage, deps = [], { limit = DEFA
     }
   }, [limit]);
 
+  // Deps the current `items` belong to. While `deps` have changed but the reset
+  // effect has not run yet, the previous list must not be shown for the new key.
+  const settledDepsRef = useRef(null);
+  const isStale = !settledDepsRef.current
+    || settledDepsRef.current.length !== deps.length
+    || settledDepsRef.current.some((d, i) => !Object.is(d, deps[i]));
+
   useEffect(() => {
+    settledDepsRef.current = deps;
     tokenRef.current += 1;
     busyRef.current = false;
     pageRef.current = 0;
@@ -79,5 +88,13 @@ export default function useInfiniteProducts(fetchPage, deps = [], { limit = DEFA
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-  return { items, loading, loadingMore, error, hasMore, loadMore: loadNext, retry: loadNext };
+  return {
+    items: isStale ? EMPTY : items,
+    loading: isStale ? true : loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore: loadNext,
+    retry: loadNext,
+  };
 }

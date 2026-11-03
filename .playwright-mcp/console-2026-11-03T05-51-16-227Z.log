@@ -1,0 +1,115 @@
+[   53597ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/modules/user/layouts/VendorLayout.jsx?t=1793685128926:0
+[   53597ms] [ERROR] [vite] Failed to reload /src/modules/user/layouts/VendorLayout.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:881
+[   53754ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/modules/user/components/common/YouPopup.jsx?t=1793685128927:0
+[   53755ms] [ERROR] [vite] Failed to reload /@fs/C:\Users\HP\Desktop\Mithilakart\frontend\src\modules\user\components\common\YouPopup.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:881
+[   54529ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   54529ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   54530ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   54532ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   54534ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[   54584ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/uploads/cms/sample-banner.jpg:0
+[   54659ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   54660ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[   54660ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[   54686ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   55466ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   55968ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   55969ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   55969ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[   55989ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   55990ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[   55990ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[   55990ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   55991ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   55991ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[   56031ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   56037ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[   56038ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[   56038ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   56038ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   56087ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   56088ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   56089ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   56109ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   65830ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   65831ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   65834ms] [WARNING] You popup config unavailable, using cached/default: Network Error @ http://localhost:3000/src/config/youPopup.js?t=1793685128926:59
+[   65834ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/you-popup:0
+[   65839ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   65839ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   65840ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[   66497ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[   66897ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   66898ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   66898ms] [WARNING] You popup config unavailable, using cached/default: Network Error @ http://localhost:3000/src/config/youPopup.js?t=1793685128926:59
+[   66898ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/you-popup:0
+[   66909ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   66909ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   66910ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[   66929ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   66930ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[   66930ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[   66975ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   66977ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   66977ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   66993ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[   66993ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[   66995ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[   67014ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[   67021ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[   67022ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[   67068ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  239950ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  241177ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[  241177ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[  241178ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[  241178ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[  241178ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[  241205ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  241229ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[  241230ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[  241299ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  241300ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[  241300ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[  241301ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[  241301ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[  241301ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[  241373ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  241374ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[  241374ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[  241400ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  256930ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  257754ms] [WARNING] You popup config unavailable, using cached/default: Network Error @ http://localhost:3000/src/config/youPopup.js?t=1793685128926:59
+[  257754ms] [ERROR] Failed to load resource: net::ERR_FAILED @ http://localhost:5000/api/v1/storefront/you-popup:0
+[  257755ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[  257755ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[  257756ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[  257756ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[  257757ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[  257792ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  257795ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[  257796ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[  257989ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  257997ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[  257997ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[  257997ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/you-buy/already-bought?page=1&limit=12:0
+[  257998ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:0
+[  257998ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart:0
+[  258068ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  258106ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Network Error @ http://localhost:3000/src/config/userAppTabs.js:112
+[  258107ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/header-tabs:0
+[  258129ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:0
+[  563317ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  564804ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/admin/login:0
+[  600707ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:3000/node_modules/.vite/deps/recharts.js?v=27128b8f:5888
+[  600709ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:3000/node_modules/.vite/deps/recharts.js?v=27128b8f:5888
+[  602762ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  616448ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  632559ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102
+[  661469ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20102

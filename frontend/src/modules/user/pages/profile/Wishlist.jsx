@@ -88,12 +88,12 @@ const Wishlist = () => {
         <button onClick={() => navigate(-1)} className={`active:scale-95 transition-transform ${headerTextColor}`}>
           <ArrowLeft size={24} />
         </button>
-        <div className="relative">
+        <button onClick={() => navigate('/vendor/cart')} className="relative active:scale-95 transition-transform" aria-label="Cart">
           <ShoppingCart size={24} className={headerTextColor} />
           <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#FCF7EE]">
             {cartCount}
           </span>
-        </div>
+        </button>
       </div>
 
       {/* Title Section */}

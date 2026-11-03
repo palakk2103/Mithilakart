@@ -293,8 +293,9 @@ export async function ensureDeliveryOnline() {
  * test password. Same login cache rationale as loginSeller/loginDelivery.
  */
 export const ADMIN_FIXTURES = {
-  email: 'palakpatel0342@gmail.com',
-  password: 'Admin@12345',
+  email: process.env.E2E_ADMIN_EMAIL || 'palakpatel0342@gmail.com',
+  // SEED_ADMIN_PASSWORD (backend/.env) is the real password; override via E2E_ADMIN_PASSWORD.
+  password: process.env.E2E_ADMIN_PASSWORD || 'Admin@12345',
 };
 
 let adminSession = null;

@@ -36,7 +36,7 @@ class CmsController extends BaseController {
   });
 
   listBanners = asyncHandler(async (req, res) => {
-    const data = await this.service.listBanners();
+    const data = await this.service.listBanners(req.query.categoryId || null);
     return ApiResponse.success(res, data);
   });
 

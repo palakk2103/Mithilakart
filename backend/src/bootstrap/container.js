@@ -213,6 +213,9 @@ const { createSellerAuthRoutes } = require('../routes/v1/seller.auth.routes');
 const { createAdminAuthRoutes } = require('../routes/v1/admin.auth.routes');
 const { createDeliveryAuthRoutes } = require('../routes/v1/delivery.auth.routes');
 const { createCatalogRoutes } = require('../routes/v1/catalog.routes');
+const { CategoryLandingSectionRepository, CategoryLandingConfigRepository } = require('../repositories/CategoryLandingRepository');
+const { CategoryLandingService } = require('../services/cms/CategoryLandingService');
+const { CategoryLandingController } = require('../controllers/cms/CategoryLandingController');
 const { createStorefrontRoutes } = require('../routes/v1/storefront.routes');
 const { createCmsRoutes } = require('../routes/v1/cms.routes');
 const { createAdminCatalogRoutes, createAdminCmsRoutes } = require('../routes/v1/admin.catalog.routes');
@@ -415,7 +418,20 @@ function buildContainer() {
     legalPageRepository,
     cmsPageRepository,
     cacheService,
+    categoryRepository,
   });
+
+  const categoryLandingService = new CategoryLandingService({
+    bannerRepository,
+    sectionRepository: new CategoryLandingSectionRepository(),
+    configRepository: new CategoryLandingConfigRepository(),
+    categoryRepository,
+    categoryService,
+    productRepository,
+    marketplaceListingService,
+    cacheService,
+  });
+  const categoryLandingController = new CategoryLandingController(categoryLandingService);
 
   const middleware = createAuthMiddleware({
     tokenService,
@@ -990,10 +1006,10 @@ function buildContainer() {
       ),
       catalog: createCatalogRoutes(categoryController, productController),
       translation: createTranslationRoutes(translationController),
-      storefront: createStorefrontRoutes(storefrontController),
+      storefront: createStorefrontRoutes(storefrontController, categoryLandingController),
       cms: createCmsRoutes(cmsController),
       adminCatalog: createAdminCatalogRoutes(
-        { categoryController, productController },
+        { categoryController, productController, categoryLandingController },
         middleware
       ),
       adminCms: createAdminCmsRoutes(cmsController, middleware),

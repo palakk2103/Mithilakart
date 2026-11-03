@@ -14,6 +14,10 @@ const bannerSchema = Joi.object({
   title: Joi.string().trim().min(2).max(120).required(),
   imageUrl: mediaUrlSchema.required(),
   linkUrl: Joi.string().trim().optional().allow(null, ''),
+  categoryId: objectIdSchema.optional().allow(null, ''),
+  mobileImageUrl: mediaUrlSchema.optional().allow(null, ''),
+  subtitle: Joi.string().trim().max(160).optional().allow(''),
+  ctaText: Joi.string().trim().max(40).optional().allow(''),
   commerceFlow: Joi.string().valid(...COMMERCE_FLOW_VALUES).optional(),
   startDate: Joi.date().iso().optional().allow(null),
   endDate: Joi.date().iso().optional().allow(null),
@@ -22,6 +26,30 @@ const bannerSchema = Joi.object({
 });
 
 const bannerUpdateSchema = bannerSchema.fork(['title', 'imageUrl'], (field) => field.optional());
+
+const { LANDING_SECTION_TYPES } = require('../../models/CategoryLandingSection');
+
+const landingSectionSchema = Joi.object({
+  title: Joi.string().trim().min(2).max(80).required(),
+  subtitle: Joi.string().trim().max(160).optional().allow(''),
+  sectionType: Joi.string().valid(...LANDING_SECTION_TYPES).optional(),
+  productIds: Joi.array().items(objectIdSchema).max(48).unique().optional(),
+  productLimit: Joi.number().integer().min(1).max(24).optional(),
+  imageUrl: mediaUrlSchema.optional().allow(null, ''),
+  ctaText: Joi.string().trim().max(40).optional().allow(''),
+  ctaLink: Joi.string().trim().max(500).optional().allow(null, ''),
+  startDate: Joi.date().iso().optional().allow(null),
+  endDate: Joi.date().iso().optional().allow(null),
+  sortOrder: Joi.number().integer().min(0).optional(),
+  isActive: Joi.boolean().optional(),
+});
+
+const landingSectionUpdateSchema = landingSectionSchema.fork(['title'], (f) => f.optional());
+
+const landingConfigSchema = Joi.object({
+  enabled: Joi.boolean().optional(),
+  blockOrder: Joi.array().items(Joi.string().max(60)).max(60).optional(),
+}).min(1);
 
 const chipSchema = Joi.object({
   label: Joi.string().trim().min(1).max(50).required(),
@@ -75,6 +103,9 @@ const confirmUploadSchema = Joi.object({
 module.exports = {
   bannerSchema,
   bannerUpdateSchema,
+  landingSectionSchema,
+  landingSectionUpdateSchema,
+  landingConfigSchema,
   chipSchema,
   chipUpdateSchema,
   sectionUpdateSchema,

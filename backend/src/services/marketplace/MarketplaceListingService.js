@@ -368,6 +368,54 @@ class MarketplaceListingService extends BaseService {
     };
   }
 
+  /**
+   * Public, tab-scoped listing cards for an explicit list of product ids
+   * (admin-curated sections). Applies the same visibility rules as
+   * listPublicForTab: approved + visible listing, approved/non-deleted product,
+   * and available stock. Result keeps the order of `productIds`.
+   */
+  async listPublicByProductIds(tabInput, productIds = []) {
+    const tab = resolveTabFromQuery({ marketplaceTab: tabInput });
+    if (!tab || !productIds.length) return [];
+    await this.marketplaceEngineService.assertTabActive(tab);
+
+    const [listings, products] = await Promise.all([
+      this.marketplaceListingRepository.findPublic({ marketplaceTab: tab, productId: { $in: productIds } }),
+      this.productRepository.findPublic({ _id: { $in: productIds } }),
+    ]);
+    const productMap = new Map(products.map((p) => [String(p._id), p]));
+    const listingByProduct = new Map();
+    listings.forEach((l) => {
+      if (!listingByProduct.has(String(l.productId))) listingByProduct.set(String(l.productId), l);
+    });
+
+    return productIds
+      .map((id) => {
+        const product = productMap.get(String(id));
+        const listing = listingByProduct.get(String(id));
+        if (!product || !listing) return null;
+        const availableStock = this.productRepository.getAvailableStock(product);
+        if (availableStock <= 0) return null;
+        return {
+          ...this._serializeListing(listing, product),
+          name: product.title,
+          title: product.title,
+          brand: product.brand,
+          image: product.images?.[0]?.url || null,
+          imageUrl: product.images?.[0]?.url || null,
+          categoryId: product.categoryId ? String(product.categoryId) : null,
+          availableStock,
+          stock: availableStock,
+          rating: product.rating || 0,
+          reviewCount: product.reviewCount || 0,
+          createdAt: listing.publishedAt || product.createdAt,
+          commerceFlow: toLegacyCommerceFlow(tab),
+          marketplaceTab: tab,
+        };
+      })
+      .filter(Boolean);
+  }
+
   async getPublicListing(listingId) {
     const listing = await this.marketplaceListingRepository.findPublicOne({ _id: listingId });
     if (!listing) throw AppError.notFound('Listing not found', [{ code: 'LISTING_NOT_FOUND' }]);

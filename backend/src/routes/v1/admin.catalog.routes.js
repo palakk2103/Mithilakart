@@ -18,6 +18,9 @@ const {
   chipUpdateSchema,
   sectionUpdateSchema,
   sectionReorderSchema,
+  landingSectionSchema,
+  landingSectionUpdateSchema,
+  landingConfigSchema,
   cmsPageSchema,
   legalPageSchema,
 } = require('../../validators/cms/cms.validator');
@@ -25,7 +28,7 @@ const { HOME_SECTION_KEYS } = require('../../constants/catalog');
 
 function createAdminCatalogRoutes(controllers, middleware) {
   const router = express.Router();
-  const { categoryController, productController } = controllers;
+  const { categoryController, productController, categoryLandingController } = controllers;
 
   router.use(middleware.authenticateAdmin());
 
@@ -49,6 +52,16 @@ function createAdminCatalogRoutes(controllers, middleware) {
   router.delete('/products/:id', requirePermission('products.delete'), validateParams(Joi.object({ id: objectIdSchema })), productController.delete);
   router.put('/products/:id', requirePermission('products.edit'), validateParams(Joi.object({ id: objectIdSchema })), productController.update);
   router.post('/products/bulk', requirePermission('products.edit'), validateBody(productBulkSchema), productController.bulk);
+
+  if (categoryLandingController) {
+    const catParam = validateParams(Joi.object({ categoryId: objectIdSchema }));
+    const idParam = validateParams(Joi.object({ id: objectIdSchema }));
+    router.get('/category-landing/:categoryId', requirePermission('banners.view'), catParam, categoryLandingController.getAdmin);
+    router.put('/category-landing/:categoryId/config', requirePermission('banners.edit'), catParam, validateBody(landingConfigSchema), categoryLandingController.updateConfig);
+    router.post('/category-landing/:categoryId/sections', requirePermission('banners.edit'), catParam, validateBody(landingSectionSchema), categoryLandingController.createSection);
+    router.put('/category-landing/sections/:id', requirePermission('banners.edit'), idParam, validateBody(landingSectionUpdateSchema), categoryLandingController.updateSection);
+    router.delete('/category-landing/sections/:id', requirePermission('banners.delete'), idParam, categoryLandingController.deleteSection);
+  }
 
   return router;
 }

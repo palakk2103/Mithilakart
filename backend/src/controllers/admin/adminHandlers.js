@@ -132,6 +132,12 @@ function createAdminHandlers(services) {
     getHeaderTabs: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.settings.getHeaderTabs());
     }),
+    getYouPopup: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.settings.getYouPopup());
+    }),
+    updateYouPopup: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.settings.updateYouPopup(req.body?.items, req.user.id));
+    }),
     updateHeaderTabs: asyncHandler(async (req, res) => {
       const tabs = req.body.tabs !== undefined ? req.body.tabs : req.body;
       return ApiResponse.success(res, await services.settings.updateHeaderTabs(tabs, req.user.id));

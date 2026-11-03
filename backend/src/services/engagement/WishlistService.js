@@ -27,7 +27,9 @@ class WishlistService extends BaseService {
     const product = await this.productRepository.findPublicById(productId);
     if (!product) throw AppError.notFound('Product not found');
 
-    const existing = await this.wishlistRepository.findEntry(userId, productId);
+    // The request may carry a sku/catalogKey (cart lines can store one), so
+    // always query the wishlist by the resolved product _id.
+    const existing = await this.wishlistRepository.findEntry(userId, product._id);
     if (existing) return existing;
 
     const count = await this.wishlistRepository.countByUser(userId);
@@ -40,9 +42,12 @@ class WishlistService extends BaseService {
   }
 
   async remove(userId, productId) {
-    const entry = await this.wishlistRepository.findEntry(userId, productId);
+    const product = await this.productRepository.findPublicById(productId);
+    const resolvedId = product ? product._id : productId;
+    if (!require('mongoose').Types.ObjectId.isValid(resolvedId)) return { removed: true };
+    const entry = await this.wishlistRepository.findEntry(userId, resolvedId);
     if (!entry) return { removed: true }; // already gone: idempotent
-    await this.wishlistRepository.softDelete(userId, productId);
+    await this.wishlistRepository.softDelete(userId, resolvedId);
     return { removed: true };
   }
 }

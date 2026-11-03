@@ -1,5 +1,7 @@
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
+const { YOU_POPUP_SETTING_KEY, YOU_POPUP_LABEL_MAX, YOU_POPUP_ITEMS } = require('../../constants/youPopup');
+const { mergeYouPopupItems } = require('../platform/youPopupMerge');
 
 class AdminPlatformSettingsService extends BaseService {
   constructor({ platformSettingRepository, commissionRuleRepository, platformConfigService = null }) {
@@ -77,6 +79,57 @@ class AdminPlatformSettingsService extends BaseService {
       await this.platformConfigService.invalidateCache();
     }
     return result;
+  }
+
+  async getYouPopup() {
+    const setting = await this.platformSettingRepository.findByKey(YOU_POPUP_SETTING_KEY);
+    return { key: 'customer_you_popup', items: mergeYouPopupItems(setting?.value) };
+  }
+
+  /**
+   * Strictly validates the payload: every registry ID exactly once, no unknown
+   * IDs, trimmed bounded labels, boolean enabled and unique integer orders.
+   * Routes are never accepted from the client.
+   */
+  async updateYouPopup(items, adminId) {
+    if (!Array.isArray(items)) throw AppError.validation('items must be an array');
+    const allowed = new Map(YOU_POPUP_ITEMS.map((i) => [i.id, i]));
+    if (items.length !== allowed.size) {
+      throw AppError.validation(`items must contain exactly ${allowed.size} entries`);
+    }
+    const seen = new Set();
+    const orders = new Set();
+    const clean = items.map((raw) => {
+      if (!raw || typeof raw !== 'object') throw AppError.validation('Invalid item');
+      const { id } = raw;
+      if (typeof id !== 'string' || !allowed.has(id)) {
+        throw AppError.validation(`Unknown menu item id: ${String(id).slice(0, 40)}`);
+      }
+      if (seen.has(id)) throw AppError.validation(`Duplicate menu item: ${id}`);
+      seen.add(id);
+      if (typeof raw.enabled !== 'boolean') throw AppError.validation(`enabled must be boolean for ${id}`);
+      const label = typeof raw.label === 'string' ? raw.label.trim().replace(/\s+/g, ' ') : '';
+      if (!label || label.length > YOU_POPUP_LABEL_MAX) {
+        throw AppError.validation(`label for ${id} must be 1-${YOU_POPUP_LABEL_MAX} characters`);
+      }
+      if (/[<>]/.test(label)) throw AppError.validation(`label for ${id} contains invalid characters`);
+      const { order } = raw;
+      if (!Number.isInteger(order) || order < 1 || order > 100) {
+        throw AppError.validation(`order for ${id} must be an integer 1-100`);
+      }
+      if (orders.has(order)) throw AppError.validation('Display order values must be unique');
+      orders.add(order);
+      return { id, label, enabled: raw.enabled, order };
+    });
+
+    const existing = await this.platformSettingRepository.findByKey(YOU_POPUP_SETTING_KEY);
+    if (existing) {
+      await this.platformSettingRepository.updateById(existing._id, { value: clean, updatedBy: adminId });
+    } else {
+      await this.platformSettingRepository.create({ key: YOU_POPUP_SETTING_KEY, value: clean, updatedBy: adminId });
+    }
+    if (this.platformConfigService) await this.platformConfigService.invalidateCache();
+    return { key: 'customer_you_popup', items: mergeYouPopupItems(clean) };
   }
 }
 

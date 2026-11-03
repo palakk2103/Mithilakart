@@ -11,9 +11,11 @@ import InventoryList from '../../vendor/inventory/InventoryList';
 import CategoryManager from '../catalog/CategoryManager';
 import CategoryBulkImport from '../catalog/CategoryBulkImport';
 import BannerManager from '../catalog/BannerManager';
+import CategoryLandingManager from '../catalog/CategoryLandingManager';
 import CategoryChipsManager from '../catalog/CategoryChipsManager';
 import HomeSectionsManager from '../catalog/HomeSectionsManager';
 import HeaderTabsManager from '../catalog/HeaderTabsManager';
+import YouPopupManager from '../catalog/YouPopupManager';
 
 // New Admin Pages
 import Analytics from '../pages/Analytics';
@@ -96,8 +98,10 @@ const AdminRoutes = () => {
         <Route path="categories" element={<CategoryManager />} />
         <Route path="categories/bulk-import" element={<CategoryBulkImport />} />
         <Route path="storefront/banners" element={<BannerManager />} />
+        <Route path="storefront/category-landing" element={<CategoryLandingManager />} />
         <Route path="storefront/chips" element={<CategoryChipsManager />} />
         <Route path="storefront/tabs" element={<HeaderTabsManager />} />
+        <Route path="storefront/you-popup" element={<YouPopupManager />} />
         <Route path="storefront/sections/:section" element={<HomeSectionsManager />} />
         
         {/* Business Ops */}
