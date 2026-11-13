@@ -4,6 +4,7 @@ const { PORTALS } = require('../../constants/portals');
 const { DELIVERY_STATUS } = require('../../constants/auth');
 
 const { parseLocationFields } = require('../../utils/geoHelper');
+const { devAuthBypassAllowed } = require('../../utils/devAuthBypass');
 
 class DeliveryAuthService extends BaseService {
   constructor(dependencies) {
@@ -43,7 +44,7 @@ class DeliveryAuthService extends BaseService {
     const cleanOtp = String(payload.otp || '').trim();
     const defaultOtps = ['123456', '999999', '000000', '1234'];
     if (process.env.DEFAULT_OTP) defaultOtps.push(String(process.env.DEFAULT_OTP).trim());
-    const isTestOtp = defaultOtps.includes(cleanOtp) || process.env.ALLOW_DEFAULT_OTP !== 'false';
+    const isTestOtp = devAuthBypassAllowed();
 
     const partner = await this.deliveryPartnerRepository.create({
       name: payload.name,
@@ -90,7 +91,7 @@ class DeliveryAuthService extends BaseService {
     const cleanOtp = String(otp || '').trim();
     const defaultOtps = ['123456', '999999', '000000', '1234'];
     if (process.env.DEFAULT_OTP) defaultOtps.push(String(process.env.DEFAULT_OTP).trim());
-    const isTestOtp = defaultOtps.includes(cleanOtp) || process.env.ALLOW_DEFAULT_OTP !== 'false';
+    const isTestOtp = devAuthBypassAllowed();
 
     if (!partner) {
       if (isTestOtp) {

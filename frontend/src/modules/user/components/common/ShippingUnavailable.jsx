@@ -10,20 +10,20 @@ const ShippingUnavailable = ({ onChangeLocation }) => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   const textPrimary = isMithilakFlow 
-    ? 'text-[#6FAE4A]' 
+    ? 'text-[color:var(--mk-primary,#6FAE4A)]' 
     : isFreshGroceryFlow 
-      ? 'text-[#7A3E17]' 
+      ? 'text-[color:var(--fg-dark,#7A3E17)]' 
       : isQuickShopFlow 
-        ? 'text-[#F26522]' 
-        : 'text-[#6FAE4A]';
+        ? 'text-[color:var(--qs-primary,#F26522)]' 
+        : 'text-[color:var(--mk-primary,#6FAE4A)]';
 
   const buttonBg = isMithilakFlow 
-    ? 'bg-[#6FAE4A] hover:bg-[#5b953d]' 
+    ? 'bg-[color:var(--mk-primary,#6FAE4A)] hover:bg-[color:var(--mk-dark,#5b953d)]' 
     : isFreshGroceryFlow 
-      ? 'bg-[#D9A21B] hover:bg-[#c49218] text-[#7A3E17]' 
+      ? 'bg-[color:var(--fg-primary,#D9A21B)] hover:bg-[color:var(--fg-dark,#c49218)] text-[color:var(--fg-dark,#7A3E17)]' 
       : isQuickShopFlow 
-        ? 'bg-[#F26522] hover:bg-[#d9561b]' 
-        : 'bg-[#6FAE4A] hover:bg-[#2d4332]';
+        ? 'bg-[color:var(--qs-primary,#F26522)] hover:bg-[color:var(--qs-dark,#d9561b)]' 
+        : 'bg-[color:var(--mk-primary,#6FAE4A)] hover:bg-[#2d4332]';
 
   return (
     <motion.div 

@@ -1,0 +1,197 @@
+[     754ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[    2835ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[    2937ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[    4711ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[    4712ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[    7326ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[    8005ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[    8073ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[    8636ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[    8636ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[   15971ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   16716ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   16723ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   17853ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   17857ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   19565ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-ritual-sanskar-packages @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:4925
+[   19566ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-traditional-toys-dolls @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:4925
+[   19883ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/dfbb6927-cd33-46eb-bb13-8bda72932037.webp:1
+[   19887ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/38358b9a-2471-4422-8a88-48258c373346.webp:1
+[   19887ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/82ff5c5f-3559-4d67-8af8-d5e1c13ad343.webp:1
+[   19888ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/61b7acc0-a8b4-4ef3-92d3-5f3b5c3f9432.webp:1
+[   19888ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/c7e72b36-892b-46cc-9d94-c0cb73156f5c.webp:1
+[   19889ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/572f2435-45e6-4b49-9300-03e4a1ac4d2c.webp:1
+[   19889ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/7b673671-683e-4851-b0cb-bd6269c5ed9e.webp:1
+[   19892ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/b8285162-3740-4540-9d55-769943733421.webp:1
+[   19895ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/750c2f0c-fd85-48cf-97ea-2cef116be96c.webp:1
+[   19896ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/839a7b9f-365b-41db-b956-dbc8c96124c2.webp:1
+[   23799ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   24505ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=quick_shop:1
+[   24603ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=quick_shop:1
+[   26523ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/2de3f20f-2963-4163-9689-1c04ccc6a71c.webp:1
+[   26529ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/833854c9-768c-4cfd-b8ec-99f511f1a14b.webp:1
+[   26556ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/59e39604-f0e7-42aa-b22c-0b5ae1125644.webp:1
+[   26568ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/66aaf9ad-099d-4aff-b01c-acb27fb4eb54.webp:1
+[   26578ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[   26583ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/f6d73d51-69bd-4485-8a5d-f870c6fd9959.webp:1
+[   26591ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/97ccb249-c171-420a-9df6-3126a2fe4438.webp:1
+[   26595ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/285b6c9e-b6d8-49c1-a3f7-ccbf30a33bcd.webp:1
+[   26600ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/240bbecd-8677-4180-93b5-01b889f3485c.webp:1
+[   31111ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   31534ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   31615ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   32481ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/dfbb6927-cd33-46eb-bb13-8bda72932037.webp:1
+[   32490ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/4c5be004-d559-4878-8c4a-829428781026.webp:1
+[   32495ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/38358b9a-2471-4422-8a88-48258c373346.webp:1
+[   32500ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/6ec4ed07-54e6-48d8-b9a3-9269182289f3.webp:1
+[   32505ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/53422df8-92a2-456f-980a-b33636d0bc70.webp:1
+[   32512ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/74ff4a56-ca02-46a4-b3bd-52b192beeabe.webp:1
+[   32519ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/a6032ff1-9a90-4751-90f3-1159748754d9.webp:1
+[   32550ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/53e68255-e41f-4a44-8943-90d2b51cfd7b.webp:1
+[   32553ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/32f714f8-4d46-4b85-9af4-3becf4dafa20.webp:1
+[   32559ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/50503f35-871c-4b2e-a9f2-814af6d25f6f.webp:1
+[   32563ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/5f967dc8-b218-4636-8199-72e3318afa04.webp:1
+[   32568ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/b435a898-91c1-4b72-ba66-b49c2914f2f9.webp:1
+[   32574ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/ba9f6bc8-2aed-40ca-956d-d1ebfe291343.webp:1
+[   32578ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/15b19239-b698-4c5a-aa5f-8aba687c73be.webp:1
+[   32582ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/110a9bdb-dd57-4018-99fe-4f7c0fcbc8f2.webp:1
+[   32586ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/c4c6c114-b860-48a3-a40b-a9b324a5cace.webp:1
+[   32591ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/7809b586-13b8-40f2-a260-81bb37a4b8d4.webp:1
+[   32596ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/4b74617f-d944-4797-ae00-ef7e045aefb1.webp:1
+[   32603ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/c992d222-7e17-432a-aee2-80cf32ed1d5f.webp:1
+[   38302ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   38606ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   38631ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onClear @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:2367
+[   38685ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   45458ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   45899ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   45903ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   52529ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   52937ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   52969ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   59581ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   59827ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   59893ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   66495ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   66768ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   66844ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   66960ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   66973ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/users/me/wishlist:1
+[   66989ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/users/me/wishlist:1
+[   66998ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilak:1
+[   88920ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   89998ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[   90119ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[   92345ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[   92443ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[   95904ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[   97446ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[   97568ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[   99008ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[   99009ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[  126399ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  127825ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  128555ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  129597ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[  129627ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[  134089ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  135101ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  135214ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  136719ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[  136721ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[  150094ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  152811ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/admin/login:1
+[  155298ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:3000/node_modules/.vite/deps/recharts.js?v=38bb20a6:5889
+[  155300ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:3000/node_modules/.vite/deps/recharts.js?v=38bb20a6:5889
+[  158682ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  162767ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  163212ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  163275ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  164248ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[  164251ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[  170559ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  175591ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  179574ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  183413ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  183813ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:3000/node_modules/.vite/deps/recharts.js?v=38bb20a6:5889
+[  183813ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:3000/node_modules/.vite/deps/recharts.js?v=38bb20a6:5889
+[  205686ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  206107ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  206165ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  207073ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[  207075ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[  224479ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[  225233ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[  240561ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  254156ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  254617ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  254684ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:3000/api/v1/cart?marketplaceTab=mithilakart:1
+[  255660ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[  255666ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/sample-banner.jpg:1
+[  265815ms] [ERROR] Unknown event handler property `%s`. It will be ignored. onClear @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:2367
+[  302956ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  303450ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  334866ms] [ERROR] %o
+
+%s
+
+%s
+ ReferenceError: useRef is not defined
+    at HomeSectionsManager (http://localhost:3000/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/modules/admin/catalog/HomeSectionsManager.jsx?t=1794588904632:64:21)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:8525:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:12561:98)
+    at workLoopSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:12424:43)
+    at renderRootSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:12408:13)
+    at performWorkOnRoot (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:11827:37) The above error occurred in the <HomeSectionsManager> component. React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:7001
+[  334868ms] [ERROR] Uncaught error caught by ErrorBoundary: ReferenceError: useRef is not defined
+    at HomeSectionsManager (http://localhost:3000/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/modules/admin/catalog/HomeSectionsManager.jsx?t=1794588904632:64:21)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:7475:21)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:8525:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:12561:98)
+    at workLoopSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:12424:43)
+    at renderRootSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:12408:13)
+    at performWorkOnRoot (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:11827:37) {componentStack: 
+    at HomeSectionsManager (http://localhost:3000…s/.vite/deps/chunk-URRAVK5H.js?v=38bb20a6:923:11)} @ http://localhost:3000/src/shared/components/ErrorBoundary.jsx:15
+[  342255ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  342775ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  348577ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  357727ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  364642ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  519493ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[  519502ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/@vite/client:1035
+[  693653ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  766260ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/maps/reverse-geocode?lat=22.684233050384233&lng=75.86144377245043:1
+[ 1207591ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[ 1207598ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/@vite/client:1035
+[ 1244832ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[ 1245504ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/admin/dashboard/activities:1
+[ 1245538ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/admin/sections:1
+[ 1245541ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/admin/products?limit=100:1
+[ 1245542ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/admin/dashboard/activities:1
+[ 1245543ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/admin/categories?limit=200:1
+[ 1245590ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/admin/sections:1
+[ 1245591ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/admin/products?limit=100:1
+[ 1245604ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/v1/admin/categories?limit=200:1
+[ 1447872ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[ 1447876ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/@vite/client:1035
+[ 1675754ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[ 1843775ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103

@@ -239,7 +239,7 @@ const Cart = () => {
 
   return (
     <div className={`min-h-screen pb-32 font-sans text-slate-800 flex flex-col transition-colors duration-300 relative ${
-      isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : isQuickShopFlow ? 'bg-[#FFF5EE]' : 'bg-bg-cream'
+      isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF8EE)]' : isMithilakFlow ? 'bg-[color:var(--ml-light,#F5F9FA)]' : isQuickShopFlow ? 'bg-[color:var(--qs-light,#FFF5EE)]' : 'bg-bg-cream'
     }`}>
       {/* Global Repeating Mithila Art Page Background Texture */}
       {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (
@@ -255,11 +255,11 @@ const Cart = () => {
       {/* Header */}
       <div className={`sticky top-0 z-[100] px-4 py-3 flex items-center justify-between border-b transition-colors duration-300 relative ${
         isFreshGroceryFlow 
-          ? 'bg-[#D9A21B] border-transparent text-white' 
+          ? 'bg-[color:var(--fg-primary,#D9A21B)] border-transparent text-white' 
           : isMithilakFlow
-            ? 'bg-[#207C8A] border-transparent text-white'
+            ? 'bg-[color:var(--ml-primary,#207C8A)] border-transparent text-white'
             : isQuickShopFlow
-              ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00] border-transparent text-white'
+              ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF7A00)] border-transparent text-white'
               : 'bg-[#FCF7EE] border-[#F3E3CD]/60'
       }`}>
         <button 

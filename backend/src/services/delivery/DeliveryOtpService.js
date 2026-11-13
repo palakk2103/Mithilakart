@@ -3,6 +3,7 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { sha256 } = require('../../utils/cryptoHelper');
 const { DELIVERY_OTP_TTL_SECONDS } = require('../../constants/delivery');
+const { devAuthBypassAllowed } = require('../../utils/devAuthBypass');
 
 class DeliveryOtpService extends BaseService {
   constructor({ redisClient }) {
@@ -37,7 +38,7 @@ class DeliveryOtpService extends BaseService {
       defaultOtps.push(String(process.env.DEFAULT_OTP).trim());
     }
 
-    if (process.env.ALLOW_DEFAULT_OTP !== 'false' && defaultOtps.includes(cleanOtp)) {
+    if (devAuthBypassAllowed() && defaultOtps.includes(cleanOtp)) {
       if (stored) {
         try { await this.redis.del(key); } catch {}
       }

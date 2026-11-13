@@ -14,6 +14,7 @@ import { LocationProvider } from './shared/context/LocationContext';
 import { LanguageProvider, useLanguage } from './shared/context/LanguageContext';
 import { setDomTranslationLanguage } from './shared/utils/domTranslator';
 import LocationPrompt from './shared/components/LocationPrompt';
+import { PublicConfigLoader } from './shared/config/publicConfig';
 import ScrollToTop from './shared/components/ScrollToTop';
 import PageLoader from './shared/components/PageLoader';
 import lazyWithRetry from './shared/utils/lazyWithRetry';
@@ -74,6 +75,7 @@ function App() {
             />
           )}
           <LocationPrompt />
+          <PublicConfigLoader />
           <Toaster position="bottom-center" toastOptions={{
             style: {
               background: '#121212',

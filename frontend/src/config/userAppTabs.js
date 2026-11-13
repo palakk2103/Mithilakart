@@ -17,7 +17,7 @@ export const DEFAULT_USER_APP_TABS = [
     enabled: true,
     iconType: 'image',
     imageSrc: '/mthibg.png',
-    activeBgClass: 'bg-[#0B3A14] text-white border-[#0B3A14]',
+    activeBgClass: 'bg-[color:var(--mk-dark,#0B3A14)] text-white border-[color:var(--mk-dark,#0B3A14)]',
     activeTextClass: 'text-white',
   },
   {
@@ -28,9 +28,9 @@ export const DEFAULT_USER_APP_TABS = [
     flow: 'quickshop',
     enabled: true,
     iconType: 'clock',
-    activeBgClass: 'bg-white text-[#F26522] border-white',
+    activeBgClass: 'bg-white text-[color:var(--qs-primary,#F26522)] border-white',
     activeTextColor: '#F26522',
-    activeTextClass: 'text-[#F26522]',
+    activeTextClass: 'text-[color:var(--qs-primary,#F26522)]',
   },
   {
     id: 'mithilak',
@@ -40,9 +40,9 @@ export const DEFAULT_USER_APP_TABS = [
     flow: 'mithilak',
     enabled: true,
     iconType: 'plane',
-    activeBgClass: 'bg-white text-[#207C8A] border-white',
+    activeBgClass: 'bg-white text-[color:var(--ml-primary,#207C8A)] border-white',
     activeTextColor: '#207C8A',
-    activeTextClass: 'text-[#207C8A]',
+    activeTextClass: 'text-[color:var(--ml-primary,#207C8A)]',
   },
   {
     id: 'freshgrocery',
@@ -51,10 +51,10 @@ export const DEFAULT_USER_APP_TABS = [
     route: '/fresh-grocery',
     flow: 'freshgrocery',
     enabled: true,
-    iconType: 'basket',
-    activeBgClass: 'bg-white text-[#7A3E17] border-white',
+    iconType: 'none',
+    activeBgClass: 'bg-white text-[color:var(--fg-dark,#7A3E17)] border-white',
     activeTextColor: '#7A3E17',
-    activeTextClass: 'text-[#7A3E17]',
+    activeTextClass: 'text-[color:var(--fg-dark,#7A3E17)]',
   },
 ];
 

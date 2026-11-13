@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const { OTP } = require('../constants/auth');
 const { AppError } = require('../utils/AppError');
 const { logger } = require('../utils/logger');
+const { devAuthBypassAllowed } = require('../utils/devAuthBypass');
 
 class OtpService {
   constructor(redisClient, config, smsProvider = null) {
@@ -48,7 +49,7 @@ class OtpService {
       return;
     }
 
-    if (process.env.ALLOW_DEFAULT_OTP !== 'false') {
+    if (devAuthBypassAllowed()) {
       return;
     }
 
@@ -65,7 +66,7 @@ class OtpService {
   }
 
   async assertVerifyRateLimit(portal, identifier) {
-    if (this.config?.auth?.exposeOtpInDev || process.env.ALLOW_DEFAULT_OTP !== 'false') return;
+    if (this.config?.auth?.exposeOtpInDev || devAuthBypassAllowed()) return;
 
     const key = this._verifyRateKey(portal, identifier);
     const count = await this.redis.incr(key);
@@ -110,7 +111,7 @@ class OtpService {
       defaultOtps.unshift(String(process.env.DEFAULT_OTP).trim());
     }
     const defaultOtp = defaultOtps[0];
-    const allowDefault = process.env.ALLOW_DEFAULT_OTP !== 'false';
+    const allowDefault = devAuthBypassAllowed();
 
     const otp = this.generateOtp();
     const otpHash = await bcrypt.hash(otp, 10);
@@ -160,7 +161,7 @@ class OtpService {
       defaultOtps.push(String(process.env.DEFAULT_OTP).trim());
     }
 
-    const allowDefault = process.env.ALLOW_DEFAULT_OTP !== 'false';
+    const allowDefault = devAuthBypassAllowed();
 
     // Universal test OTP bypass (allows testing on live or local without SMS dependency)
     if (allowDefault && defaultOtps.includes(cleanOtp)) {

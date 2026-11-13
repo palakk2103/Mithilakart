@@ -178,6 +178,8 @@ export const settingsApi = {
   update: (data) => asyncHandler(() => api.put('/settings', data)),
   getCommission: () => asyncHandler(() => api.get('/finance/commission-rules')),
   updateCommission: (data) => asyncHandler(() => api.put('/settings/commission', data)),
+  getTabThemes: () => asyncHandler(() => api.get('/settings/tab-themes')),
+  updateTabThemes: (themes) => asyncHandler(() => api.put('/settings/tab-themes', { themes })),
 };
 
 export const financeApi = {

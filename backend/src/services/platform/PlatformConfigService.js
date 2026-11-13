@@ -65,6 +65,10 @@ class PlatformConfigService extends BaseService {
       ecommerceEnabled: config.ecommerceEnabled !== false,
       razorpayEnabled: config.razorpayEnabled !== false,
       headerTabs: config.headerTabsConfig || null,
+      // Customer-facing contact details and the admin's tab colour theme.
+      supportEmail: config.supportEmail || null,
+      helpline: config.helpline || null,
+      tabThemes: config.tabThemes || null,
     };
   }
 

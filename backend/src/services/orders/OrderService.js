@@ -819,7 +819,10 @@ class OrderService extends BaseService {
     if (!order) throw AppError.notFound('Order not found');
 
     const items = await this.orderItemRepository.listByOrderId(order._id);
-    const sellerItems = items.filter((it) => String(it.sellerId) === String(sellerId));
+    // A substitute seller or the central warehouse fulfils items that another seller listed.
+    const sellerItems = this._isAssignedFulfiller(order, sellerId)
+      ? items
+      : items.filter((it) => String(it.sellerId) === String(sellerId));
     if (!sellerItems.length) throw AppError.forbidden('Seller cannot access this order');
 
     const productIds = sellerItems.map((it) => it.productId);
@@ -1120,6 +1123,18 @@ class OrderService extends BaseService {
     return { orderId: view.fulfillment.orderId, status: 'declined', offerDeclined: true };
   }
 
+  /**
+   * True when the fulfilment engine assigned this order to the seller or
+   * warehouse (cascade / cross-seller substitution / warehouse fallback). Order
+   * items keep their original seller, so item ownership alone is not enough.
+   */
+  _isAssignedFulfiller(order, sellerId) {
+    const id = String(sellerId);
+    return [order.fulfillment?.sellerId, order.fulfillment?.warehouseId]
+      .filter(Boolean)
+      .some((x) => String(x) === id);
+  }
+
   async updateStatusAsSeller({ orderId, sellerId, toStatus, note = null }) {
     const offerResponse = await this._respondToQuickOffer({ orderId, sellerId, toStatus, note });
     if (offerResponse) return offerResponse;
@@ -1129,7 +1144,8 @@ class OrderService extends BaseService {
       if (!order) throw AppError.notFound('Order not found');
 
       const items = await this.orderItemRepository.listByOrderId(order._id);
-      const hasSellerItem = items.some((it) => String(it.sellerId) === String(sellerId));
+      const hasSellerItem = items.some((it) => String(it.sellerId) === String(sellerId))
+        || this._isAssignedFulfiller(order, sellerId);
       if (!hasSellerItem) throw AppError.forbidden('Seller cannot update this order');
 
       if (!this._isValidStatusTransition(order.status, toStatus)) {

@@ -100,7 +100,7 @@ const HeaderTabs = ({ variant = 'default' }) => {
         <div
           className={`h-[16px] w-[16px] md:h-[18px] md:w-[18px] rounded-full flex items-center justify-center shadow-xs transition-all duration-300 ${
             isActive
-              ? 'bg-[#F26522] text-white'
+              ? 'bg-[color:var(--qs-primary,#F26522)] text-white'
               : isMithilakartActive
                 ? 'bg-white/25 text-white'
                 : 'bg-white/20 text-white'
@@ -183,7 +183,7 @@ const HeaderTabs = ({ variant = 'default' }) => {
         // Determine inactive tab background styling based on overall header theme
         let inactiveStyle = 'bg-white/15 text-white/90 border-white/10 hover:bg-white/25';
         if (isMithilakartActive && tab.id !== 'mithilakart') {
-          inactiveStyle = 'bg-[#84C865]/90 text-white border-white/20 hover:bg-[#84C865]';
+          inactiveStyle = 'bg-[color:var(--mk-accent,#84C865)]/90 text-white border-white/20 hover:bg-[color:var(--mk-accent,#84C865)]';
         } else if (isFreshGroceryActive && tab.id !== 'freshgrocery') {
           inactiveStyle = 'bg-white/20 text-white border-white/10 hover:bg-white/30';
         }

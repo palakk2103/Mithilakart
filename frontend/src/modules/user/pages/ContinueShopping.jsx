@@ -121,7 +121,7 @@ const ContinueShopping = () => {
   return (
     <div className="bg-[#f4faf6] min-h-screen pb-24 font-sans text-slate-800">
       {/* Sticky Header */}
-      <header className="sticky top-0 z-50 bg-[#6FAE4A] text-white px-4 py-3 flex items-center justify-between shadow-md">
+      <header className="sticky top-0 z-50 bg-[color:var(--mk-primary,#6FAE4A)] text-white px-4 py-3 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="p-1 hover:bg-white/10 rounded-full active:scale-95 transition-transform">
             <ArrowLeft size={22} className="text-white" />
@@ -138,7 +138,7 @@ const ContinueShopping = () => {
           >
             <ShoppingCart size={20} className="text-white" />
             {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-[#e2a750] text-slate-900 text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-[#6FAE4A]">
+              <span className="absolute -top-0.5 -right-0.5 bg-[#e2a750] text-slate-900 text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-[color:var(--mk-primary,#6FAE4A)]">
                 {cartCount}
               </span>
             )}
@@ -180,7 +180,7 @@ const ContinueShopping = () => {
                       onClick={() => setActiveFilter(filter)}
                       className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[11px] font-black border transition-all ${
                         activeFilter === filter
-                          ? 'bg-[#6FAE4A] border-[#6FAE4A] text-white shadow-xs'
+                          ? 'bg-[color:var(--mk-primary,#6FAE4A)] border-[color:var(--mk-primary,#6FAE4A)] text-white shadow-xs'
                           : 'bg-white border-slate-100 text-slate-650 shadow-2xs'
                       }`}
                     >

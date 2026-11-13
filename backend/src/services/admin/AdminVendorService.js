@@ -55,6 +55,22 @@ class AdminVendorService extends BaseService {
     return this.sellerRepository.updateById(id, update);
   }
 
+  /**
+   * Designate (or un-designate) a seller as the central warehouse. The
+   * fulfilment engine escalates to warehouses after local sellers decline;
+   * until now this flag could only be set by editing the database.
+   * `fulfillmentRadiusKm` null means "serves any distance".
+   */
+  async setWarehouse(id, { isWarehouse, fulfillmentRadiusKm } = {}) {
+    const seller = await this.getById(id);
+    if (isWarehouse && (seller.status !== 'active' || seller.kycStatus !== 'approved')) {
+      throw AppError.validation('Only an approved, active seller can be made a warehouse');
+    }
+    const update = { isWarehouse: Boolean(isWarehouse) };
+    if (fulfillmentRadiusKm !== undefined) update.fulfillmentRadiusKm = fulfillmentRadiusKm;
+    return this.sellerRepository.updateById(id, update);
+  }
+
   async reject(id) {
     await this.getById(id);
     return this.sellerRepository.updateById(id, { kycStatus: 'rejected', status: 'inactive' });

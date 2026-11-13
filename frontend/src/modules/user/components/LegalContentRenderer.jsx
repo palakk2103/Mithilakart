@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import sanitizeHtml from '../../../shared/utils/sanitizeHtml';
 
 /**
  * Renders CMS dynamic legal content with responsive styling
  * Supports rich HTML as well as plain formatted text with fallback
  */
 export default function LegalContentRenderer({ content, loading, fallbackContent }) {
+  const safeHtml = useMemo(() => (typeof content === 'string' ? sanitizeHtml(content) : ''), [content]);
+
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse py-4 min-h-[70vh]">
@@ -49,7 +52,7 @@ export default function LegalContentRenderer({ content, loading, fallbackContent
             [&>ol]:list-decimal [&>ol]:list-inside [&>ol]:text-[13px] [&>ol]:text-gray-600 [&>ol]:space-y-1.5 [&>ol]:ml-2 [&>ol]:mb-4
             [&>strong]:text-slate-900 [&>strong]:font-bold
             [&>blockquote]:border-l-4 [&>blockquote]:border-primary-green [&>blockquote]:bg-green-50/50 [&>blockquote]:p-3 [&>blockquote]:rounded-r-lg"
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: safeHtml }}
         />
       );
     }

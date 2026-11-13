@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { sectionsApi, productsApi, categoriesApi } from '../services/api';
 import { extractList } from '../utils/mappers';
@@ -50,13 +50,19 @@ const HomeSectionsManager = () => {
   const [saving, setSaving] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState('');
 
+  // Only the newest load may write state — an older/slower response (React dev double-effect,
+  // quick tab switches) must not overwrite what the admin has already changed in the form.
+  const loadIdRef = useRef(0);
+
   const load = useCallback(async () => {
+    const loadId = ++loadIdRef.current;
     setLoading(true);
     const [sectionsRes, productsRes, categoriesRes] = await Promise.all([
       sectionsApi.getAll(),
       productsApi.getAll({ limit: 100 }),
       categoriesApi.getAll({ limit: 200 }),
     ]);
+    if (loadId !== loadIdRef.current) return;
     setCategories(extractList(categoriesRes?.data).filter((c) => c?.name));
     setCustomMode(false);
 

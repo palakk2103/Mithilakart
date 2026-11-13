@@ -131,22 +131,35 @@ class FulfillmentSweeper {
     }
   }
 
-  async start() {
-    if (!this._stopped) return this;
-    this._stopped = false;
-
-    let intervalSeconds = 15;
+  /** Re-read every cycle so an admin change to the interval applies without a restart. */
+  async _nextIntervalSeconds() {
     try {
       const config = await this.configService.resolve(null);
-      intervalSeconds = config.sweeperIntervalSeconds;
+      const seconds = Number(config.sweeperIntervalSeconds);
+      if (Number.isFinite(seconds) && seconds > 0) return seconds;
     } catch (error) {
       logger.warn({ err: error }, 'CR-002 sweeper using default interval — config unavailable');
     }
+    return 15;
+  }
 
-    this._timer = setInterval(() => { this._tick(); }, intervalSeconds * 1000);
+  async _scheduleNext() {
+    if (this._stopped) return;
+    const seconds = await this._nextIntervalSeconds();
+    if (this._stopped) return;
+    this._timer = setTimeout(async () => {
+      await this._tick();
+      await this._scheduleNext();
+    }, seconds * 1000);
     // Never hold the event loop open on shutdown.
     if (typeof this._timer.unref === 'function') this._timer.unref();
+    return seconds;
+  }
 
+  async start() {
+    if (!this._stopped) return this;
+    this._stopped = false;
+    const intervalSeconds = await this._scheduleNext();
     logger.info({ intervalSeconds }, 'CR-002 fulfillment sweeper started');
     return this;
   }
@@ -154,7 +167,7 @@ class FulfillmentSweeper {
   stop() {
     this._stopped = true;
     if (this._timer) {
-      clearInterval(this._timer);
+      clearTimeout(this._timer);
       this._timer = null;
     }
     logger.info('CR-002 fulfillment sweeper stopped');

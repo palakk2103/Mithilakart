@@ -18,20 +18,20 @@ const OrderConfirmation = () => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   const primaryBgHover = isMithilakFlow 
-    ? 'bg-[#207C8A] hover:bg-[#1a6874]' 
+    ? 'bg-[color:var(--ml-primary,#207C8A)] hover:bg-[color:var(--ml-dark,#1a6874)]' 
     : isFreshGroceryFlow 
-      ? 'bg-[#D9A21B] hover:bg-[#c49218]' 
+      ? 'bg-[color:var(--fg-primary,#D9A21B)] hover:bg-[color:var(--fg-dark,#c49218)]' 
       : isQuickShopFlow 
-        ? 'bg-[#F26522] hover:bg-[#d9561b]' 
-        : 'bg-[#6FAE4A] hover:bg-[#5b953d]';
+        ? 'bg-[color:var(--qs-primary,#F26522)] hover:bg-[color:var(--qs-dark,#d9561b)]' 
+        : 'bg-[color:var(--mk-primary,#6FAE4A)] hover:bg-[color:var(--mk-dark,#5b953d)]';
 
   const primaryText = isMithilakFlow 
-    ? 'text-[#207C8A]' 
+    ? 'text-[color:var(--ml-primary,#207C8A)]' 
     : isFreshGroceryFlow 
-      ? 'text-[#D9A21B]' 
+      ? 'text-[color:var(--fg-primary,#D9A21B)]' 
       : isQuickShopFlow 
-        ? 'text-[#F26522]' 
-        : 'text-[#6FAE4A]';
+        ? 'text-[color:var(--qs-primary,#F26522)]' 
+        : 'text-[color:var(--mk-primary,#6FAE4A)]';
 
   const shopNowLink = isMithilakFlow 
     ? '/mithilak' 
@@ -73,7 +73,7 @@ const OrderConfirmation = () => {
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center w-full px-4 py-6 overflow-y-auto transition-colors duration-300 ${
-      isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/45 via-[#FFFDF3]/95 to-white' : 'bg-[#f0f3f6]'
+      isFreshGroceryFlow ? 'bg-gradient-to-b from-[color:var(--fg-light,#FFF0A0)]/45 via-[#FFFDF3]/95 to-white' : 'bg-[#f0f3f6]'
     }`}>
       {/* Background Texture */}
       {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (

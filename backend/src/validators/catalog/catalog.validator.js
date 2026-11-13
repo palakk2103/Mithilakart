@@ -55,6 +55,12 @@ const productBulkSchema = Joi.object({
   action: Joi.string().valid('approve', 'reject', 'delete').required(),
 });
 
+const catalogKeySchema = Joi.object({
+  ids: Joi.array().items(objectIdSchema).min(1).max(100).required(),
+  // null / '' clears the link
+  catalogKey: Joi.string().trim().pattern(/^[A-Za-z0-9][A-Za-z0-9_-]{1,63}$/).allow(null, '').required(),
+});
+
 const productRejectSchema = Joi.object({
   moderationNote: Joi.string().trim().min(3).max(500).required(),
 });
@@ -71,8 +77,8 @@ const listProductsQuerySchema = Joi.object({
   // Was missing here: Joi's stripUnknown:true silently dropped it from every
   // /products and /categories/:id/products request, so the frontend tab-scope
   // fix (docs/production-readiness) could never actually take effect.
-  marketplaceTab: Joi.string().allow('').optional(),
-  tab: Joi.string().allow('').optional(),
+  marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).allow('').optional(),
+  tab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).allow('').optional(),
   flow: Joi.string().allow('').optional(),
   status: Joi.string().valid(...PRODUCT_STATUS_VALUES).optional(),
   minPrice: Joi.number().min(0).optional(),
@@ -92,6 +98,7 @@ module.exports = {
   categoryBulkImportSchema,
   sheetCell,
   productBulkSchema,
+  catalogKeySchema,
   productRejectSchema,
   listProductsQuerySchema,
 };

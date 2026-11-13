@@ -4,6 +4,7 @@ const { PORTALS } = require('../../constants/portals');
 const { SELLER_STATUS, KYC_STATUS } = require('../../constants/auth');
 
 const { parseLocationFields, haversineKm } = require('../../utils/geoHelper');
+const { devAuthBypassAllowed } = require('../../utils/devAuthBypass');
 
 class SellerAuthService extends BaseService {
   constructor(dependencies) {
@@ -82,7 +83,7 @@ class SellerAuthService extends BaseService {
     const cleanOtp = String(otp || '').trim();
     const defaultOtps = ['123456', '999999', '000000', '1234'];
     if (process.env.DEFAULT_OTP) defaultOtps.push(String(process.env.DEFAULT_OTP).trim());
-    const isTestOtp = defaultOtps.includes(cleanOtp) || process.env.ALLOW_DEFAULT_OTP !== 'false';
+    const isTestOtp = devAuthBypassAllowed();
 
     const initialStatus = isTestOtp ? SELLER_STATUS.ACTIVE : SELLER_STATUS.INACTIVE;
     const initialKyc = isTestOtp ? KYC_STATUS.APPROVED : KYC_STATUS.PENDING;
@@ -126,7 +127,7 @@ class SellerAuthService extends BaseService {
 
     const defaultPasswords = ['123456', '999999', 'Seller@123', 'Seller@12345', 'Admin@123'];
     if (process.env.DEFAULT_OTP) defaultPasswords.push(String(process.env.DEFAULT_OTP).trim());
-    const isTestPassword = defaultPasswords.includes(password);
+    const isTestPassword = devAuthBypassAllowed() && defaultPasswords.includes(password);
 
     if (!isTestPassword) {
       if (this.passwordService.isLocked(seller)) {
@@ -153,7 +154,7 @@ class SellerAuthService extends BaseService {
     }
 
     if (seller.status !== SELLER_STATUS.ACTIVE || seller.kycStatus !== KYC_STATUS.APPROVED) {
-      if (isTestPassword || process.env.ALLOW_DEFAULT_OTP !== 'false') {
+      if (devAuthBypassAllowed()) {
         seller.status = SELLER_STATUS.ACTIVE;
         seller.kycStatus = KYC_STATUS.APPROVED;
         await seller.save();

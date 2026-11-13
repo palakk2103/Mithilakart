@@ -73,6 +73,9 @@ function createAdminHandlers(services) {
     updateVendorTabs: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.vendors.updateTabEligibility(req.params.id, req.body));
     }),
+    updateVendorWarehouse: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.vendors.setWarehouse(req.params.id, req.body));
+    }),
     vendorProducts: asyncHandler(async (req, res) => {
       const result = await services.vendors.getProducts(req.params.id, req.query);
       return ApiResponse.paginated(res, result.items, result.meta);
@@ -129,6 +132,12 @@ function createAdminHandlers(services) {
     }),
     updateCommission: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.settings.updateCommission(req.body.rate, req.user.id));
+    }),
+    getTabThemes: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.settings.getTabThemes());
+    }),
+    updateTabThemes: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.settings.updateTabThemes(req.body.themes, req.user.id));
     }),
     getHeaderTabs: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.settings.getHeaderTabs());

@@ -5,7 +5,7 @@ const CategoryCard = ({ item, onClick }) => {
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
   const cardBg = isFreshGroceryFlow
-    ? 'bg-[#FFF0A0] border border-[#7A3E17]/20 shadow-2xs'
+    ? 'bg-[color:var(--fg-light,#FFF0A0)] border border-[color:var(--fg-dark,#7A3E17)]/20 shadow-2xs'
     : 'bg-[#fdebf3]';
 
   if (isMithilakFlow) {

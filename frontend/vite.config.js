@@ -141,15 +141,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          // Heavy libraries get their own chunks so they load only with the
-          // routes that import them, instead of one catch-all vendor bundle.
-          if (/node_modules\/(recharts|d3-[^/]+|victory-vendor|decimal\.js-light)\//.test(id)) return "charts";
-          if (/node_modules\/(@firebase|firebase)\//.test(id)) return "firebase";
-          if (/node_modules\/(@react-google-maps|@googlemaps)\//.test(id)) return "maps";
-          if (/node_modules\/(papaparse|read-excel-file)\//.test(id)) return "spreadsheet";
-          if (/node_modules\/(lottie-react|lottie-web)\//.test(id)) return "lottie";
-          return "vendor";
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
+          if (id.includes("src/modules/Admin")) {
+            return "admin-portal";
+          }
         },
       },
     },
