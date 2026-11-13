@@ -59,6 +59,16 @@ function getRedisClient() {
   if (!redisClient) {
     redisClient = new MemoryRedisClient();
     isConnected = true;
+    return redisClient;
+  }
+  // If ioredis client dropped connection (status: 'close' or 'end'),
+  // fall back to in-memory so rate limiter never crashes with "Connection is closed"
+  if (
+    typeof redisClient.status === 'string' &&
+    (redisClient.status === 'close' || redisClient.status === 'end')
+  ) {
+    redisClient = new MemoryRedisClient();
+    isConnected = true;
   }
   return redisClient;
 }

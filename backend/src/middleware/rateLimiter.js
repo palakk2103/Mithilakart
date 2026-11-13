@@ -68,6 +68,17 @@ function createRateLimiterMiddleware(options = {}) {
         res.setHeader('Retry-After', String(error.details?.retryAfterSeconds || rule.windowSeconds));
         return next(error);
       }
+      // Redis connection error — degrade gracefully, do not block the request with 500
+      const msg = error?.message || '';
+      const isConnectionError =
+        msg.includes('Connection is closed') ||
+        msg.includes("Stream isn't writeable") ||
+        msg.includes('connect ECONNREFUSED') ||
+        msg.includes('ENOTFOUND') ||
+        msg.includes('Connection timeout');
+      if (isConnectionError) {
+        return next(); // skip rate limiting, let request through
+      }
       return next(error);
     }
   };
