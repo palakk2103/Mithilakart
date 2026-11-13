@@ -46,6 +46,8 @@ import Notifications from '../pages/comms/Notifications';
 import ReviewModeration from '../pages/content/ReviewModeration';
 import QnAModeration from '../pages/content/QnAModeration';
 import LegalPolicies from '../pages/content/LegalPolicies';
+import HelpCenterEditor from '../pages/content/HelpCenterEditor';
+import TabThemes from '../pages/content/TabThemes';
 
 // Operations
 import Returns from '../pages/operations/Returns';
@@ -133,6 +135,8 @@ const AdminRoutes = () => {
         <Route path="content/reviews" element={<ReviewModeration />} />
         <Route path="content/qna" element={<QnAModeration />} />
         <Route path="content/legal" element={<LegalPolicies />} />
+        <Route path="content/help-center" element={<HelpCenterEditor />} />
+        <Route path="storefront/themes" element={<TabThemes />} />
         <Route path="policies" element={<LegalPolicies />} />
         <Route path="storefront/policies" element={<LegalPolicies />} />
         

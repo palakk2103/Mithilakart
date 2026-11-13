@@ -17,6 +17,7 @@ class ProductController extends BaseController {
       'delete',
       'update',
       'bulk',
+      'setCatalogKey',
     ]);
   }
 
@@ -71,6 +72,11 @@ class ProductController extends BaseController {
 
   update = asyncHandler(async (req, res) => {
     const data = await this.service.update(req.params.id, req.body);
+    return ApiResponse.success(res, data);
+  });
+
+  setCatalogKey = asyncHandler(async (req, res) => {
+    const data = await this.service.setCatalogKey(req.body.ids, req.body.catalogKey);
     return ApiResponse.success(res, data);
   });
 

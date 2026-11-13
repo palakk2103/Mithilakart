@@ -59,6 +59,21 @@ class AdminPlatformSettingsService extends BaseService {
     return created;
   }
 
+  async getTabThemes() {
+    const setting = await this.platformSettingRepository.findByKey('tabThemes');
+    return setting?.value || null;
+  }
+
+  /** null restores the app's built-in colours. Shape is validated by the route. */
+  async updateTabThemes(themes, adminId) {
+    const existing = await this.platformSettingRepository.findByKey('tabThemes');
+    const result = existing
+      ? await this.platformSettingRepository.updateById(existing._id, { value: themes, updatedBy: adminId })
+      : await this.platformSettingRepository.create({ key: 'tabThemes', value: themes, updatedBy: adminId });
+    if (this.platformConfigService) await this.platformConfigService.invalidateCache();
+    return result?.value ?? null;
+  }
+
   async getHeaderTabs() {
     const setting = await this.platformSettingRepository.findByKey('headerTabsConfig');
     return setting?.value || null;

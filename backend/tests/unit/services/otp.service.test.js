@@ -1,3 +1,4 @@
+process.env.ALLOW_DEFAULT_OTP = 'false'; // rate-limit tests need the real limiter, not the dev bypass
 const { MemoryRedisClient } = require('../../../src/core/redis/MemoryRedisClient');
 const { OtpService } = require('../../../src/services/OtpService');
 

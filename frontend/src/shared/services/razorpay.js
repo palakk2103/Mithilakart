@@ -1,3 +1,5 @@
+import { resolvedTabColours } from '../theme/tabThemes';
+
 export const loadRazorpayScript = () =>
   new Promise((resolve, reject) => {
     if (window.Razorpay) {
@@ -41,7 +43,7 @@ export const openRazorpayCheckout = async ({
       description,
       order_id: providerOrderId,
       prefill,
-      theme: { color: '#3E5A44' },
+      theme: { color: resolvedTabColours('mithilakart').dark },
       ...(isTestKey
         ? {
             config: {

@@ -13,36 +13,36 @@ const NotFound = () => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   const pageBg = isMithilakFlow 
-    ? 'bg-gradient-to-b from-[#e0f2f1]/40 via-[#f2faf9] to-[#ffffff]' 
+    ? 'bg-gradient-to-b from-[color:var(--ml-light,#e0f2f1)]/40 via-[color:var(--ml-light,#f2faf9)] to-[#ffffff]' 
     : isFreshGroceryFlow 
-      ? 'bg-gradient-to-b from-[#FFF0A0]/20 via-[#FFFDF3] to-[#FFF]' 
+      ? 'bg-gradient-to-b from-[color:var(--fg-light,#FFF0A0)]/20 via-[#FFFDF3] to-[#FFF]' 
       : isQuickShopFlow 
-        ? 'bg-gradient-to-b from-[#fff5f7] via-[#fffcfc] to-[#fff]' 
+        ? 'bg-gradient-to-b from-[color:var(--qs-light,#fff5f7)] via-[#fffcfc] to-[#fff]' 
         : 'bg-gradient-to-b from-[#eaf5ee]/50 via-[#f7faf8] to-[#ffffff]';
 
   const textPrimary = isMithilakFlow 
-    ? 'text-[#207C8A]' 
+    ? 'text-[color:var(--ml-primary,#207C8A)]' 
     : isFreshGroceryFlow 
-      ? 'text-[#7A3E17]' 
+      ? 'text-[color:var(--fg-dark,#7A3E17)]' 
       : isQuickShopFlow 
-        ? 'text-[#F26522]' 
-        : 'text-[#6FAE4A]';
+        ? 'text-[color:var(--qs-primary,#F26522)]' 
+        : 'text-[color:var(--mk-primary,#6FAE4A)]';
 
   const buttonBg = isMithilakFlow 
-    ? 'bg-[#207C8A] hover:bg-[#1a6874]' 
+    ? 'bg-[color:var(--ml-primary,#207C8A)] hover:bg-[color:var(--ml-dark,#1a6874)]' 
     : isFreshGroceryFlow 
-      ? 'bg-[#D9A21B] hover:bg-[#c49218] text-[#7A3E17]' 
+      ? 'bg-[color:var(--fg-primary,#D9A21B)] hover:bg-[color:var(--fg-dark,#c49218)] text-[color:var(--fg-dark,#7A3E17)]' 
       : isQuickShopFlow 
-        ? 'bg-[#F26522] hover:bg-[#d9561b]' 
-        : 'bg-[#6FAE4A] hover:bg-[#2d4332]';
+        ? 'bg-[color:var(--qs-primary,#F26522)] hover:bg-[color:var(--qs-dark,#d9561b)]' 
+        : 'bg-[color:var(--mk-primary,#6FAE4A)] hover:bg-[#2d4332]';
 
   const borderPrimary = isMithilakFlow 
-    ? 'border-[#207C8A] text-[#207C8A] hover:bg-[#207C8A]/5' 
+    ? 'border-[color:var(--ml-primary,#207C8A)] text-[color:var(--ml-primary,#207C8A)] hover:bg-[color:var(--ml-primary,#207C8A)]/5' 
     : isFreshGroceryFlow 
-      ? 'border-[#D9A21B] text-[#7A3E17] hover:bg-[#D9A21B]/5' 
+      ? 'border-[color:var(--fg-primary,#D9A21B)] text-[color:var(--fg-dark,#7A3E17)] hover:bg-[color:var(--fg-primary,#D9A21B)]/5' 
       : isQuickShopFlow 
-        ? 'border-[#F26522] text-[#F26522] hover:bg-[#F26522]/5' 
-        : 'border-[#6FAE4A] text-[#6FAE4A] hover:bg-[#6FAE4A]/5';
+        ? 'border-[color:var(--qs-primary,#F26522)] text-[color:var(--qs-primary,#F26522)] hover:bg-[color:var(--qs-primary,#F26522)]/5' 
+        : 'border-[color:var(--mk-primary,#6FAE4A)] text-[color:var(--mk-primary,#6FAE4A)] hover:bg-[color:var(--mk-primary,#6FAE4A)]/5';
 
   return (
     <div className={`min-h-screen ${pageBg} flex items-center justify-center p-4`}>

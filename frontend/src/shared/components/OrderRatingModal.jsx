@@ -167,7 +167,7 @@ export default function OrderRatingModal({ isOpen, onClose, order, onReviewSubmi
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-3 bg-[#3E5A44] hover:bg-[#2d4232] text-white font-bold text-xs rounded-2xl transition-all shadow-md cursor-pointer disabled:opacity-50"
+              className="w-full py-3 bg-[color:var(--mk-dark,#3E5A44)] hover:bg-[#2d4232] text-white font-bold text-xs rounded-2xl transition-all shadow-md cursor-pointer disabled:opacity-50"
             >
               {submitting ? t('auto.submitting') : t('auto.submitFeedback')}
             </button>

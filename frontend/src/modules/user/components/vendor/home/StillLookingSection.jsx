@@ -1,10 +1,8 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { handleImageError, getProductImage } from '../../../../../shared/utils/imageUtils';
 
 const StillLookingSection = ({ items }) => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleCardClick = useCallback((item) => {
@@ -31,7 +29,7 @@ const StillLookingSection = ({ items }) => {
 
   return (
     <div className="px-2 mt-1.5 mb-1">
-      <div className="bg-[#6FAE4A] rounded-xl p-2 md:p-6 shadow-sm relative overflow-hidden md:max-w-[1600px] md:mx-auto">
+      <div className="bg-[color:var(--mk-primary,#6FAE4A)] rounded-xl p-2 md:p-6 shadow-sm relative overflow-hidden md:max-w-[1600px] md:mx-auto">
         {/* Diagonal Stripe Pattern */}
         <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{
           backgroundImage: 'linear-gradient(135deg, #fff 25%, transparent 25%, transparent 50%, #fff 50%, #fff 75%, transparent 75%, transparent)',
@@ -39,7 +37,7 @@ const StillLookingSection = ({ items }) => {
         }}></div>
 
         <h2 className="text-white text-[15px] md:text-[18px] md:text-center md:mb-4 font-black uppercase tracking-tight mb-2 pl-0.5 relative z-10">
-          {t('home.trendingThisWeek')}
+          Trending This Week
         </h2>
 
         <div className="flex overflow-x-auto w-full gap-1.5 pb-0.5 no-scrollbar snap-x relative z-10 md:justify-center md:gap-5 md:overflow-x-visible">
@@ -60,7 +58,7 @@ const StillLookingSection = ({ items }) => {
               </div>
               <div className="px-0.5">
                 <p className="text-[9px] md:text-[11px] font-bold text-gray-600 leading-tight truncate">{item.label}</p>
-                <p className="text-[8px] md:text-[9.5px] font-black text-[#6FAE4A] uppercase tracking-tighter mt-0.5">{t('home.viewStore')}</p>
+                <p className="text-[8px] md:text-[9.5px] font-black text-[color:var(--mk-primary,#6FAE4A)] uppercase tracking-tighter mt-0.5">VIEW STORE</p>
               </div>
             </div>
           ))}

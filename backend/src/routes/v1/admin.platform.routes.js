@@ -5,6 +5,26 @@ const { objectIdSchema } = require('../../validators/common.validator');
 const { requirePermission } = require('../../middleware/authMiddleware');
 const { createAdminHandlers } = require('../../controllers/admin/adminHandlers');
 
+const hexColor = Joi.string().trim().pattern(/^#[0-9a-fA-F]{6}$/);
+const tabColours = Joi.object({
+  primary: hexColor.required(),
+  dark: hexColor.optional(),
+  accent: hexColor.optional(),
+  light: hexColor.optional(),
+});
+/** themes: null restores the built-in colours. */
+const tabThemesSchema = Joi.object({
+  themes: Joi.object({
+    preset: Joi.string().trim().max(40).allow(null, '').optional(),
+    tabs: Joi.object({
+      mithilakart: tabColours.optional(),
+      mithilak: tabColours.optional(),
+      quickshop: tabColours.optional(),
+      freshgrocery: tabColours.optional(),
+    }).required(),
+  }).allow(null).required(),
+});
+
 function createAdminPlatformRoutes(services, middleware) {
   const router = express.Router();
   const authAdmin = middleware.authenticateAdmin();
@@ -35,6 +55,10 @@ function createAdminPlatformRoutes(services, middleware) {
     quickCommerceEligible: Joi.boolean().optional(),
     groceryEligible: Joi.boolean().optional(),
   }).min(1)), h.updateVendorTabs);
+  router.patch('/vendors/:id/warehouse', authAdmin, requirePermission('sellers.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({
+    isWarehouse: Joi.boolean().required(),
+    fulfillmentRadiusKm: Joi.number().min(0).max(500).allow(null).optional(),
+  })), h.updateVendorWarehouse);
   router.get('/vendors/:id/products', authAdmin, requirePermission('sellers.view'), validateParams(Joi.object({ id: objectIdSchema })), h.vendorProducts);
   router.get('/vendors/:id/earnings', authAdmin, requirePermission('finance.view'), validateParams(Joi.object({ id: objectIdSchema })), h.vendorEarnings);
 
@@ -95,6 +119,8 @@ function createAdminPlatformRoutes(services, middleware) {
 
   router.get('/settings', authAdmin, requirePermission('settings.view'), h.getSettings);
   router.put('/settings', authAdmin, requirePermission('settings.edit'), h.updateSettings);
+  router.get('/settings/tab-themes', authAdmin, requirePermission('settings.view'), h.getTabThemes);
+  router.put('/settings/tab-themes', authAdmin, requirePermission('settings.edit'), validateBody(tabThemesSchema), h.updateTabThemes);
   router.get('/settings/header-tabs', authAdmin, requirePermission('settings.view'), h.getHeaderTabs);
   router.put('/settings/header-tabs', authAdmin, requirePermission('settings.edit'), h.updateHeaderTabs);
   router.get('/settings/you-popup', authAdmin, requirePermission('settings.view'), h.getYouPopup);

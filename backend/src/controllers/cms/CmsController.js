@@ -2,6 +2,16 @@ const { BaseController } = require('../../core/BaseController');
 const { asyncHandler } = require('../../utils/asyncHandler');
 const { ApiResponse } = require('../../utils/ApiResponse');
 
+/**
+ * A page the admin has not published yet is a normal state (the app shows its
+ * built-in text), so it is answered with `null` rather than a 404 that every
+ * visit would log as an error.
+ */
+const orNullIfMissing = (promise) => promise.catch((err) => {
+  if (err?.statusCode === 404) return null;
+  throw err;
+});
+
 class CmsController extends BaseController {
   constructor(cmsService) {
     super(cmsService);
@@ -26,12 +36,12 @@ class CmsController extends BaseController {
   }
 
   getPage = asyncHandler(async (req, res) => {
-    const data = await this.service.getCmsPage(req.params.slug);
+    const data = await orNullIfMissing(this.service.getCmsPage(req.params.slug));
     return ApiResponse.success(res, data);
   });
 
   getLegalPage = asyncHandler(async (req, res) => {
-    const data = await this.service.getLegalPage(req.params.type);
+    const data = await orNullIfMissing(this.service.getLegalPage(req.params.type));
     return ApiResponse.success(res, data);
   });
 
@@ -95,7 +105,7 @@ class CmsController extends BaseController {
   });
 
   getAdminPage = asyncHandler(async (req, res) => {
-    const data = await this.service.getAdminCmsPage(req.params.slug);
+    const data = await orNullIfMissing(this.service.getAdminCmsPage(req.params.slug));
     return ApiResponse.success(res, data);
   });
 

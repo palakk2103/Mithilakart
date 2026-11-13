@@ -428,26 +428,7 @@ class FulfillmentEngineService extends BaseService {
       attemptId: attempt._id,
     });
 
-    try {
-      const order = await this.orderRepository.findById(fulfillment.orderId);
-      if (order && (order.status === 'placed' || order.status === 'pending')) {
-        await this.orderRepository.updateById(order._id, {
-          status: 'confirmed',
-          confirmedAt: new Date(),
-        });
-        eventBus.publish('order.status_changed', {
-          orderId: order._id,
-          orderNumber: order.orderNumber,
-          previousStatus: order.status,
-          currentStatus: 'confirmed',
-          status: 'confirmed',
-          changedBy: 'seller',
-          changedById: attempt.sellerId,
-        });
-      }
-    } catch (statusErr) {
-      logger.warn({ statusErr, orderId: fulfillment.orderId }, 'Auto-confirm order on seller accept failed');
-    }
+    await this._autoConfirmOrder(fulfillment.orderId, attempt.sellerId);
 
     logger.info({ traceId: fulfillment.traceId, sellerId: String(attempt.sellerId) },
       'CR-002 seller accepted');
@@ -622,10 +603,40 @@ class FulfillmentEngineService extends BaseService {
       warehouse: true,
     });
 
+    await this._autoConfirmOrder(fulfillment.orderId, candidate.sellerId);
+
     logger.info({ traceId: fulfillment.traceId, warehouseId: String(candidate.sellerId) },
       'CR-002 warehouse fulfilling order');
 
     return moved;
+  }
+
+  /**
+   * An accepted offer (seller OR warehouse) confirms the order. Both paths must
+   * do this: without it a warehouse-fulfilled order stays 'placed' and the
+   * warehouse can never mark it packed, so no rider is ever dispatched.
+   */
+  async _autoConfirmOrder(orderId, actorSellerId) {
+    try {
+      const order = await this.orderRepository.findById(orderId);
+      if (order && (order.status === 'placed' || order.status === 'pending')) {
+        await this.orderRepository.updateById(order._id, {
+          status: 'confirmed',
+          confirmedAt: new Date(),
+        });
+        eventBus.publish('order.status_changed', {
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+          previousStatus: order.status,
+          currentStatus: 'confirmed',
+          status: 'confirmed',
+          changedBy: 'seller',
+          changedById: actorSellerId,
+        });
+      }
+    } catch (statusErr) {
+      logger.warn({ statusErr, orderId }, 'Auto-confirm order on accept failed');
+    }
   }
 
   /**

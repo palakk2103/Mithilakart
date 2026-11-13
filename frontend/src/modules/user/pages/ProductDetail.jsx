@@ -675,12 +675,12 @@ const ProductDetail = () => {
       />
       <JsonLd data={productJsonLd} />
       <div className={`min-h-screen pb-28 font-sans text-slate-800 transition-colors duration-300 relative ${
-      isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-bg-cream'
+      isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF8EE)]' : 'bg-bg-cream'
     }`}>
 
       {/* Boutique Header */}
       <div className={`sticky top-0 z-50 px-4 py-3 flex items-center justify-between border-b border-gray-100 shadow-[0_1px_8px_rgba(0,0,0,0.01)] transition-colors duration-300 relative z-10 ${
-        isFreshGroceryFlow ? 'bg-[#D9A21B] text-white' : 'bg-[#FCF7EE]/90 border-[#F3E3CD]/60 backdrop-blur-md'
+        isFreshGroceryFlow ? 'bg-[color:var(--fg-primary,#D9A21B)] text-white' : 'bg-[#FCF7EE]/90 border-[#F3E3CD]/60 backdrop-blur-md'
       }`}>
         <button onClick={() => navigate(-1)} className={`p-1.5 rounded-full transition-colors active:scale-90 ${
           isFreshGroceryFlow ? 'text-white hover:bg-white/5' : 'text-slate-800 hover:bg-gray-50'
@@ -1041,7 +1041,7 @@ const ProductDetail = () => {
             </span>
             <div className="bg-white border border-slate-100 rounded-3xl p-4 space-y-4 shadow-xs">
               <div className="flex items-center gap-3">
-                <MapPin size={18} className="text-[#3E5A44] shrink-0" />
+                <MapPin size={18} className="text-[color:var(--mk-dark,#3E5A44)] shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-black text-slate-800 uppercase tracking-wider leading-none">{t('auto.deliverToHome')}</p>
                   <p className="text-[12px] text-slate-500 font-medium truncate mt-1">{deliverTo.label}</p>
@@ -1083,7 +1083,7 @@ const ProductDetail = () => {
               )}
 
               <div className="flex items-center gap-3 pt-1">
-                <Truck size={18} className="text-[#3E5A44]" />
+                <Truck size={18} className="text-[color:var(--mk-dark,#3E5A44)]" />
                 <div>
                   <p className="text-[12px] font-black text-slate-800">
                     {product?.attributes?.deliveryEstimate
@@ -1769,15 +1769,15 @@ const ProductDetail = () => {
             <div className="sticky top-[53px] bg-white flex border-b border-gray-100 z-10">
               <button 
                 onClick={() => setActivePaymentTab('COD')}
-                className={`flex-1 flex flex-col items-center py-4 gap-1 relative transition-colors ${activePaymentTab === 'COD' ? 'text-[#3E5A44]' : 'text-gray-400'}`}
+                className={`flex-1 flex flex-col items-center py-4 gap-1 relative transition-colors ${activePaymentTab === 'COD' ? 'text-[color:var(--mk-dark,#3E5A44)]' : 'text-gray-400'}`}
               >
-                <IndianRupee size={22} className={activePaymentTab === 'COD' ? 'text-[#3E5A44]' : 'text-gray-400'} />
+                <IndianRupee size={22} className={activePaymentTab === 'COD' ? 'text-[color:var(--mk-dark,#3E5A44)]' : 'text-gray-400'} />
                 <span className="text-[13px] font-bold">COD</span>
-                {activePaymentTab === 'COD' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#3E5A44]" />}
+                {activePaymentTab === 'COD' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[color:var(--mk-dark,#3E5A44)]" />}
               </button>
               <button 
                 onClick={() => setActivePaymentTab('UPI')}
-                className={`flex-1 flex flex-col items-center py-4 gap-1 relative transition-colors ${activePaymentTab === 'UPI' ? 'text-[#3E5A44]' : 'text-gray-400'}`}
+                className={`flex-1 flex flex-col items-center py-4 gap-1 relative transition-colors ${activePaymentTab === 'UPI' ? 'text-[color:var(--mk-dark,#3E5A44)]' : 'text-gray-400'}`}
               >
                 <div className="w-5 h-7 flex items-center justify-center">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1785,7 +1785,7 @@ const ProductDetail = () => {
                   </svg>
                 </div>
                 <span className="text-[13px] font-bold">UPI</span>
-                {activePaymentTab === 'UPI' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#3E5A44]" />}
+                {activePaymentTab === 'UPI' && <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[color:var(--mk-dark,#3E5A44)]" />}
               </button>
             </div>
 

@@ -52,6 +52,9 @@ const PLATFORM_SETTING_KEYS = {
 
   // ── Header Tabs Dynamic Navigation Configuration ───────────────────────────
   HEADER_TABS_CONFIG: 'headerTabsConfig',
+
+  // ── Customer app colour theme per marketplace tab (festival themes) ────────
+  TAB_THEMES: 'tabThemes',
 };
 
 /**
@@ -133,6 +136,8 @@ const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.GAME_COIN_REWARD_MIN]: 5,
   [PLATFORM_SETTING_KEYS.GAME_COIN_REWARD_MAX]: 25,
   [PLATFORM_SETTING_KEYS.HEADER_TABS_CONFIG]: null,
+  // null = the app's built-in colours. Shape: { preset, tabs: { <tab>: { primary, dark, accent, light } } }
+  [PLATFORM_SETTING_KEYS.TAB_THEMES]: null,
 };
 
 /**

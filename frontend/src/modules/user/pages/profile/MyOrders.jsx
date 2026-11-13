@@ -409,18 +409,18 @@ const MyOrders = () => {
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
-  const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#e0f2f1]/60 via-[#f2faf9] to-[#ffffff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
-  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
+  const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[color:var(--ml-light,#e0f2f1)]/60 via-[color:var(--ml-light,#f2faf9)] to-[#ffffff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[color:var(--fg-light,#FFF0A0)]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[color:var(--qs-light,#fff5f7)]' : 'bg-bg-cream');
+  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[color:var(--ml-primary,#207C8A)] to-[color:var(--ml-dark,#144f58)]' : isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF0A0)]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF8C00)]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
-  const filterBg = isMithilakFlow ? 'bg-[#e0f2f1]/80' : isFreshGroceryFlow ? 'bg-[#FFFDF3]/80' : (isQuickShopFlow ? 'bg-[#fff5f7]/80' : 'bg-bg-cream/80');
+  const filterBg = isMithilakFlow ? 'bg-[color:var(--ml-light,#e0f2f1)]/80' : isFreshGroceryFlow ? 'bg-[#FFFDF3]/80' : (isQuickShopFlow ? 'bg-[color:var(--qs-light,#fff5f7)]/80' : 'bg-bg-cream/80');
 
   const primaryBg = isMithilakFlow 
-    ? 'bg-[#207C8A] hover:bg-[#1a6874]' 
+    ? 'bg-[color:var(--ml-primary,#207C8A)] hover:bg-[color:var(--ml-dark,#1a6874)]' 
     : isFreshGroceryFlow 
-      ? 'bg-[#D9A21B] hover:bg-[#c08f16]' 
+      ? 'bg-[color:var(--fg-primary,#D9A21B)] hover:bg-[#c08f16]' 
       : isQuickShopFlow 
-        ? 'bg-[#F26522] hover:bg-[#d64f19]' 
-        : 'bg-[#6FAE4A] hover:bg-[#5b953d]';
+        ? 'bg-[color:var(--qs-primary,#F26522)] hover:bg-[#d64f19]' 
+        : 'bg-[color:var(--mk-primary,#6FAE4A)] hover:bg-[color:var(--mk-dark,#5b953d)]';
 
   const primaryShadow = isMithilakFlow
     ? 'shadow-teal-100'

@@ -2,11 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { X, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { handleImageError } from '../../../shared/utils/imageUtils';
-import { useTranslation } from 'react-i18next';
 
 const ForgotPassword = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [inputVal, setInputVal] = useState('');
   const [useEmail, setUseEmail] = useState(true);
@@ -38,25 +35,25 @@ const ForgotPassword = () => {
       <div className="w-full max-w-[420px] flex items-center justify-between z-10">
         <button 
           onClick={() => navigate('/login')}
-          className="bg-[#F26522]/10 hover:bg-[#F26522]/20 text-[#F26522] p-2 rounded-full backdrop-blur-md active:scale-95 transition-all"
+          className="bg-[color:var(--qs-primary,#F26522)]/10 hover:bg-[color:var(--qs-primary,#F26522)]/20 text-[color:var(--qs-primary,#F26522)] p-2 rounded-full backdrop-blur-md active:scale-95 transition-all"
         >
           <X size={20} strokeWidth={2.5} />
         </button>
         <div className="flex items-center gap-2">
-          <img src="/logomith-removebg-preview.png" alt="Mithilakart" className="h-8 w-auto object-contain" onError={handleImageError} />
-          <span className="text-[#F26522] font-bold tracking-wider text-sm">MITHILAKART</span>
+          <img src="/logomith-removebg-preview.png" alt="Mithilakart" className="h-8 w-auto object-contain" />
+          <span className="text-[color:var(--qs-primary,#F26522)] font-bold tracking-wider text-sm">MITHILAKART</span>
         </div>
         <div className="w-9"></div> {/* Spacer for symmetry */}
       </div>
 
       {/* Main card */}
-      <div className="w-full max-w-[420px] bg-[#FFF5EE]/95 rounded-[32px] px-6 py-8 shadow-2xl border border-white/40 backdrop-blur-md z-10 my-6">
+      <div className="w-full max-w-[420px] bg-[color:var(--qs-light,#FFF5EE)]/95 rounded-[32px] px-6 py-8 shadow-2xl border border-white/40 backdrop-blur-md z-10 my-6">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-[#F26522]">
-            {t('auto.resetPassword')}
+          <h2 className="text-3xl font-extrabold text-[color:var(--qs-primary,#F26522)]">
+            Reset Password
           </h2>
-          <p className="text-[#F26522]/80 text-[13px] font-semibold mt-1">
-            {submitted ? t('auto.checkYourInstructionsBelow') : t('auto.enterYourDetailsToReceive')}
+          <p className="text-[color:var(--qs-primary,#F26522)]/80 text-[13px] font-semibold mt-1">
+            {submitted ? 'Check your instructions below' : 'Enter your details to receive a recovery link'}
           </p>
         </div>
 
@@ -70,11 +67,11 @@ const ForgotPassword = () => {
 
             {/* Input Box */}
             <div className="space-y-2">
-              <label className="text-[12px] font-black text-[#F26522] uppercase tracking-wider pl-1 block">
-                {useEmail ? t('auto.emailAddress') : t('auto.phoneNumber')}
+              <label className="text-[12px] font-black text-[color:var(--qs-primary,#F26522)] uppercase tracking-wider pl-1 block">
+                {useEmail ? 'Email Address' : 'Phone Number'}
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-4.5 flex items-center text-[#F26522]/70">
+                <span className="absolute inset-y-0 left-0 pl-4.5 flex items-center text-[color:var(--qs-primary,#F26522)]/70">
                   {useEmail ? <Mail size={18} /> : <Phone size={18} />}
                 </span>
                 <input 
@@ -82,7 +79,7 @@ const ForgotPassword = () => {
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
                   placeholder={useEmail ? 'Enter your email address' : 'Enter your phone number'}
-                  className="w-full pl-12 pr-4.5 py-4 bg-[#FFF5EE] border border-[#F26522]/35 text-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#F26522] focus:border-transparent transition-all placeholder-[#F26522]/40 text-[14.5px] font-bold shadow-2xs"
+                  className="w-full pl-12 pr-4.5 py-4 bg-[color:var(--qs-light,#FFF5EE)] border border-[color:var(--qs-primary,#F26522)]/35 text-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[color:var(--qs-primary,#F26522)] focus:border-transparent transition-all placeholder-[color:var(--qs-primary,#F26522)]/40 text-[14.5px] font-bold shadow-2xs"
                 />
               </div>
             </div>
@@ -91,9 +88,9 @@ const ForgotPassword = () => {
             <motion.button
               type="submit"
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-[#F26522] text-white hover:bg-[#d45014] py-4 rounded-2xl font-black text-[13.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] cursor-pointer"
+              className="w-full bg-[color:var(--qs-primary,#F26522)] text-white hover:bg-[color:var(--qs-dark,#d45014)] py-4 rounded-2xl font-black text-[13.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] cursor-pointer"
             >
-              {t('auto.sendResetLink')}
+              Send Reset Link
             </motion.button>
 
             {/* Toggle Input Type Link */}
@@ -105,32 +102,32 @@ const ForgotPassword = () => {
                   setInputVal('');
                   setError('');
                 }}
-                className="text-[12px] font-bold text-[#F26522] hover:underline"
+                className="text-[12px] font-bold text-[color:var(--qs-primary,#F26522)] hover:underline"
               >
-                {useEmail ? t('auto.usePhoneNumberInstead') : t('auto.useEmailAddressInstead')}
+                {useEmail ? 'Use Phone Number Instead' : 'Use Email Address Instead'}
               </button>
             </div>
           </form>
         ) : (
           <div className="space-y-6 text-center">
-            <div className="bg-[#FFF5EE] border border-[#F26522]/35 p-5 rounded-2xl text-[14px] font-bold text-[#F26522] leading-relaxed">
-              {t('x.recoverySentTo')} <span className="underline">{inputVal}</span>. {t('x.recoverySentRest')}
+            <div className="bg-[color:var(--qs-light,#FFF5EE)] border border-[color:var(--qs-primary,#F26522)]/35 p-5 rounded-2xl text-[14px] font-bold text-[color:var(--qs-primary,#F26522)] leading-relaxed">
+              We've sent a recovery link to <span className="underline">{inputVal}</span>. Please check your inbox and follow the instructions to set a new password.
             </div>
 
             <motion.button
               onClick={() => navigate('/login')}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-[#F26522] text-white hover:bg-[#d45014] py-4 rounded-2xl font-black text-[13.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] cursor-pointer"
+              className="w-full bg-[color:var(--qs-primary,#F26522)] text-white hover:bg-[color:var(--qs-dark,#d45014)] py-4 rounded-2xl font-black text-[13.5px] uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-[0.98] cursor-pointer"
             >
-              {t('auto.returnToLogin')}
+              Return to Login
             </motion.button>
           </div>
         )}
 
-        <div className="text-center mt-5 text-[12px] font-bold text-[#F26522]/80">
-          {t('auth.rememberedPassword')}{' '}
-          <Link to="/login" className="text-[#F26522] hover:underline">
-            {t('auto.logInHere')}
+        <div className="text-center mt-5 text-[12px] font-bold text-[color:var(--qs-primary,#F26522)]/80">
+          Remembered your password?{' '}
+          <Link to="/login" className="text-[color:var(--qs-primary,#F26522)] hover:underline">
+            Log in here!
           </Link>
         </div>
       </div>
@@ -140,7 +137,8 @@ const ForgotPassword = () => {
         <img 
           src="/mthibg.png" 
           alt="Mithilakart" 
-          className="h-16 w-auto object-contain" onError={handleImageError} />
+          className="h-16 w-auto object-contain"
+        />
         <div className="flex items-center text-[14px] font-bold text-black tracking-wide italic">
           Mithilakart<span className="text-[10px] align-super ml-0.5">™</span>
         </div>

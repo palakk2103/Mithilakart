@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight, Zap } from 'lucide-react';
+import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight } from 'lucide-react';
 import CategoryCard from '../components/vendor/CategoryCard';
 import useVendorStore from '../../../store/useVendorStore';
 import useAccountStore from '../../../store/useAccountStore';
-import { getCategories, getNearbyProducts, getDeals, getProducts } from '../services/catalogApi';
+import { getCategories, getNearbyProducts, getDeals } from '../services/catalogApi';
 import { mapCategorySections, extractList, mapProductForCard } from '../utils/mappers';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { getImageUrl, handleImageError } from '../../../shared/utils/imageUtils';
@@ -30,10 +30,6 @@ import BeautyTab from '../../../assets/products/product12.jpg';
 import ToysTab from '../../../assets/products/product13.jpg';
 import StationeryTab from '../../../assets/products/product14.jpg';
 import ClothesImg from '../../../assets/products/product15.webp';
-import ScrollRow from '../components/vendor/home/ScrollRow';
-import AddToCartButton from '../components/common/AddToCartButton';
-import { useTranslation } from 'react-i18next';
-import { tName } from '../../../shared/utils/translateName';
 
 
 // Custom SVG Icons for Grocery Redesign
@@ -143,11 +139,11 @@ const GroceryCategoryIcon = ({ category }) => {
   const [failed, setFailed] = React.useState(false);
   const src = category.iconUrl || category.imageUrl;
   if (src && !failed) {
-    return <img src={getImageUrl(src)} alt="" className="w-10 h-10 object-contain" onError={() => setFailed(true)} loading="lazy" decoding="async" />;
+    return <img src={getImageUrl(src)} alt="" className="w-10 h-10 object-contain" onError={() => setFailed(true)} />;
   }
   const Icon = GROCERY_ICON_RULES.find(([pattern]) => pattern.test(category.name))?.[1];
   if (Icon) return <Icon />;
-  return <span className="text-[18px] font-black text-[#D9A21B]">{category.name.charAt(0).toUpperCase()}</span>;
+  return <span className="text-[18px] font-black text-[color:var(--fg-primary,#D9A21B)]">{category.name.charAt(0).toUpperCase()}</span>;
 };
 
 // In-memory cache across tab switches to render instantly and eliminate page blinking
@@ -163,57 +159,7 @@ const quickShopDataCache = {
   nearbyProducts: {},
 };
 
-const CountdownTimer = React.memo(({ endsAt }) => {
-  const { t } = useTranslation();
-  const [timeLeft, setTimeLeft] = React.useState({ h: '02', m: '45', s: '12' });
-  React.useEffect(() => {
-    const updateTimer = () => {
-      if (endsAt) {
-        const diff = new Date(endsAt).getTime() - Date.now();
-        if (diff <= 0) {
-          setTimeLeft({ h: '00', m: '00', s: '00' });
-          return;
-        }
-        const totalSec = Math.floor(diff / 1000);
-        const h = Math.floor(totalSec / 3600);
-        const m = Math.floor((totalSec % 3600) / 60);
-        const s = totalSec % 60;
-        setTimeLeft({
-          h: String(h).padStart(2, '0'),
-          m: String(m).padStart(2, '0'),
-          s: String(s).padStart(2, '0'),
-        });
-      } else {
-        setTimeLeft((prev) => {
-          const s = parseInt(prev.s, 10) - 1;
-          if (s >= 0) return { ...prev, s: String(s).padStart(2, '0') };
-          const m = parseInt(prev.m, 10) - 1;
-          if (m >= 0) return { ...prev, m: String(m).padStart(2, '0'), s: '59' };
-          const h = parseInt(prev.h, 10) - 1;
-          if (h >= 0) return { h: String(h).padStart(2, '0'), m: '59', s: '59' };
-          return { h: '02', m: '45', s: '12' };
-        });
-      }
-    };
-
-    const timer = setInterval(updateTimer, 1000);
-    return () => clearInterval(timer);
-  }, [endsAt]);
-
-  return (
-    <div className="text-slate-850 text-[11px] font-black flex items-center gap-1">
-      <span>{t('auto.endsIn')}</span>
-      <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.h}</span>
-      <span>:</span>
-      <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.m}</span>
-      <span>:</span>
-      <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.s}</span>
-    </div>
-  );
-});
-
 const QuickShop = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   // Same component serves /quick-shop and /fresh-grocery; React Router keeps the
@@ -227,16 +173,13 @@ const QuickShop = () => {
   const effectiveLat = liveLocation?.latitude ?? selectedAddr?.latitude ?? 28.5385859;
   const effectiveLng = liveLocation?.longitude ?? selectedAddr?.longitude ?? 77.1182734;
 
-  const roundedLat = effectiveLat ? Number(Number(effectiveLat).toFixed(2)) : 28.54;
-  const roundedLng = effectiveLng ? Number(Number(effectiveLng).toFixed(2)) : 77.12;
-
   const cachedCatTree = quickShopDataCache[marketplaceTab]?.categoryTree;
   const cachedCatSections = quickShopDataCache[marketplaceTab]?.categorySections;
   const [categorySections, setCategorySections] = React.useState(() => cachedCatSections || []);
   const [categoryTree, setCategoryTree] = React.useState(() => cachedCatTree || []);
   const [categoriesLoading, setCategoriesLoading] = React.useState(() => !cachedCatSections);
 
-  const locKey = `${roundedLat}_${roundedLng}_${isFreshGrocery ? 'fresh' : 'quick'}`;
+  const locKey = `${effectiveLat}_${effectiveLng}_${isFreshGrocery ? 'fresh' : 'quick'}`;
   const cachedNearby = quickShopDataCache.nearbyProducts[locKey];
   const [nearbyProducts, setNearbyProducts] = React.useState(() => cachedNearby || []);
   const [nearbyLoading, setNearbyLoading] = React.useState(() => !cachedNearby);
@@ -281,21 +224,19 @@ const QuickShop = () => {
   useEffect(() => {
     let cancelled = false;
 
-    // Only set loading if no cached data yet
-    if (!quickShopDataCache.nearbyProducts[locKey] && nearbyProducts.length === 0) {
+    if (!quickShopDataCache.nearbyProducts[locKey]) {
       setNearbyLoading(true);
     }
 
-    const fetchProducts = async () => {
-      try {
-        const response = await getNearbyProducts({
-          lat: roundedLat,
-          lng: roundedLng,
-          commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
-          limit: 12,
-        });
+    getNearbyProducts({
+      lat: effectiveLat,
+      lng: effectiveLng,
+      commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
+      limit: 12,
+    })
+      .then((response) => {
         const payload = response?.data ?? response;
-        let items = extractList(payload).map((p) => {
+        const items = extractList(payload).map((p) => {
           const card = mapProductForCard(p);
           return {
             id: card.id,
@@ -304,94 +245,31 @@ const QuickShop = () => {
             oldPrice: parseQuickShopPrice(card.oldPrice || card.mrp),
             image: card.image,
             distanceKm: p.distanceKm,
-            deliveryEtaText: p.deliveryEtaText || (p.deliveryPromiseMinutes ? `${p.deliveryPromiseMinutes} mins` : '15-25 mins'),
           };
         });
-
-        // If hyper-local seller has no items in this radius, seamlessly fallback to quick commerce catalog
-        if (items.length === 0) {
-          const fallbackRes = await getProducts({
-            commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
-            limit: 12,
-          });
-          const fallbackList = extractList(fallbackRes?.data ?? fallbackRes);
-          if (fallbackList.length > 0) {
-            items = fallbackList.map((p) => {
-              const card = mapProductForCard(p);
-              return {
-                id: card.id,
-                name: card.name || card.title,
-                price: parseQuickShopPrice(card.price),
-                oldPrice: parseQuickShopPrice(card.oldPrice || card.mrp),
-                image: card.image,
-                distanceKm: null,
-                deliveryEtaText: '15-30 mins',
-              };
-            });
-          }
-        }
-
-        if (!cancelled && items.length > 0) {
+        if (!cancelled) {
           quickShopDataCache.nearbyProducts[locKey] = items;
           setNearbyProducts(items);
+          setNotDeliverable(payload?.deliverable === false && items.length === 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled && !quickShopDataCache.nearbyProducts[locKey]) {
+          setNearbyProducts([]);
           setNotDeliverable(false);
         }
-      } catch {
-        if (!cancelled && nearbyProducts.length === 0) {
-          try {
-            const fallbackRes = await getProducts({
-              commerceFlow: isFreshGrocery ? 'fresh_grocery' : 'quick_shop',
-              limit: 12,
-            });
-            const fallbackList = extractList(fallbackRes?.data ?? fallbackRes);
-            const fallbackItems = fallbackList.map((p) => {
-              const card = mapProductForCard(p);
-              return {
-                id: card.id,
-                name: card.name || card.title,
-                price: parseQuickShopPrice(card.price),
-                oldPrice: parseQuickShopPrice(card.oldPrice || card.mrp),
-                image: card.image,
-                distanceKm: null,
-                deliveryEtaText: '15-30 mins',
-              };
-            });
-            if (!cancelled && fallbackItems.length > 0) {
-              setNearbyProducts(fallbackItems);
-            }
-          } catch {
-            // Keep graceful fallback
-          }
-        }
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setNearbyLoading(false);
-      }
-    };
-
-    fetchProducts();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [roundedLat, roundedLng, isFreshGrocery, locKey]);
+  }, [effectiveLat, effectiveLng, isFreshGrocery, locKey]);
 
-  // Active filter tab
+  // Simulated active tab for the filters
   const [activeFilter, setActiveFilter] = React.useState('All');
-  const filterTabs = React.useMemo(() => {
-    const catNames = categoryTree.slice(0, 6).map((c) => c.name);
-    return ['All', ...catNames];
-  }, [categoryTree]);
-
-  const displayedNearby = React.useMemo(() => {
-    if (!activeFilter || activeFilter === 'All') return nearbyProducts;
-    return nearbyProducts.filter((p) => {
-      const matchCat = categoryTree.find((c) => c.name === activeFilter);
-      if (matchCat && p.categoryId) {
-        return String(p.categoryId) === String(matchCat.id);
-      }
-      return (p.name || '').toLowerCase().includes(activeFilter.toLowerCase());
-    });
-  }, [nearbyProducts, activeFilter, categoryTree]);
 
   // Real Flash Deals from backend
   const [activeFlashSale, setActiveFlashSale] = React.useState(null);
@@ -431,9 +309,45 @@ const QuickShop = () => {
     };
   }, []);
 
+  // Timer: real endsAt countdown with smooth fallback
+  const [timeLeft, setTimeLeft] = React.useState({ h: '02', m: '45', s: '12' });
+  React.useEffect(() => {
+    const updateTimer = () => {
+      if (activeFlashSale?.endsAt) {
+        const diff = new Date(activeFlashSale.endsAt).getTime() - Date.now();
+        if (diff <= 0) {
+          setTimeLeft({ h: '00', m: '00', s: '00' });
+          return;
+        }
+        const totalSec = Math.floor(diff / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        setTimeLeft({
+          h: String(h).padStart(2, '0'),
+          m: String(m).padStart(2, '0'),
+          s: String(s).padStart(2, '0'),
+        });
+      } else {
+        setTimeLeft((prev) => {
+          const s = parseInt(prev.s, 10) - 1;
+          if (s >= 0) return { ...prev, s: String(s).padStart(2, '0') };
+          const m = parseInt(prev.m, 10) - 1;
+          if (m >= 0) return { ...prev, m: String(m).padStart(2, '0'), s: '59' };
+          const h = parseInt(prev.h, 10) - 1;
+          if (h >= 0) return { h: String(h).padStart(2, '0'), m: '59', s: '59' };
+          return { h: '02', m: '45', s: '12' };
+        });
+      }
+    };
+
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [activeFlashSale?.endsAt]);
+
   if (isFreshGrocery) {
     return (
-      <div className="min-h-screen pb-24 bg-[#FFF8EE] flex flex-col font-sans text-[#3F2A20] relative overflow-x-hidden">
+      <div className="min-h-screen pb-24 bg-[color:var(--fg-light,#FFF8EE)] flex flex-col font-sans text-[#3F2A20] relative overflow-x-hidden">
         
         {/* Repeating Mithila Art Page Background Texture */}
         <div 
@@ -448,10 +362,10 @@ const QuickShop = () => {
           {/* Banner Section */}
           <div className="mx-4 my-4 p-5 rounded-3xl border border-[#F6C453]/35 flex items-center justify-between shadow-xs overflow-hidden relative" style={{ backgroundImage: 'linear-gradient(135deg, #FFFDF8 0%, #FFF9F2 100%)' }}>
             <div className="flex-1 z-10 pr-2">
-              <h1 className="text-[20px] font-black text-[#3F2A20] leading-tight mb-1">{t('auto.freshnessYouCanTrust')}</h1>
-              <p className="text-[12px] font-bold text-[#3F2A20]/75 mb-4">{t('auto.farmFreshProducts')}</p>
-              <button className="bg-[#6FAE4A] text-white text-[12px] font-black px-6 py-2.5 rounded-full shadow-md active:scale-95 transition-transform hover:brightness-105">
-                {t('auto.shopNow')}
+              <h1 className="text-[20px] font-black text-[#3F2A20] leading-tight mb-1">Freshness You Can Trust</h1>
+              <p className="text-[12px] font-bold text-[#3F2A20]/75 mb-4">Farm Fresh Products</p>
+              <button className="bg-[color:var(--mk-primary,#6FAE4A)] text-white text-[12px] font-black px-6 py-2.5 rounded-full shadow-md active:scale-95 transition-transform hover:brightness-105">
+                Shop Now
               </button>
             </div>
             <div className="w-[130px] h-[130px] flex items-center justify-center flex-shrink-0 relative">
@@ -459,23 +373,8 @@ const QuickShop = () => {
             </div>
           </div>
 
-          {/* Categories Grid — the Fresh & Groceries tab's top-level categories from admin */}
+          {/* Categories Grid — the Groceries & Fresh tab's top-level categories from admin */}
           <div className="px-4 mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{t('auto.browseByCategory')}</h2>
-              <span
-                onClick={() => {
-                  localStorage.setItem('isFreshGroceryFlow', 'true');
-                  localStorage.setItem('isQuickShopFlow', 'false');
-                  localStorage.setItem('isMithilakFlow', 'false');
-                  navigate('/categories?flow=freshgrocery', { state: { flow: 'freshgrocery' } });
-                }}
-                className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline"
-              >
-                {t('auto.viewAll')}
-              </span>
-            </div>
-
             <div className="grid grid-cols-4 gap-2.5">
               {categoriesLoading && Array.from({ length: 8 }).map((_, idx) => (
                 <div key={idx} className="h-[92px] bg-white/70 border border-[#EADCC9]/40 rounded-2xl animate-pulse" />
@@ -487,9 +386,9 @@ const QuickShop = () => {
                     localStorage.setItem('isFreshGroceryFlow', 'true');
                     navigate('/fresh-grocery/category', { state: { category: cat.name, categoryId: cat.id } });
                   }}
-                  className="bg-white border border-[#EADCC9]/55 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#D9A21B]"
+                  className="bg-white border border-[#EADCC9]/55 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[color:var(--fg-primary,#D9A21B)]"
                 >
-                  <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[#FFF8EE] rounded-xl overflow-hidden">
+                  <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[color:var(--fg-light,#FFF8EE)] rounded-xl overflow-hidden">
                     <GroceryCategoryIcon category={cat} />
                   </div>
                   <span className="text-[10px] md:text-[11px] font-black text-[#3F2A20] leading-tight line-clamp-2">{cat.name}</span>
@@ -497,7 +396,7 @@ const QuickShop = () => {
               ))}
               {!categoriesLoading && categoryTree.length === 0 && (
                 <div className="col-span-4 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#EADCC9]">
-                  <p className="text-[11.5px] font-bold text-[#3F2A20]/70">{t('auto.categoriesAreComingSoon')}</p>
+                  <p className="text-[11.5px] font-bold text-[#3F2A20]/70">Categories are coming soon</p>
                 </div>
               )}
             </div>
@@ -506,8 +405,8 @@ const QuickShop = () => {
           {/* Today's Best Offers */}
           <div className="px-4 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{t('auto.todaySBestOffers')}</h2>
-              <span className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline">{t('auto.viewAll')}</span>
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">Today's Best Offers</h2>
+              <span className="text-[color:var(--mk-primary,#6FAE4A)] text-[12.5px] font-black cursor-pointer hover:underline">View All</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
@@ -523,7 +422,7 @@ const QuickShop = () => {
                   >
                     {discount && (
                       <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none">
-                        {tName(discount)}
+                        {discount}
                       </div>
                     )}
 
@@ -532,7 +431,8 @@ const QuickShop = () => {
                         src={getImageUrl(prod.image)} 
                         alt={prod.name} 
                         className="max-h-full max-w-full object-contain rounded-lg" 
-                        onError={handleImageError} loading="lazy" decoding="async" />
+                        onError={handleImageError}
+                      />
                     </div>
 
                     <div>
@@ -543,9 +443,6 @@ const QuickShop = () => {
                         )}
                         <span className="text-[12.5px] font-black text-[#3F2A20]">₹{prod.price}</span>
                       </div>
-                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-                        <AddToCartButton product={prod} />
-                      </div>
                     </div>
                   </div>
                 );
@@ -553,7 +450,7 @@ const QuickShop = () => {
               {nearbyProducts.length === 0 && (
                 <div className="col-span-3 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#EADCC9]">
                   <p className="text-[11.5px] font-bold text-[#3F2A20]/70">
-                    {notDeliverable ? t('auto.shareLocationToSeeOffers') : t('auto.loadingBestOffers')}
+                    {notDeliverable ? 'Share location to see offers from nearby stores' : 'Loading best offers...'}
                   </p>
                 </div>
               )}
@@ -561,8 +458,8 @@ const QuickShop = () => {
           </div>
 
           {/* ── HORIZONTAL FILTER TABS BAR ── */}
-          <ScrollRow className="flex gap-2.5 py-3.5 px-4 mb-4">
-            {filterTabs.map((tab) => {
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-3.5 px-4 mb-4">
+            {['All', 'Title Sponsors', 'Intel Core', 'AI Nova', 'Boat'].map((tab) => {
               const isActive = activeFilter === tab;
               return (
                 <button
@@ -570,32 +467,39 @@ const QuickShop = () => {
                   onClick={() => setActiveFilter(tab)}
                   className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-[12px] font-black tracking-tight transition-all duration-200 border ${
                     isActive
-                      ? 'bg-[#D9A21B] border-[#D9A21B] text-white shadow-xs'
+                      ? 'bg-[color:var(--fg-primary,#D9A21B)] border-[color:var(--fg-primary,#D9A21B)] text-white shadow-xs'
                       : 'bg-white border-[#EADCC9]/55 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  {tName(tab)}
+                  {tab}
                 </button>
               );
             })}
-          </ScrollRow>
+          </div>
 
           {/* ── FLASH DEALS SECTION ── */}
           <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(217,162,27,0.015)]">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{activeFlashSale?.title || t('common.flashDeals')}</h2>
-              <CountdownTimer endsAt={activeFlashSale?.endsAt} />
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{activeFlashSale?.title || 'Flash Deals'}</h2>
+              <div className="text-slate-850 text-[12.5px] font-black flex items-center gap-1.5">
+                <span>Ends in</span>
+                <span className="font-mono bg-[#3F2A20] text-white px-1.5 py-0.5 rounded text-[11px]">{timeLeft.h}</span>
+                <span>:</span>
+                <span className="font-mono bg-[#3F2A20] text-white px-1.5 py-0.5 rounded text-[11px]">{timeLeft.m}</span>
+                <span>:</span>
+                <span className="font-mono bg-[#3F2A20] text-white px-1.5 py-0.5 rounded text-[11px]">{timeLeft.s}</span>
+              </div>
             </div>
 
             {/* Flash Deals Cards grid */}
             {dealsLoading && (
-              <p className="text-center text-[11px] text-slate-500 py-6">{t('auto.loadingFlashDeals')}</p>
+              <p className="text-center text-[11px] text-slate-500 py-6">Loading flash deals...</p>
             )}
 
             {!dealsLoading && flashDeals.length === 0 && (
-              <div className="text-center py-6 px-4 bg-[#FFF8EE]/50 rounded-xl border border-dashed border-[#EADCC9]">
-                <p className="text-[12px] font-bold text-[#3F2A20]/70">{t('auto.noActiveFlashDealsAt')}</p>
-                <p className="text-[10px] text-[#3F2A20]/50 mt-1">{t('auto.checkBackSoonForExclusive')}</p>
+              <div className="text-center py-6 px-4 bg-[color:var(--fg-light,#FFF8EE)]/50 rounded-xl border border-dashed border-[#EADCC9]">
+                <p className="text-[12px] font-bold text-[#3F2A20]/70">No active flash deals at the moment.</p>
+                <p className="text-[10px] text-[#3F2A20]/50 mt-1">Check back soon for exclusive limited-time discounts!</p>
               </div>
             )}
 
@@ -618,7 +522,7 @@ const QuickShop = () => {
                   >
                     {prod.discount && (
                       <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                        {tName(prod.discount)}
+                        {prod.discount}
                       </div>
                     )}
                     
@@ -627,7 +531,8 @@ const QuickShop = () => {
                         src={getImageUrl(prod.image)} 
                         alt={prod.title || prod.name} 
                         className="max-h-full object-contain mix-blend-multiply" 
-                        onError={handleImageError} loading="lazy" decoding="async" />
+                        onError={handleImageError}
+                      />
                     </div>
 
                     <div>
@@ -638,9 +543,6 @@ const QuickShop = () => {
                         )}
                         <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
                       </div>
-                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-                        <AddToCartButton product={prod} />
-                      </div>
                     </div>
                   </div>
                 ))}
@@ -649,13 +551,13 @@ const QuickShop = () => {
           </div>
 
           {/* ── SHARE LOCATION BANNER ── */}
-          <div className="bg-[#FFF8EE] border border-[#EADCC9]/55 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
+          <div className="bg-[color:var(--fg-light,#FFF8EE)] border border-[#EADCC9]/55 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
             <div className="flex flex-col gap-3 flex-1 pr-2">
               <span className="text-[12.5px] font-extrabold text-[#3F2A20] leading-snug">
-                {t('auto.shareYourLocationToAccess')}
+                Share your location to access Grocery & explore offers
               </span>
-              <button className="bg-[#D9A21B] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs">
-                {t('auto.shareLocation')}
+              <button className="bg-[color:var(--fg-primary,#D9A21B)] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs">
+                Share Location
               </button>
             </div>
             <ChevronDown size={20} className="text-slate-550 flex-shrink-0 cursor-pointer" />
@@ -664,8 +566,8 @@ const QuickShop = () => {
           {/* ── TODAY'S SPECIAL DEALS ── */}
           <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(217,162,27,0.015)]">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{t('auto.todaySSpecialDeals')}</h2>
-              <span className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline">{t('auto.viewAll')}</span>
+              <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">Today's Special Deals</h2>
+              <span className="text-[color:var(--mk-primary,#6FAE4A)] text-[12.5px] font-black cursor-pointer hover:underline">View All</span>
             </div>
 
             {/* Deals grid */}
@@ -682,7 +584,7 @@ const QuickShop = () => {
                   >
                     {discount && (
                       <div className="absolute top-1.5 left-1.5 bg-[#E25822] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                        {tName(discount)}
+                        {discount}
                       </div>
                     )}
                     
@@ -691,7 +593,8 @@ const QuickShop = () => {
                         src={getImageUrl(prod.image)} 
                         alt={prod.name} 
                         className="max-h-full object-contain mix-blend-multiply" 
-                        onError={handleImageError} loading="lazy" decoding="async" />
+                        onError={handleImageError}
+                      />
                     </div>
 
                     <div>
@@ -702,17 +605,14 @@ const QuickShop = () => {
                         )}
                         <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
                       </div>
-                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-                        <AddToCartButton product={prod} />
-                      </div>
                     </div>
                   </div>
                 );
               })}
               {nearbyProducts.length === 0 && (
-                <div className="col-span-3 text-center py-6 px-3 bg-[#FFF8EE]/50 rounded-xl border border-dashed border-[#EADCC9]">
+                <div className="col-span-3 text-center py-6 px-3 bg-[color:var(--fg-light,#FFF8EE)]/50 rounded-xl border border-dashed border-[#EADCC9]">
                   <p className="text-[11.5px] font-bold text-[#3F2A20]/70">
-                    {notDeliverable ? t('auto.shareLocationToExploreSpecial2') : t('auto.noDealsAvailableRightNow')}
+                    {notDeliverable ? 'Share location to explore special deals near you' : 'No deals available right now'}
                   </p>
                 </div>
               )}
@@ -721,17 +621,9 @@ const QuickShop = () => {
 
           {/* ── RESTORED CATEGORY SECTIONS (Mobile View) ── */}
           <div className="md:hidden px-4 space-y-8">
-            {categorySections.length > 0 && (
-              <div className="pl-1 pt-2 pb-5 !mb-2">
-                <h2 className="text-[19px] font-black text-[#3F2A20] tracking-tight leading-tight">
-                  {t('auto.exploreAllCategories', 'Explore All Categories')}
-                </h2>
-                <div className="mt-1.5 h-[3px] w-14 rounded-full bg-[#D9A21B]" />
-              </div>
-            )}
             {categorySections.map((section, sIdx) => (
               <div key={sIdx} className="mb-6">
-                <h2 className="text-[15px] font-extrabold text-[#D9A21B] mb-3 tracking-tight pl-1">
+                <h2 className="text-[15px] font-extrabold text-[color:var(--fg-primary,#D9A21B)] mb-3 tracking-tight pl-1">
                   {section.title}
                 </h2>
                 <div className="grid grid-cols-4 gap-2 justify-items-center">
@@ -755,7 +647,7 @@ const QuickShop = () => {
             {categorySections.map((section, sIdx) => (
               <div key={sIdx} className="flex flex-col">
                 {/* Header Banner */}
-                <div className="px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[#D9A21B]">
+                <div className="px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[color:var(--fg-primary,#D9A21B)]">
                   <h2 className="text-[15px] font-black uppercase tracking-wider">
                     {section.title}
                   </h2>
@@ -783,7 +675,7 @@ const QuickShop = () => {
                             onError={handleImageError}
                           />
                         </div>
-                        <span className="text-[13px] font-black text-center text-[#3F2A20] leading-tight tracking-tight mt-1 group-hover:text-[#D9A21B] transition-colors">
+                        <span className="text-[13px] font-black text-center text-[#3F2A20] leading-tight tracking-tight mt-1 group-hover:text-[color:var(--fg-primary,#D9A21B)] transition-colors">
                           {item.name}
                         </span>
                       </div>
@@ -812,347 +704,176 @@ const QuickShop = () => {
       />
 
       <div className="relative z-10 flex flex-col">
-        {/* ── HERO BANNER SECTION ── */}
-        <div
-          className="mx-4 my-4 p-5 rounded-3xl border border-[#FFD9C7] flex items-center justify-between shadow-xs overflow-hidden relative"
-          style={{ backgroundImage: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)' }}
-        >
-          <div className="flex-1 z-10 pr-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F26522]/10 text-[#F26522] text-[10px] font-black uppercase tracking-wider mb-1.5">
-              <Zap size={11} className="fill-[#F26522]" /> {t('common.deliveryIn1530')}
-            </div>
-            <h1 className="text-[19px] md:text-[22px] font-black text-slate-900 leading-tight mb-1">
-              {t('auto.quickShopEssentials')}
-            </h1>
-            <p className="text-[11.5px] md:text-[12.5px] font-bold text-slate-600 mb-3">
-              {t('auto.groceriesSnacksDailyNeedsAt')}
-            </p>
-            <button
-              onClick={() => {
-                const el = document.getElementById('quick-categories-grid');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="bg-[#F26522] text-white text-[12px] font-black px-6 py-2.5 rounded-full shadow-md active:scale-95 transition-transform hover:brightness-105"
-            >
-              {t('auto.exploreCategories')}
-            </button>
-          </div>
-          <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] flex items-center justify-center flex-shrink-0 relative">
-            <svg viewBox="0 0 120 120" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="60" cy="60" r="50" fill="#FFEDD5" />
-              <circle cx="60" cy="60" r="42" fill="#FED7AA" fillOpacity="0.4" />
-              <path d="M40 70 L55 35 L70 35 L58 55 L75 55 L48 90 L54 68 Z" fill="#F26522" />
-            </svg>
-          </div>
-        </div>
-
-        {/* ── BROWSE BY CATEGORY GRID ── */}
-        <div id="quick-categories-grid" className="px-4 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{t('auto.browseByCategory')}</h2>
-            <span
-              onClick={() => {
-                localStorage.setItem('isQuickShopFlow', 'true');
-                navigate('/quick-shop/category');
-              }}
-              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
-            >
-              {t('auto.viewAll')}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-4 gap-2.5">
-            {categoriesLoading && Array.from({ length: 8 }).map((_, idx) => (
-              <div key={idx} className="h-[92px] bg-white border border-slate-100 rounded-2xl animate-pulse" />
-            ))}
-            {!categoriesLoading && categoryTree.map((cat) => (
-              <div
-                key={cat.id}
-                onClick={() => {
-                  localStorage.setItem('isQuickShopFlow', 'true');
-                  navigate('/quick-shop/category', { state: { category: cat.name, categoryId: cat.id } });
-                }}
-                className="bg-white border border-[#FFD9C7]/60 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#F26522]"
-              >
-                <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[#FFF7ED] rounded-xl overflow-hidden p-1">
-                  {cat.imageUrl || cat.iconUrl ? (
-                    <img src={getImageUrl(cat.imageUrl || cat.iconUrl)} alt={cat.name} className="w-full h-full object-contain" onError={handleImageError} loading="lazy" decoding="async" />
-                  ) : (
-                    <GroceryCategoryIcon category={cat} />
-                  )}
-                </div>
-                <span className="text-[10px] md:text-[11px] font-black text-slate-800 leading-tight line-clamp-2">{cat.name}</span>
-              </div>
-            ))}
-            {!categoriesLoading && categoryTree.length === 0 && (
-              <div className="col-span-4 text-center py-6 px-3 bg-white/60 rounded-xl border border-dashed border-[#FFD9C7]">
-                <p className="text-[11.5px] font-bold text-slate-600">{t('auto.categoriesComingSoon')}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── TODAY'S BEST OFFERS ── */}
-        <div className="px-4 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{t('auto.todaySBestOffers')}</h2>
-            <span
-              onClick={() => {
-                localStorage.setItem('isQuickShopFlow', 'true');
-                navigate('/quick-shop/category');
-              }}
-              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
-            >
-              {t('auto.viewAll')}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            {nearbyLoading && nearbyProducts.length === 0 && Array.from({ length: 3 }).map((_, idx) => (
-              <div key={idx} className="h-36 bg-slate-100 rounded-2xl animate-pulse" />
-            ))}
-            {nearbyProducts.slice(0, 3).map((prod) => {
-              const discount = prod.oldPrice > prod.price
-                ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
-                : null;
-              return (
-                <div
-                  key={prod.id}
-                  onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
-                  className="bg-white rounded-2xl border border-[#FFD9C7]/30 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform shadow-xs"
-                >
-                  {discount && (
-                    <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
-                      {tName(discount)}
-                    </div>
-                  )}
-
-                  <div className="h-20 flex items-center justify-center my-3">
-                    <img
-                      src={getImageUrl(prod.image)}
-                      alt={prod.name}
-                      className="max-h-full max-w-full object-contain mix-blend-multiply"
-                      onError={handleImageError} loading="lazy" decoding="async" />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <span className="text-[#F26522] text-[8px] font-black">{prod.deliveryEtaText || '⚡ 15-25m'}</span>
-                      {prod.distanceKm != null && (
-                        <span className="text-slate-400 text-[8px] font-bold">• {prod.distanceKm.toFixed(1)} km</span>
-                      )}
-                    </div>
-                    <h3 className="text-[11.5px] font-black text-slate-850 leading-tight truncate">{prod.name}</h3>
-                    <div className="flex items-baseline gap-1 mt-1">
-                      {prod.oldPrice > prod.price && (
-                        <span className="text-[9.5px] text-slate-400 line-through">₹{prod.oldPrice}</span>
-                      )}
-                      <span className="text-[12.5px] font-black text-slate-900">₹{prod.price}</span>
-                    </div>
-                    <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-                      <AddToCartButton product={prod} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {!nearbyLoading && nearbyProducts.length === 0 && (
-              <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
-                <p className="text-[11.5px] font-bold text-slate-700">
-                  {notDeliverable ? t('auto.shareLocationToSeeOffers') : t('auto.loadingBestOffers')}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* ── HORIZONTAL FILTER TABS BAR ── */}
-        <ScrollRow className="flex gap-2.5 py-3.5 px-4 mb-4">
-          {filterTabs.map((tab) => {
+        <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-3.5 px-4">
+          {['All', 'Title Sponsors', 'Intel Core', 'AI Nova', 'Boat'].map((tab) => {
             const isActive = activeFilter === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveFilter(tab)}
                 className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-[12px] font-black tracking-tight transition-all duration-200 border ${
-                  isActive
-                    ? 'bg-[#F26522] border-[#F26522] text-white shadow-xs'
+              isActive
+                    ? 'bg-[color:var(--qs-primary,#F26522)] border-[color:var(--qs-primary,#F26522)] text-white shadow-xs'
                     : 'bg-white border-[#EADCC9]/55 text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                {tName(tab)}
+                {tab}
               </button>
             );
           })}
-        </ScrollRow>
-
-        {/* ── FLASH DEALS SECTION ── */}
-        <div className="bg-white rounded-[24px] p-4 mx-4 mb-4 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{activeFlashSale?.title || t('common.flashDeals')}</h2>
-            <CountdownTimer endsAt={activeFlashSale?.endsAt} />
-          </div>
-
-          {/* Flash Deals Cards grid */}
-          {dealsLoading && (
-            <p className="text-center text-[11px] text-slate-500 py-6">{t('auto.loadingFlashDeals')}</p>
-          )}
-
-          {!dealsLoading && ((activeFilter !== 'All' && displayedNearby.length === 0) || (activeFilter === 'All' && flashDeals.length === 0 && displayedNearby.length === 0 && nearbyProducts.length === 0)) && (
-            <div className="text-center py-6 px-4 bg-[#FFF5EE]/60 rounded-xl border border-dashed border-[#FFD9C7]">
-              <p className="text-[12px] font-bold text-slate-700">
-                {activeFilter !== 'All' ? `No products found under "${activeFilter}"` : t('auto.noActiveFlashDealsAt')}
-              </p>
-              <p className="text-[10px] text-slate-500 mt-1">
-                {activeFilter !== 'All' ? t('auto.trySwitchingToAnotherCategory') : t('auto.checkBackSoonForExclusive')}
-              </p>
-            </div>
-          )}
-
-          {!dealsLoading && (activeFilter !== 'All' ? displayedNearby.length > 0 : (flashDeals.length > 0 || displayedNearby.length > 0 || nearbyProducts.length > 0)) && (
-            <div className="grid grid-cols-3 gap-2.5">
-              {(activeFilter !== 'All' ? displayedNearby : (flashDeals.length > 0 ? flashDeals : (displayedNearby.length > 0 ? displayedNearby : nearbyProducts))).slice(0, 3).map((prod) => {
-                const discount = prod.discount || (prod.oldPrice > prod.price ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF` : null);
-                const prodId = prod.productId || prod.id;
-                return (
-                  <div
-                    key={prodId}
-                    onClick={() => navigate(`/product-detail/${prodId}`, {
-                      state: {
-                        product: {
-                          ...prod,
-                          id: prodId,
-                          productId: prodId,
-                          marketplaceTab: 'quick_shop',
-                        }
-                      }
-                    })}
-                    className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-                  >
-                    {discount && (
-                      <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                        {tName(discount)}
-                      </div>
-                    )}
-
-                    <div className="h-20 flex items-center justify-center my-3">
-                      <img
-                        src={getImageUrl(prod.image)}
-                        alt={prod.title || prod.name}
-                        className="max-h-full object-contain mix-blend-multiply"
-                        onError={handleImageError} loading="lazy" decoding="async" />
-                    </div>
-
-                    <div>
-                      <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5 truncate">{prod.title || prod.name}</h3>
-                      <div className="flex items-baseline gap-1 mt-1.5">
-                        {prod.oldPrice > prod.price && (
-                          <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
-                        )}
-                        <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
-                      </div>
-                      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-                        <AddToCartButton product={prod} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
 
-        {/* ── SHARE LOCATION BANNER ── */}
-        <div className="bg-[#FFF5EE] border border-[#FFD9C7]/55 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
-          <div className="flex flex-col gap-3 flex-1 pr-2">
-            <span className="text-[12.5px] font-extrabold text-slate-800 leading-snug">
-              {t('auto.shareYourLocationToAccess2')}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPromptOpen(true)}
-              className="bg-[#F26522] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs"
-            >
-              {t('auto.shareLocation')}
-            </button>
+      {/* ── FLASH DEALS SECTION ── */}
+      <div className="bg-white rounded-2xl p-3 mx-3 mb-3 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
+        <div className="flex justify-between items-center mb-2.5">
+          <h2 className="text-[14.5px] font-black text-slate-800 tracking-tight">Flash Deals</h2>
+          <div className="text-slate-850 text-[11px] font-black flex items-center gap-1">
+            <span>Ends in</span>
+            <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.h}</span>
+            <span>:</span>
+            <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.m}</span>
+            <span>:</span>
+            <span className="font-mono bg-slate-900 text-white px-1 py-0.5 rounded text-[9.5px]">{timeLeft.s}</span>
           </div>
-          <ChevronDown size={20} className="text-slate-500 flex-shrink-0 cursor-pointer" />
         </div>
 
-        {/* ── TODAY'S SPECIAL DEALS ── */}
-        <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-[16px] font-black text-slate-850 tracking-tight">{t('auto.todaySSpecialDeals')}</h2>
-            <span
-              onClick={() => {
-                localStorage.setItem('isQuickShopFlow', 'true');
-                navigate('/quick-shop/category');
-              }}
-              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
-            >
-              {t('auto.viewAll')}
-            </span>
-          </div>
-
-          {/* Deals grid */}
-          <div className="grid grid-cols-3 gap-2.5">
-            {nearbyLoading && nearbyProducts.length === 0 && Array.from({ length: 3 }).map((_, idx) => (
-              <div key={idx} className="h-36 bg-slate-100 rounded-2xl animate-pulse" />
-            ))}
-            {(displayedNearby.length > 3 ? displayedNearby.slice(3, 6) : (displayedNearby.length > 0 ? displayedNearby.slice(0, 3) : (nearbyProducts.length > 3 ? nearbyProducts.slice(3, 6) : nearbyProducts.slice(0, 3)))).map((prod) => {
-              const discount = prod.oldPrice > prod.price
-                ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
-                : null;
-              return (
-                <div
-                  key={prod.id}
-                  onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
-                  className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
-                >
-                  {discount && (
-                    <div className="absolute top-1.5 left-1.5 bg-[#FF5C00] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
-                      {tName(discount)}
-                    </div>
-                  )}
-
-                  <div className="h-20 flex items-center justify-center my-3">
-                    <img
-                      src={getImageUrl(prod.image)}
-                      alt={prod.name}
-                      className="max-h-full object-contain mix-blend-multiply"
-                      onError={handleImageError} loading="lazy" decoding="async" />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[#F26522] text-[8px] font-black">{prod.deliveryEtaText || '⚡ 15-25m'}</span>
-                      {prod.distanceKm != null && (
-                        <span className="text-slate-400 text-[8px] font-bold">• {prod.distanceKm.toFixed(1)} km</span>
-                      )}
-                    </div>
-                    <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5 truncate">{prod.name}</h3>
-                    <div className="flex items-baseline gap-1 mt-1">
-                      {prod.oldPrice > prod.price && (
-                        <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
-                      )}
-                      <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
-                    </div>
-                    <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-                      <AddToCartButton product={prod} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {!nearbyLoading && nearbyProducts.length === 0 && (
-              <div className="col-span-3 text-center py-6 px-3 bg-[#FFF5EE] rounded-xl border border-dashed border-[#FFD9C7]">
-                <p className="text-[11.5px] font-bold text-slate-700">
-                  {t('auto.shareLocationToExploreSpecial')}
-                </p>
-              </div>
+        {/* Flash Deals Cards grid — nearby Quick Commerce products */}
+        {notDeliverable && (
+          <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
+            <p className="text-[11px] font-bold text-amber-900">
+              {liveLocation?.latitude == null
+                ? 'Share your location to see products from nearby sellers.'
+                : 'Quick Commerce is not available at this address yet.'}
+            </p>
+            {liveLocation?.latitude == null && (
+              <button
+                type="button"
+                onClick={() => setPromptOpen(true)}
+                className="mt-2 px-3 py-1.5 rounded-lg bg-[color:var(--qs-primary,#FF5C00)] text-white text-[10px] font-black"
+              >
+                Share Location
+              </button>
             )}
           </div>
+        )}
+        <div className="grid grid-cols-3 gap-2">
+          {nearbyLoading && Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="h-32 bg-slate-100 rounded-xl animate-pulse" />
+          ))}
+          {!nearbyLoading && nearbyProducts.slice(0, 3).map((product) => {
+            const discount = product.oldPrice > product.price
+              ? `${Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)}% OFF`
+              : null;
+            return (
+              <div
+                key={product.id}
+                onClick={() => navigate(`/product-detail/${product.id}`, { state: { product } })}
+                className="bg-white rounded-xl border border-slate-100 p-1.5 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
+              >
+                {discount && (
+                  <div className="absolute top-1 left-1 bg-[color:var(--qs-primary,#FF5C00)] text-white text-[7.5px] font-black px-1.2 py-0.3 rounded-xs shadow-2xs leading-none z-10">
+                    {discount}
+                  </div>
+                )}
+                <div className="h-14 flex items-center justify-center my-1.5">
+                  <img src={getImageUrl(product.image)} alt={product.name} className="max-h-full object-contain mix-blend-multiply" onError={handleImageError} />
+                </div>
+                <div>
+                  {product.distanceKm != null && (
+                    <span className="text-slate-400 text-[8px] font-bold">{product.distanceKm.toFixed(1)} km</span>
+                  )}
+                  <h3 className="text-[10px] font-black text-slate-850 leading-tight mt-0.5 line-clamp-2">{product.name}</h3>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    {product.oldPrice > product.price && (
+                      <span className="text-[9px] text-slate-400 line-through">₹{product.oldPrice}</span>
+                    )}
+                    <span className="text-[11px] font-black text-slate-900">₹{product.price}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
+      </div>
+
+      {/* ── SHARE LOCATION BANNER (only while we have no location) ── */}
+      {liveLocation?.latitude == null && (
+      <div className="bg-[color:var(--qs-light,#FFF5EE)] border border-[#FFD9C7]/40 rounded-[20px] p-4 mx-4 mb-4 flex items-center justify-between shadow-2xs">
+        <div className="flex flex-col gap-3 flex-1 pr-2">
+          <span className="text-[12.5px] font-extrabold text-slate-800 leading-snug">
+            Share your location to access QuickShop & explore offers
+          </span>
+          <button
+            type="button"
+            onClick={() => setPromptOpen(true)}
+            className="bg-[color:var(--qs-primary,#FF5C00)] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs"
+          >
+            Share Location
+          </button>
+        </div>
+        <ChevronDown size={20} className="text-slate-500 flex-shrink-0 cursor-pointer" />
+      </div>
+      )}
+
+      {/* ── TODAY'S SPECIAL DEALS ── */}
+      <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(242,101,34,0.015)]">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-[16px] font-black text-slate-800 tracking-tight">Today's Special Deals</h2>
+          <span className="text-[#A63A00] text-[12.5px] font-black cursor-pointer hover:underline">View All</span>
+        </div>
+
+        {/* Deals grid */}
+        <div className="grid grid-cols-3 gap-2.5">
+          {nearbyLoading && Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="h-36 bg-slate-100 rounded-2xl animate-pulse" />
+          ))}
+          {!nearbyLoading && (nearbyProducts.length > 3 ? nearbyProducts.slice(3, 6) : nearbyProducts.slice(0, 3)).map((prod) => {
+            const discount = prod.oldPrice > prod.price
+              ? `${Math.round(((prod.oldPrice - prod.price) / prod.oldPrice) * 100)}% OFF`
+              : null;
+            return (
+              <div 
+                key={prod.id}
+                onClick={() => navigate(`/product-detail/${prod.id}`, { state: { product: prod } })}
+                className="bg-white rounded-2xl border border-slate-100 p-2 flex flex-col justify-between relative cursor-pointer active:scale-98 transition-transform"
+              >
+                {discount && (
+                  <div className="absolute top-1.5 left-1.5 bg-[color:var(--qs-primary,#FF5C00)] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm shadow-2xs leading-none z-10">
+                    {discount}
+                  </div>
+                )}
+                
+                <div className="h-20 flex items-center justify-center my-3">
+                  <img 
+                    src={getImageUrl(prod.image)} 
+                    alt={prod.name} 
+                    className="max-h-full object-contain mix-blend-multiply" 
+                    onError={handleImageError}
+                  />
+                </div>
+
+                <div>
+                  <h3 className="text-[11px] font-black text-slate-850 leading-tight mt-0.5 truncate">{prod.name}</h3>
+                  <div className="flex items-baseline gap-1 mt-1.5">
+                    {prod.oldPrice > prod.price && (
+                      <span className="text-[10px] text-slate-400 line-through">₹{prod.oldPrice}</span>
+                    )}
+                    <span className="text-[12px] font-black text-slate-900">₹{prod.price}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {!nearbyLoading && nearbyProducts.length === 0 && (
+            <div className="col-span-3 text-center py-6 px-3 bg-[color:var(--qs-light,#FFF5EE)] rounded-xl border border-dashed border-[#FFD9C7]">
+              <p className="text-[11.5px] font-bold text-slate-700">
+                {notDeliverable ? 'Share location to explore special deals in your area' : 'No deals available right now'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ── RESTORED CATEGORY SECTIONS (Mobile View) ── */}
       <div className="md:hidden px-4 space-y-8">
@@ -1170,17 +891,9 @@ const QuickShop = () => {
             ))}
           </div>
         )}
-        {!categoriesLoading && categorySections.length > 0 && (
-          <div className="pl-1 pt-2 pb-5 !mb-2">
-            <h2 className="text-[19px] font-black text-slate-900 tracking-tight leading-tight">
-              {t('auto.exploreAllCategories', 'Explore All Categories')}
-            </h2>
-            <div className="mt-1.5 h-[3px] w-14 rounded-full bg-[#F26522]" />
-          </div>
-        )}
         {!categoriesLoading && categorySections.map((section, sIdx) => (
           <div key={sIdx} className="mb-6">
-            <h2 className="text-[15px] font-extrabold text-[#F26522] mb-3 tracking-tight pl-1">
+            <h2 className="text-[15px] font-extrabold text-[color:var(--qs-primary,#F26522)] mb-3 tracking-tight pl-1">
               {section.title}
             </h2>
             <div className="grid grid-cols-4 gap-2 justify-items-center">
@@ -1203,7 +916,7 @@ const QuickShop = () => {
       <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-4 md:py-6 space-y-8">
         {categoriesLoading && (
           <div className="space-y-6">
-            <div className="h-10 bg-[#F26522]/30 rounded-t-3xl animate-pulse" />
+            <div className="h-10 bg-[color:var(--qs-primary,#F26522)]/30 rounded-t-3xl animate-pulse" />
             <div className="bg-white p-6 rounded-b-3xl border border-slate-100 shadow-md grid grid-cols-4 lg:grid-cols-8 gap-6">
               {Array.from({ length: 8 }).map((_, idx) => (
                 <div key={idx} className="h-28 bg-slate-100 rounded-2xl animate-pulse" />
@@ -1214,7 +927,7 @@ const QuickShop = () => {
         {!categoriesLoading && categorySections.map((section, sIdx) => (
           <div key={sIdx} className="flex flex-col">
             {/* Header Banner */}
-            <div className={`px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[#F26522]`}>
+            <div className={`px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[color:var(--qs-primary,#F26522)]`}>
               <h2 className="text-[15px] font-black uppercase tracking-wider">
                 {section.title}
               </h2>
@@ -1242,7 +955,7 @@ const QuickShop = () => {
                         onError={handleImageError}
                       />
                     </div>
-                    <span className="text-[13px] font-black text-center text-slate-850 leading-tight tracking-tight mt-1 group-hover:text-[#F26522] transition-colors">
+                    <span className="text-[13px] font-black text-center text-slate-850 leading-tight tracking-tight mt-1 group-hover:text-[color:var(--qs-primary,#F26522)] transition-colors">
                       {item.name}
                     </span>
                   </div>

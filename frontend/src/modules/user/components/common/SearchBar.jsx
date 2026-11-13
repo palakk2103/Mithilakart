@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Camera, Mic, MapPin, ChevronDown, Zap, X, Star } from 'lucide-react';
 import LanguageSelector from './LanguageSelector';
 import { useTranslation } from 'react-i18next';
-import { tName } from '../../../../shared/utils/translateName';
 import SearchInput from '../../../../shared/components/SearchInput';
 import toast from 'react-hot-toast';
 import { getCurrentMarketplaceTab } from '../../../../shared/utils/marketplaceHelpers';
@@ -97,7 +96,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
       setTimeout(() => {
         setIsAnalyzingImage(false);
         toast.dismiss("img-search");
-        toast.success(t('auto.imageAnalyzedFoundMatchingHandcrafte'));
+        toast.success("Image analyzed! Found matching handcrafted item.");
         navigate('/search?q=Mithila%20Painting');
       }, 2000);
     }
@@ -117,7 +116,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
       
       // Simulate barcode scan after 3 seconds
       setTimeout(() => {
-        toast.success(t('auto.barcodeDetectedSkuMithila09'));
+        toast.success("Barcode detected: SKU-MITHILA-09");
         stopScanner();
         navigate('/search?q=Jewellery');
       }, 3000);
@@ -125,7 +124,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
       console.warn("Webcam not available, running in simulation mode", err);
       // Mock scanner simulation if no webcam
       setTimeout(() => {
-        toast.success(t('auto.simulatedScanCompletedSuccessfully'));
+        toast.success("Simulated scan completed successfully!");
         stopScanner();
         navigate('/search?q=Watch');
       }, 3500);
@@ -149,7 +148,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
   }, [stream]);
 
   const displayAddress = deliverTo?.label
-    || (selectedAddress?.address ? selectedAddress.address.slice(0, 32) : t('x.setDeliveryLocation'));
+    || (selectedAddress?.address ? selectedAddress.address.slice(0, 32) : 'Set delivery location');
 
   return (
     <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-2 md:px-4 md:pb-3 md:flex-col md:gap-3">
@@ -168,13 +167,13 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-2 min-w-0 text-white hover:text-white/95 text-left py-1.5 px-3.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
+            className="flex items-center gap-1.5 min-w-0 text-white hover:text-white/95 text-left py-0.5 px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
           >
             <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0 text-white" />
-            <div className="flex flex-col text-left leading-tight min-w-0 justify-center">
-              <span className="text-[8.5px] font-medium text-white/80 leading-none tracking-wide">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
-              <span className="text-[11px] font-bold truncate max-w-[165px] sm:max-w-[220px] md:max-w-[280px] mt-0.5">
-                {tName(displayAddress)}
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
+              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px]">
+                {displayAddress}
               </span>
             </div>
             <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
@@ -183,13 +182,13 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-2 min-w-0 text-white/95 hover:text-white text-left py-1.5 px-3.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
+            className="flex items-center gap-1.5 min-w-0 text-white/95 hover:text-white text-left py-0.5 px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
           >
             <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0" />
-            <div className="flex flex-col text-left leading-tight min-w-0 justify-center">
-              <span className="text-[8.5px] font-medium text-white/80 leading-none tracking-wide">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
-              <span className="text-[11px] font-bold truncate max-w-[165px] sm:max-w-[220px] md:max-w-[280px] mt-0.5">
-                {tName(displayAddress)}
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
+              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px]">
+                {displayAddress}
               </span>
             </div>
             <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0" />
@@ -198,13 +197,13 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
           <button
             type="button"
             onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-2 min-w-0 text-white bg-white/20 hover:bg-white/30 border border-white/25 px-3.5 py-1.5 rounded-full shadow-xs transition-all text-left"
+            className="flex items-center gap-1.5 min-w-0 text-white bg-white/20 hover:bg-white/30 border border-white/25 px-2.5 py-0.5 rounded-full shadow-xs transition-all text-left"
           >
             <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0 text-white" />
-            <div className="flex flex-col text-left leading-tight min-w-0 justify-center">
-              <span className="text-[8.5px] font-medium text-white/80 leading-none tracking-wide">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
-              <span className="text-[11px] font-bold truncate max-w-[165px] sm:max-w-[220px] md:max-w-[280px] text-white mt-0.5">
-                {tName(displayAddress)}
+            <div className="flex flex-col text-left leading-tight min-w-0">
+              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
+              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px] text-white">
+                {displayAddress}
               </span>
             </div>
             <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
@@ -219,14 +218,14 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
           {/* Custom Coins/Stars Badge or Delivery Time Badge */}
           {isFreshGroceryActive ? (
             <div className="flex items-center gap-1 px-2.5 h-[25px] bg-white/20 border border-white/15 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
-              <span>{t('auto.n15Mins')}</span>
+              <span>15 mins</span>
             </div>
           ) : isQuickShopActive ? (
-            <div className="flex items-center gap-1 px-2.5 h-[25px] bg-[#D45014] border border-white/20 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
-              <span>{t('auto.n15Mins')}</span>
+            <div className="flex items-center gap-1 px-2.5 h-[25px] bg-[color:var(--qs-dark,#D45014)] border border-white/20 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
+              <span>15 mins</span>
             </div>
           ) : isMithilakActive ? (
-            <div className="flex items-center gap-0.5 px-2.5 h-[25px] bg-[#207C8A] border border-white/20 rounded-full text-white font-extrabold text-[11px] shadow-xs">
+            <div className="flex items-center gap-0.5 px-2.5 h-[25px] bg-[color:var(--ml-primary,#207C8A)] border border-white/20 rounded-full text-white font-extrabold text-[11px] shadow-xs">
               <Star size={11} className="text-yellow-300 fill-yellow-300" />
               <span>3</span>
             </div>
@@ -302,8 +301,8 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
 
             <div className="w-full max-w-sm flex flex-col items-center text-center space-y-6">
               <div>
-                <h3 className="text-lg font-black text-white uppercase tracking-wider">{t('auto.barcodeQrScanner')}</h3>
-                <p className="text-xs text-slate-400 mt-1 font-medium">{t('auto.alignTheBarcodeInsideThe')}</p>
+                <h3 className="text-lg font-black text-white uppercase tracking-wider">Barcode / QR Scanner</h3>
+                <p className="text-xs text-slate-400 mt-1 font-medium">Align the barcode inside the target box to scan</p>
               </div>
 
               {/* Viewport Box */}
@@ -319,7 +318,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
                 ) : (
                   <div className="flex flex-col items-center justify-center space-y-3">
                     <div className="w-10 h-10 border-4 border-t-blue-500 border-white/10 rounded-full animate-spin"></div>
-                    <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">{t('auto.startingCameraFeed')}</span>
+                    <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Starting camera feed...</span>
                   </div>
                 )}
 
@@ -333,7 +332,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
               </div>
 
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest animate-pulse">
-                {t('auto.analyzingBarcodePattern')}
+                Analyzing barcode pattern...
               </div>
             </div>
           </motion.div>

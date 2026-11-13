@@ -21,9 +21,6 @@ import CatchYourDeliveryGame from '../../components/common/CatchYourDeliveryGame
 import OrderInvoiceModal from '../../../../shared/components/OrderInvoiceModal';
 import OrderRatingModal from '../../../../shared/components/OrderRatingModal';
 import { soundEffects } from '../../../../shared/utils/soundEffects';
-import { handleImageError } from '../../../../shared/utils/imageUtils';
-import { useTranslation } from 'react-i18next';
-import { tName } from '../../../../shared/utils/translateName';
 
 const STATUS_STEPS = [
   { key: 'pending', title: 'Checkout Started', desc: 'Payment pending.' },
@@ -69,7 +66,6 @@ const buildTimeline = (tracking = [], currentStatus = 'pending', steps = STATUS_
 };
 
 const OrderDetail = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const { orderId } = useParams();
   const orders = useAccountStore((state) => state.orders);
@@ -204,7 +200,7 @@ const OrderDetail = () => {
     if (!deliveryOtp) return;
     navigator.clipboard?.writeText?.(deliveryOtp);
     setCopiedOtp(true);
-    toast.success(t('auto.otpCopiedToClipboard'));
+    toast.success('OTP copied to clipboard!');
     setTimeout(() => setCopiedOtp(false), 2000);
   };
 
@@ -212,7 +208,7 @@ const OrderDetail = () => {
     if (!awb) return;
     navigator.clipboard?.writeText?.(awb);
     setCopiedAwb(true);
-    toast.success(t('auto.courierAwbCopiedToClipboard'));
+    toast.success('Courier AWB copied to clipboard!');
     setTimeout(() => setCopiedAwb(false), 2000);
   };
 
@@ -270,7 +266,7 @@ const OrderDetail = () => {
 
   const handleSubmitReturn = async () => {
     if (!returnForm.orderItemId || !returnForm.reason.trim()) {
-      toast.error(t('auto.selectAnItemAndEnter'));
+      toast.error('Select an item and enter a reason');
       return;
     }
     setReturnSubmitting(true);
@@ -280,11 +276,11 @@ const OrderDetail = () => {
         quantity: Number(returnForm.quantity) || 1,
         reason: returnForm.reason.trim(),
       });
-      toast.success(t('auto.returnRequestSubmitted'));
+      toast.success('Return request submitted');
       setShowReturnModal(false);
       await loadOrder();
     } catch (err) {
-      toast.error(err?.message || t('auto.failedToSubmitReturn'));
+      toast.error(err?.message || 'Failed to submit return');
     } finally {
       setReturnSubmitting(false);
     }
@@ -296,12 +292,12 @@ const OrderDetail = () => {
       await cancelOrder(order.id || order.mongoId || orderId, { reason: cancelReason });
       const paidOnline = order?.paymentStatus === 'paid' && order?.paymentMethod && order.paymentMethod !== 'cod';
       toast.success(paidOnline
-        ? t('auto.orderCancelledYourRefundHas')
-        : t('auto.orderCancelledSuccessfully'));
+        ? 'Order cancelled. Your refund has been sent to your original payment method.'
+        : 'Order cancelled successfully.');
       setShowCancelModal(false);
       loadOrder(true);
     } catch (err) {
-      toast.error(err?.response?.data?.message || err?.message || t('auto.failedToCancelOrder'));
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to cancel order');
     } finally {
       setIsCancelling(false);
     }
@@ -312,7 +308,7 @@ const OrderDetail = () => {
       setIsReordering(true);
       const items = order.items || order.products || [];
       if (items.length === 0) {
-        toast.error(t('auto.noItemsFoundToReorder'));
+        toast.error('No items found to reorder');
         return;
       }
       for (const item of items) {
@@ -322,10 +318,10 @@ const OrderDetail = () => {
           await addCartItem({ productId: pId, quantity: qty }).catch(() => {});
         }
       }
-      toast.success(t('auto.allItemsAddedToBag'));
+      toast.success('All items added to bag!');
       navigate('/cart');
     } catch {
-      toast.error(t('auto.couldNotReorderItems'));
+      toast.error('Could not reorder items');
     } finally {
       setIsReordering(false);
     }
@@ -334,20 +330,20 @@ const OrderDetail = () => {
   const formatReturnStatus = (status) => String(status || 'requested').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">{t('auto.loadingOrder')}</div>;
+    return <div className="min-h-screen flex items-center justify-center">Loading order...</div>;
   }
 
   if (!order) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-gray-50">
         <Package size={48} className="text-gray-300 mb-4 animate-bounce" />
-        <h2 className="text-lg font-bold text-gray-800">{t('auto.orderNotFound')}</h2>
-        <p className="text-sm text-gray-500 mt-1 max-w-sm">{t('x.couldntRetrieveOrder', { id: orderId })}</p>
+        <h2 className="text-lg font-bold text-gray-800">Order Not Found</h2>
+        <p className="text-sm text-gray-500 mt-1 max-w-sm">We couldn't retrieve details for order #{orderId}.</p>
         <button
           onClick={() => navigate(-1)}
           className="mt-6 px-6 py-3 bg-blue-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg hover:bg-blue-700 transition-all"
         >
-          {t('auto.goBack2')}
+          Go Back
         </button>
       </div>
     );
@@ -367,8 +363,8 @@ const OrderDetail = () => {
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
-  const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#f3e8ff]/60 via-[#faf5ff] to-[#f5f3ff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
-  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
+  const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#f3e8ff]/60 via-[#faf5ff] to-[#f5f3ff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[color:var(--fg-light,#FFF0A0)]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[color:var(--qs-light,#fff5f7)]' : 'bg-bg-cream');
+  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF0A0)]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF7A00)]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
   const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
 
   return (
@@ -388,10 +384,10 @@ const OrderDetail = () => {
           <button onClick={() => navigate(-1)} className={`p-1 -ml-1 hover:bg-slate-50 rounded-full transition-colors ${headerTextColor}`}>
             <ArrowLeft size={22} />
           </button>
-          <h1 className={`text-[17px] font-black tracking-tight ${headerTextColor}`}>{t('auto.trackOrder')}</h1>
+          <h1 className={`text-[17px] font-black tracking-tight ${headerTextColor}`}>Track Order</h1>
         </div>
-        <span className="text-[11px] font-black text-[#3E5A44] bg-[#FFF8EE] px-3 py-1 rounded-full border border-emerald-100/50">
-          {t('orders.orderId')}: #{order.id}
+        <span className="text-[11px] font-black text-[color:var(--mk-dark,#3E5A44)] bg-[color:var(--fg-light,#FFF8EE)] px-3 py-1 rounded-full border border-emerald-100/50">
+          ORDER ID: #{order.id}
         </span>
       </div>
 
@@ -412,8 +408,8 @@ const OrderDetail = () => {
                 <Gift size={20} className="text-amber-500" />
               </div>
               <div className="text-left flex-1">
-                <p className="text-[12.5px] font-black text-emerald-900">{t('auto.catchYourDelivery')}</p>
-                <p className="text-[10.5px] font-semibold text-emerald-700/60">{t('auto.playNowToWinRewards')}</p>
+                <p className="text-[12.5px] font-black text-emerald-900">Catch Your Delivery</p>
+                <p className="text-[10.5px] font-semibold text-emerald-700/60">Play now to win rewards</p>
               </div>
             </button>
           )}
@@ -430,14 +426,14 @@ const OrderDetail = () => {
             }}
           />
 
-          <div className="bg-gradient-to-br from-[#3E5A44] to-[#042112] rounded-3xl p-6 text-white shadow-[0_8px_30px_rgba(8,66,36,0.12)] relative overflow-hidden border border-emerald-800/30">
+          <div className="bg-gradient-to-br from-[color:var(--mk-dark,#3E5A44)] to-[#042112] rounded-3xl p-6 text-white shadow-[0_8px_30px_rgba(8,66,36,0.12)] relative overflow-hidden border border-emerald-800/30">
             <div className="absolute right-[-10px] top-[-10px] w-24 h-24 rounded-full bg-white/5 blur-xl pointer-events-none" />
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/15 flex-shrink-0">
                 <Truck size={24} className="text-white" />
               </div>
               <div>
-                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-200">{t('auto.currentStatus')}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-200">Current Status</span>
                 <h2 className="text-[18px] font-black tracking-tight mt-0.5">{order.status}</h2>
                 <p className="text-[11.5px] font-medium text-emerald-100/70 mt-1 leading-normal">
                   {isCourierOrder && (trackingData?.shipment?.awb || order?.shipment?.awb) ? (
@@ -448,9 +444,9 @@ const OrderDetail = () => {
                       )}
                     </>
                   ) : trackingData?.assignment?.partnerName ? (
-                    <>{t('auto.deliveryPartner')} <span className="text-yellow-400 font-bold">{trackingData.assignment.partnerName}</span></>
+                    <>Delivery partner: <span className="text-yellow-400 font-bold">{trackingData.assignment.partnerName}</span></>
                   ) : (
-                    <>{t('auto.orderedOn')} <span className="text-yellow-400 font-bold">{order.date}</span></>
+                    <>Ordered on: <span className="text-yellow-400 font-bold">{order.date}</span></>
                   )}
                 </p>
               </div>
@@ -484,30 +480,30 @@ const OrderDetail = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t('auto.liveTransparencyUpdate')}</span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Live Transparency Update</span>
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               </div>
               <h4 className="text-[13px] font-black text-slate-800 mt-0.5">
                 {isCourierOrder ? (
                   <>
-                    {order.rawStatus === 'placed' && t('auto.awaitingSellerConfirmation')}
-                    {order.rawStatus === 'confirmed' && t('auto.sellerAcceptedPreparingShipment')}
-                    {order.rawStatus === 'packed' && t('auto.packedLabeledReadyForCourier')}
-                    {order.rawStatus === 'shipped' && t('auto.handedOverToCourierPartner')}
-                    {order.rawStatus === 'out_for_delivery' && t('auto.outForDeliveryToYour')}
-                    {order.rawStatus === 'delivered' && t('auto.deliveredSuccessfully')}
-                    {order.rawStatus === 'cancelled' && t('auto.orderCancelled')}
+                    {order.rawStatus === 'placed' && 'Awaiting Seller Confirmation'}
+                    {order.rawStatus === 'confirmed' && 'Seller Accepted — Preparing Shipment'}
+                    {order.rawStatus === 'packed' && 'Packed & Labeled — Ready for Courier Pickup'}
+                    {order.rawStatus === 'shipped' && 'Handed Over to Courier Partner'}
+                    {order.rawStatus === 'out_for_delivery' && 'Out For Delivery to Your Doorstep'}
+                    {order.rawStatus === 'delivered' && 'Delivered Successfully!'}
+                    {order.rawStatus === 'cancelled' && 'Order Cancelled'}
                     {!['placed', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'].includes(order.rawStatus) && 'Processing Order'}
                   </>
                 ) : (
                   <>
-                    {order.rawStatus === 'placed' && t('auto.awaitingSellerConfirmation')}
-                    {order.rawStatus === 'confirmed' && t('auto.sellerAcceptedPreparingInStore')}
-                    {order.rawStatus === 'packed' && t('auto.packedReadyForPickup')}
-                    {order.rawStatus === 'shipped' && t('auto.riderPickedUpPackage')}
-                    {order.rawStatus === 'out_for_delivery' && t('auto.outForDeliveryToYour')}
-                    {order.rawStatus === 'delivered' && t('auto.deliveredSuccessfully')}
-                    {order.rawStatus === 'cancelled' && t('auto.orderCancelled')}
+                    {order.rawStatus === 'placed' && 'Awaiting Seller Confirmation'}
+                    {order.rawStatus === 'confirmed' && 'Seller Accepted — Preparing in Store'}
+                    {order.rawStatus === 'packed' && 'Packed & Ready for Pickup'}
+                    {order.rawStatus === 'shipped' && 'Rider Picked Up Package'}
+                    {order.rawStatus === 'out_for_delivery' && 'Out For Delivery to Your Doorstep'}
+                    {order.rawStatus === 'delivered' && 'Delivered Successfully!'}
+                    {order.rawStatus === 'cancelled' && 'Order Cancelled'}
                     {!['placed', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'].includes(order.rawStatus) && 'Processing Order'}
                   </>
                 )}
@@ -515,24 +511,24 @@ const OrderDetail = () => {
               <p className="text-[11.5px] text-slate-600 mt-0.5 leading-relaxed">
                 {isCourierOrder ? (
                   <>
-                    {order.rawStatus === 'placed' && t('auto.yourOrderWasReceivedAnd')}
-                    {order.rawStatus === 'confirmed' && t('auto.theSellerHasAcceptedYour')}
-                    {order.rawStatus === 'packed' && t('auto.itemsAreSafelyPackedWith')}
-                    {order.rawStatus === 'shipped' && t('auto.theParcelHasBeenHanded')}
-                    {order.rawStatus === 'out_for_delivery' && t('auto.yourPackageHasArrivedAt')}
-                    {order.rawStatus === 'delivered' && t('auto.packageHasBeenDeliveredInto')}
-                    {order.rawStatus === 'cancelled' && t('auto.thisOrderHasBeenCancelled')}
+                    {order.rawStatus === 'placed' && 'Your order was received and sent to the seller. Packaging and courier scheduling will begin once accepted.'}
+                    {order.rawStatus === 'confirmed' && 'The seller has accepted your order and is currently packing your items and generating the courier shipping label & AWB.'}
+                    {order.rawStatus === 'packed' && 'Items are safely packed with shipping label attached. Awaiting pickup by the national courier partner.'}
+                    {order.rawStatus === 'shipped' && 'The parcel has been handed over to the courier partner and is now in transit across logistics hubs.'}
+                    {order.rawStatus === 'out_for_delivery' && 'Your package has arrived at the local delivery center and is out for final delivery.'}
+                    {order.rawStatus === 'delivered' && 'Package has been delivered into your hands. Thank you for supporting Mithilakart artisans!'}
+                    {order.rawStatus === 'cancelled' && 'This order has been cancelled.'}
                     {!['placed', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'].includes(order.rawStatus) && 'We are updating your order details in real time.'}
                   </>
                 ) : (
                   <>
-                    {order.rawStatus === 'placed' && t('auto.yourOrderWasReceivedAnd2')}
-                    {order.rawStatus === 'confirmed' && t('auto.theSellerHasAcceptedYour2')}
-                    {order.rawStatus === 'packed' && t('auto.itemsAreSafelyPackedA')}
-                    {order.rawStatus === 'shipped' && t('auto.yourDeliveryPartnerHasCollected')}
-                    {order.rawStatus === 'out_for_delivery' && t('auto.yourDeliveryPartnerIsNearby')}
-                    {order.rawStatus === 'delivered' && t('auto.packageHasBeenDeliveredInto')}
-                    {order.rawStatus === 'cancelled' && t('auto.thisOrderHasBeenCancelled')}
+                    {order.rawStatus === 'placed' && 'Your order was received and sent to the local artisan/seller. As soon as the seller accepts, packing will begin.'}
+                    {order.rawStatus === 'confirmed' && 'The seller has accepted your order and is currently picking and preparing your items at the store/hub.'}
+                    {order.rawStatus === 'packed' && 'Items are safely packed. A nearby delivery partner has been requested for pickup.'}
+                    {order.rawStatus === 'shipped' && 'Your delivery partner has collected the package from the seller and is on the way.'}
+                    {order.rawStatus === 'out_for_delivery' && 'Your delivery partner is nearby and heading toward your address! Keep your delivery OTP handy.'}
+                    {order.rawStatus === 'delivered' && 'Package has been delivered into your hands. Thank you for supporting Mithilakart artisans!'}
+                    {order.rawStatus === 'cancelled' && 'This order has been cancelled.'}
                     {!['placed', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'].includes(order.rawStatus) && 'We are updating your order details in real time.'}
                   </>
                 )}
@@ -548,17 +544,17 @@ const OrderDetail = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <ShieldCheck size={20} className="text-amber-100" />
-                    <span className="text-[11px] font-black uppercase tracking-widest text-amber-100">{t('auto.deliveryVerificationOtp')}</span>
+                    <span className="text-[11px] font-black uppercase tracking-widest text-amber-100">Delivery Verification OTP</span>
                   </div>
                   <p className="text-[12px] font-medium text-amber-50 mt-1 max-w-sm leading-snug">
-                    {t('auto.shareThis6DigitCode')}
+                    Share this 6-digit code with the delivery partner ONLY when they arrive at your door.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyOtp}
                   className="self-start sm:self-auto bg-white text-slate-900 px-4 py-2.5 rounded-2xl flex items-center gap-2.5 shadow-md active:scale-95 hover:bg-amber-50 transition-all flex-shrink-0"
-                  title={t('auto.clickToCopyOtp')}
+                  title="Click to copy OTP"
                 >
                   <span className="font-mono text-xl font-black tracking-widest text-slate-900">{deliveryOtp}</span>
                   {copiedOtp ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} className="text-slate-400" />}
@@ -571,11 +567,11 @@ const OrderDetail = () => {
           {!isCourierOrder && trackingData?.assignment?.partnerName && (
             <div className="bg-white rounded-3xl p-4.5 border border-slate-100/90 shadow-[0_4px_20px_rgba(0,0,0,0.015)] flex items-center justify-between">
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-[#3E5A44] flex items-center justify-center font-black">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-[color:var(--mk-dark,#3E5A44)] flex items-center justify-center font-black">
                   <User size={20} />
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{t('auto.assignedDeliveryRider')}</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Assigned Delivery Rider</span>
                   <h4 className="text-[14px] font-black text-slate-800">{trackingData.assignment.partnerName}</h4>
                   {trackingData.assignment.partnerPhone && (
                     <p className="text-[11.5px] text-slate-500 font-semibold">{trackingData.assignment.partnerPhone}</p>
@@ -585,10 +581,10 @@ const OrderDetail = () => {
               {trackingData.assignment.partnerPhone && (
                 <a
                   href={`tel:${trackingData.assignment.partnerPhone}`}
-                  className="px-4 py-2 bg-[#3E5A44] hover:bg-[#2e4333] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                  className="px-4 py-2 bg-[color:var(--mk-dark,#3E5A44)] hover:bg-[#2e4333] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
                 >
                   <Phone size={13} />
-                  {t('auto.callRider')}
+                  Call Rider
                 </a>
               )}
             </div>
@@ -597,8 +593,8 @@ const OrderDetail = () => {
           {showLiveMap && (
             <div className="bg-white rounded-3xl p-4 border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
               <h3 className="text-[14px] font-black text-slate-800 tracking-tight mb-3 flex items-center gap-2">
-                <MapPin size={16} className="text-[#3E5A44]" />
-                {t('auto.liveDeliveryMap')}
+                <MapPin size={16} className="text-[color:var(--mk-dark,#3E5A44)]" />
+                Live Delivery Map
               </h3>
               <LiveDeliveryMap destination={destination} partnerLocation={partnerLocation} />
             </div>
@@ -614,26 +610,26 @@ const OrderDetail = () => {
                     <Package size={18} />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300">{t('auto.logisticsFulfillment')}</span>
-                    <h3 className="text-[14px] font-black text-white">{t('auto.nationalCourierDelivery')}</h3>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300">Logistics Fulfillment</span>
+                    <h3 className="text-[14px] font-black text-white">National Courier Delivery</h3>
                   </div>
                 </div>
                 <span className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
-                  {order.rawStatus?.replace(/_/g, ' ') || t('auto.inTransit')}
+                  {order.rawStatus?.replace(/_/g, ' ') || 'In Transit'}
                 </span>
               </div>
 
               <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 space-y-2.5 relative z-10">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{t('auto.courierPartner')}</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Courier Partner</span>
                     <p className="text-[13px] font-bold text-white mt-0.5">
-                      {trackingData?.shipment?.courierName || order?.shipment?.courierName || t('auto.standardExpressCourier')}
+                      {trackingData?.shipment?.courierName || order?.shipment?.courierName || 'Standard Express Courier'}
                     </p>
                   </div>
                   {(trackingData?.shipment?.awb || order?.shipment?.awb) && (
                     <div className="text-right">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{t('auto.awbTracking')}</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">AWB Tracking #</span>
                       <div className="flex items-center gap-2 mt-0.5 justify-end">
                         <span className="font-mono text-xs font-black text-amber-300">
                           {trackingData?.shipment?.awb || order?.shipment?.awb}
@@ -642,7 +638,7 @@ const OrderDetail = () => {
                           type="button"
                           onClick={() => handleCopyAwb(trackingData?.shipment?.awb || order?.shipment?.awb)}
                           className="p-1 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 transition-colors"
-                          title={t('auto.copyAwb')}
+                          title="Copy AWB"
                         >
                           {copiedAwb ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
                         </button>
@@ -664,7 +660,7 @@ const OrderDetail = () => {
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-white transition-colors"
                     >
                       <Download size={14} />
-                      {t('auto.downloadOfficialCourierShippingLabel')}
+                      Download Official Courier Shipping Label
                     </a>
                   </div>
                 )}
@@ -674,8 +670,8 @@ const OrderDetail = () => {
 
           <div className="bg-white rounded-3xl p-6 border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
             <h3 className="text-[14px] font-black text-slate-800 tracking-tight mb-5 flex items-center gap-2">
-              <Clock size={16} className="text-[#3E5A44]" />
-              {t('auto.shipmentTimeline')}
+              <Clock size={16} className="text-[color:var(--mk-dark,#3E5A44)]" />
+              Shipment Timeline
             </h3>
             <div className="space-y-6 pl-1.5">
               {deliveryUpdates.map((update, index) => {
@@ -687,17 +683,17 @@ const OrderDetail = () => {
                     )}
                     <div className={`z-10 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
                       update.active
-                        ? 'bg-emerald-50 text-[#3E5A44] border-2 border-[#3E5A44]'
+                        ? 'bg-emerald-50 text-[color:var(--mk-dark,#3E5A44)] border-2 border-[color:var(--mk-dark,#3E5A44)]'
                         : 'bg-slate-50 text-slate-300 border-2 border-slate-200'
                     }`}>
-                      <CheckCircle2 size={12} className={update.active ? 'text-[#3E5A44]' : 'text-slate-300'} />
+                      <CheckCircle2 size={12} className={update.active ? 'text-[color:var(--mk-dark,#3E5A44)]' : 'text-slate-300'} />
                     </div>
                     <div className="flex-1 -mt-0.5 pb-2">
                       <div className="flex justify-between items-baseline gap-2">
-                        <h4 className="text-[13px] font-black text-slate-800 leading-none">{tName(update.title)}</h4>
+                        <h4 className="text-[13px] font-black text-slate-800 leading-none">{update.title}</h4>
                         {update.date && <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap">{update.date}</span>}
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">{tName(update.desc)}</p>
+                      <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">{update.desc}</p>
                     </div>
                   </div>
                 );
@@ -707,19 +703,19 @@ const OrderDetail = () => {
 
           <div className="bg-white rounded-3xl border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden">
             <div className="px-5 py-4.5 border-b border-slate-100 flex items-center gap-2">
-              <Package size={16} className="text-[#3E5A44]" />
-              <h3 className="text-[14px] font-black text-slate-800 tracking-tight">{t('auto.orderItems')}</h3>
+              <Package size={16} className="text-[color:var(--mk-dark,#3E5A44)]" />
+              <h3 className="text-[14px] font-black text-slate-800 tracking-tight">Order Items</h3>
             </div>
             <div className="divide-y divide-slate-100">
               {order.items.map((item, idx) => (
                 <div key={idx} className="p-5 flex gap-4">
                   <div className="w-16 h-16 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 p-1.5 border border-slate-100/80">
-                    <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" loading="lazy" decoding="async" onError={handleImageError} />
+                    <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                   </div>
                   <div className="flex-1 py-0.5">
                     <h4 className="text-[13px] font-black text-slate-850 leading-snug line-clamp-2">{item.name}</h4>
-                    <p className="text-[10.5px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{t('common.quantity')}: {item.quantity || 1}</p>
-                    <p className="text-[13px] font-black text-[#3E5A44] mt-1.5">{formatPrice(item.price)}</p>
+                    <p className="text-[10.5px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Qty: {item.quantity || 1}</p>
+                    <p className="text-[13px] font-black text-[color:var(--mk-dark,#3E5A44)] mt-1.5">{formatPrice(item.price)}</p>
                   </div>
                 </div>
               ))}
@@ -729,17 +725,17 @@ const OrderDetail = () => {
           {returns.length > 0 && (
             <div className="bg-white rounded-3xl p-5 border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
               <h3 className="text-[14px] font-black text-slate-800 tracking-tight mb-4 flex items-center gap-2">
-                <RotateCcw size={16} className="text-[#3E5A44]" />
-                {t('auto.returnRequests')}
+                <RotateCcw size={16} className="text-[color:var(--mk-dark,#3E5A44)]" />
+                Return Requests
               </h3>
               <div className="space-y-3">
                 {returns.map((ret) => (
                   <div key={getEntityId(ret)} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                     <div>
                       <p className="text-[12px] font-bold text-slate-800">{ret.reason || 'Return requested'}</p>
-                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{t('common.quantity')}: {ret.quantity}</p>
+                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Qty: {ret.quantity}</p>
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#3E5A44] bg-emerald-50 px-2 py-1 rounded-lg">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[color:var(--mk-dark,#3E5A44)] bg-emerald-50 px-2 py-1 rounded-lg">
                       {formatReturnStatus(ret.status)}
                     </span>
                   </div>
@@ -754,21 +750,21 @@ const OrderDetail = () => {
               className="w-full bg-white border border-amber-200 text-amber-700 py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-[12px] uppercase tracking-wider shadow-sm hover:bg-amber-50 transition-colors"
             >
               <RotateCcw size={16} />
-              {t('auto.requestReturn')}
+              Request Return
             </button>
           )}
 
           <div className="bg-white rounded-3xl p-5 border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)] space-y-4">
             <h3 className="text-[14px] font-black text-slate-800 tracking-tight flex items-center gap-2">
-              <MapPin size={16} className="text-[#3E5A44]" />
-              {t('auto.deliveryDetails')}
+              <MapPin size={16} className="text-[color:var(--mk-dark,#3E5A44)]" />
+              Delivery Details
             </h3>
             <div className="flex gap-4">
               <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 flex-shrink-0">
                 <User size={15} />
               </div>
               <div>
-                <h4 className="text-[13px] font-black text-slate-800">{t('auto.recipient')}</h4>
+                <h4 className="text-[13px] font-black text-slate-800">Recipient</h4>
                 <p className="text-[12px] text-slate-500 mt-0.5">{order.address?.name || '—'}</p>
                 {order.address?.phone && (
                   <p className="text-[11.5px] text-slate-400 font-semibold mt-1 flex items-center gap-1">
@@ -782,7 +778,7 @@ const OrderDetail = () => {
                 <MapPin size={15} />
               </div>
               <div>
-                <h4 className="text-[13px] font-black text-slate-800">{t('auto.address')}</h4>
+                <h4 className="text-[13px] font-black text-slate-800">Address</h4>
                 <p className="text-[12px] text-slate-500 leading-relaxed mt-0.5">
                   {[order.address?.line1, order.address?.city, order.address?.pincode].filter(Boolean).join(', ') || '—'}
                 </p>
@@ -792,31 +788,31 @@ const OrderDetail = () => {
 
           <div className="bg-white rounded-3xl border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden">
             <div className="px-5 py-4.5 border-b border-slate-100 flex items-center gap-2">
-              <ReceiptText size={16} className="text-[#3E5A44]" />
-              <h3 className="text-[14px] font-black text-slate-800 tracking-tight">{t('auto.priceDetails')}</h3>
+              <ReceiptText size={16} className="text-[color:var(--mk-dark,#3E5A44)]" />
+              <h3 className="text-[14px] font-black text-slate-800 tracking-tight">Price Details</h3>
             </div>
             <div className="p-5 space-y-3.5 border-b border-slate-100">
               <div className="flex justify-between items-center text-[12.5px] font-medium text-slate-500">
-                <span>{t('auto.listingPrice')}</span>
+                <span>Listing Price</span>
                 <span className="font-bold text-slate-700">{formatPrice(orderTotalOldPrice)}</span>
               </div>
               <div className="flex justify-between items-center text-[12.5px] font-medium text-slate-500">
-                <span>{t('auto.specialDiscount')}</span>
-                <span className="font-bold text-[#3E5A44]">- {formatPrice(orderTotalOldPrice - orderTotalPrice)}</span>
+                <span>Special Discount</span>
+                <span className="font-bold text-[color:var(--mk-dark,#3E5A44)]">- {formatPrice(orderTotalOldPrice - orderTotalPrice)}</span>
               </div>
               <div className="flex justify-between items-center text-[12.5px] font-medium text-slate-500">
-                <span>{t('auto.deliveryCharges')}</span>
+                <span>Delivery Charges</span>
                 <span className="font-bold text-slate-700">{formatPrice(deliveryCharge)}</span>
               </div>
               <div className="pt-3.5 border-t border-dashed border-slate-100 flex justify-between items-center text-[14px] font-black text-slate-800">
-                <span>{t('auto.totalPaidAmount')}</span>
-                <span className="text-[#3E5A44]">{formatPrice(orderTotalPrice + deliveryCharge)}</span>
+                <span>Total Paid Amount</span>
+                <span className="text-[color:var(--mk-dark,#3E5A44)]">{formatPrice(orderTotalPrice + deliveryCharge)}</span>
               </div>
             </div>
             <div className="bg-slate-50/50 px-5 py-4 flex justify-between items-center">
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">{t('auto.paymentMode')}</span>
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Payment Mode</span>
               <div className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-xl border border-slate-100 shadow-2xs">
-                <Wallet size={14} className="text-[#3E5A44]" />
+                <Wallet size={14} className="text-[color:var(--mk-dark,#3E5A44)]" />
                 <span className="text-[12px] font-bold text-slate-800 capitalize">{order.paymentMethod || 'Cash On Delivery'}</span>
               </div>
             </div>
@@ -827,11 +823,11 @@ const OrderDetail = () => {
             <button
               onClick={handleReorder}
               disabled={isReordering}
-              className="w-full bg-[#3E5A44] hover:bg-[#2d4232] text-white py-4 rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-md active:scale-[0.99] cursor-pointer"
+              className="w-full bg-[color:var(--mk-dark,#3E5A44)] hover:bg-[#2d4232] text-white py-4 rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-md active:scale-[0.99] cursor-pointer"
             >
               <ShoppingBag size={18} />
               <span className="text-[13.5px] font-black uppercase tracking-wider">
-                {isReordering ? t('auto.addingToBag') : t('auto.oneClickReorder')}
+                {isReordering ? 'Adding to Bag...' : '1-Click Reorder This Order'}
               </span>
             </button>
 
@@ -842,7 +838,7 @@ const OrderDetail = () => {
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-sm font-black text-xs uppercase tracking-wider cursor-pointer"
               >
                 <Star size={16} className="fill-white" />
-                <span>{t('auto.rateYourExperienceRider5')}</span>
+                <span>Rate Your Experience & Rider (5★)</span>
               </button>
             )}
 
@@ -853,7 +849,7 @@ const OrderDetail = () => {
                 className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all font-bold text-xs uppercase tracking-wider cursor-pointer"
               >
                 <XCircle size={16} />
-                <span>{t('auto.cancelOrderInstantRefund')}</span>
+                <span>Cancel Order (Instant Refund)</span>
               </button>
             )}
 
@@ -861,9 +857,9 @@ const OrderDetail = () => {
               onClick={handleDownloadInvoice}
               className="w-full bg-white hover:bg-slate-50/60 active:bg-slate-50 text-slate-800 border border-slate-100 py-4 rounded-2xl flex items-center justify-center gap-3 transition-colors shadow-[0_4px_20px_rgba(0,0,0,0.01)] cursor-pointer"
             >
-              <Download size={18} className="text-[#3E5A44]" />
+              <Download size={18} className="text-[color:var(--mk-dark,#3E5A44)]" />
               <span className="text-[13.5px] font-black uppercase tracking-wider">
-                {t('auto.downloadPrintGstInvoice')}
+                Download / Print GST Invoice
               </span>
             </button>
 
@@ -877,7 +873,7 @@ const OrderDetail = () => {
             >
               <MessageCircle size={18} className="text-emerald-700" />
               <span className="text-[12.5px] font-bold">
-                {t('auto.needHelpWithThisOrder')}
+                Need Help with this Order? Chat on WhatsApp
               </span>
             </a>
           </div>
@@ -888,14 +884,14 @@ const OrderDetail = () => {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-black text-slate-900">{t('auto.requestReturn')}</h3>
+              <h3 className="text-lg font-black text-slate-900">Request Return</h3>
               <button onClick={() => setShowReturnModal(false)} className="p-2 rounded-full hover:bg-slate-100">
                 <X size={18} />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('auto.item')}</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</label>
                 <select
                   value={returnForm.orderItemId}
                   onChange={(e) => setReturnForm((f) => ({ ...f, orderItemId: e.target.value }))}
@@ -909,7 +905,7 @@ const OrderDetail = () => {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('auto.quantity')}</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quantity</label>
                 <input
                   type="number"
                   min={1}
@@ -920,21 +916,21 @@ const OrderDetail = () => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('auto.reason')}</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason</label>
                 <textarea
                   value={returnForm.reason}
                   onChange={(e) => setReturnForm((f) => ({ ...f, reason: e.target.value }))}
                   rows={3}
-                  placeholder={t('auto.describeTheIssue')}
+                  placeholder="Describe the issue..."
                   className="w-full mt-1.5 border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none"
                 />
               </div>
               <button
                 onClick={handleSubmitReturn}
                 disabled={returnSubmitting}
-                className="w-full bg-[#3E5A44] text-white py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider disabled:opacity-60"
+                className="w-full bg-[color:var(--mk-dark,#3E5A44)] text-white py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider disabled:opacity-60"
               >
-                {returnSubmitting ? t('auto.submitting') : t('auto.submitReturn')}
+                {returnSubmitting ? 'Submitting...' : 'Submit Return'}
               </button>
             </div>
           </div>
@@ -963,7 +959,7 @@ const OrderDetail = () => {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-rose-600">
                 <AlertTriangle size={20} />
-                <h3 className="text-base font-black">{t('x.cancelOrderNo', { id: order.orderNumber || order.id })}</h3>
+                <h3 className="text-base font-black">Cancel Order #{order.orderNumber || order.id}</h3>
               </div>
               <button onClick={() => setShowCancelModal(false)} className="p-1 text-slate-400 hover:text-slate-700">
                 <X size={18} />
@@ -971,21 +967,21 @@ const OrderDetail = () => {
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              {t('auto.areYouSureYouWant')}
+              Are you sure you want to cancel this order? Any pre-paid amount will be refunded immediately to your original payment source.
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('auto.selectReason')}</label>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Select Reason</label>
               <select
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 className="w-full text-xs font-semibold p-3 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none"
               >
-                <option value="Ordered by mistake">{t('auto.orderedByMistake')}</option>
-                <option value="Want to change delivery address">{t('auto.wantToChangeDeliveryAddress')}</option>
-                <option value="Want to add more items">{t('auto.wantToAddMoreItems')}</option>
-                <option value="Expected faster delivery">{t('auto.expectedFasterDelivery')}</option>
-                <option value="Other reason">{t('auto.otherReason')}</option>
+                <option value="Ordered by mistake">Ordered by mistake</option>
+                <option value="Want to change delivery address">Want to change delivery address</option>
+                <option value="Want to add more items">Want to add more items</option>
+                <option value="Expected faster delivery">Expected faster delivery</option>
+                <option value="Other reason">Other reason</option>
               </select>
             </div>
 
@@ -995,7 +991,7 @@ const OrderDetail = () => {
                 onClick={() => setShowCancelModal(false)}
                 className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
               >
-                {t('auto.keepOrder')}
+                Keep Order
               </button>
               <button
                 type="button"
@@ -1003,7 +999,7 @@ const OrderDetail = () => {
                 onClick={handleCancelOrder}
                 className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50"
               >
-                {isCancelling ? t('auto.cancelling') : t('auto.confirmCancel')}
+                {isCancelling ? 'Cancelling...' : 'Confirm Cancel'}
               </button>
             </div>
           </div>

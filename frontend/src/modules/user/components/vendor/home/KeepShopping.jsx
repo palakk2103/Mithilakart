@@ -61,7 +61,7 @@ const KeepShopping = () => {
           </h2>
           <span
             onClick={() => navigate('/categories')}
-            className="text-[10.5px] font-black text-[#65B842] uppercase tracking-tighter cursor-pointer flex items-center"
+            className="text-[10.5px] font-black text-[color:var(--mk-primary,#65B842)] uppercase tracking-tighter cursor-pointer flex items-center"
           >
             {t('common.viewAll', { defaultValue: 'View All' })} <ViewAllIcon />
           </span>
@@ -78,7 +78,7 @@ const KeepShopping = () => {
                 {item.img ? (
                   <img src={item.img} alt={item.name} className="w-full h-full object-cover rounded-[10px]" loading="lazy" onError={handleImageError} />
                 ) : (
-                  <span className="text-[11px] font-black text-[#3E5A44]">{item.name.charAt(0)}</span>
+                  <span className="text-[11px] font-black text-[color:var(--mk-dark,#3E5A44)]">{item.name.charAt(0)}</span>
                 )}
               </div>
               <p className="text-[8.5px] md:text-[10px] font-bold text-[#3F2A20] text-center leading-tight line-clamp-2 px-0.5">

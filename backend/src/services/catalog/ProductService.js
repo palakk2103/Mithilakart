@@ -273,6 +273,22 @@ class ProductService extends BaseService {
   }
 
 
+  /**
+   * Admin declares that several sellers' products are the SAME sellable item.
+   * Only then can the fulfilment engine substitute one seller for another
+   * (see Product.catalogKey). A wrong key ships the customer a different
+   * product, so this is explicit and admin-only — never derived from titles.
+   */
+  async setCatalogKey(ids, catalogKey) {
+    if (!Array.isArray(ids) || ids.length === 0) throw AppError.validation('Product ids are required');
+    const key = catalogKey === null || catalogKey === undefined || String(catalogKey).trim() === ''
+      ? null
+      : String(catalogKey).trim().toUpperCase();
+    await this.productRepository.setCatalogKey(ids, key);
+    await Promise.all(ids.map((id) => this._invalidateProductCache(id)));
+    return { updatedCount: ids.length, catalogKey: key };
+  }
+
   async bulkAction(ids, action) {
     if (!Array.isArray(ids) || ids.length === 0) {
       throw AppError.validation('Product ids are required');

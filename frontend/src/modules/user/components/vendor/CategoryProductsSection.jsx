@@ -1,8 +1,6 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Heart, Star, ShoppingBag, Tag, X, SlidersHorizontal, Layers, Check } from 'lucide-react';
-import useWishlistToggle from '../../hooks/useWishlistToggle';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import ScrollRow from './home/ScrollRow';
 import { getCategories, getCategoryProducts } from '../../services/catalogApi';
 import { findCategoryByName, extractList, mapProductForCard } from '../../utils/mappers';
 import { addProductToCart } from '../../utils/cartUtils';
@@ -11,10 +9,6 @@ import { getCurrentMarketplaceTab } from '../../../../shared/utils/marketplaceHe
 import { allCategoryProducts } from '../../../../data/categoryData';
 import { getImageUrl, handleImageError } from '../../../../shared/utils/imageUtils';
 import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
-import InfiniteScrollSentinel from '../../../../shared/components/InfiniteScrollSentinel';
-import { getFashionFallbackImage } from './home/SubCategoryGrid';
-import CategoryLandingBlocks from './landing/CategoryLandingBlocks';
 
 // Fallback images for subcategories when admin hasn't set an image yet
 import FashionHero from '../../../../assets/products/product06.jpg';
@@ -27,7 +21,6 @@ import MakeupHero from '../../../../assets/products/product08.jpg';
 import PlumShampoo from '../../../../assets/products/product05.jpg';
 import SamsungS24 from '../../../../assets/products/product01.jpg';
 import AsusLaptop from '../../../../assets/products/product02.jpg';
-import { sortLabelToApi } from '../../utils/listQuery';
 import EarbudsDeal from '../../../../assets/products/product03.jpg';
 import JewelleryImg from '../../../../assets/products/product12.jpg';
 import ToysImg from '../../../../assets/products/product14.jpg';
@@ -66,14 +59,12 @@ const CardBottomDivider = () => (
 );
 
 const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
-  const { t } = useTranslation();
-  const { isWishlisted: checkWishlisted, toggle: toggleWishlist } = useWishlistToggle();
-  const isWishlisted = checkWishlisted(product);
+  const [isWishlisted, setIsWishlisted] = useState(false);
   const { primaryText } = useTabTheme();
 
   return (
     <div
-      className="flex flex-col cursor-pointer group w-full relative bg-[#FFFDF9] border border-[#EADCC9]/70 rounded-[18px] md:rounded-[24px] p-2 md:p-3 shadow-[0_2px_8px_rgba(61,35,20,0.015)] hover:shadow-[0_6px_18px_rgba(61,35,20,0.04)] hover:border-[#3E5A44]/35 transition-all duration-300 transform select-none justify-between"
+      className="flex flex-col cursor-pointer group w-full relative bg-[#FFFDF9] border border-[#EADCC9]/70 rounded-[18px] md:rounded-[24px] p-2 md:p-3 shadow-[0_2px_8px_rgba(61,35,20,0.015)] hover:shadow-[0_6px_18px_rgba(61,35,20,0.04)] hover:border-[color:var(--mk-dark,#3E5A44)]/35 transition-all duration-300 transform select-none justify-between"
       onClick={() => onProductClick(product)}
     >
       {/* Inner Decorative Dashed Border */}
@@ -99,7 +90,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            toggleWishlist(product);
+            setIsWishlisted(!isWishlisted);
           }}
           className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-6 h-6 md:w-7 md:h-7 rounded-full bg-white/90 backdrop-blur-xs shadow-sm flex items-center justify-center text-slate-700 hover:text-red-500 z-10 transition-all duration-200 active:scale-85"
         >
@@ -111,7 +102,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
 
         {/* Discount Badge */}
         {product.off && (
-          <div className="absolute top-1.5 left-1.5 bg-[#3E5A44] text-white text-[7.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
+          <div className="absolute top-1.5 left-1.5 bg-[color:var(--mk-dark,#3E5A44)] text-white text-[7.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
             {product.off}
           </div>
         )}
@@ -145,10 +136,10 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
         <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[#EADCC9]/40">
           <button
             onClick={(e) => onAddToCart(product, e)}
-            className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs"
+            className="w-full py-1.5 px-2 bg-[color:var(--fg-light,#FFF8EE)] hover:bg-[color:var(--mk-dark,#3E5A44)] text-[color:var(--mk-dark,#3E5A44)] hover:text-white border border-[color:var(--mk-dark,#3E5A44)]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs"
           >
             <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>{t('common.addToCart')}</span>
+            <span>Add to Cart</span>
           </button>
         </div>
 
@@ -158,38 +149,18 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
   );
 });
 
-const BATCH_SIZE = 36;
-
-const hasMoreFromMeta = (data, count, limit) => {
-  const meta = data?.meta;
-  return meta ? Boolean(meta.hasMore ?? (meta.page < meta.totalPages)) : count >= limit;
-};
-
 const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
-  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSubcategory = searchParams.get('subcategory');
-  // Id of the parent the shopper entered a child category through. A category can have
-  // several parents, so the child id alone cannot say which path (and breadcrumb) is active.
-  const urlParent = searchParams.get('parent');
 
   const [allProducts, setAllProducts] = useState([]);
   const [adminSubcategories, setAdminSubcategories] = useState([]);
-  // Main category the admin-configured landing blocks (banner / promo sections) belong to.
-  const [landingCategoryId, setLandingCategoryId] = useState(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState(urlSubcategory || null);
   const [subProducts, setSubProducts] = useState(null);
   const [loading, setLoading] = useState(false);
   const [subLoading, setSubLoading] = useState(false);
   const [activeSort, setActiveSort] = useState('Popularity');
-  // Sorting is done by the API so it covers the whole category, not just loaded batches.
-  const sortApi = sortLabelToApi(activeSort);
-  const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
-  const [moreLoading, setMoreLoading] = useState(false);
-  const [moreError, setMoreError] = useState(null);
-  // Server paging cursors for the two product sources; `gen` invalidates in-flight loads on reset.
-  const allPaging = useRef({ catId: null, page: 1, hasMore: false, busy: false, gen: 0 });
-  const subPaging = useRef({ catId: null, page: 1, hasMore: false, busy: false, gen: 0 });
+  const [displayCount, setDisplayCount] = useState(8);
   const navigate = useNavigate();
 
   // Keep selectedSubcategory in sync when URL changes or category changes
@@ -203,9 +174,6 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     if (!selectedCategory) return;
 
     let cancelled = false;
-    allPaging.current = { catId: null, page: 1, hasMore: false, busy: false, gen: allPaging.current.gen + 1 };
-    setDisplayCount(BATCH_SIZE);
-    setMoreError(null);
 
     const loadCategoryData = async () => {
       setLoading(true);
@@ -215,44 +183,30 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         const match = findCategoryByName(categories, selectedCategory);
 
         if (match) {
-          // Dynamic subcategories created by Admin in CategoryManager (preserving full hierarchy)
-          const mapSubTree = (list) => {
-            if (!Array.isArray(list)) return [];
-            return list.map((sub) => {
-              const rawImg = sub.imageUrl || sub.iconUrl;
-              const img = rawImg && !rawImg.includes('via.placeholder') ? getImageUrl(rawImg) : getFashionFallbackImage(sub.name);
-              return {
-                id: String(sub.id || sub._id),
-                name: sub.name,
-                img,
-                slug: sub.slug,
-                children: mapSubTree(sub.children),
-              };
-            });
-          };
-
-          const dynamicSubs = mapSubTree(match.children);
+          // Dynamic subcategories created by Admin in CategoryManager
+          const rawChildren = Array.isArray(match.children) ? match.children : [];
+          const dynamicSubs = rawChildren.map((sub) => ({
+            id: String(sub.id || sub._id),
+            name: sub.name,
+            img: sub.imageUrl ? getImageUrl(sub.imageUrl) : (sub.iconUrl ? getImageUrl(sub.iconUrl) : ''),
+            slug: sub.slug,
+          }));
 
           if (!cancelled) {
             setAdminSubcategories(dynamicSubs);
-            setLandingCategoryId(String(match.id));
           }
 
           // Fetch products created in Database under this category
-          const queryParams = { page: 1, limit: BATCH_SIZE, marketplaceTab: tab, ...(sortApi ? { sort: sortApi } : {}) };
+          const queryParams = { limit: 50, marketplaceTab: tab };
           let apiProducts = [];
-          let apiHasMore = false;
           try {
             const data = await getCategoryProducts(match.id, queryParams);
-            const rawList = extractList(data);
-            apiProducts = rawList.map((p) => mapProductForCard(p));
-            apiHasMore = hasMoreFromMeta(data, rawList.length, BATCH_SIZE);
+            apiProducts = extractList(data).map((p) => mapProductForCard(p));
           } catch {
             apiProducts = [];
           }
 
           if (!cancelled) {
-            allPaging.current = { catId: match.id, page: 1, hasMore: apiHasMore, busy: false, gen: allPaging.current.gen };
             if (apiProducts.length > 0) {
               setAllProducts(apiProducts);
             } else {
@@ -264,7 +218,6 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         } else {
           if (!cancelled) {
             setAdminSubcategories([]);
-            setLandingCategoryId(null);
             const fallback = allCategoryProducts[selectedCategory] || allCategoryProducts['Fashion'] || [];
             setAllProducts(fallback.map((p) => mapProductForCard(p)));
           }
@@ -283,7 +236,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     return () => {
       cancelled = true;
     };
-  }, [selectedCategory, sortApi]);
+  }, [selectedCategory]);
 
   // Fallback curated subcategories if Admin hasn't added subcategories to DB for this category yet
   const fallbackSubcategories = useMemo(() => {
@@ -322,51 +275,13 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
   const subcategoriesToDisplay = adminSubcategories.length > 0 ? adminSubcategories : fallbackSubcategories;
 
-  // Resolve Active Parent & Child Subcategories
-  const { activeParentSub, activeChildSub } = useMemo(() => {
-    if (!selectedSubcategory) return { activeParentSub: null, activeChildSub: null };
-    const norm = String(selectedSubcategory).toLowerCase().trim();
-
-    // 1. Direct match with a top-level subcategory (e.g. Men's Wear)
-    const directMatch = subcategoriesToDisplay.find(
-      (s) => s.id === selectedSubcategory || s.slug?.toLowerCase() === norm || s.name?.toLowerCase() === norm
-    );
-    if (directMatch) {
-      return { activeParentSub: directMatch, activeChildSub: null };
-    }
-
-    // 2. Match with a child of one of the subcategories (e.g. Casual Shirts under Men's Wear).
-    // Exact id match across all parents wins first, so duplicate names can't resolve to the wrong parent.
-    // The path the shopper came through (?parent=) wins, so a child shared by several parents
-    // (e.g. Lassi under Dairy and under Beverages) never jumps to the first parent in the list.
-    if (urlParent) {
-      const viaParent = subcategoriesToDisplay.find((p) => p.id === urlParent);
-      const viaChild = viaParent && Array.isArray(viaParent.children) && viaParent.children.find((c) => c.id === selectedSubcategory);
-      if (viaChild) return { activeParentSub: viaParent, activeChildSub: viaChild };
-    }
-    for (const parent of subcategoriesToDisplay) {
-      const idMatch = Array.isArray(parent.children) && parent.children.find((c) => c.id === selectedSubcategory);
-      if (idMatch) return { activeParentSub: parent, activeChildSub: idMatch };
-    }
-    for (const parent of subcategoriesToDisplay) {
-      if (Array.isArray(parent.children) && parent.children.length > 0) {
-        const childMatch = parent.children.find(
-          (c) => c.id === selectedSubcategory || c.slug?.toLowerCase() === norm || c.name?.toLowerCase() === norm
-        );
-        if (childMatch) {
-          return { activeParentSub: parent, activeChildSub: childMatch };
-        }
-      }
-    }
-
-    return { activeParentSub: null, activeChildSub: null };
-  }, [selectedSubcategory, subcategoriesToDisplay, urlParent]);
-
   // Active Subcategory Object
   const currentSubcategoryObj = useMemo(() => {
     if (!selectedSubcategory) return null;
-    return activeChildSub || activeParentSub || { name: selectedSubcategory, id: selectedSubcategory };
-  }, [selectedSubcategory, activeChildSub, activeParentSub]);
+    return subcategoriesToDisplay.find(
+      (s) => s.id === selectedSubcategory || s.name === selectedSubcategory || s.slug === selectedSubcategory
+    ) || { name: selectedSubcategory, id: selectedSubcategory };
+  }, [selectedSubcategory, subcategoriesToDisplay]);
 
   // Real-time backend fetching when a dynamic subcategory from Admin is selected
   useEffect(() => {
@@ -375,28 +290,23 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       return;
     }
 
-    const activeTarget = activeChildSub || activeParentSub || subcategoriesToDisplay.find(
+    const activeSub = subcategoriesToDisplay.find(
       (s) => s.id === selectedSubcategory || s.name === selectedSubcategory || s.slug === selectedSubcategory
     );
 
-    const subId = activeTarget?.id;
+    const subId = activeSub?.id;
     const isMongoId = subId && /^[0-9a-fA-F]{24}$/.test(subId);
 
     if (isMongoId) {
       let cancelled = false;
       setSubLoading(true);
-      subPaging.current = { catId: subId, page: 1, hasMore: false, busy: false, gen: subPaging.current.gen + 1 };
-      setDisplayCount(BATCH_SIZE);
-      setMoreError(null);
 
       const fetchSubProducts = async () => {
         try {
           const tab = getCurrentMarketplaceTab();
-          const data = await getCategoryProducts(subId, { page: 1, limit: BATCH_SIZE, marketplaceTab: tab, ...(sortApi ? { sort: sortApi } : {}) });
-          const rawList = extractList(data);
-          const items = rawList.map((p) => mapProductForCard(p));
+          const data = await getCategoryProducts(subId, { limit: 50, marketplaceTab: tab });
+          const items = extractList(data).map((p) => mapProductForCard(p));
           if (!cancelled) {
-            subPaging.current.hasMore = hasMoreFromMeta(data, rawList.length, BATCH_SIZE);
             setSubProducts(items);
           }
         } catch {
@@ -411,20 +321,16 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         cancelled = true;
       };
     } else {
-      subPaging.current = { catId: null, page: 1, hasMore: false, busy: false, gen: subPaging.current.gen + 1 };
       setSubProducts(null);
     }
-  }, [selectedSubcategory, activeChildSub, activeParentSub, subcategoriesToDisplay, sortApi]);
+  }, [selectedSubcategory, subcategoriesToDisplay]);
 
-  // Click handler for top-level subcategory card (e.g. Men's Wear, Women's Wear)
+  // Click handler for subcategory card - fully responsive and updates URL & state
   const handleSubcategoryClick = useCallback((sub) => {
     const isAlreadySelected =
       selectedSubcategory === sub.id ||
       selectedSubcategory === sub.name ||
-      selectedSubcategory === sub.slug ||
-      activeParentSub?.id === sub.id ||
-      activeParentSub?.name === sub.name ||
-      activeParentSub?.slug === sub.slug;
+      selectedSubcategory === sub.slug;
 
     const nextVal = isAlreadySelected ? null : (sub.slug || sub.name || sub.id);
 
@@ -438,7 +344,6 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       } else {
         next.delete('subcategory');
       }
-      next.delete('parent'); // a top-level subcategory has no parent context
       return next;
     }, { replace: true });
 
@@ -449,41 +354,13 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }, 50);
-  }, [selectedSubcategory, activeParentSub, setSearchParams]);
-
-  // Click handler for nested / child subcategory (e.g. Casual Shirts, Jeans under Men's Wear)
-  const handleChildSubcategoryClick = useCallback((child, parent) => {
-    // Compare by id only: identically-named children under different parents
-    // (e.g. "Kurta Sets" under Men's vs Boys Ethnic) must never be treated as the same node.
-    const isAlreadySelected = selectedSubcategory === child.id && (!urlParent || urlParent === parent.id);
-
-    const nextVal = isAlreadySelected ? (parent.id || parent.slug || parent.name) : (child.id || child.slug || child.name);
-
-    setSelectedSubcategory(nextVal);
-
-    setSearchParams((prevParams) => {
-      const next = new URLSearchParams(prevParams);
-      next.set('subcategory', nextVal);
-      // Remember the path used to reach this child; cleared when going back up to the parent.
-      if (isAlreadySelected) next.delete('parent');
-      else next.set('parent', parent.id);
-      return next;
-    }, { replace: true });
-
-    setTimeout(() => {
-      const el = document.getElementById('category-products-grid');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }, 50);
-  }, [selectedSubcategory, urlParent, setSearchParams]);
+  }, [selectedSubcategory, setSearchParams]);
 
   const handleClearSubcategory = useCallback(() => {
     setSelectedSubcategory(null);
     setSearchParams((prevParams) => {
       const next = new URLSearchParams(prevParams);
       next.delete('subcategory');
-      next.delete('parent');
       return next;
     }, { replace: true });
   }, [setSearchParams]);
@@ -497,12 +374,12 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
     // Otherwise, filter in-memory products against selected subcategory
     if (selectedSubcategory && (subProducts === null || subProducts.length === 0)) {
-      const activeTarget = activeChildSub || activeParentSub || subcategoriesToDisplay.find(
+      const activeSub = subcategoriesToDisplay.find(
         (s) => s.id === selectedSubcategory || s.name === selectedSubcategory || s.slug === selectedSubcategory
       );
-      const subName = (activeTarget?.name || selectedSubcategory || '').toLowerCase().trim();
-      const subSlug = (activeTarget?.slug || '').toLowerCase().trim();
-      const subId = String(activeTarget?.id || selectedSubcategory).toLowerCase().trim();
+      const subName = (activeSub?.name || selectedSubcategory || '').toLowerCase().trim();
+      const subSlug = (activeSub?.slug || '').toLowerCase().trim();
+      const subId = String(activeSub?.id || selectedSubcategory).toLowerCase().trim();
 
       // Normalize search keywords (including singular and plural variants)
       const rawKeywords = [
@@ -550,58 +427,23 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       list = matched;
     }
 
-    // Order comes from the API (sortApi).
+    // Sort
+    if (activeSort === 'Price: Low to High') {
+      return list.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+    }
+    if (activeSort === 'Price: High to Low') {
+      return list.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+    }
+    if (activeSort === 'Customer Rating') {
+      return list.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+    }
     return list;
-  }, [allProducts, subProducts, selectedSubcategory, subcategoriesToDisplay]);
+  }, [allProducts, subProducts, selectedSubcategory, subcategoriesToDisplay, activeSort]);
 
   const displayedProducts = useMemo(
     () => filteredAndSortedProducts.slice(0, displayCount),
     [filteredAndSortedProducts, displayCount]
   );
-
-  // Scroll-driven loading: reveal more already-fetched products, and pull the next
-  // server batch once the fetched list is nearly exhausted.
-  const usingSubSource = subProducts !== null && subProducts.length > 0;
-  const activePaging = usingSubSource ? subPaging : allPaging;
-  const serverHasMore = Boolean(activePaging.current.hasMore) && !(selectedSubcategory && !usingSubSource);
-  const hasMoreToShow = displayCount < filteredAndSortedProducts.length || serverHasMore;
-
-  const handleLoadMore = useCallback(async () => {
-    setDisplayCount((prev) => prev + BATCH_SIZE);
-    const paging = activePaging.current;
-    const remaining = filteredAndSortedProducts.length - displayCount;
-    if (!paging.hasMore || paging.busy || !paging.catId || remaining > BATCH_SIZE) return;
-    paging.busy = true;
-    const gen = paging.gen;
-    const setter = usingSubSource ? setSubProducts : setAllProducts;
-    setMoreLoading(true);
-    setMoreError(null);
-    try {
-      const nextPage = paging.page + 1;
-      const data = await getCategoryProducts(paging.catId, {
-        page: nextPage,
-        limit: BATCH_SIZE,
-        marketplaceTab: getCurrentMarketplaceTab(),
-        ...(sortApi ? { sort: sortApi } : {}),
-      });
-      if (gen !== paging.gen) return; // category/subcategory changed meanwhile
-      const rawList = extractList(data);
-      paging.page = nextPage;
-      paging.hasMore = hasMoreFromMeta(data, rawList.length, BATCH_SIZE);
-      const incoming = rawList.map((p) => mapProductForCard(p));
-      setter((prev) => {
-        const seen = new Set((prev || []).map((x) => x.id));
-        return (prev || []).concat(incoming.filter((x) => !seen.has(x.id)));
-      });
-    } catch (err) {
-      if (gen === paging.gen) setMoreError(err?.message || t('common.failedLoadMore'));
-    } finally {
-      if (gen === paging.gen) {
-        paging.busy = false;
-        setMoreLoading(false);
-      }
-    }
-  }, [activePaging, filteredAndSortedProducts.length, displayCount, usingSubSource, sortApi]);
 
   const handleAddToCart = useCallback(async (product, e) => {
     e.stopPropagation();
@@ -612,9 +454,9 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         price: product.price,
         image: product.image || product.img,
       });
-      toast.success(t('common.addedToCart', { name: product.name }));
+      toast.success(`${product.name} added to cart!`);
     } catch {
-      toast.error(t('common.couldNotAddToCart'));
+      toast.error('Could not add to cart');
     }
   }, []);
 
@@ -633,19 +475,6 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     });
   }, [navigate]);
 
-  // Same product card + handlers as the main grid, for the admin promo sections.
-  const renderLandingProduct = useCallback((item) => {
-    const product = mapProductForCard(item);
-    return (
-      <ProductCard
-        key={product.listingId || product.id}
-        product={product}
-        onProductClick={handleProductClick}
-        onAddToCart={handleAddToCart}
-      />
-    );
-  }, [handleProductClick, handleAddToCart]);
-
   if (!selectedCategory) return null;
 
   return (
@@ -654,7 +483,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       {/* ── Active Category Control Bar ── */}
       <div className="flex items-center justify-between mb-4 bg-white border border-[#EADCC9]/70 rounded-2xl p-2.5 shadow-xs">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-[#FFF8EE] border border-[#3E5A44]/30 flex items-center justify-center text-[#3E5A44]">
+          <div className="w-8 h-8 rounded-xl bg-[color:var(--fg-light,#FFF8EE)] border border-[color:var(--mk-dark,#3E5A44)]/30 flex items-center justify-center text-[color:var(--mk-dark,#3E5A44)]">
             <Tag size={16} />
           </div>
           <div>
@@ -662,14 +491,14 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               <h2 className="text-[15.5px] font-black text-[#3F2A20] leading-tight">
                 {selectedCategory}
               </h2>
-              <span className="text-[9.5px] font-bold bg-[#3E5A44]/10 text-[#3E5A44] px-2 py-0.5 rounded-full">
+              <span className="text-[9.5px] font-bold bg-[color:var(--mk-dark,#3E5A44)]/10 text-[color:var(--mk-dark,#3E5A44)] px-2 py-0.5 rounded-full">
                 {filteredAndSortedProducts.length} items
               </span>
             </div>
             <p className="text-[10px] text-slate-500 font-semibold">
               {adminSubcategories.length > 0 
                 ? `${adminSubcategories.length} subcategories from Admin`
-                : t('auto.showingCuratedCollectionsProducts')}
+                : 'Showing curated collections & products'}
             </p>
           </div>
         </div>
@@ -677,24 +506,13 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         {onResetToAll && (
           <button
             onClick={onResetToAll}
-            className="flex items-center gap-1 text-[11px] font-bold text-[#3E5A44] hover:text-[#2d4232] bg-[#FFF8EE] border border-[#3E5A44]/30 px-3 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs"
+            className="flex items-center gap-1 text-[11px] font-bold text-[color:var(--mk-dark,#3E5A44)] hover:text-[#2d4232] bg-[color:var(--fg-light,#FFF8EE)] border border-[color:var(--mk-dark,#3E5A44)]/30 px-3 py-1.5 rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs"
           >
             <X size={13} />
-            <span>{t('common.showAll')}</span>
+            <span>Show All</span>
           </button>
         )}
       </div>
-
-      {/* ── Admin landing blocks above the subcategory row (banner etc.); hidden once a subcategory is chosen ── */}
-      {!selectedSubcategory && landingCategoryId && (
-        <CategoryLandingBlocks
-          categoryId={landingCategoryId}
-          tab={getCurrentMarketplaceTab()}
-          part="before"
-          onNavigate={navigate}
-          renderProduct={renderLandingProduct}
-        />
-      )}
 
       {/* ── SECTION 1: Subcategories Horizontal Row (100% Dynamic & Clickable) ── */}
       {subcategoriesToDisplay.length > 0 && (
@@ -702,51 +520,50 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
           <div className="flex items-center justify-between mb-3 px-1">
             <div className="flex items-center gap-2">
               <h3 className="text-[15px] font-black text-[#3F2A20] tracking-tight flex items-center gap-1.5">
-                <span>{t('common.subcategoriesOf', { name: selectedCategory })}</span>
+                <span>{selectedCategory} Subcategories</span>
               </h3>
-              <span className="text-[10.5px] font-semibold text-slate-500 bg-[#EADCC9]/40 px-2 py-0.5 rounded-md">
-                {t('common.clickToFilter')}
+              <span className="text-[9px] font-semibold text-slate-500 bg-[#EADCC9]/40 px-2 py-0.5 rounded-md">
+                Click to filter products
               </span>
             </div>
             {selectedSubcategory && (
               <button
                 onClick={handleClearSubcategory}
-                className="text-[11px] font-bold text-[#3E5A44] hover:underline flex items-center gap-1 cursor-pointer bg-[#FFF8EE] px-2.5 py-1 rounded-full border border-[#3E5A44]/20 active:scale-95 transition-transform"
+                className="text-[11px] font-bold text-[color:var(--mk-dark,#3E5A44)] hover:underline flex items-center gap-1 cursor-pointer bg-[color:var(--fg-light,#FFF8EE)] px-2.5 py-1 rounded-full border border-[color:var(--mk-dark,#3E5A44)]/20 active:scale-95 transition-transform"
               >
-                <X size={12} /> {t('x.clearFilter')}
+                <X size={12} /> Clear Filter
               </button>
             )}
           </div>
 
-          <ScrollRow className="flex items-stretch gap-3 pb-2 pt-1 -mx-1 px-1">
+          <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-2 pt-1 -mx-1 px-1">
             {/* "All" Subcategory Pill Card */}
             <button
               type="button"
               onClick={handleClearSubcategory}
               className={`flex-shrink-0 w-[115px] sm:w-[130px] rounded-[18px] p-2.5 flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 border ${
                 !selectedSubcategory
-                  ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-md ring-2 ring-[#3E5A44]/30'
-                  : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:bg-[#FFF8EE]'
+                  ? 'bg-[color:var(--mk-dark,#3E5A44)] text-white border-[color:var(--mk-dark,#3E5A44)] shadow-md ring-2 ring-[color:var(--mk-dark,#3E5A44)]/30'
+                  : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:bg-[color:var(--fg-light,#FFF8EE)]'
               }`}
             >
               <div className={`w-9 h-9 rounded-full flex items-center justify-center mb-1.5 ${
-                !selectedSubcategory ? 'bg-white/20 text-white' : 'bg-[#FFF8EE] text-[#3E5A44]'
+                !selectedSubcategory ? 'bg-white/20 text-white' : 'bg-[color:var(--fg-light,#FFF8EE)] text-[color:var(--mk-dark,#3E5A44)]'
               }`}>
                 <Layers size={17} />
               </div>
-              <span className="text-[12px] md:text-[13px] font-black leading-tight text-center">{t('common.allItems')}</span>
-              <span className={`text-[10.5px] mt-0.5 ${!selectedSubcategory ? 'text-[#FDE68A]' : 'text-slate-400'}`}>
+              <span className="text-[11px] font-black leading-tight text-center">All {selectedCategory}</span>
+              <span className={`text-[9px] mt-0.5 ${!selectedSubcategory ? 'text-[#FDE68A]' : 'text-slate-400'}`}>
                 {allProducts.length} items
               </span>
             </button>
 
             {/* Subcategories (Clickable to Filter in-place) */}
             {subcategoriesToDisplay.map((sub) => {
-              // Identity is the category id (slug for legacy links) - never the display name, which repeats across parents.
               const isSelected =
                 selectedSubcategory === sub.id ||
-                (sub.slug && selectedSubcategory === sub.slug) ||
-                activeParentSub?.id === sub.id;
+                selectedSubcategory === sub.name ||
+                selectedSubcategory === sub.slug;
 
               return (
                 <button
@@ -759,8 +576,8 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                   }}
                   className={`flex-shrink-0 w-[125px] sm:w-[140px] md:w-[155px] cursor-pointer transition-all duration-200 active:scale-95 rounded-[18px] p-2.5 flex flex-col justify-between text-left ${
                     isSelected
-                      ? 'bg-gradient-to-br from-[#283E2D] via-[#3E5A44] to-[#1E2E22] text-white border-2 border-[#3E5A44] shadow-md ring-2 ring-[#3E5A44]/30'
-                      : 'bg-[#FFF8EE] text-[#3F2A20] border border-[#EADCC9] hover:border-[#3E5A44]/60 hover:shadow-xs'
+                      ? 'bg-gradient-to-br from-[#283E2D] via-[color:var(--mk-dark,#3E5A44)] to-[#1E2E22] text-white border-2 border-[color:var(--mk-dark,#3E5A44)] shadow-md ring-2 ring-[color:var(--mk-dark,#3E5A44)]/30'
+                      : 'bg-[color:var(--fg-light,#FFF8EE)] text-[#3F2A20] border border-[#EADCC9] hover:border-[color:var(--mk-dark,#3E5A44)]/60 hover:shadow-xs'
                   }`}
                 >
                   <div className="w-full aspect-square bg-white rounded-[14px] border border-[#EADCC9]/70 overflow-hidden p-1 flex items-center justify-center relative shadow-xs">
@@ -768,116 +585,33 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                       src={sub.img || FashionHero}
                       alt={sub.name}
                       onError={handleImageError}
-                      className="w-full h-full object-cover rounded-[10px] group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" />
+                      className="w-full h-full object-cover rounded-[10px] group-hover:scale-105 transition-transform duration-500"
+                    />
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 bg-[#3E5A44] text-white w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
+                      <div className="absolute top-1.5 right-1.5 bg-[color:var(--mk-dark,#3E5A44)] text-white w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
                         <Check size={12} strokeWidth={3} />
                       </div>
                     )}
                   </div>
                   <div className="mt-2 text-center w-full">
-                    <h4 className={`text-[12px] md:text-[13px] font-black leading-tight truncate px-0.5 ${isSelected ? 'text-white' : 'text-[#3F2A20]'}`}>
+                    <h4 className={`text-[11px] font-black leading-tight truncate px-0.5 ${isSelected ? 'text-white' : 'text-[#3F2A20]'}`}>
                       {sub.name}
                     </h4>
                     {sub.offer ? (
-                      <span className={`text-[11px] font-extrabold block mt-0.5 ${isSelected ? 'text-[#FDE68A]' : 'text-[#E26D22]'}`}>
+                      <span className={`text-[9.5px] font-extrabold block mt-0.5 ${isSelected ? 'text-[#FDE68A]' : 'text-[#E26D22]'}`}>
                         {sub.offer}
                       </span>
                     ) : (
-                      <span className={`text-[10.5px] font-semibold block mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
-                        {isSelected ? t('common.selected') : t('common.filterByThis')}
+                      <span className={`text-[8.5px] font-semibold block mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
+                        {isSelected ? 'Selected' : 'Filter by this'}
                       </span>
                     )}
                   </div>
                 </button>
               );
             })}
-          </ScrollRow>
-        </div>
-      )}
-
-      {/* ── SECTION 1B: Secondary / Nested Subcategories Strip (e.g. Men's Wear -> Casual Shirts, Jeans, Denim, Festive, etc.) ── */}
-      {activeParentSub && Array.isArray(activeParentSub.children) && activeParentSub.children.length > 0 && (
-        <div className="mb-6 bg-[#FAF9F5] border border-[#EADCC9]/80 rounded-2xl p-3 shadow-xs">
-          <div className="flex items-center justify-between mb-2.5 px-0.5">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#3E5A44]" />
-              <h4 className="text-[13px] font-black text-[#3F2A20]">
-                {activeParentSub.name} Collections ({activeParentSub.children.length})
-              </h4>
-              <nav aria-label="Category path" data-testid="category-breadcrumb" className="text-[11px] font-semibold text-slate-400 truncate">
-                {[selectedCategory, activeParentSub.name, activeChildSub?.name].filter(Boolean).join(' / ')}
-              </nav>
-            </div>
-            {activeChildSub && (
-              <button
-                type="button"
-                onClick={() => handleSubcategoryClick(activeParentSub)}
-                className="text-[10.5px] font-bold text-[#3E5A44] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <X size={11} /> {t('common.viewAll')} {activeParentSub.name}
-              </button>
-            )}
           </div>
-
-          <ScrollRow className="flex items-center gap-2.5 pb-1 pt-0.5 -mx-0.5 px-0.5">
-            {/* "All [Parent]" pill */}
-            <button
-              type="button"
-              onClick={() => handleSubcategoryClick(activeParentSub)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[13px] sm:text-[14px] md:text-[15px] font-black cursor-pointer transition-all active:scale-95 border ${
-                !activeChildSub
-                  ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
-                  : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:bg-[#FFF8EE]'
-              }`}
-            >
-              All {activeParentSub.name}
-            </button>
-
-            {/* Child subcategories: Casual Shirts, Jeans, Denim Wear, Festive Wear, Workwear, Sleepwear, etc. */}
-            {activeParentSub.children.map((child) => {
-              const isChildSelected =
-                activeChildSub?.id === child.id ||
-                selectedSubcategory === child.id ||
-                (child.slug && selectedSubcategory === child.slug);
-
-              const fallbackImg = getFashionFallbackImage(child.name);
-
-              return (
-                <button
-                  key={child.id}
-                  type="button"
-                  onClick={() => handleChildSubcategoryClick(child, activeParentSub)}
-                  className={`flex-shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[13px] sm:text-[14px] md:text-[15px] font-bold cursor-pointer transition-all active:scale-95 border ${
-                    isChildSelected
-                      ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
-                      : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:border-[#3E5A44]/60 hover:bg-[#FFF8EE]'
-                  }`}
-                >
-                  <div className="w-5 h-5 rounded-lg overflow-hidden bg-[#FAF9F5] flex-shrink-0 border border-[#EADCC9]/60">
-                    <img
-                      src={child.img || fallbackImg}
-                      alt={child.name}
-                      onError={handleImageError}
-                      className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                  </div>
-                  <span className="whitespace-nowrap">{child.name}</span>
-                </button>
-              );
-            })}
-          </ScrollRow>
         </div>
-      )}
-
-      {/* ── Admin landing blocks below the subcategory row (promo sections) ── */}
-      {!selectedSubcategory && landingCategoryId && (
-        <CategoryLandingBlocks
-          categoryId={landingCategoryId}
-          tab={getCurrentMarketplaceTab()}
-          part="after"
-          onNavigate={navigate}
-          renderProduct={renderLandingProduct}
-        />
       )}
 
       {/* ── SECTION 2: Dynamic Products Grid & Real-time Sorting ── */}
@@ -887,16 +621,16 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             <h3 className="text-[15px] font-black text-[#3F2A20] tracking-tight">
               {currentSubcategoryObj
                 ? `${currentSubcategoryObj.name}`
-                : t('common.allProductsOf', { name: selectedCategory })}
+                : `All ${selectedCategory} Products`}
             </h3>
             {currentSubcategoryObj && (
-              <div className="flex items-center gap-1 bg-[#FFF8EE] border border-[#3E5A44]/30 text-[#3E5A44] px-2 py-0.5 rounded-full text-[9.5px] font-bold">
-                <span>{t('common.filterActive')}</span>
+              <div className="flex items-center gap-1 bg-[color:var(--fg-light,#FFF8EE)] border border-[color:var(--mk-dark,#3E5A44)]/30 text-[color:var(--mk-dark,#3E5A44)] px-2 py-0.5 rounded-full text-[9.5px] font-bold">
+                <span>Filter active</span>
                 <button
                   type="button"
                   onClick={handleClearSubcategory}
                   className="hover:text-red-500 cursor-pointer ml-0.5"
-                  title={t('common.removeFilter')}
+                  title="Remove filter"
                 >
                   <X size={11} strokeWidth={2.5} />
                 </button>
@@ -904,14 +638,14 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             )}
           </div>
           <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
-            {t('common.showingOf', { shown: displayedProducts.length, total: filteredAndSortedProducts.length })}
+            Showing {displayedProducts.length} of {filteredAndSortedProducts.length} items
           </p>
         </div>
 
         {/* Sort Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <span className="text-[10px] font-bold text-slate-500 flex items-center gap-0.5 flex-shrink-0">
-            <SlidersHorizontal size={11} /> {t('common.sort')}:
+            <SlidersHorizontal size={11} /> Sort:
           </span>
           {['Popularity', 'Price: Low to High', 'Price: High to Low', 'Customer Rating'].map((sortKey) => (
             <button
@@ -919,11 +653,11 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               onClick={() => setActiveSort(sortKey)}
               className={`text-[9.5px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 transition-colors cursor-pointer ${
                 activeSort === sortKey
-                  ? 'bg-[#3E5A44] text-white shadow-xs'
+                  ? 'bg-[color:var(--mk-dark,#3E5A44)] text-white shadow-xs'
                   : 'bg-white border border-[#EADCC9] text-slate-700 hover:bg-slate-50'
               }`}
             >
-              {t('sortOptions.' + ({ 'Popularity': 'popularity', 'Price: Low to High': 'priceLow', 'Price: High to Low': 'priceHigh', 'Customer Rating': 'rating' }[sortKey]), { defaultValue: sortKey })}
+              {sortKey}
             </button>
           ))}
         </div>
@@ -932,30 +666,30 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       {/* Product Grid */}
       {(loading || subLoading) ? (
         <div className="py-12 flex flex-col items-center justify-center gap-2">
-          <div className="w-8 h-8 rounded-full border-2 border-[#3E5A44] border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-[color:var(--mk-dark,#3E5A44)] border-t-transparent animate-spin" />
           <span className="text-xs font-bold text-slate-500">
             {subLoading
-              ? t('common.filtering', { name: currentSubcategoryObj?.name || t('common.subcategory') })
-              : t('common.loadingProductsOf', { name: selectedCategory })}
+              ? `Filtering ${currentSubcategoryObj?.name || 'subcategory'}...`
+              : `Loading ${selectedCategory} products...`}
           </span>
         </div>
       ) : displayedProducts.length === 0 ? (
         <div className="py-10 px-4 text-center bg-white rounded-2xl border border-[#EADCC9]/70 shadow-xs max-w-md mx-auto my-4">
-          <div className="w-12 h-12 rounded-full bg-[#FFF8EE] border border-[#3E5A44]/30 flex items-center justify-center mx-auto mb-2.5 text-[#3E5A44]">
+          <div className="w-12 h-12 rounded-full bg-[color:var(--fg-light,#FFF8EE)] border border-[color:var(--mk-dark,#3E5A44)]/30 flex items-center justify-center mx-auto mb-2.5 text-[color:var(--mk-dark,#3E5A44)]">
             <Layers size={22} />
           </div>
           <h4 className="text-[14px] font-black text-[#3F2A20]">
-            {t('common.noProductsIn', { name: currentSubcategoryObj?.name || selectedSubcategory })}
+            No products found in "{currentSubcategoryObj?.name || selectedSubcategory}"
           </h4>
           <p className="text-[11px] text-slate-500 mt-1 max-w-xs mx-auto">
-            {t('common.noProductsHint', { name: selectedCategory })}
+            There are currently no products under this subcategory. You can explore all {selectedCategory} products below.
           </p>
           <button
             type="button"
             onClick={handleClearSubcategory}
-            className="mt-3.5 px-4 py-1.5 bg-[#3E5A44] hover:bg-[#2e4433] text-white text-[11px] font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            className="mt-3.5 px-4 py-1.5 bg-[color:var(--mk-dark,#3E5A44)] hover:bg-[#2e4433] text-white text-[11px] font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
           >
-            {t('common.viewAllOf', { name: selectedCategory, count: allProducts.length })}
+            View All {selectedCategory} ({allProducts.length} items)
           </button>
         </div>
       ) : (
@@ -971,15 +705,17 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             ))}
           </div>
 
-          {/* Infinite scroll: next batch loads automatically near the end of the list */}
-          <InfiniteScrollSentinel
-            onVisible={handleLoadMore}
-            disabled={!hasMoreToShow || moreLoading || Boolean(moreError)}
-            loadingMore={moreLoading}
-            error={moreError}
-            onRetry={handleLoadMore}
-            watch={`${displayCount}:${filteredAndSortedProducts.length}`}
-          />
+          {/* Load More Button */}
+          {displayCount < filteredAndSortedProducts.length && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setDisplayCount((prev) => prev + 8)}
+                className="px-6 py-2 bg-white border border-[color:var(--mk-dark,#3E5A44)]/40 text-[color:var(--mk-dark,#3E5A44)] hover:bg-[color:var(--mk-dark,#3E5A44)] hover:text-white rounded-2xl text-[12px] font-black transition-all shadow-sm active:scale-95 cursor-pointer"
+              >
+                Load More Products ({filteredAndSortedProducts.length - displayCount} remaining)
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

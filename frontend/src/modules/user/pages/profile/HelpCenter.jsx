@@ -1,295 +1,225 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Search, MessageCircle, Phone, Mail, HelpCircle, ChevronRight, FileText, Send, MapPin, Clock } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Phone, Mail, HelpCircle, ChevronRight, FileText, Send, MapPin, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import SearchInput from '../../../../shared/components/SearchInput';
+import useTabTheme from '../../../../shared/hooks/useTabTheme';
+import { useSupportContact } from '../../../../shared/config/publicConfig';
+import { isAuthenticated } from '../../../../shared/api/tokenStorage';
+import { DEFAULT_HELP_CENTER, HELP_CENTER_SLUG, parseHelpCenter } from '../../../../shared/content/helpCenter';
 import { createSupportTicket } from '../../services/userApi';
-import { useTranslation } from 'react-i18next';
-import { tName } from '../../../../shared/utils/translateName';
+import { getCmsPage } from '../../services/storefrontApi';
+
+const POLICIES = [
+  { title: 'Privacy Policy', path: '/privacy' },
+  { title: 'Terms of Service', path: '/terms' },
+  { title: 'Cancellation & Returns', path: '/cancellation-returns' },
+  { title: 'Shipping Policy', path: '/shipping' },
+];
+
+const MultiLine = ({ text, className }) => (
+  <p className={className}>
+    {String(text || '').split('\n').map((line, i) => (
+      <React.Fragment key={i}>{i > 0 && <br />}{line}</React.Fragment>
+    ))}
+  </p>
+);
 
 const HelpCenter = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
+  const theme = useTabTheme();
+  const contact = useSupportContact();
+  const [content, setContent] = useState(DEFAULT_HELP_CENTER);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFaq, setExpandedFaq] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
   const [ticketMessage, setTicketMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // FAQs, address and hours are edited by the admin (Content → Help Center).
+  useEffect(() => {
+    let cancelled = false;
+    getCmsPage(HELP_CENTER_SLUG)
+      .then((page) => { if (!cancelled) setContent(parseHelpCenter(page?.content)); })
+      .catch(() => { /* not set up yet: defaults stay */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const faqs = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return content.faqs;
+    return content.faqs.filter((f) => `${f.q} ${f.a}`.toLowerCase().includes(q));
+  }, [content.faqs, searchQuery]);
 
   const handleCreateTicket = async () => {
+    if (!isAuthenticated('customer')) {
+      navigate('/login', { state: { from: '/profile/help-center' } });
+      return;
+    }
+    const message = ticketMessage.trim();
+    if (message.length < 5) {
+      toast.error('Please describe your issue');
+      return;
+    }
     setSubmitting(true);
     try {
-      await createSupportTicket({
-        subject: 'Customer support request',
-        message: ticketMessage || searchQuery || t('auto.needHelpWithMyOrder'),
-        category: 'general',
-      });
+      await createSupportTicket({ subject: message.slice(0, 80), message });
       setTicketMessage('');
-      setSearchQuery('');
-    } catch {
-      // keep UI unchanged
+      toast.success('Message sent — our team will get back to you');
+    } catch (err) {
+      toast.error(err?.message || 'Could not send your message. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const faqs = [
-    { 
-      q: 'How to track my order?', 
-      a: 'You can track your order in the "My Orders" section. Click on any order to see real-time tracking updates and estimated delivery time.' 
-    },
-    { 
-      q: 'How to return a product?', 
-      a: 'Go to "My Orders", select the item you want to return, and click "Return". You have 10 days from delivery to initiate a return. Items must be unused and in original packaging.' 
-    },
-    { 
-      q: 'Payment failed but money deducted', 
-      a: 'Don\'t worry! If payment fails but money is deducted, the refund will be automatically processed within 5-7 business days to your original payment method.' 
-    },
-    { 
-      q: 'How do I cancel my order?', 
-      a: 'You can cancel your order before it\'s shipped. Go to "My Orders", select the order, and click "Cancel Order". Refund will be processed within 3-5 business days.' 
-    },
-    { 
-      q: 'What is the warranty policy?', 
-      a: 'Warranty varies by product. Check the product description for specific warranty details. Most electronics come with 1-year manufacturer warranty.' 
-    },
-    { 
-      q: 'How to change delivery address?', 
-      a: 'You can change the delivery address before the order is shipped. Go to "My Orders", select the order, and click "Change Address".' 
-    }
-  ];
-
   const contactMethods = [
-    {
-      icon: <Phone size={24} />,
-      title: 'Call Us',
-      subtitle: 'Mon-Sat (9am-6pm)',
-      detail: '+91 1800-123-4567',
-      color: 'bg-primary-light text-[#3E5A44]'
-    },
-    {
-      icon: <Mail size={24} />,
-      title: 'Email Us',
-      subtitle: '24/7 support',
-      detail: 'support@mithilakart.com',
-      color: 'bg-green-50 text-green-600'
-    },
-    {
-      icon: <MessageCircle size={24} />,
-      title: 'Live Chat',
-      subtitle: 'Instant response',
-      detail: 'Chat with us now',
-      color: 'bg-purple-50 text-purple-600'
-    }
+    { icon: <Phone size={22} />, title: 'Call Us', subtitle: content.phoneHours, detail: contact.phone, href: `tel:${contact.phone.replace(/[^\d+]/g, '')}` },
+    { icon: <Mail size={22} />, title: 'Email Us', subtitle: content.emailNote, detail: contact.email, href: `mailto:${contact.email}` },
   ];
-
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
-
-  const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#f3e8ff]/60 via-[#faf5ff] to-[#f5f3ff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[#fff5f7]' : 'bg-bg-cream');
-  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[#FFF0A0]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
-  const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
 
   return (
-    <div className={`min-h-screen relative transition-colors duration-300 ${pageBg}`}>
-      {/* Global Repeating Mithila Art Page Background Texture */}
-      {!(isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow) && (
-        <div 
-          className="fixed inset-0 pointer-events-none z-0 bg-repeat opacity-[0.03] select-none"
-          style={{
-            backgroundImage: "url('/Screenshot 2026-07-17 130906.png')",
-            backgroundSize: '360px',
-          }}
-        />
-      )}
-
-      {/* Header */}
-      <div className={`sticky top-0 z-50 p-4 shadow-sm relative z-10 transition-colors duration-300 ${headerBg}`}>
+    <div className="min-h-screen bg-[#F8FAFC]">
+      {/* Header — follows the active tab's (admin-set) colours */}
+      <div className={`sticky top-0 z-50 p-4 shadow-sm ${theme.headerBg}`}>
         <div className="flex items-center gap-3 mb-4">
-          <button 
-            onClick={() => navigate(-1)} 
-            className={`active:scale-90 transition-transform ${headerTextColor}`}
-          >
+          <button onClick={() => navigate(-1)} aria-label="Back" className="text-white active:scale-90 transition-transform">
             <ArrowLeft size={24} strokeWidth={2.5} />
           </button>
-          <h1 className={`text-[18px] font-bold ${headerTextColor}`}>{t('auto.helpSupport')}</h1>
+          <h1 className="text-[18px] font-bold text-white">Help & Support</h1>
         </div>
-        
-        {/* Search Bar */}
-        <div className="relative">
-          <SearchInput
-            type="text" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('auto.searchForHelp')} 
-          />
-        </div>
+        <SearchInput
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search questions…"
+        />
       </div>
 
-      <div className="px-4 py-6 space-y-8 pb-24 relative z-10">
-        {/* Contact Methods */}
+      <div className="px-4 py-6 space-y-8 pb-24">
         <section>
-          <h2 className="text-[16px] font-bold text-slate-900 mb-4">{t('auto.howCanWeHelpYou')}</h2>
+          <h2 className="text-[16px] font-bold text-slate-900 mb-4">How can we help you?</h2>
           <div className="grid grid-cols-1 gap-3">
-            {contactMethods.map((method, idx) => (
-              <motion.div
-                key={idx}
+            {contactMethods.map((method) => (
+              <motion.a
+                key={method.title}
+                href={method.href}
                 whileTap={{ scale: 0.98 }}
-                className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4 shadow-sm active:shadow-md transition-all cursor-pointer"
+                className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4 shadow-sm active:shadow-md transition-all"
               >
-                <div className={`p-3 ${method.color} rounded-full`}>
-                  {method.icon}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-[14px] font-bold text-slate-900">{tName(method.title)}</h3>
-                  <p className="text-[12px] text-gray-500 font-medium">{tName(method.subtitle)}</p>
-                  <p className="text-[13px] text-[#3E5A44] font-bold mt-1">{tName(method.detail)}</p>
+                <div className={`p-3 rounded-full ${theme.primaryLightBg} ${theme.primaryText}`}>{method.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[14px] font-bold text-slate-900">{method.title}</h3>
+                  <p className="text-[12px] text-gray-500 font-medium">{method.subtitle}</p>
+                  <p className={`text-[13px] font-bold mt-1 break-all ${theme.primaryText}`}>{method.detail}</p>
                 </div>
                 <ChevronRight size={20} className="text-gray-300" />
-              </motion.div>
+              </motion.a>
             ))}
           </div>
         </section>
 
-        {/* FAQs */}
         <section>
-          <h2 className="text-[16px] font-bold text-slate-900 mb-4">{t('auto.frequentlyAskedQuestions')}</h2>
-          <div className="space-y-2">
-            {faqs.map((faq, idx) => (
-              <div 
-                key={idx}
-                className="bg-white border border-gray-200 rounded-xl overflow-hidden"
-              >
-                <button
-                  onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
-                  className="w-full p-4 flex items-center justify-between text-left active:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <HelpCircle size={18} className="text-[#3E5A44] flex-shrink-0" />
-                    <span className="text-[13px] font-bold text-slate-900">{tName(faq.q)}</span>
-                  </div>
-                  <ChevronRight 
-                    size={18} 
-                    className={`text-gray-400 transition-transform ${expandedFaq === idx ? 'rotate-90' : ''}`}
-                  />
-                </button>
-                {expandedFaq === idx && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="px-4 pb-4"
+          <h2 className="text-[16px] font-bold text-slate-900 mb-4">Frequently Asked Questions</h2>
+          {faqs.length === 0 ? (
+            <p className="text-[13px] text-gray-500 bg-white border border-gray-200 rounded-xl p-4">
+              No answers match “{searchQuery}”. Send us a message below and we will help.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {faqs.map((faq, idx) => (
+                <div key={`${faq.q}-${idx}`} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
+                    aria-expanded={expandedFaq === idx}
+                    className="w-full p-4 flex items-center justify-between text-left active:bg-gray-50 transition-colors"
                   >
-                    <p className="text-[12px] text-gray-600 leading-relaxed pl-7">
-                      {tName(faq.a)}
-                    </p>
-                  </motion.div>
-                )}
-              </div>
-            ))}
-          </div>
+                    <div className="flex items-center gap-3 flex-1">
+                      <HelpCircle size={18} className={`flex-shrink-0 ${theme.primaryText}`} />
+                      <span className="text-[13px] font-bold text-slate-900">{faq.q}</span>
+                    </div>
+                    <ChevronRight size={18} className={`text-gray-400 transition-transform ${expandedFaq === idx ? 'rotate-90' : ''}`} />
+                  </button>
+                  {expandedFaq === idx && (
+                    <div className="px-4 pb-4">
+                      <MultiLine text={faq.a} className="text-[12.5px] text-gray-600 leading-relaxed pl-7" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* Contact Us Section */}
-        <section className="bg-gradient-to-br from-blue-50 to-white border border-primary-green/30 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-[#3E5A44] rounded-full">
-              <Send size={18} className="text-white" />
+        <section className="bg-white border border-gray-200 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`p-2 rounded-full ${theme.primaryBg}`}>
+              <Send size={16} className="text-white" />
             </div>
-            <h2 className="text-[16px] font-bold text-slate-900">{t('auto.contactUs')}</h2>
+            <h2 className="text-[16px] font-bold text-slate-900">Send us a message</h2>
           </div>
-          
-          <p className="text-[13px] text-gray-600 mb-4 leading-relaxed">
-            {t('auto.canTFindWhatYou')}
-          </p>
-
-          <div className="space-y-3">
-            {/* Phone */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Phone size={16} className="text-[#3E5A44]" />
-              </div>
-              <div>
-                <p className="text-[12px] font-bold text-slate-900">{t('auto.phoneSupport')}</p>
-                <p className="text-[13px] text-[#3E5A44] font-bold">+91 1800-123-4567</p>
-                <p className="text-[11px] text-gray-500">{t('auto.monSat900Am')}</p>
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Mail size={16} className="text-[#3E5A44]" />
-              </div>
-              <div>
-                <p className="text-[12px] font-bold text-slate-900">{t('auto.emailSupport')}</p>
-                <p className="text-[13px] text-[#3E5A44] font-bold">support@mithilakart.com</p>
-                <p className="text-[11px] text-gray-500">{t('auto.responseWithin24Hours')}</p>
-              </div>
-            </div>
-
-            {/* Address */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <MapPin size={16} className="text-[#3E5A44]" />
-              </div>
-              <div>
-                <p className="text-[12px] font-bold text-slate-900">{t('auto.officeAddress')}</p>
-                <p className="text-[12px] text-gray-600 leading-relaxed">
-                  {t('x.companyName')}<br />
-                  {t('x.companyStreet')}<br />
-                  {t('auto.mumbaiMaharashtra400069')}
-                </p>
-              </div>
-            </div>
-
-            {/* Business Hours */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Clock size={16} className="text-[#3E5A44]" />
-              </div>
-              <div>
-                <p className="text-[12px] font-bold text-slate-900">{t('auto.businessHours')}</p>
-                <p className="text-[12px] text-gray-600">{t('auto.mondaySaturday900Am')}</p>
-                <p className="text-[12px] text-gray-600">{t('auto.sundayClosed')}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA Button */}
+          <label htmlFor="support-message" className="sr-only">Your message</label>
+          <textarea
+            id="support-message"
+            value={ticketMessage}
+            onChange={(e) => setTicketMessage(e.target.value)}
+            rows={4}
+            maxLength={1000}
+            placeholder="Tell us what went wrong — include your order number if it is about an order."
+            className="w-full rounded-xl border border-gray-200 bg-slate-50 p-3 text-[13px] text-slate-800 outline-none focus:border-slate-400"
+          />
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={handleCreateTicket}
             disabled={submitting}
-            className="w-full mt-6 bg-[#3E5A44] text-white py-3 rounded-xl font-bold text-[14px] shadow-md active:shadow-sm transition-all disabled:opacity-60"
+            className={`w-full mt-3 text-white py-3 rounded-xl font-bold text-[14px] shadow-md transition-all disabled:opacity-60 ${theme.primaryBg}`}
           >
-            {submitting ? t('auto.sending') : t('auto.sendUsAMessage')}
+            {submitting ? 'Sending…' : 'Send message'}
           </motion.button>
+
+          <div className="mt-6 space-y-4">
+            {content.address && (
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg border border-gray-200">
+                  <MapPin size={16} className={theme.primaryText} />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-slate-900">Office Address</p>
+                  <MultiLine text={content.address} className="text-[12px] text-gray-600 leading-relaxed" />
+                </div>
+              </div>
+            )}
+            {content.hours && (
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg border border-gray-200">
+                  <Clock size={16} className={theme.primaryText} />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-slate-900">Business Hours</p>
+                  <MultiLine text={content.hours} className="text-[12px] text-gray-600 leading-relaxed" />
+                </div>
+              </div>
+            )}
+          </div>
         </section>
 
-        {/* Policies */}
         <section>
-          <h2 className="text-[16px] font-bold text-slate-900 mb-4">{t('auto.policiesInformation')}</h2>
+          <h2 className="text-[16px] font-bold text-slate-900 mb-4">Policies & Information</h2>
           <div className="space-y-2">
-            {[
-              { title: t('auto.privacyPolicy'), path: '/privacy' },
-              { title: t('auto2.termsOfService'), path: '/terms' },
-              { title: t('auto.cancellationsReturns'), path: '/cancellation-returns' },
-              { title: t('auto.shippingPolicy'), path: '/shipping' }
-            ].map((item, idx) => (
-              <motion.div
-                key={idx}
+            {POLICIES.map((item) => (
+              <motion.button
+                key={item.path}
+                type="button"
                 whileTap={{ scale: 0.98 }}
-                onClick={() => item.path !== '#' && navigate(item.path)}
-                className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl active:bg-gray-50 transition-all cursor-pointer"
+                onClick={() => navigate(item.path)}
+                className="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl active:bg-gray-50 transition-all"
               >
-                <div className="flex items-center gap-3">
+                <span className="flex items-center gap-3">
                   <FileText size={18} className="text-gray-400" />
                   <span className="text-[13px] font-bold text-slate-900">{item.title}</span>
-                </div>
+                </span>
                 <ChevronRight size={18} className="text-gray-300" />
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </section>
@@ -299,5 +229,3 @@ const HelpCenter = () => {
 };
 
 export default HelpCenter;
-
-

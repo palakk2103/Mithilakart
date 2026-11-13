@@ -70,7 +70,7 @@ const BrandsSpotlight = ({ items = [] }) => {
       {/* Desktop view (Purple/Indigo style banner layout mimicking the "People also viewed" container structure) */}
       <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-2 md:mt-6">
         {/* Banner Header with background color and rounded-t corners */}
-        <div className="bg-[#6FAE4A] text-white px-6 py-4 rounded-t-3xl flex items-center justify-between shadow-sm">
+        <div className="bg-[color:var(--mk-primary,#6FAE4A)] text-white px-6 py-4 rounded-t-3xl flex items-center justify-between shadow-sm">
           <h2 className="text-[17px] font-black uppercase tracking-wider">
             {t('home.brandsSpotlight')}
           </h2>
@@ -100,7 +100,7 @@ const BrandsSpotlight = ({ items = [] }) => {
 
                 {/* Content placed below the image box */}
                 <div className="px-1">
-                  <h3 className="text-[13px] font-black text-slate-800 leading-snug group-hover:text-[#6FAE4A] transition-colors">{card.sub}</h3>
+                  <h3 className="text-[13px] font-black text-slate-800 leading-snug group-hover:text-[color:var(--mk-primary,#6FAE4A)] transition-colors">{card.sub}</h3>
                   <p className="text-[12px] font-black text-rose-600 mt-1 uppercase tracking-wider">{card.title}</p>
                 </div>
               </div>

@@ -13,28 +13,28 @@ const ProductNotFound = () => {
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
 
   const textPrimary = isMithilakFlow 
-    ? 'text-[#6FAE4A]' 
+    ? 'text-[color:var(--mk-primary,#6FAE4A)]' 
     : isFreshGroceryFlow 
-      ? 'text-[#7A3E17]' 
+      ? 'text-[color:var(--fg-dark,#7A3E17)]' 
       : isQuickShopFlow 
-        ? 'text-[#F26522]' 
-        : 'text-[#6FAE4A]';
+        ? 'text-[color:var(--qs-primary,#F26522)]' 
+        : 'text-[color:var(--mk-primary,#6FAE4A)]';
 
   const buttonBg = isMithilakFlow 
-    ? 'bg-[#6FAE4A] hover:bg-[#5b953d]' 
+    ? 'bg-[color:var(--mk-primary,#6FAE4A)] hover:bg-[color:var(--mk-dark,#5b953d)]' 
     : isFreshGroceryFlow 
-      ? 'bg-[#D9A21B] hover:bg-[#c49218] text-[#7A3E17]' 
+      ? 'bg-[color:var(--fg-primary,#D9A21B)] hover:bg-[color:var(--fg-dark,#c49218)] text-[color:var(--fg-dark,#7A3E17)]' 
       : isQuickShopFlow 
-        ? 'bg-[#F26522] hover:bg-[#d9561b]' 
-        : 'bg-[#6FAE4A] hover:bg-[#2d4332]';
+        ? 'bg-[color:var(--qs-primary,#F26522)] hover:bg-[color:var(--qs-dark,#d9561b)]' 
+        : 'bg-[color:var(--mk-primary,#6FAE4A)] hover:bg-[#2d4332]';
 
   const borderPrimary = isMithilakFlow 
-    ? 'border-[#6FAE4A] text-[#6FAE4A] hover:bg-[#6FAE4A]/5' 
+    ? 'border-[color:var(--mk-primary,#6FAE4A)] text-[color:var(--mk-primary,#6FAE4A)] hover:bg-[color:var(--mk-primary,#6FAE4A)]/5' 
     : isFreshGroceryFlow 
-      ? 'border-[#D9A21B] text-[#7A3E17] hover:bg-[#D9A21B]/5' 
+      ? 'border-[color:var(--fg-primary,#D9A21B)] text-[color:var(--fg-dark,#7A3E17)] hover:bg-[color:var(--fg-primary,#D9A21B)]/5' 
       : isQuickShopFlow 
-        ? 'border-[#F26522] text-[#F26522] hover:bg-[#F26522]/5' 
-        : 'border-[#6FAE4A] text-[#6FAE4A] hover:bg-[#6FAE4A]/5';
+        ? 'border-[color:var(--qs-primary,#F26522)] text-[color:var(--qs-primary,#F26522)] hover:bg-[color:var(--qs-primary,#F26522)]/5' 
+        : 'border-[color:var(--mk-primary,#6FAE4A)] text-[color:var(--mk-primary,#6FAE4A)] hover:bg-[color:var(--mk-primary,#6FAE4A)]/5';
 
   return (
     <motion.div 

@@ -6,7 +6,7 @@ import {
   Truck, Store, Key, Settings, ChevronDown, ChevronRight,
   UserPlus, DollarSign, BarChart3, HelpCircle, FileText, Image, LayoutGrid, Layout,
   Tag, Zap, MessageSquare, RotateCcw, Inbox,
-  Banknote, Percent, AlertCircle, CheckCircle2, Lock, SlidersHorizontal, Upload
+  Banknote, Percent, AlertCircle, CheckCircle2, Lock, SlidersHorizontal, Upload, Palette, LifeBuoy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchInput from '../../../shared/components/SearchInput';
@@ -51,6 +51,8 @@ const AdminLayout = () => {
     { name: 'Header Tabs Manager', path: '/admin/storefront/tabs' },
     { name: 'Banner Manager', path: '/admin/storefront/banners' },
     { name: 'Policies & Information', path: '/admin/content/legal' },
+    { name: 'Help & Support Page', path: '/admin/content/help-center' },
+    { name: 'App Theme & Festival Colours', path: '/admin/storefront/themes' },
     { name: 'Customer Database', path: '/admin/users' },
     { name: 'Inventory Stock', path: '/admin/inventory/all' },
     { name: 'System Settings', path: '/admin/settings' },
@@ -98,6 +100,8 @@ const AdminLayout = () => {
         { name: 'Category Manager', path: '/admin/categories', icon: <Layers size={18} /> },
         { name: 'Bulk Category Import', path: '/admin/categories/bulk-import', icon: <Upload size={18} /> },
         { name: 'Policies & Information', path: '/admin/content/legal', icon: <FileText size={18} /> },
+        { name: 'Help & Support Page', path: '/admin/content/help-center', icon: <LifeBuoy size={18} /> },
+        { name: 'App Theme & Festival Colours', path: '/admin/storefront/themes', icon: <Palette size={18} /> },
       ]
     },
     {
@@ -183,6 +187,7 @@ const AdminLayout = () => {
         { name: 'Review Moderation', path: '/admin/content/reviews', icon: <MessageSquare size={18} /> },
         { name: 'Q&A Moderation', path: '/admin/content/qna', icon: <HelpCircle size={18} /> },
         { name: 'Legal & Policies', path: '/admin/content/legal', icon: <FileText size={18} /> },
+        { name: 'Help & Support Page', path: '/admin/content/help-center', icon: <LifeBuoy size={18} /> },
       ]
     },
     {

@@ -83,6 +83,11 @@ class ProductRepository extends BaseRepository {
     return this.updateById(id, { status, moderationNote }, session);
   }
 
+  /** Declare products to be the same sellable item (or clear it with null). */
+  async setCatalogKey(ids, catalogKey) {
+    return this.model.updateMany({ _id: { $in: ids }, deletedAt: null }, { catalogKey }).exec();
+  }
+
   async bulkUpdateStatus(ids, status, session = null) {
     const query = this.model.updateMany(
       { _id: { $in: ids }, deletedAt: null },

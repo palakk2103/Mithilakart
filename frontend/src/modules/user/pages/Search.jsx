@@ -33,11 +33,11 @@ const MARKETPLACE_TAB_CONFIG = [
     id: 'quick_shop',
     label: 'Quick Shop',
     iconType: 'clock',
-    headerBg: 'bg-gradient-to-r from-[#F26522] to-[#FF7A00]',
-    pageBg: 'bg-[#FFF5EE]',
-    textPrimary: 'text-[#F26522]',
-    borderPrimary: 'border-[#F26522]',
-    activeTabBg: 'bg-white text-[#F26522]',
+    headerBg: 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF7A00)]',
+    pageBg: 'bg-[color:var(--qs-light,#FFF5EE)]',
+    textPrimary: 'text-[color:var(--qs-primary,#F26522)]',
+    borderPrimary: 'border-[color:var(--qs-primary,#F26522)]',
+    activeTabBg: 'bg-white text-[color:var(--qs-primary,#F26522)]',
     tabPillBorder: 'border-white/30',
     searchPlaceholder: 'Search Quick Shop (Snacks, Electronics, Daily)...',
   },
@@ -45,11 +45,11 @@ const MARKETPLACE_TAB_CONFIG = [
     id: 'mithilak',
     label: 'Mithilak',
     iconType: 'plane',
-    headerBg: 'bg-gradient-to-r from-[#207C8A] to-[#144f58]',
-    pageBg: 'bg-gradient-to-b from-[#e0f2f1]/60 via-[#f2faf9] to-[#ffffff]',
-    textPrimary: 'text-[#207C8A]',
-    borderPrimary: 'border-[#207C8A]',
-    activeTabBg: 'bg-white text-[#207C8A]',
+    headerBg: 'bg-gradient-to-r from-[color:var(--ml-primary,#207C8A)] to-[color:var(--ml-dark,#144f58)]',
+    pageBg: 'bg-gradient-to-b from-[color:var(--ml-light,#e0f2f1)]/60 via-[color:var(--ml-light,#f2faf9)] to-[#ffffff]',
+    textPrimary: 'text-[color:var(--ml-primary,#207C8A)]',
+    borderPrimary: 'border-[color:var(--ml-primary,#207C8A)]',
+    activeTabBg: 'bg-white text-[color:var(--ml-primary,#207C8A)]',
     tabPillBorder: 'border-white/30',
     searchPlaceholder: 'Search Mithilak (Handicrafts, Art, Heritage)...',
   },
@@ -58,10 +58,10 @@ const MARKETPLACE_TAB_CONFIG = [
     label: 'Fresh & Groceries',
     iconType: 'bag',
     headerBg: 'bg-gradient-to-r from-[#F5B014] to-[#E59800]',
-    pageBg: 'bg-gradient-to-b from-[#FFF0A0]/25 via-[#FFFDF3] to-[#FFF]',
-    textPrimary: 'text-[#7A3E17]',
-    borderPrimary: 'border-[#7A3E17]',
-    activeTabBg: 'bg-white text-[#7A3E17]',
+    pageBg: 'bg-gradient-to-b from-[color:var(--fg-light,#FFF0A0)]/25 via-[#FFFDF3] to-[#FFF]',
+    textPrimary: 'text-[color:var(--fg-dark,#7A3E17)]',
+    borderPrimary: 'border-[color:var(--fg-dark,#7A3E17)]',
+    activeTabBg: 'bg-white text-[color:var(--fg-dark,#7A3E17)]',
     tabPillBorder: 'border-white/30',
     searchPlaceholder: 'Search Fresh Fruits, Veggies, Atta, Dal...',
   },
@@ -279,12 +279,12 @@ const Search = () => {
       return <Sparkles size={13} strokeWidth={2.5} className={isActive ? 'text-[#2B5135]' : 'text-white'} />;
     }
     if (tab.iconType === 'clock') {
-      return <Clock size={13} strokeWidth={2.5} className={isActive ? 'text-[#F26522]' : 'text-white'} />;
+      return <Clock size={13} strokeWidth={2.5} className={isActive ? 'text-[color:var(--qs-primary,#F26522)]' : 'text-white'} />;
     }
     if (tab.iconType === 'plane') {
-      return <Plane size={13} strokeWidth={2.5} className={isActive ? 'text-[#207C8A]' : 'text-white'} />;
+      return <Plane size={13} strokeWidth={2.5} className={isActive ? 'text-[color:var(--ml-primary,#207C8A)]' : 'text-white'} />;
     }
-    return <ShoppingBag size={13} strokeWidth={2.5} className={isActive ? 'text-[#7A3E17]' : 'text-white'} />;
+    return <ShoppingBag size={13} strokeWidth={2.5} className={isActive ? 'text-[color:var(--fg-dark,#7A3E17)]' : 'text-white'} />;
   };
 
   const activeSearchTerm = debouncedQuery || searchValue.trim();

@@ -9,11 +9,16 @@ const {
 } = require('../../constants/delivery');
 const { eventBus } = require('../../events/EventBus');
 const { DELIVERY_EVENTS } = require('../../events/eventTypes');
-const { parseLocationFields } = require('../../utils/geoHelper');
+const { parseLocationFields, haversineKm } = require('../../utils/geoHelper');
 const { DELIVERY_ASSIGNMENT_MODE } = require('../../constants/fulfillment');
 const { toFiniteNumber } = require('../../utils/numeric');
 const { logger } = require('../../utils/logger');
 const config = require('../../config');
+
+// Rider feed: look at a wide pool, then filter by distance and cap what is shown.
+const AVAILABLE_POOL_SIZE = 100;
+const AVAILABLE_RESULT_LIMIT = 20;
+const DEFAULT_RIDER_VISIBILITY_RADIUS_KM = 25;
 
 class DeliveryOrderService extends BaseService {
   constructor({
@@ -195,6 +200,18 @@ class DeliveryOrderService extends BaseService {
     return this.deliveryPartnerRepository.updateById(partnerId, { isOnline: Boolean(isOnline) });
   }
 
+  /** Admin-configurable (maxDeliveryRadiusKm); never throws — a config outage must not blind riders. */
+  async _riderVisibilityRadiusKm() {
+    try {
+      const cfg = await this.fulfillmentConfigService?.resolve(null);
+      const v = Number(cfg?.maxDeliveryRadiusKm);
+      if (Number.isFinite(v) && v > 0) return v;
+    } catch (err) {
+      logger.warn({ err }, 'Rider visibility radius: config unavailable, using default');
+    }
+    return DEFAULT_RIDER_VISIBILITY_RADIUS_KM;
+  }
+
   async listOrders(partnerId) {
     const partner = await this.deliveryPartnerRepository.findById(partnerId);
     if (!partner?.isOnline) {
@@ -202,7 +219,7 @@ class DeliveryOrderService extends BaseService {
     }
 
     const [availableRaw, assignedRaw] = await Promise.all([
-      this.deliveryAssignmentRepository.findAvailable(20),
+      this.deliveryAssignmentRepository.findAvailable(AVAILABLE_POOL_SIZE),
       this.deliveryAssignmentRepository.findByPartner(partnerId, {
         status: { $in: [ASSIGNMENT_STATUS.ASSIGNED, ASSIGNMENT_STATUS.ACCEPTED, ASSIGNMENT_STATUS.PICKED_UP] },
       }, { sort: { createdAt: -1 } }),
@@ -226,27 +243,41 @@ class DeliveryOrderService extends BaseService {
       : [];
     const sellerMap = new Map(sellers.map((s) => [String(s._id), s]));
 
+    const radiusKm = await this._riderVisibilityRadiusKm();
+    const partnerLat = toFiniteNumber(partner.latitude ?? partner.location?.coordinates?.[1]);
+    const partnerLng = toFiniteNumber(partner.longitude ?? partner.location?.coordinates?.[0]);
+
     const available = availableRaw
-      .filter((assignment) => {
-        const order = orderMap.get(String(assignment.orderId));
-        return (
-          order &&
-          [ORDER_STATUS.CONFIRMED, ORDER_STATUS.PACKED].includes(order.status) &&
-          order.fulfilmentType !== 'courier' &&
-          order.fulfillment?.type !== 'courier' &&
-          order.fulfillment?.deliveryMode !== 'standard'
-        );
-      })
       .map((assignment) => {
         const ord = orderMap.get(String(assignment.orderId));
         const sId = ord?.fulfillment?.sellerId || (ord?.sellerSubOrders || [])[0]?.sellerId;
         const seller = sId ? sellerMap.get(String(sId)) : null;
-        return {
-          ...this._riderSafe(assignment),
-          order: this._mapOrderForDelivery(ord, assignment, seller),
-          orderId: ord || assignment.orderId,
-        };
-      });
+        const sellerLat = toFiniteNumber(seller?.latitude ?? seller?.location?.coordinates?.[1]);
+        const sellerLng = toFiniteNumber(seller?.longitude ?? seller?.location?.coordinates?.[0]);
+        const distanceToPickupKm = [partnerLat, partnerLng, sellerLat, sellerLng].every((v) => v != null)
+          ? Math.round(haversineKm(partnerLat, partnerLng, sellerLat, sellerLng) * 100) / 100
+          : null;
+        return { assignment, ord, seller, distanceToPickupKm };
+      })
+      .filter(({ assignment, ord, distanceToPickupKm }) => (
+        ord
+        && [ORDER_STATUS.CONFIRMED, ORDER_STATUS.PACKED].includes(ord.status)
+        && ord.fulfilmentType !== 'courier'
+        && ord.fulfillment?.type !== 'courier'
+        && ord.fulfillment?.deliveryMode !== 'standard'
+        // A rider only sees pickups within the admin-configured radius. When
+        // either location is unknown we cannot rule the order out, so keep it.
+        && (distanceToPickupKm == null || distanceToPickupKm <= radiusKm)
+        && assignment
+      ))
+      .sort((a, b) => (a.distanceToPickupKm ?? Infinity) - (b.distanceToPickupKm ?? Infinity))
+      .slice(0, AVAILABLE_RESULT_LIMIT)
+      .map(({ assignment, ord, seller, distanceToPickupKm }) => ({
+        ...this._riderSafe(assignment),
+        distanceToPickupKm,
+        order: this._mapOrderForDelivery(ord, assignment, seller),
+        orderId: ord || assignment.orderId,
+      }));
 
     const assigned = assignedRaw.map((assignment) => {
       const ord = orderMap.get(String(assignment.orderId));

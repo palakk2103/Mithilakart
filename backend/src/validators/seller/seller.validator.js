@@ -3,6 +3,23 @@ const { objectIdSchema } = require('../common.validator');
 const { COMMERCE_FLOW_VALUES, PRODUCT_STATUS_VALUES } = require('../../constants/catalog');
 const { COUPON_TYPE_VALUES } = require('../../constants/pricing');
 
+// The model stores media as { url, alt, sortOrder } objects. Plain URL strings
+// used to pass validation and then fail with a Mongoose cast error (422), so
+// they are normalized here, once, for both create and update.
+const mediaItemSchema = Joi.alternatives().try(
+  Joi.string(),
+  Joi.object({
+    url: Joi.string().required(),
+    alt: Joi.string().allow('').optional(),
+    sortOrder: Joi.number().integer().min(0).optional(),
+  })
+);
+const mediaListSchema = Joi.array().items(mediaItemSchema).custom((list) => list.map((item, index) => (
+  typeof item === 'string'
+    ? { url: item, alt: '', sortOrder: index }
+    : { alt: '', sortOrder: index, ...item }
+)), 'normalize media items');
+
 const sellerProductCreateSchema = Joi.object({
   title: Joi.string().trim().min(2).max(200).required(),
   description: Joi.string().allow('').optional(),
@@ -11,28 +28,8 @@ const sellerProductCreateSchema = Joi.object({
   mrp: Joi.number().min(0).required(),
   stock: Joi.number().integer().min(0).optional(),
   categoryId: Joi.string().trim().required(),
-  // Additional categories the same product is also listed under.
-  categoryIds: Joi.array().items(objectIdSchema).max(25).optional(),
-  images: Joi.array().items(
-    Joi.alternatives().try(
-      Joi.string(),
-      Joi.object({
-        url: Joi.string().required(),
-        alt: Joi.string().allow('').optional(),
-        sortOrder: Joi.number().integer().min(0).optional(),
-      })
-    )
-  ).optional(),
-  videos: Joi.array().items(
-    Joi.alternatives().try(
-      Joi.string(),
-      Joi.object({
-        url: Joi.string().required(),
-        alt: Joi.string().allow('').optional(),
-        sortOrder: Joi.number().integer().min(0).optional(),
-      })
-    )
-  ).optional(),
+  images: mediaListSchema.optional(),
+  videos: mediaListSchema.optional(),
   tags: Joi.array().items(Joi.string()).optional(),
   commerceFlows: Joi.array().items(Joi.string().valid(...COMMERCE_FLOW_VALUES)).min(1).optional(),
   brand: Joi.string().allow('').optional(),

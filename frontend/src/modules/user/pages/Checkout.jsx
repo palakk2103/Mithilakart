@@ -10,7 +10,8 @@ import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import useAccountStore from '../../../store/useAccountStore';
 import { createOrder, initiatePayment, verifyPayment, validateCoupon } from '../services/ordersApi';
 import { checkShippingServiceability } from '../services/shippingApi';
-import { getAddresses } from '../services/userApi';
+import { getAddresses, createAddress, getProfile } from '../services/userApi';
+import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { fetchCartItems, getCommerceFlow, getMarketplaceTab, clearCart, dispatchCartUpdated } from '../utils/cartUtils';
 import { getStorefrontConfig } from '../services/storefrontApi';
 import { openRazorpayCheckout } from '../../../shared/services/razorpay';
@@ -48,7 +49,9 @@ const Checkout = () => {
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
-  const { addOrder, savedAddresses, selectedAddressId } = useAccountStore();
+  const { addOrder, savedAddresses, selectedAddressId, setSelectedAddress } = useAccountStore();
+  const { location: liveLocation } = useLiveLocation();
+  const [savingLiveAddress, setSavingLiveAddress] = useState(false);
 
   const theme = useTabTheme();
   const isMithilakFlow = theme.activeFlow === 'mithilak';
@@ -252,7 +255,55 @@ const Checkout = () => {
     }
   };
 
+  // A new customer has no saved address, but we already know where they are.
+  // Offer the live location as the delivery address instead of a dead end.
+  const canUseLiveLocation = Boolean(
+    liveLocation?.latitude != null && liveLocation?.longitude != null
+    && (liveLocation.addressLine || liveLocation.formattedAddress)
+    && /^\d{6}$/.test(String(liveLocation.pincode || ''))
+  );
+
+  const useLiveLocationAsAddress = async () => {
+    if (!canUseLiveLocation || savingLiveAddress) return;
+    setSavingLiveAddress(true);
+    try {
+      const profile = await getProfile().catch(() => null);
+      const me = profile?.data ?? profile ?? {};
+      const phone = String(me.phone || '').replace(/\D/g, '').slice(-10);
+      if (phone.length !== 10) {
+        toast.error('Add your phone number to your profile, or add an address manually.');
+        navigate('/profile/addresses');
+        return;
+      }
+      const created = await createAddress({
+        type: 'HOME',
+        name: me.name || 'Me',
+        phone,
+        addressLine: liveLocation.addressLine || liveLocation.formattedAddress,
+        city: liveLocation.city || undefined,
+        state: liveLocation.state || undefined,
+        pincode: String(liveLocation.pincode),
+        latitude: liveLocation.latitude,
+        longitude: liveLocation.longitude,
+        placeId: liveLocation.placeId || undefined,
+        isDefault: true,
+      });
+      const saved = created?.data ?? created;
+      setDefaultAddress(saved);
+      if (saved?.id || saved?._id) setSelectedAddress(saved.id || saved._id);
+      toast.success('Delivering to your current location');
+    } catch (err) {
+      toast.error(err?.message || 'Could not use your location. Please add an address.');
+    } finally {
+      setSavingLiveAddress(false);
+    }
+  };
+
   const handleContinue = async () => {
+    if (currentStep === 2 && !defaultAddress) {
+      toast.error('Add a delivery address to continue');
+      return;
+    }
     if (currentStep === 2) {
       if (isEcommerceFlow && courierServiceable === false) {
         toast.error(t('checkout.courierUnavailableChoose'));
@@ -375,7 +426,7 @@ const Checkout = () => {
   };
 
   const renderStepper = () => (
-    <div className={`px-4 py-3.5 sticky top-14 z-40 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'}`}>
+    <div className={`px-4 py-3.5 sticky top-14 z-40 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF8EE)]' : 'bg-[#f0f3f6]'}`}>
       <div className="flex items-center justify-between relative max-w-sm mx-auto">
         {/* Connecting Lines */}
         <div className="absolute top-3.5 left-[15%] right-[15%] h-[2.5px] bg-slate-200 -z-0">
@@ -383,7 +434,7 @@ const Checkout = () => {
         </div>
 
         {/* Step 1: Address */}
-        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'}`}>
+        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF8EE)]' : 'bg-[#f0f3f6]'}`}>
           <div className={`w-7 h-7 rounded-full ${primaryBg} text-white flex items-center justify-center text-[11px] font-black shadow-xs`}>
             <CheckCircle2 size={15} />
           </div>
@@ -391,7 +442,7 @@ const Checkout = () => {
         </div>
 
         {/* Step 2: Order Summary */}
-        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'}`}>
+        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF8EE)]' : 'bg-[#f0f3f6]'}`}>
           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all shadow-xs ${currentStep >= 2 ? `${primaryBg} text-white` : 'bg-white text-slate-400'}`}>
             {currentStep > 2 ? <CheckCircle2 size={15} /> : '2'}
           </div>
@@ -399,7 +450,7 @@ const Checkout = () => {
         </div>
 
         {/* Step 3: Payment */}
-        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'}`}>
+        <div className={`flex flex-col items-center gap-1 z-10 px-2 transition-colors duration-300 ${isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF8EE)]' : 'bg-[#f0f3f6]'}`}>
           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all shadow-xs ${currentStep === 3 ? `${primaryBg} text-white` : 'bg-white text-slate-400'}`}>
             3
           </div>
@@ -426,6 +477,27 @@ const Checkout = () => {
           {address.name} <span className="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded ml-1 font-black uppercase">{t('sidebar.home').toUpperCase()}</span>
         </p>
         <p className="text-[12.5px] text-slate-500 font-medium leading-relaxed mt-1.5">{address.address}</p>
+        {!defaultAddress && (
+          <div className="mt-3 flex flex-col gap-2">
+            {canUseLiveLocation && (
+              <button
+                type="button"
+                onClick={useLiveLocationAsAddress}
+                disabled={savingLiveAddress}
+                className={`${primaryText} text-[12px] font-black uppercase border border-slate-200 px-4 py-2 rounded-full active:scale-95 transition-transform disabled:opacity-60 text-left`}
+              >
+                {savingLiveAddress ? 'Saving…' : `Use my current location — ${liveLocation.shortLabel || liveLocation.formattedAddress}`}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate('/profile/addresses')}
+              className="text-[12px] font-black uppercase text-slate-500 underline text-left"
+            >
+              Add a new address
+            </button>
+          </div>
+        )}
         <p className="text-[12.5px] text-slate-800 font-black mt-2 tracking-tight">{address.phone}</p>
         {isEcommerceFlow && defaultAddress?.pincode && (
           <div className="mt-3 pt-3 border-t border-slate-100">
@@ -752,7 +824,7 @@ const Checkout = () => {
 
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center w-full fixed inset-0 z-[1000] px-4 py-6 overflow-y-auto transition-colors duration-300 ${
-        isFreshGroceryFlow ? 'bg-gradient-to-b from-[#FFF0A0]/45 via-[#FFFDF3]/95 to-white/95 backdrop-blur-xs' : 'bg-[#f0f3f6]'
+        isFreshGroceryFlow ? 'bg-gradient-to-b from-[color:var(--fg-light,#FFF0A0)]/45 via-[#FFFDF3]/95 to-white/95 backdrop-blur-xs' : 'bg-[#f0f3f6]'
       }`}>
         {orderStatus === 'processing' ? (
           <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-xl max-w-sm w-full text-center flex flex-col items-center">
@@ -820,7 +892,7 @@ const Checkout = () => {
 
   return (
     <div className={`min-h-screen font-sans text-slate-850 pb-28 transition-colors duration-300 relative ${
-      isFreshGroceryFlow ? 'bg-[#FFF8EE]' : 'bg-[#f0f3f6]'
+      isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF8EE)]' : 'bg-[#f0f3f6]'
     }`}>
       {/* Global Repeating Mithila Art Page Background Texture */}
       {(isFreshGroceryFlow || !(isMithilakFlow || isQuickShopFlow)) && (
@@ -836,11 +908,11 @@ const Checkout = () => {
       {/* Header */}
       <div className={`sticky top-0 z-50 px-4 py-3 flex items-center justify-between transition-colors duration-300 relative z-10 ${
         isFreshGroceryFlow 
-          ? 'bg-[#D9A21B] text-white' 
+          ? 'bg-[color:var(--fg-primary,#D9A21B)] text-white' 
           : isMithilakFlow 
-            ? 'bg-[#207C8A] text-white' 
+            ? 'bg-[color:var(--ml-primary,#207C8A)] text-white' 
             : isQuickShopFlow 
-              ? 'bg-gradient-to-r from-[#F26522] to-[#FF7A00] text-white' 
+              ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF7A00)] text-white' 
               : 'bg-[#f0f3f6]'
       }`}>
         <div className="flex items-center gap-4">

@@ -8,6 +8,7 @@ const {
   categoryUpdateSchema,
   categoryBulkImportSchema,
   productBulkSchema,
+  catalogKeySchema,
   productRejectSchema,
   listProductsQuerySchema,
 } = require('../../validators/catalog/catalog.validator');
@@ -51,6 +52,7 @@ function createAdminCatalogRoutes(controllers, middleware) {
   router.patch('/products/:id/reject', requirePermission('products.approve'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(productRejectSchema), productController.reject);
   router.delete('/products/:id', requirePermission('products.delete'), validateParams(Joi.object({ id: objectIdSchema })), productController.delete);
   router.put('/products/:id', requirePermission('products.edit'), validateParams(Joi.object({ id: objectIdSchema })), productController.update);
+  router.post('/products/catalog-key', requirePermission('products.edit'), validateBody(catalogKeySchema), productController.setCatalogKey);
   router.post('/products/bulk', requirePermission('products.edit'), validateBody(productBulkSchema), productController.bulk);
 
   if (categoryLandingController) {

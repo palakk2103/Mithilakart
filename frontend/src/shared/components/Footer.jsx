@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import footerBorder from '../../assets/footer-border.png';
-import { useTranslation } from 'react-i18next';
+import { useSupportContact } from '../config/publicConfig';
 
 const Footer = () => {
-  const { t } = useTranslation();
+  const contact = useSupportContact();
   return (
     <footer className="w-full bg-white pb-20 mt-auto border-t border-gray-100 flex flex-col items-center">
       {/* Decorative Mithila painting border with opacity */}
@@ -19,57 +19,57 @@ const Footer = () => {
       <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-12 w-full max-w-[1200px] px-5 sm:px-6 mb-8 pb-8 border-b border-gray-100">
         {/* Column 1: About */}
         <div className="col-span-2 md:col-span-1 space-y-3 md:space-y-4">
-          <h3 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">{t('auto.aboutMithilakart')}</h3>
+          <h3 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">About Mithilakart</h3>
           <p className="text-[11px] md:text-xs text-gray-500 leading-relaxed font-semibold">
-            {t('auto.discoverUniqueHighQualityHandcrafted')}
+            Discover unique, high-quality handcrafted items and fresh goods directly from local artisans. We bridge the gap between traditional craftsmanship and modern convenience.
           </p>
         </div>
 
         {/* Column 2: Customer Care */}
         <div className="space-y-3 md:space-y-4">
-          <h3 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">{t('auto.customerCare')}</h3>
+          <h3 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">Customer Care</h3>
           <ul className="space-y-2 text-[11px] md:text-xs font-bold text-gray-500">
             <li>
-              <Link to="/profile/help-center" className="hover:text-primary-green transition-colors">{t('auto.helpCenter')}</Link>
+              <Link to="/profile/help-center" className="hover:text-primary-green transition-colors">Help Center</Link>
             </li>
             <li>
-              <Link to="/profile/orders" className="hover:text-primary-green transition-colors">{t('auto.trackOrder')}</Link>
+              <Link to="/profile/orders" className="hover:text-primary-green transition-colors">Track Order</Link>
             </li>
             <li>
-              <Link to="/cancellation-returns" className="hover:text-primary-green transition-colors">{t('auto.cancellationsReturns')}</Link>
+              <Link to="/cancellation-returns" className="hover:text-primary-green transition-colors">Cancellations & Returns</Link>
             </li>
             <li>
-              <Link to="/shipping" className="hover:text-primary-green transition-colors">{t('auto.shippingPolicy')}</Link>
+              <Link to="/shipping" className="hover:text-primary-green transition-colors">Shipping Policy</Link>
             </li>
           </ul>
         </div>
 
         {/* Column 3: Useful Links */}
         <div className="space-y-3 md:space-y-4">
-          <h3 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">{t('auto.usefulLinks')}</h3>
+          <h3 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">Useful Links</h3>
           <ul className="space-y-2 text-[11px] md:text-xs font-bold text-gray-500">
             <li>
-              <Link to="/terms" className="hover:text-primary-green transition-colors">{t('auto.termsOfUse')}</Link>
+              <Link to="/terms" className="hover:text-primary-green transition-colors">Terms of Use</Link>
             </li>
             <li>
-              <Link to="/privacy" className="hover:text-primary-green transition-colors">{t('auto.privacyPolicy')}</Link>
+              <Link to="/privacy" className="hover:text-primary-green transition-colors">Privacy Policy</Link>
             </li>
             <li>
-              <Link to="/home" className="hover:text-primary-green transition-colors">{t('auto.homePage')}</Link>
+              <Link to="/home" className="hover:text-primary-green transition-colors">Home Page</Link>
             </li>
             <li>
-              <Link to="/categories" className="hover:text-primary-green transition-colors">{t('auto.shopByCategories')}</Link>
+              <Link to="/categories" className="hover:text-primary-green transition-colors">Shop by Categories</Link>
             </li>
           </ul>
         </div>
 
         {/* Column 4: Contact Us */}
         <div className="col-span-2 md:col-span-1 space-y-3 md:space-y-4">
-          <h3 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">{t('auto.contactUs')}</h3>
+          <h3 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">Contact Us</h3>
           <ul className="space-y-2 text-[11px] md:text-xs font-semibold text-gray-500">
-            <li><strong>{t('auto.email')}</strong> support@mithilakart.com</li>
-            <li><strong>{t('auto.phone')}</strong> +91 1800-123-4567</li>
-            <li><strong>{t('auto.address2')}</strong> {t('auto.mithilakartPvtLtdMumbaiIndia')}</li>
+            <li><strong>Email:</strong> {contact.email}</li>
+            <li><strong>Phone:</strong> {contact.phone}</li>
+            <li><strong>Address:</strong> Mithilakart Pvt Ltd, Mumbai, India</li>
           </ul>
         </div>
       </div>

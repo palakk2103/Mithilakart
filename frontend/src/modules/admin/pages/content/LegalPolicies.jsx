@@ -22,7 +22,13 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cmsApi } from '../../services/api';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
+import { cmsApi, settingsApi } from '../../services/api';
+import { PrivacyDefaultContent } from '../../../user/pages/LegalPrivacy';
+import { TermsDefaultContent } from '../../../user/pages/TermsOfUse';
+import { CancellationDefaultContent } from '../../../user/pages/CancellationReturns';
+import { ShippingDefaultContent } from '../../../user/pages/ShippingPolicy';
 import toast from 'react-hot-toast';
 
 const TABS = [
@@ -60,6 +66,28 @@ const TABS = [
   },
 ];
 
+const DEFAULT_CONTENT = {
+  privacy: PrivacyDefaultContent,
+  terms: TermsDefaultContent,
+  cancellation: CancellationDefaultContent,
+  shipping: ShippingDefaultContent,
+};
+
+/**
+ * The text the customer app shows today for a policy nobody has published
+ * yet — so the editor starts from it instead of an empty box.
+ */
+function renderDefaultHtml(tabId, contact) {
+  const Component = DEFAULT_CONTENT[tabId];
+  if (!Component) return '';
+  const host = document.createElement('div');
+  const root = createRoot(host);
+  flushSync(() => root.render(<Component contact={contact} />));
+  const html = host.innerHTML;
+  root.unmount();
+  return html;
+}
+
 const LegalPolicies = () => {
   const [activeTab, setActiveTab] = useState('privacy');
   const [isEditing, setIsEditing] = useState(false);
@@ -85,6 +113,12 @@ const LegalPolicies = () => {
 
       if (cancelled) return;
 
+      const { data: settings } = await settingsApi.getAll();
+      const contact = {
+        email: settings?.settings?.supportEmail || 'support@mithilakart.com',
+        phone: settings?.settings?.helpline || '+91 1800-123-4567',
+      };
+
       const next = {};
       results.forEach(({ id, data, error }) => {
         if (!error && data) {
@@ -93,6 +127,15 @@ const LegalPolicies = () => {
             content: data.content || '',
             version: data.version || 1,
             updatedAt: data.updatedAt || new Date().toISOString(),
+          };
+        } else {
+          // Not published yet: start from what the app shows now.
+          next[id] = {
+            title: TABS.find((t) => t.id === id)?.label,
+            content: renderDefaultHtml(id, contact),
+            version: 0,
+            updatedAt: null,
+            unpublished: true,
           };
         }
       });
@@ -107,11 +150,11 @@ const LegalPolicies = () => {
   }, []);
 
   useEffect(() => {
+    // Always replace the draft — keeping the previous tab's text let an admin
+    // save Privacy's content into Shipping by accident.
     const page = pages[activeTab];
-    if (page) {
-      setDraft({ title: page.title, content: page.content });
-    }
-  }, [activeTab, pages]);
+    setDraft({ title: page?.title || activeTabMeta.label, content: page?.content || '' });
+  }, [activeTab, pages, activeTabMeta.label]);
 
   const handleSave = async () => {
     if (!draft.content.trim()) {
@@ -135,8 +178,9 @@ const LegalPolicies = () => {
       ...prev,
       [activeTab]: {
         ...draft,
-        version: (prev[activeTab]?.version || 1) + 1,
+        version: (prev[activeTab]?.version || 0) + 1,
         updatedAt: new Date().toISOString(),
+        unpublished: false,
       },
     }));
     setIsEditing(false);
@@ -165,7 +209,7 @@ const LegalPolicies = () => {
         hour: '2-digit',
         minute: '2-digit',
       })
-    : 'Live';
+    : 'Not published yet';
 
   return (
     <div className="space-y-6">
@@ -267,8 +311,8 @@ const LegalPolicies = () => {
                     <Icon size={18} />
                   </div>
                   {tabData && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 uppercase">
-                      v{tabData.version || 1}
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase ${tabData.unpublished ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {tabData.unpublished ? 'Built-in text' : `v${tabData.version || 1}`}
                     </span>
                   )}
                 </div>

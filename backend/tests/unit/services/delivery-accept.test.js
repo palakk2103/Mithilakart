@@ -70,6 +70,7 @@ describe('DeliveryOrderService.acceptOrder', () => {
         findByOrderId: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ _id: 'assign1', orderId }),
         acceptByOrderId: jest.fn().mockResolvedValue(assignment),
+        updateById: jest.fn().mockResolvedValue(assignment),
       },
     });
 
