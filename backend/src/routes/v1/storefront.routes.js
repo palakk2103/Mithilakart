@@ -10,6 +10,7 @@ function createStorefrontRoutes(controller, categoryLandingController = null) {
   router.get('/config', controller.getConfig);
   router.get('/header-tabs', controller.getHeaderTabs);
   router.get('/you-popup', controller.getYouPopup);
+  router.get('/help-center', controller.getHelpCenter);
   router.get('/banners', controller.getBanners);
   if (categoryLandingController) {
     router.get(

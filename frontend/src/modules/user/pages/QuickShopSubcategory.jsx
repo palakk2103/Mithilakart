@@ -1,3 +1,4 @@
+import { AddButton } from '../components/common/AddToCartButton';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Share2, ChevronDown, Heart, Check, X, Sparkles, Clock, Star, Zap } from 'lucide-react';
@@ -1129,15 +1130,14 @@ const QuickShopSubcategory = () => {
                                   )}
                                 </div>
 
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
-                                  }}
-                                  className={`px-3 py-1 rounded-lg text-[10.5px] md:text-[11.5px] font-black text-white ${primaryBg} hover:opacity-95 active:scale-95 transition-all shadow-xs uppercase`}
-                                >
-                                  {t('auto.add')}
-                                </button>
+                                <div className="w-[64px] md:w-[72px] flex-shrink-0">
+                                  <AddButton
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      addProductToCart({ id: product.id, name: product.name, price: product.price, image: product.img }).catch(() => {});
+                                    }}
+                                  />
+                                </div>
                               </div>
              
                               {/* ETA & Stock status strip */}

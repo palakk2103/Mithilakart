@@ -7,6 +7,8 @@ const {
 
 const { YOU_POPUP_SETTING_KEY, YOU_POPUP_ITEMS } = require('../../constants/youPopup');
 const { mergeYouPopupItems } = require('./youPopupMerge');
+const { HELP_CENTER_SETTING_KEY } = require('../../constants/helpCenter');
+const { toPublicHelpCenter } = require('./helpCenterContent');
 
 class PlatformConfigService extends BaseService {
   constructor({ platformSettingRepository, deliveryChargeRuleRepository, cacheService }) {
@@ -75,6 +77,12 @@ class PlatformConfigService extends BaseService {
         .filter((i) => i.enabled)
         .map((i) => ({ id: i.id, label: i.label, order: i.order, route: routes.get(i.id) })),
     };
+  }
+
+  /** Customer-safe Help & Support page content (disabled items removed). */
+  async getHelpCenter() {
+    const config = await this.getConfig();
+    return toPublicHelpCenter(config[HELP_CENTER_SETTING_KEY]);
   }
 
   async getHeaderTabs() {

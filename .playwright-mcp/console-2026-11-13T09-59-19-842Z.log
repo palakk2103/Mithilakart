@@ -1,0 +1,31 @@
+[     450ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20103
+[     991ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[    1018ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[    1995ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[    2212ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[    4485ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-ritual-sanskar-packages @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:4925
+[    4486ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-traditional-toys-dolls @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:4925
+[  175483ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[  175498ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/@vite/client:1035
+[  176533ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/@vite/client:1035
+[  177541ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/@vite/client:1035
+[  181643ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:20103
+[  182066ms] [WARNING] You popup config unavailable, using cached/default: Network Error @ http://localhost:3000/src/config/youPopup.js:60
+[  182068ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/you-popup:1
+[  182078ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:1
+[  182078ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[  182082ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:1
+[  182082ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/addresses:1
+[  182083ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[  182084ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/storefront/home?commerceFlow=standard:1
+[  182368ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/categories?marketplaceTab=mithilak:1
+[  182379ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/users/me/wishlist:1
+[  182389ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/categories?marketplaceTab=mithilak:1
+[  182417ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5000/api/v1/maps/reverse-geocode?lat=22.717619679749095&lng=75.87188258707312:1
+[ 2460467ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[ 2461643ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:20103
+[ 2462358ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5000/api/v1/users/me/addresses:1
+[ 2462453ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5000/api/v1/users/me/addresses:1
+[ 2462463ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2462544ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2463279ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5000/api/v1/users/me/wishlist:1

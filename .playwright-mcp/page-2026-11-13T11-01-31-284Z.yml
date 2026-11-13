@@ -1,0 +1,19 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - button [ref=e7]
+    - generic [ref=e11]: ADMIN PANEL
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - heading "Welcome back" [level=2] [ref=e14]
+      - paragraph [ref=e15]: Verified Management Session
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - text: Email / Phone
+        - textbox "Enter email or phone" [ref=e22]
+      - generic [ref=e23]:
+        - text: Password
+        - generic [ref=e24]:
+          - textbox "Enter password" [ref=e28]
+          - button [ref=e29]
+      - button "Sign In Securely" [ref=e33]
+  - generic [ref=e37]: Mithilakart Admin Portal

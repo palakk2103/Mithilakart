@@ -1,3 +1,4 @@
+import { openCategoryExplorer } from '../utils/categoryLandingNav';
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight, Zap } from 'lucide-react';
@@ -139,11 +140,11 @@ const GROCERY_ICON_RULES = [
   [/household|clean|home|detergent/i, HouseholdIcon],
 ];
 
-const GroceryCategoryIcon = ({ category }) => {
+const GroceryCategoryIcon = ({ category, imgClassName = '' }) => {
   const [failed, setFailed] = React.useState(false);
   const src = category.iconUrl || category.imageUrl;
   if (src && !failed) {
-    return <img src={getImageUrl(src)} alt="" className="w-10 h-10 object-contain" onError={() => setFailed(true)} loading="lazy" decoding="async" />;
+    return <img src={getImageUrl(src)} alt="" className={`w-full h-full object-contain ${imgClassName}`} onError={() => setFailed(true)} loading="lazy" decoding="async" />;
   }
   const Icon = GROCERY_ICON_RULES.find(([pattern]) => pattern.test(category.name))?.[1];
   if (Icon) return <Icon />;
@@ -476,7 +477,7 @@ const QuickShop = () => {
               </span>
             </div>
 
-            <div className="grid grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-4 gap-1.5 -mx-2 md:mx-0 md:gap-3 md:grid-cols-[repeat(auto-fill,110px)]">
               {categoriesLoading && Array.from({ length: 8 }).map((_, idx) => (
                 <div key={idx} className="h-[92px] bg-white/70 border border-[#EADCC9]/40 rounded-2xl animate-pulse" />
               ))}
@@ -485,12 +486,12 @@ const QuickShop = () => {
                   key={cat.id}
                   onClick={() => {
                     localStorage.setItem('isFreshGroceryFlow', 'true');
-                    navigate('/fresh-grocery/category', { state: { category: cat.name, categoryId: cat.id } });
+                    openCategoryExplorer(navigate, { flow: 'freshgrocery', id: cat.id, name: cat.name });
                   }}
-                  className="bg-white border border-[#EADCC9]/55 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#D9A21B]"
+                  className="bg-white border border-[#EADCC9]/55 rounded-2xl p-1 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#D9A21B]"
                 >
-                  <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[#FFF8EE] rounded-xl overflow-hidden">
-                    <GroceryCategoryIcon category={cat} />
+                  <div className="w-full aspect-square flex items-center justify-center mb-1.5 bg-[#FFF8EE] rounded-xl overflow-hidden p-2">
+                    <GroceryCategoryIcon category={cat} imgClassName="scale-110" />
                   </div>
                   <span className="text-[10px] md:text-[11px] font-black text-[#3F2A20] leading-tight line-clamp-2">{cat.name}</span>
                 </div>
@@ -741,7 +742,7 @@ const QuickShop = () => {
                       item={item}
                       onClick={() => {
                         localStorage.setItem('isFreshGroceryFlow', 'true');
-                        navigate('/fresh-grocery/category', { state: { category: item.name, categoryId: item.id } });
+                        openCategoryExplorer(navigate, { flow: 'freshgrocery', id: item.id, name: item.name });
                       }}
                     />
                   ))}
@@ -752,6 +753,14 @@ const QuickShop = () => {
 
           {/* ── RESTORED CATEGORY SECTIONS (Desktop View) ── */}
           <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-4 md:py-6 space-y-8">
+            {categorySections.length > 0 && (
+              <div className="pl-1">
+                <h2 className="text-[26px] font-black text-[#3F2A20] tracking-tight leading-tight">
+                  {t('auto.exploreAllCategories', 'Explore All Categories')}
+                </h2>
+                <div className="mt-2 h-[3px] w-16 rounded-full bg-[#D9A21B]" />
+              </div>
+            )}
             {categorySections.map((section, sIdx) => (
               <div key={sIdx} className="flex flex-col">
                 {/* Header Banner */}
@@ -769,7 +778,7 @@ const QuickShop = () => {
                         key={itemIdx}
                         onClick={() => {
                           localStorage.setItem('isFreshGroceryFlow', 'true');
-                          navigate('/fresh-grocery/category', { state: { category: item.name, categoryId: item.id } });
+                          openCategoryExplorer(navigate, { flow: 'freshgrocery', id: item.id, name: item.name });
                         }}
                         className="flex flex-col items-center gap-3.5 cursor-pointer group active:scale-95 transition-transform w-full max-w-[160px]"
                       >
@@ -853,7 +862,7 @@ const QuickShop = () => {
             <span
               onClick={() => {
                 localStorage.setItem('isQuickShopFlow', 'true');
-                navigate('/quick-shop/category');
+                navigate('/categories?flow=quickshop', { state: { flow: 'quickshop' } });
               }}
               className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
             >
@@ -870,7 +879,7 @@ const QuickShop = () => {
                 key={cat.id}
                 onClick={() => {
                   localStorage.setItem('isQuickShopFlow', 'true');
-                  navigate('/quick-shop/category', { state: { category: cat.name, categoryId: cat.id } });
+                  openCategoryExplorer(navigate, { flow: 'quickshop', id: cat.id, name: cat.name });
                 }}
                 className="bg-white border border-[#FFD9C7]/60 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#F26522]"
               >
@@ -899,7 +908,7 @@ const QuickShop = () => {
             <span
               onClick={() => {
                 localStorage.setItem('isQuickShopFlow', 'true');
-                navigate('/quick-shop/category');
+                navigate('/categories?flow=quickshop', { state: { flow: 'quickshop' } });
               }}
               className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
             >
@@ -1086,7 +1095,7 @@ const QuickShop = () => {
             <span
               onClick={() => {
                 localStorage.setItem('isQuickShopFlow', 'true');
-                navigate('/quick-shop/category');
+                navigate('/categories?flow=quickshop', { state: { flow: 'quickshop' } });
               }}
               className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
             >
@@ -1190,7 +1199,7 @@ const QuickShop = () => {
                   item={item}
                   onClick={() => {
                     localStorage.setItem('isQuickShopFlow', 'true');
-                    navigate(isFreshGrocery ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name, categoryId: item.id } });
+                    openCategoryExplorer(navigate, { flow: isFreshGrocery ? 'freshgrocery' : 'quickshop', id: item.id, name: item.name });
                   }}
                 />
               ))}
@@ -1211,6 +1220,14 @@ const QuickShop = () => {
             </div>
           </div>
         )}
+        {!categoriesLoading && categorySections.length > 0 && (
+          <div className="pl-1">
+            <h2 className="text-[26px] font-black text-slate-900 tracking-tight leading-tight">
+              {t('auto.exploreAllCategories', 'Explore All Categories')}
+            </h2>
+            <div className="mt-2 h-[3px] w-16 rounded-full bg-[#F26522]" />
+          </div>
+        )}
         {!categoriesLoading && categorySections.map((section, sIdx) => (
           <div key={sIdx} className="flex flex-col">
             {/* Header Banner */}
@@ -1228,7 +1245,7 @@ const QuickShop = () => {
                     key={itemIdx}
                     onClick={() => {
                       localStorage.setItem('isQuickShopFlow', 'true');
-                      navigate(isFreshGrocery ? '/fresh-grocery/category' : '/quick-shop/category', { state: { category: item.name, categoryId: item.id } });
+                      openCategoryExplorer(navigate, { flow: isFreshGrocery ? 'freshgrocery' : 'quickshop', id: item.id, name: item.name });
                     }}
                     className="flex flex-col items-center gap-3.5 cursor-pointer group active:scale-95 transition-transform w-full max-w-[160px]"
                   >

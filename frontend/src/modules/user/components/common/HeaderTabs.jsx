@@ -18,7 +18,7 @@ const iconMap = {
   basket: FiShoppingCart,
 };
 
-const HeaderTabs = () => {
+const HeaderTabs = ({ variant = 'default' }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -130,6 +130,41 @@ const HeaderTabs = () => {
 
     return null;
   };
+
+    if (variant === 'desktop') {
+    return (
+      <div className="flex items-center gap-2 xl:gap-3 p-1 rounded-full bg-black/15 ring-1 ring-white/10 backdrop-blur-sm">
+        {enabledTabs.map((tab) => {
+          const currentPath = location.pathname;
+          const hasRouteMatch = enabledTabs.some((t) => t.route === currentPath || (t.route === '/home' && currentPath === '/'));
+          const isRouteActive = tab.route === currentPath || (tab.route === '/home' && currentPath === '/');
+          const isActive = hasRouteMatch ? isRouteActive : (effectiveFlow === tab.flow || (tab.route && currentPath.startsWith(tab.route)));
+          const displayLabel = tab.i18nKey ? t(tab.i18nKey, { defaultValue: tab.label }) : tab.label;
+
+          return (
+            <motion.button
+              type="button"
+              key={tab.id}
+              data-testid={`header-tab-${tab.id}`}
+              whileHover={{ y: -1.5 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => handleTabClick(tab)}
+              className={`flex items-center gap-2.5 px-4 py-2 xl:px-5 xl:py-2.5 rounded-full text-[13px] xl:text-sm font-bold transition-all duration-200 cursor-pointer ${
+                isActive
+                  ? 'bg-white text-slate-900 shadow-[0_4px_14px_rgba(0,0,0,0.22)] ring-1 ring-black/5 font-extrabold'
+                  : 'bg-white/10 hover:bg-white/25 text-white border border-white/15 hover:border-white/40 hover:shadow-[0_3px_10px_rgba(0,0,0,0.15)]'
+              }`}
+            >
+              {renderTabIcon(tab, isActive)}
+              <span className={`tracking-tight whitespace-nowrap ${tab.id === 'mithilakart' ? 'font-black italic' : 'font-bold'}`}>
+                {displayLabel}
+              </span>
+            </motion.button>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { sectionsApi, productsApi } from '../services/api';
+import { sectionsApi, productsApi, categoriesApi } from '../services/api';
 import { extractList } from '../utils/mappers';
 import { Save, Loader2, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -24,10 +24,26 @@ const COMMERCE_FLOWS = [
   { id: 'mithilak', label: 'Mithilak' },
 ];
 
+// Pages the section arrow can open. Categories are added dynamically from the DB.
+const PAGE_LINK_PRESETS = [
+  { label: 'All Offers (featured products)', value: '/all-offers' },
+  { label: 'Deals & Offers', value: '/deals' },
+  { label: 'All Categories', value: '/categories' },
+  { label: 'Quick Shop', value: '/quick-shop' },
+  { label: 'Mithilak Express', value: '/mithilak' },
+  { label: 'Fresh & Groceries', value: '/fresh-grocery' },
+  { label: 'Toys Store', value: '/toys' },
+  { label: 'Beauty Store', value: '/beauty' },
+];
+
+const CUSTOM_LINK = '__custom__';
+const isValidViewAllLink = (v) => !v || /^\/(?!\/)\S*$/.test(v) || /^https?:\/\/\S+$/i.test(v);
+
 const HomeSectionsManager = () => {
   const { section: sectionKey = 'trending-this-week' } = useParams();
   const [commerceFlow, setCommerceFlow] = useState('standard');
-  const [sectionData, setSectionData] = useState({ title: '', productIds: [], isActive: true });
+  const [categories, setCategories] = useState([]);
+  const [sectionData, setSectionData] = useState({ title: '', productIds: [], viewAllLink: '', isActive: true });
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,10 +52,13 @@ const HomeSectionsManager = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [sectionsRes, productsRes] = await Promise.all([
+    const [sectionsRes, productsRes, categoriesRes] = await Promise.all([
       sectionsApi.getAll(),
       productsApi.getAll({ limit: 100 }),
+      categoriesApi.getAll({ limit: 200 }),
     ]);
+    setCategories(extractList(categoriesRes?.data).filter((c) => c?.name));
+    setCustomMode(false);
 
     const sections = extractList(sectionsRes.data);
     const match = sections.find(
@@ -54,6 +73,7 @@ const HomeSectionsManager = () => {
     setSectionData({
       title: match?.title || SECTION_TITLES[sectionKey] || sectionKey,
       productIds: (match?.productIds || []).map((id) => String(id._id || id)),
+      viewAllLink: match?.viewAllLink || '',
       isActive: match?.isActive !== false,
     });
 
@@ -86,11 +106,27 @@ const HomeSectionsManager = () => {
     setProducts(nextIds.map((id) => allProducts.find((p) => String(p._id || p.id) === String(id))).filter(Boolean));
   };
 
+  const categoryLinkFor = (name) => `/category-products?category=${encodeURIComponent(name)}`;
+  const knownLinks = [
+    ...PAGE_LINK_PRESETS.map((p) => p.value),
+    ...categories.map((c) => categoryLinkFor(c.name)),
+  ];
+  const linkSelectValue = !sectionData.viewAllLink
+    ? ''
+    : knownLinks.includes(sectionData.viewAllLink) ? sectionData.viewAllLink : CUSTOM_LINK;
+  const [customMode, setCustomMode] = useState(false);
+  const linkInvalid = !isValidViewAllLink(sectionData.viewAllLink);
+
   const handleSave = async () => {
+    if (linkInvalid) {
+      toast.error('View All link must start with "/" or http(s)://');
+      return;
+    }
     setSaving(true);
     const payload = {
       title: sectionData.title,
       productIds: sectionData.productIds,
+      viewAllLink: sectionData.viewAllLink.trim(),
       isActive: sectionData.isActive,
     };
     const { error } = await sectionsApi.update(sectionKey, payload, { commerceFlow });
@@ -154,6 +190,54 @@ const HomeSectionsManager = () => {
               onChange={(e) => setSectionData((p) => ({ ...p, title: e.target.value }))}
               className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none"
             />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+              Arrow / "View All" opens
+            </label>
+            <select
+              data-testid="view-all-link-select"
+              value={customMode ? CUSTOM_LINK : linkSelectValue}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === CUSTOM_LINK) {
+                  setCustomMode(true);
+                  return;
+                }
+                setCustomMode(false);
+                setSectionData((p) => ({ ...p, viewAllLink: v }));
+              }}
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none"
+            >
+              <option value="">Default (this section's own products page)</option>
+              <optgroup label="Pages">
+                {PAGE_LINK_PRESETS.map((p) => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </optgroup>
+              {categories.length > 0 && (
+                <optgroup label="Categories">
+                  {categories.map((c) => (
+                    <option key={c._id || c.id || c.name} value={categoryLinkFor(c.name)}>{c.name}</option>
+                  ))}
+                </optgroup>
+              )}
+              <option value={CUSTOM_LINK}>Custom link…</option>
+            </select>
+            {(customMode || linkSelectValue === CUSTOM_LINK) && (
+              <input
+                data-testid="view-all-link-custom"
+                value={sectionData.viewAllLink}
+                onChange={(e) => setSectionData((p) => ({ ...p, viewAllLink: e.target.value }))}
+                placeholder="/category-products?category=Beauty  or  https://example.com"
+                className={`mt-2 w-full border rounded-xl px-4 py-3 text-sm font-mono outline-none ${linkInvalid ? 'border-red-400' : 'border-slate-200'}`}
+              />
+            )}
+            {linkInvalid && <p className="text-xs text-red-500 mt-1">Must start with "/" or http(s)://</p>}
+            <p className="text-xs text-slate-400 mt-1">
+              Where users land when they tap the arrow on this section. Current: <code className="bg-slate-100 px-1 rounded">{sectionData.viewAllLink || 'default (section products page)'}</code>
+            </p>
           </div>
 
           <label className="flex items-center gap-2 text-sm font-bold">

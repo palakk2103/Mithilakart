@@ -1,3 +1,4 @@
+import { AddButton } from '../components/common/AddToCartButton';
 import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import useWishlistToggle from '../hooks/useWishlistToggle';
@@ -193,14 +194,7 @@ const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel, ct
 
         {/* Add to Cart Button */}
         <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[#EADCC9]/40">
-          <button
-            onClick={(e) => onAddToCart(deal, e)}
-            disabled={ctaDisabled}
-            className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#FFF8EE] disabled:hover:text-[#3E5A44]"
-          >
-            <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>{ctaLabel || t('common.addToCart')}</span>
-          </button>
+          <AddButton onClick={(e) => onAddToCart(deal, e)} disabled={ctaDisabled} label={ctaLabel} />
         </div>
 
         <CardBottomDivider />
@@ -565,7 +559,7 @@ const Home = () => {
       {/* 4. TRENDING THIS WEEK SECTION */}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
         <div className="mb-5 md:mb-8">
-          <TrendingThisWeek maxItems={MAX_SECTION_PRODUCTS} />
+          <TrendingThisWeek theme="default" maxItems={MAX_SECTION_PRODUCTS} />
         </div>
       )}
 

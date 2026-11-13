@@ -1,0 +1,46 @@
+[     532ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:20103
+[   13619ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[   13625ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[   13788ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[   13824ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[   16803ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-ritual-sanskar-packages @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:4925
+[   16803ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-traditional-toys-dolls @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=27128b8f:4925
+[   16859ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/3b757d3d-4d5e-4eed-84f0-dc901d885b10.webp:1
+[   16862ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/9182383a-3a1b-4d4f-b62d-b5b702704aed.webp:1
+[   16862ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/f53dafbb-4f83-47b9-9601-5d4a72fc6d27.webp:1
+[   16862ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/uploads/cms/ae69ae33-8d70-4550-84e4-b1a413f1ba07.webp:1
+[ 3700651ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[ 3700850ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/@vite/client:1035
+[ 3705554ms] [ERROR] WebSocket connection to 'ws://localhost:3000/?token=Xc7sdAvaur5A' failed: Error during WebSocket handshake: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/@vite/client:802
+[ 3706603ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/components/SplashScreen.jsx:1
+[ 3706720ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/context/LocationContext.jsx:1
+[ 3706720ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/services/pushNotifications.js:1
+[ 3706720ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/api/tokenStorage.js:1
+[ 3706720ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/components/ErrorBoundary.jsx:1
+[ 3706720ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/modules/user/routes/MarketRoutes.jsx?t=1794554975304:1
+[ 3706720ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/context/LanguageContext.jsx:1
+[ 3706720ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/components/LocationPrompt.jsx:1
+[ 3706720ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/components/ScrollToTop.jsx:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/components/PageLoader.jsx:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/shared/utils/lazyWithRetry.js:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/i18n/locales/en/common.json?import:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/i18n/locales/hi/common.json?import:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/i18n/locales/mai/common.json?import:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/store/slices/orderSlice.js:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/store/slices/financeSlice.js:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/store/slices/vendorSlice.js:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/store/slices/adminSlice.js:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/store/slices/productSlice.js:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/store/slices/analyticsSlice.js:1
+[ 3706721ms] [ERROR] Failed to load resource: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/src/store/slices/notificationSlice.js:1
+[ 3706721ms] [ERROR] WebSocket connection to 'ws://localhost:3000/?token=Xc7sdAvaur5A' failed: Error in connection establishment: net::ERR_NETWORK_IO_SUSPENDED @ http://localhost:3000/@vite/client:815
+[ 3706722ms] [ERROR] [vite] failed to connect to websocket.
+your current setup:
+  (browser) localhost:3000/ <--[HTTP]--> localhost:3000/ (server)
+  (browser) localhost:3000/ <--[WebSocket (failing)]--> localhost:3000/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr . @ http://localhost:3000/@vite/client:830
+[ 3706722ms] [ERROR] [vite] TypeError: Cannot read properties of undefined (reading 'send')
+    at Object.send (http://localhost:3000/@vite/client:483:10)
+    at Object.send (http://localhost:3000/@vite/client:849:21)
+    at Object.send (http://localhost:3000/@vite/client:326:24)
+    at Object.send (http://localhost:3000/@vite/client:417:33) @ http://localhost:3000/@vite/client:882

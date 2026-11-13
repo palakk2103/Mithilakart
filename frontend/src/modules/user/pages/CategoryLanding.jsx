@@ -17,14 +17,14 @@ import { getImageUrl, handleImageError } from '../../../shared/utils/imageUtils'
 const SubcategorySlider = ({ items, onSelect, title }) => (
   <section data-testid="landing-subcategories">
     <h2 className="text-[17px] md:text-[19px] font-bold text-[#3F2A20] mb-2 px-1">{title}</h2>
-    <ScrollRow className="flex items-start gap-3 md:gap-5 pb-2 pt-1 -mx-1 px-1">
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-3 gap-y-4 md:gap-x-5 pb-2 pt-1">
       {items.map((item) => (
         <button
           type="button"
           key={item.id}
           data-testid="landing-subcategory"
           onClick={() => onSelect(item)}
-          className="flex-shrink-0 w-[96px] sm:w-[112px] md:w-[130px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform outline-none"
+          className="min-w-0 w-full flex flex-col items-center cursor-pointer group active:scale-95 transition-transform outline-none"
         >
           <div className="w-full aspect-square rounded-[18px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/60 group-hover:border-[#207C8A]/40 group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] transition-all p-1">
             <img
@@ -41,7 +41,7 @@ const SubcategorySlider = ({ items, onSelect, title }) => (
           </span>
         </button>
       ))}
-    </ScrollRow>
+    </div>
   </section>
 );
 

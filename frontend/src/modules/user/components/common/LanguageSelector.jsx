@@ -13,7 +13,9 @@ const LanguageSelector = ({ isDarkHeader = false, variant = '', compact = false 
   const baseLanguageCode = (contextLang || i18n.language || 'en').split('-')[0].toLowerCase();
   const currentLanguage = languages.find(lang => lang.code === baseLanguageCode) || languages[0];
 
-  const buttonStyle = compact 
+  const buttonStyle = variant === 'glass'
+    ? 'bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-full text-[12.5px] font-bold px-3.5 h-[36px] flex items-center justify-center gap-1.5 leading-none shadow-xs backdrop-blur-xs cursor-pointer transition-all'
+    : compact 
     ? 'bg-white text-gray-900 border-none rounded-md text-[11px] font-bold px-2.5 h-[30px] flex items-center justify-center leading-none shadow-xs hover:bg-gray-100 cursor-pointer'
     : 'bg-white text-gray-900 border-none rounded-md text-[13px] font-bold px-4 h-[38px] flex items-center justify-center leading-none shadow-sm hover:bg-gray-100 cursor-pointer';
 
@@ -23,7 +25,7 @@ const LanguageSelector = ({ isDarkHeader = false, variant = '', compact = false 
   };
 
   return (
-    <div className="relative inline-block text-left z-[9999]">
+    <div translate="no" className="notranslate relative inline-block text-left z-[9999]">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center justify-center gap-1 font-bold transition-all duration-300 ${buttonStyle}`}

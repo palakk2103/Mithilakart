@@ -25,6 +25,7 @@ const BeautyLanding = lazyWithRetry(() => import('../pages/BeautyLanding'));
 const Checkout = lazyWithRetry(() => import('../pages/Checkout'));
 const OrderConfirmation = lazyWithRetry(() => import('../pages/OrderConfirmation'));
 const AllOffers = lazyWithRetry(() => import('../pages/AllOffers'));
+const SectionProducts = lazyWithRetry(() => import('../pages/SectionProducts'));
 const DealsPage = lazyWithRetry(() => import('../pages/DealsPage'));
 const Search = lazyWithRetry(() => import('../pages/Search'));
 const ContinueShopping = lazyWithRetry(() => import('../pages/ContinueShopping'));
@@ -114,6 +115,7 @@ const MarketRoutes = () => {
         <Route path="/beauty" element={<BeautyLanding />} />
         <Route path="/continue-shopping/:productId" element={<ContinueShopping />} />
         <Route path="/all-offers" element={<AllOffers />} />
+        <Route path="/section/:slug" element={<SectionProducts />} />
         <Route path="/quick-shop" element={<QuickShop />} />
         <Route path="/quick-shop/category" element={<QuickShopSubcategory />} />
         <Route path="/mithilak/category" element={<QuickShopSubcategory />} />

@@ -39,22 +39,62 @@ describe('CartService line addressing', () => {
     const { itemKey } = added.items[0];
     expect(itemKey).toBe('listing:lq');
 
-    const updated = await cart.updateItemQuantity({ ...ctx, itemId: itemKey, quantity: 3 });
+    const updated = await cart.updateItemQuantity({ ...ctx, itemId: itemKey, quantity: 3, marketplaceTab: 'quick_shop' });
     expect(updated.items[0].quantity).toBe(3);
 
-    const removed = await cart.removeItem({ ...ctx, itemId: itemKey });
+    const removed = await cart.removeItem({ ...ctx, itemId: itemKey, marketplaceTab: 'quick_shop' });
     expect(removed.items).toHaveLength(0);
   });
 
-  it('blocks mixing tabs with a readable message, and unlocks once emptied', async () => {
+  it('keeps one independent cart per tab — adding in one tab never blocks or touches another', async () => {
     const cart = setup();
-    await cart.addItem({ ...ctx, listingId: 'lq', marketplaceTab: 'quick_shop', quantity: 1 });
-    await expect(cart.addItem({ ...ctx, listingId: 'ls', marketplaceTab: 'mithilakart', quantity: 1 }))
-      .rejects.toThrow(/cart has items from Quick Shop/);
+    await cart.addItem({ ...ctx, listingId: 'lq', marketplaceTab: 'quick_shop', quantity: 2 });
+    const mk = await cart.addItem({ ...ctx, listingId: 'ls', marketplaceTab: 'mithilakart', quantity: 1 });
+    expect(mk.marketplaceTab).toBe('mithilakart');
+    expect(mk.items.map((i) => i.itemKey)).toEqual(['listing:ls']);
 
-    await cart.removeItem({ ...ctx, itemId: 'listing:lq' });
-    const next = await cart.addItem({ ...ctx, listingId: 'ls', marketplaceTab: 'mithilakart', quantity: 1 });
-    expect(next.marketplaceTab).toBe('mithilakart');
+    const qs = await cart.getCart({ ...ctx, marketplaceTab: 'quick_shop' });
+    expect(qs.items.map((i) => [i.itemKey, i.quantity])).toEqual([['listing:lq', 2]]);
+
+    // quantity / remove / clear in one tab leave the other intact
+    await cart.updateItemQuantity({ ...ctx, itemId: 'listing:lq', quantity: 5, marketplaceTab: 'quick_shop' });
+    expect((await cart.getCart({ ...ctx, marketplaceTab: 'mithilakart' })).items[0].quantity).toBe(1);
+    await cart.clearCart({ ...ctx, marketplaceTab: 'quick_shop' });
+    expect((await cart.getCart({ ...ctx, marketplaceTab: 'quick_shop' })).items).toHaveLength(0);
+    expect((await cart.getCart({ ...ctx, marketplaceTab: 'mithilakart' })).items).toHaveLength(1);
+  });
+
+  it('rejects an unknown tab, and a listing from another tab than the one asked for', async () => {
+    const cart = setup();
+    await expect(cart.getCart({ ...ctx, marketplaceTab: 'bogus' })).rejects.toThrow(/Invalid marketplace tab/);
+    await expect(cart.addItem({ ...ctx, listingId: 'lq', marketplaceTab: 'mithilakart', quantity: 1 }))
+      .rejects.toThrow(/does not belong/);
+  });
+
+  it('migrates a legacy single-key cart into its own tab and leaves tab-less lines alone', async () => {
+    const redis = new MemoryRedisClient();
+    const cart = new CartService({
+      redisClient: redis,
+      productRepository: { findPublicById: jest.fn(async () => product), getAvailableStock: () => 10 },
+      pricingService: { calculateTotals: jest.fn(async () => ({ subtotal: 0, total: 0 })) },
+      marketplaceListingService: { resolveListingForCart: jest.fn(async (id) => ({ listing: listings[id], product })) },
+    });
+    await redis.set('cart:customer:u1', JSON.stringify({
+      marketplaceTab: 'quick_shop',
+      items: [{ itemKey: 'p1:', productId: 'p1', quantity: 2, unitPrice: 20 }],
+    }), 'EX', 1000);
+    await redis.set('cart:customer:u2', JSON.stringify({
+      items: [{ itemKey: 'p1:', productId: 'p1', quantity: 1, unitPrice: 20 }],
+    }), 'EX', 1000);
+
+    const qs = await cart.getCart({ userId: 'u1', marketplaceTab: 'quick_shop' });
+    expect(qs.items).toHaveLength(1);
+    expect(await redis.get('cart:customer:u1')).toBeNull();
+    expect((await cart.getCart({ userId: 'u1', marketplaceTab: 'mithilakart' })).items).toHaveLength(0);
+
+    // ambiguous (no tab recorded): not guessed into any tab, not deleted
+    expect((await cart.getCart({ userId: 'u2', marketplaceTab: 'mithilakart' })).items).toHaveLength(0);
+    expect(await redis.get('cart:customer:u2')).not.toBeNull();
   });
 });
 

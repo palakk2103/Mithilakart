@@ -14,14 +14,14 @@ class CartRepository extends BaseRepository {
     return this.findOne({ sessionId, status: 'active', deletedAt: null });
   }
 
-  async upsertActiveCart({ userId, sessionId, commerceFlow, currency = 'INR' }, session = null) {
-    const filter = { userId: userId || null, sessionId: sessionId || null, status: 'active', deletedAt: null };
+  async upsertActiveCart({ userId, sessionId, commerceFlow, marketplaceTab = null, currency = 'INR' }, session = null) {
+    const filter = { userId: userId || null, sessionId: sessionId || null, marketplaceTab: marketplaceTab || null, status: 'active', deletedAt: null };
     const existing = await this.findOne(filter, { session });
 
     if (existing) {
       const updated = await this.updateById(
         existing._id,
-        { commerceFlow: commerceFlow || existing.commerceFlow, currency, lastActiveAt: new Date() },
+        { commerceFlow: commerceFlow || existing.commerceFlow, marketplaceTab: marketplaceTab || null, currency, lastActiveAt: new Date() },
         session
       );
       return updated;
@@ -32,6 +32,7 @@ class CartRepository extends BaseRepository {
         userId: userId || null,
         sessionId: sessionId || null,
         commerceFlow: commerceFlow || 'standard',
+        marketplaceTab: marketplaceTab || null,
         currency,
         subtotal: 0,
         shippingFee: 0,

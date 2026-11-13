@@ -2,6 +2,8 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { YOU_POPUP_SETTING_KEY, YOU_POPUP_LABEL_MAX, YOU_POPUP_ITEMS } = require('../../constants/youPopup');
 const { mergeYouPopupItems } = require('../platform/youPopupMerge');
+const { HELP_CENTER_SETTING_KEY } = require('../../constants/helpCenter');
+const { validateHelpCenter, resolveHelpCenter } = require('../platform/helpCenterContent');
 
 class AdminPlatformSettingsService extends BaseService {
   constructor({ platformSettingRepository, commissionRuleRepository, platformConfigService = null }) {
@@ -79,6 +81,24 @@ class AdminPlatformSettingsService extends BaseService {
       await this.platformConfigService.invalidateCache();
     }
     return result;
+  }
+
+  async getHelpCenter() {
+    const setting = await this.platformSettingRepository.findByKey(HELP_CENTER_SETTING_KEY);
+    return resolveHelpCenter(setting?.value);
+  }
+
+  /** `content === null` resets the page to the built-in defaults. */
+  async updateHelpCenter(content, adminId) {
+    const value = content === null ? null : validateHelpCenter(content);
+    const existing = await this.platformSettingRepository.findByKey(HELP_CENTER_SETTING_KEY);
+    if (existing) {
+      await this.platformSettingRepository.updateById(existing._id, { value, updatedBy: adminId });
+    } else {
+      await this.platformSettingRepository.create({ key: HELP_CENTER_SETTING_KEY, value, updatedBy: adminId });
+    }
+    if (this.platformConfigService) await this.platformConfigService.invalidateCache();
+    return resolveHelpCenter(value);
   }
 
   async getYouPopup() {

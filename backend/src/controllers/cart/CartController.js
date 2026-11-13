@@ -34,6 +34,14 @@ class CartController extends BaseController {
     };
   }
 
+  /** Tab of the cart being acted on: query string (GET/DELETE) or body (PATCH). */
+  _tabOf(req) {
+    return {
+      marketplaceTab: req.query?.marketplaceTab || req.body?.marketplaceTab || null,
+      commerceFlow: req.query?.commerceFlow || req.body?.commerceFlow || null,
+    };
+  }
+
   getCart = asyncHandler(async (req, res) => {
     const { userId, sessionId } = this._resolveCartContext(req, res);
     const data = await this.service.getCart({
@@ -69,6 +77,7 @@ class CartController extends BaseController {
       sessionId,
       itemId: req.params.id,
       quantity: req.body.quantity,
+      ...this._tabOf(req),
     });
 
     return ApiResponse.success(res, data);
@@ -80,6 +89,7 @@ class CartController extends BaseController {
       userId,
       sessionId,
       itemId: req.params.id,
+      ...this._tabOf(req),
     });
 
     return ApiResponse.success(res, data);
@@ -87,7 +97,7 @@ class CartController extends BaseController {
 
   clearCart = asyncHandler(async (req, res) => {
     const { userId, sessionId } = this._resolveCartContext(req, res);
-    const data = await this.service.clearCart({ userId, sessionId });
+    const data = await this.service.clearCart({ userId, sessionId, ...this._tabOf(req) });
     return ApiResponse.success(res, data);
   });
 }

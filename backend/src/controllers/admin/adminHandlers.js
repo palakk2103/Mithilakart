@@ -1,5 +1,6 @@
 const { ApiResponse } = require('../../utils/ApiResponse');
 const { asyncHandler } = require('../../utils/asyncHandler');
+const { AppError } = require('../../utils/AppError');
 
 function createAdminHandlers(services) {
   return {
@@ -131,6 +132,14 @@ function createAdminHandlers(services) {
     }),
     getHeaderTabs: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.settings.getHeaderTabs());
+    }),
+    getHelpCenter: asyncHandler(async (req, res) => {
+      return ApiResponse.success(res, await services.settings.getHelpCenter());
+    }),
+    updateHelpCenter: asyncHandler(async (req, res) => {
+      const content = req.body?.content === undefined ? undefined : req.body.content;
+      if (content === undefined) throw AppError.validation('content is required (use null to reset)');
+      return ApiResponse.success(res, await services.settings.updateHelpCenter(content, req.user.id));
     }),
     getYouPopup: asyncHandler(async (req, res) => {
       return ApiResponse.success(res, await services.settings.getYouPopup());

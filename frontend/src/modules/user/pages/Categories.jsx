@@ -332,6 +332,38 @@ const Categories = () => {
   const [selectedSubCategory, setSelectedSubCategory] = React.useState(null);
   const rightContentRef = React.useRef(null);
 
+  const sidebarRef = React.useRef(null);
+  const appliedSelectionRef = React.useRef(null);
+
+  // Deep link from the landing page (Shop by Categories): pre-select the clicked
+  // category so it behaves exactly like browsing there via the bottom Category icon.
+  React.useEffect(() => {
+    if (loading) return;
+    const wantedId = location.state?.categoryId ? String(location.state.categoryId) : null;
+    const wantedName = String(location.state?.category || '').trim().toLowerCase();
+    if (!wantedId && !wantedName) return;
+    const key = `${location.key}|${currentFlow}`;
+    if (appliedSelectionRef.current === key) return;
+    appliedSelectionRef.current = key;
+
+    const sameName = (...names) => !!wantedName && names.some((n) => String(n || '').trim().toLowerCase() === wantedName);
+    let sIdx = sectionsList.findIndex((s) => (wantedId && String(s.id) === wantedId) || sameName(s.rawTitle, s.title));
+    let item = null;
+    if (sIdx < 0) {
+      for (let i = 0; i < sectionsList.length && sIdx < 0; i += 1) {
+        const found = sectionsList[i].items.find((it) => (wantedId && String(it.id) === wantedId) || sameName(it.rawName, it.name));
+        if (found) { sIdx = i; item = found; }
+      }
+    }
+    if (sIdx < 0) return;
+    setActiveSectionIndex(sIdx);
+    setSelectedSubCategory(item && item.children?.length > 0 ? item : null);
+    // Bring the selected sidebar entry into view.
+    requestAnimationFrame(() => {
+      sidebarRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
+    });
+  }, [loading, sectionsList, location.key, currentFlow]);
+
   React.useEffect(() => {
     if (rightContentRef.current) {
       rightContentRef.current.scrollTop = 0;
@@ -419,13 +451,14 @@ const Categories = () => {
       {/* Split-pane Layout (All Screen Sizes — scrollable category tabs + content) */}
       <div className="flex relative z-10 flex-1 min-h-0 overflow-hidden md:max-w-5xl md:mx-auto md:w-full md:border-x md:border-slate-200/70 md:shadow-sm">
         {/* Left Sidebar */}
-        <div className="w-[100px] md:w-[190px] lg:w-[220px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto overscroll-contain no-scrollbar pb-24">
+        <div ref={sidebarRef} className="w-[100px] md:w-[190px] lg:w-[220px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto overscroll-contain no-scrollbar pb-24">
           {sectionsList.map((section, sIdx) => {
             const isActive = activeSectionIndex === sIdx;
             const sectionImg = section.items[0]?.img;
             return (
               <button
                 key={sIdx}
+                data-active={isActive ? 'true' : 'false'}
                 onClick={() => {
                   setActiveSectionIndex(sIdx);
                   setSelectedSubCategory(null);
@@ -452,10 +485,10 @@ const Categories = () => {
                   </div>
                 )}
                 
-                <span className={`text-[12.5px] text-center leading-tight break-words w-full ${
+                <span className={`text-[13px] text-center leading-[1.25] break-words w-full ${
                   isActive
                     ? `${textPrimary} font-bold`
-                    : 'text-slate-800 font-medium'
+                    : 'text-slate-900 font-medium'
                 }`}>
                   {tName(section.title)}
                 </span>
@@ -517,7 +550,7 @@ const Categories = () => {
                           loading="lazy"
                         />
                       </div>
-                      <span className="text-[11.5px] min-[360px]:text-[12.5px] font-medium text-slate-900 text-center leading-tight break-words w-full">
+                      <span className="text-[12.5px] min-[360px]:text-[13px] font-medium text-slate-900 text-center leading-[1.25] break-words w-full">
                         {tName(sub.name)}
                       </span>
                     </div>
@@ -552,7 +585,7 @@ const Categories = () => {
                           </div>
                         )}
                       </div>
-                      <span className="text-[11.5px] min-[360px]:text-[12.5px] font-medium text-slate-900 text-center leading-tight break-words w-full">
+                      <span className="text-[12.5px] min-[360px]:text-[13px] font-medium text-slate-900 text-center leading-[1.25] break-words w-full">
                         {tName(item.name).replace('Mithila ', '')}
                       </span>
                     </div>

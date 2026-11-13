@@ -9,6 +9,10 @@ async function connectRedis(config) {
   }
 
   if (config.redis.useMemory) {
+    if (config.env === 'production') {
+      const { logger } = require('../utils/logger');
+      logger.error('REDIS_USE_MEMORY is enabled in production: OTPs/sessions are per-worker and will fail across PM2 cluster workers. Set REDIS_USE_MEMORY=false.');
+    }
     redisClient = new MemoryRedisClient();
     isConnected = true;
     return redisClient;
@@ -33,6 +37,13 @@ async function connectRedis(config) {
     return redisClient;
   } catch (err) {
     const { logger } = require('../utils/logger');
+    // In production the API runs as a multi-worker PM2 cluster. A per-process
+    // memory store would make OTPs (and sessions) invisible to other workers,
+    // causing random "OTP expired or not found" errors, so fail loudly instead.
+    if (config.env === 'production') {
+      logger.error({ err: err?.message || err }, 'Failed to connect to Redis in production — refusing to fall back to per-process memory');
+      throw err;
+    }
     logger.warn({ err: err?.message || err }, 'Failed to connect to external Redis — gracefully falling back to MemoryRedisClient');
     redisClient = new MemoryRedisClient();
     isConnected = true;

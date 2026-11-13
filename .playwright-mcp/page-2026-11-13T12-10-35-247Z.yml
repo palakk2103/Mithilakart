@@ -1,0 +1,135 @@
+- main [ref=f13e111]:
+  - generic [ref=f13e173]:
+    - generic [ref=f13e174]:
+      - button [ref=f13e175]
+      - generic [ref=f13e178]: Mithilakart
+      - generic [ref=f13e179]:
+        - button [ref=f13e180]
+        - generic [ref=f13e184] [cursor=pointer]
+    - generic [ref=f13e189]:
+      - generic [ref=f13e191]:
+        - generic [ref=f13e192]:
+          - img "kajal" [ref=f13e193]
+          - button
+          - generic [ref=f13e194]:
+            - button [ref=f13e195]
+            - button [ref=f13e198]
+        - button [ref=f13e206]:
+          - img "preview-0" [ref=f13e207]
+      - generic [ref=f13e208]:
+        - generic [ref=f13e209]:
+          - generic [ref=f13e210]: urban
+          - heading "kajal" [level=1] [ref=f13e211]
+          - generic [ref=f13e212]:
+            - generic [ref=f13e213]:
+              - generic [ref=f13e214]: ₹120
+              - generic [ref=f13e218]: Inclusive of GST
+            - generic [ref=f13e219]: Direct Artisan & Verified Seller Deal
+        - generic [ref=f13e221]:
+          - generic [ref=f13e222]: Best Offers For You
+          - generic [ref=f13e223]:
+            - generic [ref=f13e224]:
+              - generic [ref=f13e226]:
+                - generic [ref=f13e227]: Mithilakart Special
+                - generic [ref=f13e228]: Flat ₹200 Cashback
+              - generic [ref=f13e229]: On orders above ₹999
+            - generic [ref=f13e230]:
+              - generic [ref=f13e231]:
+                - generic [ref=f13e232]: Bank Offer
+                - generic [ref=f13e233]: 10% Instant Discount
+              - generic [ref=f13e234]: Using HDFC Bank Debit/Credit Cards
+            - generic [ref=f13e235]:
+              - generic [ref=f13e236]:
+                - generic [ref=f13e237]: Free Delivery
+                - generic [ref=f13e238]: Free Express Shipping
+              - generic [ref=f13e239]: Valid for elite members
+        - generic [ref=f13e240]:
+          - generic [ref=f13e241]: Quantity
+          - generic [ref=f13e242]:
+            - generic [ref=f13e243]:
+              - button "Decrease quantity" [ref=f13e244] [cursor=pointer]
+              - generic [ref=f13e246]: "1"
+              - button "Increase quantity" [ref=f13e247] [cursor=pointer]
+            - generic [ref=f13e249]:
+              - button "Add to Bag" [ref=f13e250] [cursor=pointer]
+              - button "Buy Now" [ref=f13e251] [cursor=pointer]
+        - generic [ref=f13e252]:
+          - generic [ref=f13e253]: Delivery Details
+          - generic [ref=f13e254]:
+            - generic [ref=f13e259]:
+              - paragraph [ref=f13e260]: Deliver to Home
+              - paragraph [ref=f13e261]: Corporate House, RNT Marg, South Tukoganj, Indore
+            - generic [ref=f13e265]:
+              - textbox "Enter 6-digit Pincode" [ref=f13e266]
+              - button "Check" [ref=f13e267]
+            - paragraph [ref=f13e275]: "Estimated Delivery: 3-5"
+        - generic [ref=f13e276]:
+          - generic [ref=f13e277] [cursor=pointer]: 10-Day Return
+          - generic [ref=f13e283] [cursor=pointer]: COD Available
+          - generic [ref=f13e289] [cursor=pointer]:
+            - generic [ref=f13e290]: 24x7
+            - generic [ref=f13e292]: Live Support
+        - generic [ref=f13e294]:
+          - generic [ref=f13e295]: 100% Original
+          - generic [ref=f13e300]: Verified Seller
+          - generic [ref=f13e305]: Secure Payments
+        - generic [ref=f13e313] [cursor=pointer]:
+          - heading "Specifications & Info" [level=3] [ref=f13e314]
+          - paragraph [ref=f13e315]: Details, Description and Origin
+    - generic [ref=f13e318]:
+      - generic [ref=f13e319]:
+        - heading "Customer Reviews" [level=3] [ref=f13e320]
+        - generic [ref=f13e321]:
+          - generic [ref=f13e322]:
+            - text: –
+            - paragraph [ref=f13e334]: No ratings yet
+          - generic [ref=f13e335]:
+            - generic [ref=f13e336]:
+              - generic [ref=f13e337]: 5★
+              - generic [ref=f13e339]: 0%
+            - generic [ref=f13e340]:
+              - generic [ref=f13e341]: 4★
+              - generic [ref=f13e343]: 0%
+            - generic [ref=f13e344]:
+              - generic [ref=f13e345]: 3★
+              - generic [ref=f13e347]: 0%
+            - generic [ref=f13e348]:
+              - generic [ref=f13e349]: 2★
+              - generic [ref=f13e351]: 0%
+            - generic [ref=f13e352]:
+              - generic [ref=f13e353]: 1★
+              - generic [ref=f13e355]: 0%
+        - generic [ref=f13e356]:
+          - generic [ref=f13e357]:
+            - button "All Reviews" [ref=f13e360]
+            - button "Verified Purchases" [ref=f13e361]
+            - button "5 Stars" [ref=f13e362]
+            - button "With Photos" [ref=f13e363]
+          - generic [ref=f13e364]:
+            - generic [ref=f13e365]: Sort
+            - combobox [ref=f13e366]:
+              - option "Most Recent" [selected]
+              - option "Highest Rating"
+              - option "Lowest Rating"
+        - paragraph [ref=f13e368]: No reviews yet — be the first to share your experience.
+        - generic [ref=f13e369]:
+          - paragraph [ref=f13e370]: Write a review
+          - combobox [ref=f13e371]:
+            - option "5 Stars" [selected]
+            - option "4 Stars"
+            - option "3 Stars"
+            - option "2 Stars"
+            - option "1 Stars"
+          - textbox "Share your experience..." [ref=f13e372]
+          - generic [ref=f13e373]:
+            - generic [ref=f13e374]: Upload Photos or Videos
+            - generic [ref=f13e375] [cursor=pointer]: Choose Files
+          - button "Submit Review" [ref=f13e380]
+      - generic [ref=f13e381]:
+        - heading "Questions & Answers" [level=3] [ref=f13e382]
+        - generic [ref=f13e384]:
+          - paragraph [ref=f13e385]: No questions asked yet for this item.
+          - paragraph [ref=f13e386]: Have a query? Ask the artisan/seller below!
+        - generic [ref=f13e387]:
+          - textbox "Ask about this product..." [ref=f13e388]
+          - button [ref=f13e389]

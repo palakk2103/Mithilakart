@@ -61,6 +61,8 @@ const Checkout = () => {
   const shopNowLink = isMithilakFlow ? '/mithilak' : isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home');
 
   const [checkoutItems, setCheckoutItems] = useState([]);
+  // The tab whose cart is being checked out (echoed by the server for the cart we loaded).
+  const [cartTab, setCartTab] = useState(null);
   const [loading, setLoading] = useState(true);
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
@@ -103,6 +105,7 @@ const Checkout = () => {
         const { items, cart } = await fetchCartItems();
         if (!cancelled) {
           setCheckoutItems(items.length ? items : []);
+          setCartTab(cart?.marketplaceTab || null);
           setDeliveryFee(Number(cart?.deliveryCharge ?? cart?.shippingFee ?? 0) || 0);
           setPlatformFee(Number(cart?.platformFee ?? 0) || 0);
           setTaxAmount(Number(cart?.tax ?? 0) || 0);
@@ -279,7 +282,8 @@ const Checkout = () => {
         // and Mithilakart must ship the way the customer bought it.
         const itemTab = checkoutItems.find((it) => it.marketplaceTab)?.marketplaceTab;
         const themeTab = isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'groceries_fresh' : getMarketplaceTab();
-        const resolvedTab = itemTab || themeTab;
+        // Checking out a cart: that cart's own tab decides everything.
+        const resolvedTab = (!location.state?.product && cartTab) || itemTab || themeTab;
         const resolvedFlow = TAB_TO_COMMERCE_FLOW[resolvedTab] || getCommerceFlow();
 
         const buyNowItem = location.state?.product;
@@ -357,7 +361,7 @@ const Checkout = () => {
         addOrder(newOrder);
         setPlacedOrder(newOrder);
         // Buy Now bypasses the cart, so the cart's other items must survive it.
-        if (!buyNowItems) await clearCart();
+        if (!buyNowItems) await clearCart(resolvedTab);
         dispatchCartUpdated();
         navigate('/order-confirmation', { state: { placedOrder: newOrder, checkoutItems } });
         setOrderStatus('idle');

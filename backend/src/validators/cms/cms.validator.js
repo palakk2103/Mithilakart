@@ -68,6 +68,14 @@ const chipUpdateSchema = chipSchema.fork(['label'], (field) => field.optional())
 const sectionUpdateSchema = Joi.object({
   title: Joi.string().trim().min(2).max(120).required(),
   productIds: Joi.array().items(objectIdSchema).max(50).optional(),
+  // Internal path ("/categories", "/products?category=abc") or http(s) URL. '' clears it.
+  viewAllLink: Joi.string()
+    .trim()
+    .max(500)
+    .allow('')
+    .pattern(/^(\/(?!\/)\S*|https?:\/\/\S+)$/)
+    .optional()
+    .messages({ 'string.pattern.base': 'View All link must start with "/" or http(s)://' }),
   isActive: Joi.boolean().optional(),
   sortOrder: Joi.number().integer().min(0).optional(),
 });

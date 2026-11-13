@@ -1,0 +1,222 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e38]:
+    - complementary [ref=f1e39]:
+      - link [ref=f1e41] [cursor=pointer]:
+        - /url: /admin/dashboard
+        - img "Logo" [ref=f1e42]
+      - navigation [ref=f1e43]:
+        - generic [ref=f1e44]:
+          - heading "OVERVIEW" [level=3] [ref=f1e45]
+          - generic [ref=f1e46]:
+            - link "Dashboard" [ref=f1e47] [cursor=pointer]:
+              - /url: /admin/dashboard
+            - link "Analytics" [ref=f1e55] [cursor=pointer]:
+              - /url: /admin/analytics
+            - link "Customers" [ref=f1e60] [cursor=pointer]:
+              - /url: /admin/users
+        - generic [ref=f1e68]:
+          - heading "STOREFRONT" [level=3] [ref=f1e69]
+          - generic [ref=f1e70]:
+            - link "Header Tabs Manager" [ref=f1e71] [cursor=pointer]:
+              - /url: /admin/storefront/tabs
+            - link "You Popup Menu" [ref=f1e79] [cursor=pointer]:
+              - /url: /admin/storefront/you-popup
+            - link "Banner Manager" [ref=f1e87] [cursor=pointer]:
+              - /url: /admin/storefront/banners
+            - link "Category Landing" [ref=f1e94] [cursor=pointer]:
+              - /url: /admin/storefront/category-landing
+            - link "Category Chips" [ref=f1e99] [cursor=pointer]:
+              - /url: /admin/storefront/chips
+            - button "Home Sections" [ref=f1e108]
+            - link "Category Manager" [ref=f1e117] [cursor=pointer]:
+              - /url: /admin/categories
+            - link "Bulk Category Import" [ref=f1e124] [cursor=pointer]:
+              - /url: /admin/categories/bulk-import
+            - link "Policies & Information" [ref=f1e130] [cursor=pointer]:
+              - /url: /admin/content/legal
+        - generic [ref=f1e136]:
+          - heading "BUSINESS OPS" [level=3] [ref=f1e137]
+          - generic [ref=f1e138]:
+            - button "Inventory" [ref=f1e140]
+            - link "Orders" [ref=f1e151] [cursor=pointer]:
+              - /url: /admin/orders
+            - button "Fulfillment" [ref=f1e159]
+            - button "Returns & Refunds" [ref=f1e168]
+        - generic [ref=f1e178]:
+          - heading "REPORTS" [level=3] [ref=f1e179]
+          - generic [ref=f1e180]:
+            - link "Sales Report" [ref=f1e181] [cursor=pointer]:
+              - /url: /admin/reports/sales
+            - link "Seller Report" [ref=f1e186] [cursor=pointer]:
+              - /url: /admin/reports/sellers
+            - link "User Report" [ref=f1e193] [cursor=pointer]:
+              - /url: /admin/reports/users
+            - link "Order Report" [ref=f1e201] [cursor=pointer]:
+              - /url: /admin/reports/orders
+            - link "Inventory Report" [ref=f1e208] [cursor=pointer]:
+              - /url: /admin/reports/inventory
+            - link "Refund Report" [ref=f1e215] [cursor=pointer]:
+              - /url: /admin/reports/refunds
+        - generic [ref=f1e221]:
+          - heading "PROMOTIONS" [level=3] [ref=f1e222]
+          - generic [ref=f1e223]:
+            - link "Coupon Manager" [ref=f1e224] [cursor=pointer]:
+              - /url: /admin/promotions/coupons
+            - link "Flash Sales" [ref=f1e230] [cursor=pointer]:
+              - /url: /admin/promotions/flash-sale
+            - link "Featured Selection" [ref=f1e235] [cursor=pointer]:
+              - /url: /admin/promotions/featured
+        - generic [ref=f1e240]:
+          - heading "COMMS" [level=3] [ref=f1e241]
+          - link "Notification Hub" [ref=f1e243] [cursor=pointer]:
+            - /url: /admin/comms/notifications
+        - generic [ref=f1e249]:
+          - heading "PARTNERS" [level=3] [ref=f1e250]
+          - generic [ref=f1e251]:
+            - button "Vendors" [ref=f1e253]
+            - button "Delivery Partners" [ref=f1e265]
+        - generic [ref=f1e277]:
+          - heading "CONTENT" [level=3] [ref=f1e278]
+          - generic [ref=f1e279]:
+            - link "Review Moderation" [ref=f1e280] [cursor=pointer]:
+              - /url: /admin/content/reviews
+            - link "Q&A Moderation" [ref=f1e285] [cursor=pointer]:
+              - /url: /admin/content/qna
+            - link "Legal & Policies" [ref=f1e291] [cursor=pointer]:
+              - /url: /admin/content/legal
+        - generic [ref=f1e297]:
+          - heading "SUPPORT" [level=3] [ref=f1e298]
+          - link "Help Desk" [ref=f1e300] [cursor=pointer]:
+            - /url: /admin/support/tickets
+        - generic [ref=f1e306]:
+          - heading "CATALOG" [level=3] [ref=f1e307]
+          - generic [ref=f1e308]:
+            - link "Moderation" [ref=f1e309] [cursor=pointer]:
+              - /url: /admin/products/moderation
+            - link "Categories" [ref=f1e316] [cursor=pointer]:
+              - /url: /admin/categories
+            - link "Bulk Category Import" [ref=f1e322] [cursor=pointer]:
+              - /url: /admin/categories/bulk-import
+        - generic [ref=f1e328]:
+          - heading "FINANCE" [level=3] [ref=f1e329]
+          - generic [ref=f1e330]:
+            - link "Earnings" [ref=f1e331] [cursor=pointer]:
+              - /url: /admin/finance/earnings
+            - link "Payouts" [ref=f1e336] [cursor=pointer]:
+              - /url: /admin/payouts
+            - link "Commission Rules" [ref=f1e342] [cursor=pointer]:
+              - /url: /admin/finance/rules
+            - link "Tax & GST Config" [ref=f1e349] [cursor=pointer]:
+              - /url: /admin/finance/tax
+            - link "Delivery Charges" [ref=f1e355] [cursor=pointer]:
+              - /url: /admin/finance/delivery-charges
+        - generic [ref=f1e363]:
+          - heading "SYSTEM" [level=3] [ref=f1e364]
+          - generic [ref=f1e365]:
+            - link "Sub-Admins" [ref=f1e366] [cursor=pointer]:
+              - /url: /admin/system/sub-admins
+            - link "Role Management" [ref=f1e372] [cursor=pointer]:
+              - /url: /admin/system/roles
+            - link "Audit Logs" [ref=f1e378] [cursor=pointer]:
+              - /url: /admin/system/audit-logs
+            - link "Settings" [ref=f1e384] [cursor=pointer]:
+              - /url: /admin/settings
+            - link "Logout" [ref=f1e390] [cursor=pointer]:
+              - /url: /admin/auth
+      - generic [ref=f1e397] [cursor=pointer]:
+        - generic [ref=f1e398]: A
+        - generic [ref=f1e399]:
+          - paragraph [ref=f1e400]: System Admin
+          - paragraph [ref=f1e401]: Live & Secure
+    - generic [ref=f1e403]:
+      - banner [ref=f1e404]:
+        - generic [ref=f1e406]:
+          - heading "Dashboard" [level=2] [ref=f1e407]
+          - paragraph [ref=f1e408]: Admin Management • Verified Session
+        - generic [ref=f1e409]:
+          - textbox "Search global records..." [ref=f1e412]
+          - generic [ref=f1e413]:
+            - button [ref=f1e415]
+            - generic [ref=f1e420] [cursor=pointer]: A
+      - main [ref=f1e421]:
+        - generic [ref=f1e422]:
+          - generic [ref=f1e423]:
+            - generic [ref=f1e424]:
+              - heading "System Overview" [level=1] [ref=f1e425]
+              - paragraph [ref=f1e426]: Real-time performance metrics and platform health.
+            - generic [ref=f1e427]:
+              - button "Download Report" [ref=f1e428]
+              - button "Refresh Data" [ref=f1e429]
+          - generic [ref=f1e430]:
+            - generic [ref=f1e550]:
+              - generic [ref=f1e551]: +12.5%
+              - generic [ref=f1e559]:
+                - paragraph [ref=f1e560]: Total Revenue
+                - heading "₹2,816,050" [level=3] [ref=f1e561]
+            - generic [ref=f1e562]:
+              - generic [ref=f1e563]: +5.2%
+              - generic [ref=f1e572]:
+                - paragraph [ref=f1e573]: Total Orders
+                - heading "432" [level=3] [ref=f1e574]
+            - generic [ref=f1e575]:
+              - generic [ref=f1e576]: +8.1%
+              - generic [ref=f1e587]:
+                - paragraph [ref=f1e588]: Active Vendors
+                - heading "30" [level=3] [ref=f1e589]
+            - generic [ref=f1e590]:
+              - generic [ref=f1e591]: "-2.4%"
+              - generic [ref=f1e600]:
+                - paragraph [ref=f1e601]: Platform Comm.
+                - heading "₹0" [level=3] [ref=f1e602]
+          - generic [ref=f1e484]:
+            - generic [ref=f1e485]:
+              - generic [ref=f1e486]:
+                - heading "Revenue Trend" [level=3] [ref=f1e487]
+                - combobox [ref=f1e488]:
+                  - option "Last 7 Days" [selected]
+                  - option "Last 30 Days"
+              - application [ref=f1e604]:
+                - generic [ref=f1e615]:
+                  - generic [ref=f1e616]:
+                    - generic [ref=f1e617]: 2026-10-14
+                    - generic [ref=f1e619]: 2026-10-21
+                    - generic [ref=f1e621]: 2026-10-30
+                    - generic [ref=f1e623]: 2026-11-01
+                  - generic [ref=f1e625]:
+                    - generic [ref=f1e626]: "0"
+                    - generic [ref=f1e628]: "150000"
+                    - generic [ref=f1e630]: "300000"
+                    - generic [ref=f1e632]: "450000"
+                    - generic [ref=f1e634]: "600000"
+            - generic [ref=f1e491]:
+              - heading "Category Share" [level=3] [ref=f1e492]
+              - application [ref=f1e637]
+              - generic [ref=f1e639]:
+                - generic [ref=f1e640]: Category
+                - generic [ref=f1e643]: 0%
+          - generic [ref=f1e495]:
+            - generic [ref=f1e496]:
+              - generic [ref=f1e497]:
+                - heading "Pending Approvals" [level=3] [ref=f1e498]
+                - generic [ref=f1e499]: 0 New Requests
+              - button "View All Requests" [ref=f1e500]
+            - generic [ref=f1e501]:
+              - heading "Live Activity" [level=3] [ref=f1e502]
+              - generic [ref=f1e503]:
+                - generic [ref=f1e508]:
+                  - heading "New Payout Request" [level=4] [ref=f1e509]
+                  - paragraph [ref=f1e510]: Elite Electronics requested ₹50,000
+                  - generic [ref=f1e511]: 2 mins ago
+                - generic [ref=f1e520]:
+                  - heading "New Product Upload" [level=4] [ref=f1e521]
+                  - paragraph [ref=f1e522]: Fashion Hub added "Summer Dress"
+                  - generic [ref=f1e523]: 15 mins ago
+                - generic [ref=f1e531]:
+                  - heading "Order Disputed" [level=4] [ref=f1e532]
+                  - paragraph [ref=f1e533]: "Order #OD1234 by Customer ID #542"
+                  - generic [ref=f1e534]: 1 hour ago
+                - generic [ref=f1e543]:
+                  - heading "Vendor Verified" [level=4] [ref=f1e544]
+                  - paragraph [ref=f1e545]: Global Tech verification completed
+                  - generic [ref=f1e546]: 2 hours ago
+  - generic [aria-hidden] [ref=f1e644]: "150000"

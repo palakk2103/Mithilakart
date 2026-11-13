@@ -11,11 +11,20 @@ import ErrorBoundary from './shared/components/ErrorBoundary';
 import { initPushNotifications } from './shared/services/pushNotifications';
 import { isAuthenticated } from './shared/api/tokenStorage';
 import { LocationProvider } from './shared/context/LocationContext';
-import { LanguageProvider } from './shared/context/LanguageContext';
+import { LanguageProvider, useLanguage } from './shared/context/LanguageContext';
+import { setDomTranslationLanguage } from './shared/utils/domTranslator';
 import LocationPrompt from './shared/components/LocationPrompt';
 import ScrollToTop from './shared/components/ScrollToTop';
 import PageLoader from './shared/components/PageLoader';
 import lazyWithRetry from './shared/utils/lazyWithRetry';
+
+// Remounts the route tree on language change (so every page refetches localized data)
+// and runs the DOM translator for anything not covered by t()/backend localisation.
+const LocalizedRoutes = ({ children }) => {
+  const { currentLanguage } = useLanguage();
+  useEffect(() => { setDomTranslationLanguage(currentLanguage); }, [currentLanguage]);
+  return <React.Fragment key={currentLanguage}>{children}</React.Fragment>;
+};
 
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
@@ -77,6 +86,7 @@ function App() {
             }
           }} />
           <Suspense fallback={<PageLoader />}>
+          <LocalizedRoutes>
           <Routes>
             {/* Delivery Agent Portal */}
             <Route path="/delivery/*" element={<DeliveryRoutes />} />
@@ -91,6 +101,7 @@ function App() {
             <Route path="/vendor/*" element={<MarketRoutes />} />
             <Route path="/*" element={<MarketRoutes />} />
           </Routes>
+          </LocalizedRoutes>
           </Suspense>
         </BrowserRouter>
       </LocationProvider>

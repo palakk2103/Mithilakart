@@ -13,6 +13,7 @@ import {
 
 import MainSidebar from '../components/common/MainSidebar';
 import HeaderTop from '../components/common/HeaderTop';
+import DesktopHeader from '../components/common/DesktopHeader';
 import HeaderTabs from '../components/common/HeaderTabs';
 import SearchBar from '../components/common/SearchBar';
 import CategoryNavbar from '../components/common/CategoryNavbar';
@@ -109,13 +110,19 @@ const VendorLayout = () => {
         ? 'bg-[#F26522]' 
         : 'bg-[#65B842]';
 
-  /* ── Cart listener ── */
+  /* ── Cart listener ── each tab has its own cart; load the active tab's ── */
+  const cartTab = effectiveFlow === 'mithilak' ? 'mithilak'
+    : effectiveFlow === 'freshgrocery' ? 'groceries_fresh'
+      : effectiveFlow === 'quickshop' ? 'quick_shop' : 'mithilakart';
   useEffect(() => {
+    let active = true;
     const updateCart = async () => {
       try {
         // One request for both the badge count and the items (was two per refresh,
         // and this runs on every navigation — enough to hit the API rate limit).
-        const { cart, items } = await fetchCartItems();
+        const { cart, items } = await fetchCartItems(cartTab);
+        // Ignore a response for a tab the shopper has already left.
+        if (!active) return;
         setCartCount(items.reduce((acc, item) => acc + (item.qty || 1), 0));
         setCartItems((cart?.items || []).map((item) => ({
           ...item,
@@ -123,14 +130,18 @@ const VendorLayout = () => {
           qty: item.quantity,
         })));
       } catch {
+        if (!active) return;
         setCartItems([]);
         setCartCount(0);
       }
     };
     updateCart();
     window.addEventListener('cartUpdated', updateCart);
-    return () => window.removeEventListener('cartUpdated', updateCart);
-  }, []);
+    return () => {
+      active = false;
+      window.removeEventListener('cartUpdated', updateCart);
+    };
+  }, [cartTab]);
 
   useEffect(() => {
     fetchStandardNav();
@@ -189,6 +200,7 @@ const VendorLayout = () => {
     location.pathname.includes('product-detail') ||
     location.pathname.includes('continue-shopping') ||
     location.pathname.includes('all-offers') ||
+    location.pathname.includes('/section/') ||
     location.pathname.includes('cart') ||
     location.pathname.includes('/profile') ||
     location.pathname.includes('/deals') ||
@@ -203,7 +215,7 @@ const VendorLayout = () => {
 
   const isProfileMainPage = location.pathname === '/profile' || location.pathname === '/vendor/profile';
   const hideHeader = isImmersivePage;
-  const hideFooter = isImmersivePage && !location.pathname.includes('all-offers') && !isProfileMainPage;
+  const hideFooter = isImmersivePage && !location.pathname.includes('all-offers') && !location.pathname.includes('/section/') && !isProfileMainPage;
 
   const isCartOrCheckoutPage = 
     location.pathname.includes('/cart') || 
@@ -273,54 +285,15 @@ const VendorLayout = () => {
 
       {/* Desktop Header */}
       {!hideHeader && (
-        <div ref={desktopHeaderRef} className={`hidden md:flex items-center justify-between px-8 py-2.5 border-b border-gray-200/80 sticky top-0 z-50 shadow-sm transition-colors duration-300 ${
-          effectiveFlow === 'mithilak'
-            ? 'bg-gradient-to-r from-[#207C8A] to-[#144f58] text-white'
-            : effectiveFlow === 'freshgrocery'
-              ? 'bg-[#D9A21B] text-[#3F2A20]'
-              : effectiveFlow === 'quickshop'
-                ? 'bg-[#F26522] text-white'
-                : `${getMithilakartHeaderBg(selectedCategory)} ${
-                    selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory
-                      ? 'text-white'
-                      : 'text-slate-800'
-                  }`
-        }`}>
-          <div className="flex items-center gap-8 xl:gap-5 min-[1440px]:gap-8! max-w-[1600px] mx-auto w-full">
-            <Link to="/home" className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-2xl font-black tracking-tight">Mithilakart</span>
-            </Link>
-
-            {/* Desktop Header Flow Tabs */}
-            <div className="w-[360px] xl:w-[400px] min-[1440px]:w-[460px]! 2xl:w-[540px]! flex-shrink-0 scale-95 origin-left">
-              <HeaderTabs />
-            </div>
-
-            <nav className="flex items-center gap-3 ml-4">
-              <Link to="/home" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>{t('nav.home')}</Link>
-              <Link to={`/categories?flow=${effectiveFlow}`} className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>{t('nav.categories')}</Link>
-              <Link to="/cart" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-2 hover:bg-black/5 text-[#3F2A20]`}>
-                <span>{t('nav.cart')}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${cartBadgeBg} text-white`}>{cartTotalItems}</span>
-              </Link>
-              <Link to="/profile" className={`text-[14px] font-black px-3.5 py-1.5 rounded-xl transition-all duration-200 hover:bg-black/5 text-[#3F2A20]`}>{t('auto.profile')}</Link>
-            </nav>
-
-            <div className="ml-auto flex items-center gap-6">
-              <LanguageSelector isDarkHeader={isDarkHeader} />
-              <div className="text-sm font-semibold flex items-center gap-1 opacity-90">
-                <span>📍 {t('nav.deliverTo')}</span>
-                <button
-                  type="button"
-                  onClick={() => setPromptOpen(true)}
-                  className="font-bold truncate max-w-[200px] hover:underline text-left"
-                >
-                  {tName(deliverTo.label)}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DesktopHeader
+          ref={desktopHeaderRef}
+          effectiveFlow={effectiveFlow}
+          deliverTo={deliverTo}
+          onLocationClick={() => setPromptOpen(true)}
+          cartTotalItems={cartTotalItems}
+          cartTotalPrice={cartTotalPrice}
+          cartBadgeBg={cartBadgeBg}
+        />
       )}
 
       {/* Sticky Header */}

@@ -1,0 +1,56 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img "Mithilakart" [ref=e8]
+        - generic [ref=e9]: Mithilakart
+      - generic [ref=e10] [cursor=pointer]: Quick Shop
+      - generic [ref=e16] [cursor=pointer]: Mithilak
+      - generic [ref=e22] [cursor=pointer]: Fresh & Groceries
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - button "Deliver to House-1918, Flat-211/2nd Floor, Khasra-605, Behind Tata Telco, Rangpuri-Mahipalpur" [ref=e31]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: Deliver to
+            - generic [ref=e37]: House-1918, Flat-211/2nd Floor, Khasra-605, Behind Tata Telco, Rangpuri-Mahipalpur
+        - generic [ref=e40]:
+          - button "English English" [ref=e42] [cursor=pointer]:
+            - img "English" [ref=e43]
+            - generic [ref=e44]: English
+          - generic [ref=e45]: 15 mins
+      - generic [ref=e49]:
+        - searchbox "Search for products, categories..." [ref=e50]
+        - generic [ref=e52]:
+          - img [aria-hidden] [ref=e53] [cursor=pointer]
+          - img [aria-hidden] [ref=e56] [cursor=pointer]
+  - generic [ref=e59]:
+    - main [ref=e62]:
+      - status "Loading" [ref=e63]
+    - contentinfo [ref=e65]:
+      - img "Mithila Art Footer Border" [ref=e67]
+      - generic [ref=e68]:
+        - link [ref=e69] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=e72] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=e75] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=e79] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=e82] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=e85]:
+        - img "Mithilakart Logo" [ref=e86]
+        - generic [ref=e87]:
+          - text: Mithilakart
+          - generic [ref=e88]: ™
+  - navigation [ref=e89]:
+    - link "Home" [ref=e90] [cursor=pointer]:
+      - /url: /quick-shop
+    - link "Categories" [ref=e95] [cursor=pointer]:
+      - /url: /categories?flow=quickshop
+    - link "0 Cart" [ref=e102] [cursor=pointer]:
+      - /url: /cart
+      - generic [ref=e103]: "0"
+      - generic [ref=e109]: Cart
+    - button "You" [ref=e110]

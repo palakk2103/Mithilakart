@@ -1,0 +1,40 @@
+[     289ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:20103
+[    1110ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilakart:1
+[    1116ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilakart:1
+[    7220ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilakart:1
+[    7225ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilakart:1
+[    9550ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/admin/sections/top-selection:1
+[    9566ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/admin/sections/top-selection:1
+[    9577ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/admin/sections/top-selection:1
+[ 1824446ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[ 1825815ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:20103
+[ 1828278ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 1828298ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 1828306ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 1828427ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2088936ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[ 2108241ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:20103
+[ 2109274ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2109279ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2109300ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2109302ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2734813ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[ 2736372ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:20103
+[ 2737703ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2737708ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2737711ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 2737713ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 3149750ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:3000/@vite/client:964
+[ 3149779ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/@vite/client:1035
+[ 3150787ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/@vite/client:1035
+[ 3151801ms] [ERROR] WebSocket connection to 'ws://localhost:3000/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/@vite/client:1035
+[ 3154927ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[ 3156091ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 3156097ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 3156131ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 3156133ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 3720724ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[ 3722082ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 3722086ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 3722288ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1
+[ 3722294ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilak:1

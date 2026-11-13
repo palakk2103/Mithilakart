@@ -221,7 +221,7 @@ const CategoryNavbar = ({ selectedCategory, setSelectedCategory }) => {
 
             {/* Label */}
             <span
-              className={`text-[8px] md:text-[9.5px] tracking-tight whitespace-nowrap leading-tight text-center transition-colors duration-200 ${
+              className={`text-[10px] md:text-[11.5px] tracking-tight whitespace-nowrap leading-tight text-center transition-colors duration-200 ${
                 isActive ? `font-black ${getMithilakartActiveTextColor(selectedCategory)}` : 'font-extrabold text-primary-dark/80'
               }`}
             >

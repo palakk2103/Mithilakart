@@ -10,6 +10,7 @@ import StillImg2 from '../../../../../assets/StillSection/StillImages2.jpg';
 import StillImg3 from '../../../../../assets/StillSection/StillImages3.jpg';
 import StillImg4 from '../../../../../assets/StillSection/StillImages4.png';
 import AddToCartButton from '../../common/AddToCartButton';
+import { useSectionViewAll } from '../../../utils/sectionLinks';
 
 // Custom header flower matching Mithila art
 const HeaderFlower = () => (
@@ -133,6 +134,7 @@ const ARCH_BACKGROUNDS = [
 const BestQuality = ({ items = [] }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const handleViewAll = useSectionViewAll('bestQualityGuaranteed');
 
   const products = (Array.isArray(items) && items.length)
     ? items.slice(0, 4).map((item, idx) => {
@@ -183,7 +185,9 @@ const BestQuality = ({ items = [] }) => {
           <HeaderFlower />
         </div>
         <button
-          onClick={() => navigate('/all-offers')}
+          onClick={handleViewAll}
+          aria-label="View all best quality products"
+          data-testid="section-view-all-bestQualityGuaranteed"
           className="w-8 h-8 rounded-full border border-[#D35400]/40 border-dashed flex items-center justify-center bg-[#FAF6EE]/50 hover:bg-[#F3E3CD]/30 active:scale-90 transition-all duration-200"
         >
           <ChevronRight size={16} className="text-[#4E2812]" strokeWidth={2.5} />

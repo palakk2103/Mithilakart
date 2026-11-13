@@ -22,6 +22,7 @@ const addCartItemSchema = Joi.object({
 const updateCartItemSchema = Joi.object({
   quantity: Joi.number().integer().min(1).max(100).required(),
   commerceFlow: Joi.string().valid(...ALLOWED_COMMERCE_FLOWS).optional(),
+  marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).optional(),
 });
 
 const clearCartSchema = Joi.object({});

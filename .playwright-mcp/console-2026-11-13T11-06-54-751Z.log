@@ -1,0 +1,31 @@
+[     267ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:20103
+[    1963ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilakart:1
+[    1971ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5000/api/v1/cart?marketplaceTab=mithilakart:1
+[    2182ms] [ERROR] %o
+
+%s
+
+%s
+ ReferenceError: useSectionViewAll is not defined
+    at TopSelection (http://localhost:3000/src/modules/user/components/vendor/home/TopSelection.jsx?t=1794567594053:413:25)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:7475:21)
+    at updateSimpleMemoComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:7264:16)
+    at updateMemoComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:7218:185)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:8786:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:12561:98)
+    at workLoopSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:12424:43) The above error occurred in the <TopSelection> component. React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:7001
+[    2182ms] [ERROR] Uncaught error caught by ErrorBoundary: ReferenceError: useSectionViewAll is not defined
+    at TopSelection (http://localhost:3000/src/modules/user/components/vendor/home/TopSelection.jsx?t=1794567594053:413:25)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:18509:20)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:5654:24)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:7475:21)
+    at updateSimpleMemoComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:7264:16)
+    at updateMemoComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:7218:185)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:8786:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:997:72)
+    at performUnitOfWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:12561:98)
+    at workLoopSync (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=3b9c79f1:12424:43) {componentStack: 
+    at TopSelection (http://localhost:3000/src/mo…s/.vite/deps/chunk-URRAVK5H.js?v=5ed2d64b:923:11)} @ http://localhost:3000/src/shared/components/ErrorBoundary.jsx:15

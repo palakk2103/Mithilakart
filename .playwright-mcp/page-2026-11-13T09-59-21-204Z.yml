@@ -1,0 +1,56 @@
+- generic [ref=f4e3]:
+  - banner [ref=f4e4]:
+    - generic [ref=f4e5]:
+      - generic [ref=f4e6] [cursor=pointer]:
+        - img "Mithilakart" [ref=f4e8]
+        - generic [ref=f4e9]: Mithilakart
+      - generic [ref=f4e10] [cursor=pointer]: Quick Shop
+      - generic [ref=f4e16] [cursor=pointer]: Mithilak
+      - generic [ref=f4e22] [cursor=pointer]: Fresh & Groceries
+    - generic [ref=f4e29]:
+      - generic [ref=f4e30]:
+        - button "Deliver to Corporate House, RNT Marg, South Tukoganj, Indore" [ref=f4e31]:
+          - generic [ref=f4e35]:
+            - generic [ref=f4e36]: Deliver to
+            - generic [ref=f4e37]: Corporate House, RNT Marg, South Tukoganj, Indore
+        - generic [ref=f4e40]:
+          - button "English English" [ref=f4e42] [cursor=pointer]:
+            - img "English" [ref=f4e43]
+            - generic [ref=f4e44]: English
+          - generic [ref=f4e45]: "3"
+      - generic [ref=f4e51]:
+        - searchbox "Search for products, categories..." [ref=f4e52]
+        - generic [ref=f4e54]:
+          - img [aria-hidden] [ref=f4e55] [cursor=pointer]
+          - img [aria-hidden] [ref=f4e58] [cursor=pointer]
+  - generic [ref=f4e61]:
+    - main [ref=f4e64]:
+      - status "Loading" [ref=f4e65]
+    - contentinfo [ref=f4e67]:
+      - img "Mithila Art Footer Border" [ref=f4e69]
+      - generic [ref=f4e70]:
+        - link [ref=f4e71] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=f4e74] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=f4e77] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=f4e81] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=f4e84] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=f4e87]:
+        - img "Mithilakart Logo" [ref=f4e88]
+        - generic [ref=f4e89]:
+          - text: Mithilakart
+          - generic [ref=f4e90]: ™
+  - navigation [ref=f4e91]:
+    - link "Home" [ref=f4e92] [cursor=pointer]:
+      - /url: /mithilak
+    - link "Categories" [ref=f4e97] [cursor=pointer]:
+      - /url: /categories?flow=mithilak
+    - link "0 Cart" [ref=f4e104] [cursor=pointer]:
+      - /url: /cart
+      - generic [ref=f4e105]: "0"
+      - generic [ref=f4e111]: Cart
+    - button "You" [ref=f4e112]

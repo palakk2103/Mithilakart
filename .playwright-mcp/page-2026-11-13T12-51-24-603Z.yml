@@ -1,0 +1,67 @@
+- generic [ref=f16e4]:
+  - main [ref=f16e7]:
+    - status "Loading" [ref=f16e8]
+  - contentinfo [ref=f16e10]:
+    - img "Mithila Art Footer Border" [ref=f16e12]
+    - generic [ref=f16e13]:
+      - generic [ref=f16e14]:
+        - heading "About Mithilakart" [level=3] [ref=f16e15]
+        - paragraph [ref=f16e16]: Discover unique, high-quality handcrafted items and fresh goods directly from local artisans. We bridge the gap between traditional craftsmanship and modern convenience.
+      - generic [ref=f16e17]:
+        - heading "Customer Care" [level=3] [ref=f16e18]
+        - list [ref=f16e19]:
+          - listitem [ref=f16e20]:
+            - link "Help Center" [ref=f16e21] [cursor=pointer]:
+              - /url: /profile/help-center
+          - listitem [ref=f16e22]:
+            - link "Track Order" [ref=f16e23] [cursor=pointer]:
+              - /url: /profile/orders
+          - listitem [ref=f16e24]:
+            - link "Cancellations & Returns" [ref=f16e25] [cursor=pointer]:
+              - /url: /cancellation-returns
+          - listitem [ref=f16e26]:
+            - link "Shipping Policy" [ref=f16e27] [cursor=pointer]:
+              - /url: /shipping
+      - generic [ref=f16e28]:
+        - heading "Useful Links" [level=3] [ref=f16e29]
+        - list [ref=f16e30]:
+          - listitem [ref=f16e31]:
+            - link "Terms of Use" [ref=f16e32] [cursor=pointer]:
+              - /url: /terms
+          - listitem [ref=f16e33]:
+            - link "Privacy Policy" [ref=f16e34] [cursor=pointer]:
+              - /url: /privacy
+          - listitem [ref=f16e35]:
+            - link "Home Page" [ref=f16e36] [cursor=pointer]:
+              - /url: /home
+          - listitem [ref=f16e37]:
+            - link "Shop by Categories" [ref=f16e38] [cursor=pointer]:
+              - /url: /categories
+      - generic [ref=f16e39]:
+        - heading "Contact Us" [level=3] [ref=f16e40]
+        - list [ref=f16e41]:
+          - listitem [ref=f16e42]:
+            - strong [ref=f16e43]: "Email:"
+            - text: support@mithilakart.com
+          - listitem [ref=f16e44]:
+            - strong [ref=f16e45]: "Phone:"
+            - text: +91 1800-123-4567
+          - listitem [ref=f16e46]:
+            - strong [ref=f16e47]: "Address:"
+            - text: Mithilakart Pvt Ltd, Mumbai, India
+    - generic [ref=f16e48]:
+      - link [ref=f16e49] [cursor=pointer]:
+        - /url: https://www.facebook.com/mithilakart
+      - link [ref=f16e52] [cursor=pointer]:
+        - /url: https://www.youtube.com/@mithilakart
+      - link [ref=f16e55] [cursor=pointer]:
+        - /url: https://www.instagram.com/mithilakart
+      - link [ref=f16e59] [cursor=pointer]:
+        - /url: https://x.com
+      - link [ref=f16e62] [cursor=pointer]:
+        - /url: https://wa.me/918076109547
+    - generic [ref=f16e65]:
+      - img "Mithilakart Logo" [ref=f16e66]
+      - generic [ref=f16e67]:
+        - text: Mithilakart
+        - generic [ref=f16e68]: ™

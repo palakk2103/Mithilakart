@@ -103,12 +103,14 @@ const Search = () => {
   }, [searchParams]);
 
   // Keep input in sync with URL query if URL changed externally (e.g. back/forward navigation)
+  // Only when the URL differs from what we last searched for; otherwise our own debounced
+  // URL update would overwrite characters the user typed in the meantime.
   useEffect(() => {
-    if (urlQuery !== searchValue && !isInitialMount.current) {
+    if (urlQuery.trim() !== debouncedQuery && !isInitialMount.current) {
       setSearchValue(urlQuery);
       setDebouncedQuery(urlQuery.trim());
     }
-  }, [urlQuery]);
+  }, [urlQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounce user input so typing triggers real-time search without having to press Enter
   useEffect(() => {
@@ -309,6 +311,7 @@ const Search = () => {
           <form onSubmit={handleSearchSubmit} className="flex-1 min-w-0">
             <SearchInput
               type="text"
+              autoFocus
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onKeyDown={(e) => {

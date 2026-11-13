@@ -1,3 +1,4 @@
+import { AddButton } from '../common/AddToCartButton';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Heart, Star, ShoppingBag, Tag, X, SlidersHorizontal, Layers, Check } from 'lucide-react';
 import useWishlistToggle from '../../hooks/useWishlistToggle';
@@ -143,13 +144,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
 
         {/* Add to Cart Button */}
         <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[#EADCC9]/40">
-          <button
-            onClick={(e) => onAddToCart(product, e)}
-            className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs"
-          >
-            <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>{t('common.addToCart')}</span>
-          </button>
+          <AddButton onClick={(e) => onAddToCart(product, e)} />
         </div>
 
         <CardBottomDivider />
@@ -607,14 +602,18 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     e.stopPropagation();
     try {
       await addProductToCart({
-        id: product.id,
+        id: product.productId || product.product?._id || product.product?.id || product.id,
+        productId: product.productId || product.product?._id || product.product?.id || product.id,
+        listingId: product.listingId,
+        variantId: product.variantId,
+        marketplaceTab: product.marketplaceTab || getCurrentMarketplaceTab(),
         name: product.name,
         price: product.price,
         image: product.image || product.img,
       });
       toast.success(t('common.addedToCart', { name: product.name }));
-    } catch {
-      toast.error(t('common.couldNotAddToCart'));
+    } catch (err) {
+      toast.error(err?.message || t('common.couldNotAddToCart'));
     }
   }, []);
 

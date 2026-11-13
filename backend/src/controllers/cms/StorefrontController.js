@@ -5,7 +5,7 @@ const { ApiResponse } = require('../../utils/ApiResponse');
 class StorefrontController extends BaseController {
   constructor(storefrontService) {
     super(storefrontService);
-    this.bindMethods(['getHome', 'getFlowHome', 'getBanners', 'getConfig', 'getHeaderTabs', 'getYouPopup']);
+    this.bindMethods(['getHome', 'getFlowHome', 'getBanners', 'getConfig', 'getHeaderTabs', 'getYouPopup', 'getHelpCenter']);
   }
 
   getHome = asyncHandler(async (req, res) => {
@@ -32,6 +32,11 @@ class StorefrontController extends BaseController {
 
   getHeaderTabs = asyncHandler(async (req, res) => {
     const data = await this.service.getHeaderTabs();
+    return ApiResponse.success(res, data);
+  });
+
+  getHelpCenter = asyncHandler(async (req, res) => {
+    const data = await this.service.getHelpCenter();
     return ApiResponse.success(res, data);
   });
 

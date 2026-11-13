@@ -319,7 +319,7 @@ const OrderDetail = () => {
         const pId = item.productId || item.id;
         const qty = item.quantity || item.qty || 1;
         if (pId) {
-          await addCartItem({ productId: pId, quantity: qty }).catch(() => {});
+          await addCartItem({ productId: pId, quantity: qty, ...(order?.marketplaceTab ? { marketplaceTab: order.marketplaceTab } : {}) }).catch(() => {});
         }
       }
       toast.success(t('auto.allItemsAddedToBag'));

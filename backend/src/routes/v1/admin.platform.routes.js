@@ -97,6 +97,8 @@ function createAdminPlatformRoutes(services, middleware) {
   router.put('/settings', authAdmin, requirePermission('settings.edit'), h.updateSettings);
   router.get('/settings/header-tabs', authAdmin, requirePermission('settings.view'), h.getHeaderTabs);
   router.put('/settings/header-tabs', authAdmin, requirePermission('settings.edit'), h.updateHeaderTabs);
+  router.get('/settings/help-center', authAdmin, requirePermission('settings.view'), h.getHelpCenter);
+  router.put('/settings/help-center', authAdmin, requirePermission('settings.edit'), h.updateHelpCenter);
   router.get('/settings/you-popup', authAdmin, requirePermission('settings.view'), h.getYouPopup);
   router.put('/settings/you-popup', authAdmin, requirePermission('settings.edit'), h.updateYouPopup);
   router.put('/settings/commission', authAdmin, requirePermission('finance.edit'), validateBody(Joi.object({ rate: Joi.number().min(0).max(1).required() })), h.updateCommission);

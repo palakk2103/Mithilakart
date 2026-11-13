@@ -5,6 +5,7 @@ import { handleImageError, getProductImage } from '../../../../../shared/utils/i
 import { useTranslation } from 'react-i18next';
 import AddToCartButton from '../../common/AddToCartButton';
 import { useLanguage } from '../../../../../shared/context/LanguageContext';
+import { useSectionViewAll } from '../../../utils/sectionLinks';
 
 const HeaderFlower = ({ isMithilak }) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block align-middle mx-1">
@@ -61,8 +62,11 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { homeSections } = useVendorStore();
+  const handleViewAll = useSectionViewAll('trendingThisWeek');
 
-  const isMithilak = theme === 'mithilak' || location.pathname.includes('/mithilak') || localStorage.getItem('isMithilakFlow') === 'true';
+  const isMithilak = theme
+    ? theme === 'mithilak'
+    : location.pathname.includes('/mithilak') || localStorage.getItem('isMithilakFlow') === 'true';
 
   const rawList = homeSections.trendingThisWeek?.length
     ? homeSections.trendingThisWeek
@@ -128,7 +132,8 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
             <HeaderFlower isMithilak={isMithilak} />
           </div>
           <button
-            onClick={() => navigate('/all-offers')}
+            onClick={handleViewAll}
+            data-testid="section-view-all-trendingThisWeek"
             className={`font-bold flex items-center flex-shrink-0 whitespace-nowrap transition-colors duration-200 ${
               isMithilak
                 ? 'text-[11px] md:text-sm px-2 py-0.5 rounded-full bg-white border border-[#207C8A]/40 text-[#207C8A] hover:bg-[#207C8A] hover:text-white'

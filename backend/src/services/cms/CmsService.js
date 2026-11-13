@@ -137,6 +137,7 @@ class CmsService extends BaseService {
         commerceFlow,
         title: data.title,
         productIds: data.productIds || [],
+        viewAllLink: data.viewAllLink || '',
         isActive: data.isActive !== undefined ? data.isActive : true,
         sortOrder: data.sortOrder || 0,
       });

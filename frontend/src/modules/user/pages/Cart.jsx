@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShoppingCart, ChevronRight, CheckCircle, Info, Trash2,
   ArrowLeft, ShieldCheck, MapPin, Truck, Star, Heart, Zap, X
@@ -53,9 +53,13 @@ const Cart = () => {
   const [localWishlist, setLocalWishlist] = useState([]);
 
   // Load cart items from API
+  const loadCartSeq = useRef(0);
   const loadCart = async () => {
+    const seq = ++loadCartSeq.current;
     try {
       const { items } = await fetchCartItems();
+      // A slower, older response must not overwrite a newer one.
+      if (seq !== loadCartSeq.current) return;
       setCartItems(items);
     } catch (e) {
       console.error('Failed to load cart', e);

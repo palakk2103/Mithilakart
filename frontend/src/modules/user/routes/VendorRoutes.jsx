@@ -17,6 +17,7 @@ import ToysLanding from '../pages/ToysLanding';
 import BeautyLanding from '../pages/BeautyLanding';
 import Checkout from '../pages/Checkout';
 import AllOffers from '../pages/AllOffers';
+import SectionProducts from '../pages/SectionProducts';
 import DealsPage from '../pages/DealsPage';
 import Search from '../pages/Search';
 import ContinueShopping from '../pages/ContinueShopping';
@@ -87,6 +88,7 @@ const VendorRoutes = () => {
         <Route path="/beauty" element={<BeautyLanding />} />
         <Route path="/continue-shopping/:productId" element={<ContinueShopping />} />
         <Route path="/all-offers" element={<AllOffers />} />
+        <Route path="/section/:slug" element={<SectionProducts />} />
 
       </Route>
 

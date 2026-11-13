@@ -1,3 +1,4 @@
+import { AddButton } from '../components/common/AddToCartButton';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useWishlistToggle from '../hooks/useWishlistToggle';
@@ -6,7 +7,7 @@ import useVendorStore from '../../../store/useVendorStore';
 import { addProductToCart } from '../utils/cartUtils';
 import { getCategories } from '../services/catalogApi';
 import { mapMithilaCategoryCards, mapNavChips } from '../utils/mappers';
-import { openMithilaCategory, resolveChipCategory } from '../utils/categoryLandingNav';
+import { openCategoryExplorer, resolveChipCategory } from '../utils/categoryLandingNav';
 import { getHeaderChipIcon } from '../../../shared/constants/headerChipIcons';
 
 // Shared Home Components for Merchandising Pattern Alignment
@@ -153,14 +154,7 @@ export const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaL
 
         {/* Add to Cart Button */}
         <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[#207C8A]/20">
-          <button
-            onClick={(e) => onAddToCart(prod, e)}
-            disabled={ctaDisabled}
-            className="w-full py-1.5 px-2 bg-[#F0F9FA] hover:bg-[#207C8A] text-[#207C8A] hover:text-white border border-[#207C8A]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#F0F9FA] disabled:hover:text-[#207C8A]"
-          >
-            <ShoppingBag size={12} strokeWidth={2.2} />
-            <span>{ctaLabel || t('common.addToCart')}</span>
-          </button>
+          <AddButton onClick={(e) => onAddToCart(prod, e)} disabled={ctaDisabled} label={ctaLabel} />
         </div>
 
         <MithilaCardBottomDivider />
@@ -354,7 +348,7 @@ const Mithilak = () => {
     .map((b, idx) => ({
       id: b.id || b._id || `banner-${idx}`,
       image: b.imageUrl || b.image,
-      title: b.title || 'Mithila Banner',
+      title: b.title || '',
       link: b.linkUrl || b.link || '',
     }));
 
@@ -404,21 +398,25 @@ const Mithilak = () => {
         chips={headerChips}
         onSelect={(chip) => {
           const target = resolveChipCategory(chip, mithilaCategories);
-          if (!target) return;
-          openMithilaCategory(navigate, target);
+          if (!target) {
+            // Chips that aren't tied to a category used to do nothing on tap.
+            const key = String(chip?.rawLabel || chip?.label || '').trim().toLowerCase();
+            if (chip?.id === 'for-you' || key === 'you buy') {
+              // "You Buy" = this tab's home: just return to the top.
+              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+            } else if (/deal/.test(key) || /deal/.test(String(chip?.id || '').toLowerCase())) {
+              navigate('/deals');
+            } else {
+              navigate('/categories?flow=mithilak', { state: { flow: 'mithilak' } });
+            }
+            return;
+          }
+          openCategoryExplorer(navigate, { flow: 'mithilak', id: target.id, name: target.name });
         }}
       />
 
       <div className="px-4 py-5">
       {/* 1. Page Title Header */}
-      <div className="mb-4 px-1">
-        <h2 className="text-[19px] font-bold text-[#3F2A20] tracking-tight leading-none mb-1">
-          {t('auto.mithilaSpecialities')}
-        </h2>
-        <p className="text-[10px] text-[#207C8A] font-extrabold tracking-widest uppercase mt-1">
-          {t('auto.handpickedCulturalProducts')}
-        </p>
-      </div>
 
       {/* 2. Hero Promotional Banner */}
       {adminBanners.length > 0 ? (
@@ -478,7 +476,7 @@ const Mithilak = () => {
               onClick={() => {
                 localStorage.setItem('isMithilakFlow', 'true');
                 localStorage.setItem('isQuickShopFlow', 'false');
-                navigate('/categories');
+                navigate('/categories?flow=mithilak');
               }}
               className="text-[13px] font-bold text-[#207C8A] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
             >
@@ -499,7 +497,7 @@ const Mithilak = () => {
             {mithilaCategories.map((item, idx) => (
               <div
                 key={item.id || idx}
-                onClick={() => openMithilaCategory(navigate, { id: item.id, name: item.name })}
+                onClick={() => openCategoryExplorer(navigate, { flow: 'mithilak', id: item.id, name: item.name })}
                 className="flex-shrink-0 w-[104px] sm:w-[120px] md:w-[140px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
               >
                 <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[#207C8A]/40 transition-all duration-300 transform">

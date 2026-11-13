@@ -28,3 +28,12 @@ export const resolveChipCategory = (chip, categories = []) => {
   const match = label && categories.find((c) => norm(c.name) === label);
   return match ? { id: String(match.id), name: match.name } : null;
 };
+
+/**
+ * Opens the shared Categories explorer (same screen as the bottom Category icon)
+ * with the given category pre-selected. `flow` is the tab: mithilakart | quickshop |
+ * freshgrocery | mithilak.
+ */
+export const openCategoryExplorer = (navigate, { flow, id, name }) => {
+  navigate(`/categories?flow=${flow}`, { state: { flow, categoryId: id ? String(id) : null, category: name } });
+};

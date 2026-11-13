@@ -5,6 +5,7 @@ import { mapShopCategoryCards } from '../../../utils/mappers';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../../../../shared/context/LanguageContext';
 import { handleImageError } from '../../../../../shared/utils/imageUtils';
+import { useSectionViewAll } from '../../../utils/sectionLinks';
 
 const HeaderFlower = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="inline-block align-middle mx-1">
@@ -32,6 +33,7 @@ const KeepShopping = () => {
   const { t } = useTranslation();
   const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
+  const handleViewAll = useSectionViewAll('keepShopping', '/categories');
   const { homeCategories, homeSections } = useVendorStore();
 
   const categoriesData = useMemo(() => {
@@ -60,7 +62,8 @@ const KeepShopping = () => {
             {t('home.keepShopping', { defaultValue: 'Keep Shopping for' })} <HeaderFlower />
           </h2>
           <span
-            onClick={() => navigate('/categories')}
+            onClick={handleViewAll}
+            data-testid="section-view-all-keepShopping"
             className="text-[10.5px] font-black text-[#65B842] uppercase tracking-tighter cursor-pointer flex items-center"
           >
             {t('common.viewAll', { defaultValue: 'View All' })} <ViewAllIcon />

@@ -432,7 +432,8 @@ export const mapOffers = (offersData) => {
 
 export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
   const sections = homeData?.sections || [];
-  const result = { ...fallbackSections };
+  // Rebuilt on every fetch so a link cleared in Admin doesn't linger from the previous state.
+  const result = { ...fallbackSections, sectionLinks: {} };
 
   const sectionMap = {
     'trending-this-week': 'trendingThisWeek',
@@ -448,6 +449,9 @@ export const mapStorefrontSections = (homeData, fallbackSections = {}) => {
 
   sections.forEach((section) => {
     const key = sectionMap[section.key];
+    if (key && section.viewAllLink) {
+      result.sectionLinks[key] = section.viewAllLink;
+    }
     if (!key || !section.products?.length) return;
 
     const currentLang = localStorage.getItem('user_language') || 'en';

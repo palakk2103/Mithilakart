@@ -7,6 +7,8 @@ const homeSectionSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     commerceFlow: { type: String, enum: COMMERCE_FLOW_VALUES, default: 'standard' },
+    // Where the section's "View All" arrow goes. Empty = frontend default (/all-offers).
+    viewAllLink: { type: String, trim: true, default: '' },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
   },

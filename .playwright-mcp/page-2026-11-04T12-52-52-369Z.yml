@@ -1,0 +1,229 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img "Mithilakart" [ref=e8]
+        - generic [ref=e9]: Mithilakart
+      - generic [ref=e10] [cursor=pointer]: Quick Shop
+      - generic [ref=e16] [cursor=pointer]: Mithilak
+      - generic [ref=e22] [cursor=pointer]: Fresh & Groceries
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - button "Deliver to Tap to set delivery location" [ref=e31]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: Deliver to
+            - generic [ref=e37]: Tap to set delivery location
+        - generic [ref=e40]:
+          - button "English English" [ref=e42] [cursor=pointer]:
+            - img "English" [ref=e43]
+            - generic [ref=e44]: English
+          - generic [ref=e45]: "3"
+      - generic [ref=e51]:
+        - searchbox "Search for products, categories..." [ref=e52]
+        - generic [ref=e54]:
+          - img [aria-hidden] [ref=e55] [cursor=pointer]
+          - img [aria-hidden] [ref=e58] [cursor=pointer]
+  - generic [ref=e61]:
+    - main [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e67]:
+          - button "You Buy" [ref=e68] [cursor=pointer]
+          - button "Today's Deals" [active] [ref=e76] [cursor=pointer]
+          - button "Fashion" [ref=e81] [cursor=pointer]
+          - button "Beauty & Care" [ref=e86] [cursor=pointer]
+          - button "More categories" [ref=e91] [cursor=pointer]:
+            - generic [ref=e97]: More
+        - generic [ref=e926]:
+          - generic [ref=e927]:
+            - generic [ref=e933]:
+              - generic [ref=e934]:
+                - heading "Today's Deals" [level=2] [ref=e935]
+                - generic [ref=e936]: 10 items
+              - paragraph [ref=e937]: Showing curated collections & products
+            - button "Show All" [ref=e938] [cursor=pointer]
+          - generic [ref=e943]:
+            - generic [ref=e944]:
+              - heading "All Today's Deals Products" [level=3] [ref=e946]
+              - paragraph [ref=e947]: Showing 10 of 10 items
+            - generic [ref=e948]:
+              - generic [ref=e949]: "Sort:"
+              - button "Popularity" [ref=e951] [cursor=pointer]
+              - 'button "Price: Low to High" [ref=e952] [cursor=pointer]'
+              - 'button "Price: High to Low" [ref=e953] [cursor=pointer]'
+              - button "Customer Rating" [ref=e954] [cursor=pointer]
+          - generic [ref=e955]:
+            - generic [ref=e956] [cursor=pointer]:
+              - generic [ref=e961]:
+                - img "Men's Denim Jacket" [ref=e962]
+                - button [ref=e963]
+                - generic [ref=e966]: 50% OFF
+                - generic [ref=e967]: "4.8"
+              - generic [ref=e971]:
+                - generic [ref=e972]:
+                  - generic [ref=e973]: Mithilakart
+                  - heading "Men's Denim Jacket" [level=3] [ref=e974]
+                  - generic [ref=e975]:
+                    - generic [ref=e976]: ₹1,499
+                    - generic [ref=e977]: ₹2,999
+                - button "Add" [ref=e979]
+            - generic [ref=e980] [cursor=pointer]:
+              - generic [ref=e985]:
+                - img "Women's Maxi Dress" [ref=e986]
+                - button [ref=e987]
+                - generic [ref=e990]: 48% OFF
+                - generic [ref=e991]: "4.7"
+              - generic [ref=e995]:
+                - generic [ref=e996]:
+                  - generic [ref=e997]: Mithilakart
+                  - heading "Women's Maxi Dress" [level=3] [ref=e998]
+                  - generic [ref=e999]:
+                    - generic [ref=e1000]: ₹1,299
+                    - generic [ref=e1001]: ₹2,499
+                - button "Add" [ref=e1003]
+            - generic [ref=e1004] [cursor=pointer]:
+              - generic [ref=e1009]:
+                - img "Graphic Printed T-Shirt" [ref=e1010]
+                - button [ref=e1011]
+                - generic [ref=e1014]: 50% OFF
+                - generic [ref=e1015]: "4.6"
+              - generic [ref=e1019]:
+                - generic [ref=e1020]:
+                  - generic [ref=e1021]: Mithilakart
+                  - heading "Graphic Printed T-Shirt" [level=3] [ref=e1022]
+                  - generic [ref=e1023]:
+                    - generic [ref=e1024]: ₹499
+                    - generic [ref=e1025]: ₹999
+                - button "Add" [ref=e1027]
+            - generic [ref=e1028] [cursor=pointer]:
+              - generic [ref=e1033]:
+                - img "Casual Flip Flops" [ref=e1034]
+                - button [ref=e1035]
+                - generic [ref=e1038]: 50% OFF
+                - generic [ref=e1039]: "4.8"
+              - generic [ref=e1043]:
+                - generic [ref=e1044]:
+                  - generic [ref=e1045]: Mithilakart
+                  - heading "Casual Flip Flops" [level=3] [ref=e1046]
+                  - generic [ref=e1047]:
+                    - generic [ref=e1048]: ₹299
+                    - generic [ref=e1049]: ₹599
+                - button "Add" [ref=e1051]
+            - generic [ref=e1052] [cursor=pointer]:
+              - generic [ref=e1057]:
+                - img "Men's Chino Pants" [ref=e1058]
+                - button [ref=e1059]
+                - generic [ref=e1062]: 50% OFF
+                - generic [ref=e1063]: "4.5"
+              - generic [ref=e1067]:
+                - generic [ref=e1068]:
+                  - generic [ref=e1069]: Mithilakart
+                  - heading "Men's Chino Pants" [level=3] [ref=e1070]
+                  - generic [ref=e1071]:
+                    - generic [ref=e1072]: ₹999
+                    - generic [ref=e1073]: ₹1,999
+                - button "Add" [ref=e1075]
+            - generic [ref=e1076] [cursor=pointer]:
+              - generic [ref=e1081]:
+                - img "Polarized Sunglasses" [ref=e1082]
+                - button [ref=e1083]
+                - generic [ref=e1086]: 60% OFF
+                - generic [ref=e1087]: "4.6"
+              - generic [ref=e1091]:
+                - generic [ref=e1092]:
+                  - generic [ref=e1093]: Mithilakart
+                  - heading "Polarized Sunglasses" [level=3] [ref=e1094]
+                  - generic [ref=e1095]:
+                    - generic [ref=e1096]: ₹599
+                    - generic [ref=e1097]: ₹1,499
+                - button "Add" [ref=e1099]
+            - generic [ref=e1100] [cursor=pointer]:
+              - generic [ref=e1105]:
+                - img "Women's Formal Blazer" [ref=e1106]
+                - button [ref=e1107]
+                - generic [ref=e1110]: 45% OFF
+                - generic [ref=e1111]: "4.7"
+              - generic [ref=e1115]:
+                - generic [ref=e1116]:
+                  - generic [ref=e1117]: Mithilakart
+                  - heading "Women's Formal Blazer" [level=3] [ref=e1118]
+                  - generic [ref=e1119]:
+                    - generic [ref=e1120]: ₹1,899
+                    - generic [ref=e1121]: ₹3,499
+                - button "Add" [ref=e1123]
+            - generic [ref=e1124] [cursor=pointer]:
+              - generic [ref=e1129]:
+                - img "Analog Wrist Watch" [ref=e1130]
+                - button [ref=e1131]
+                - generic [ref=e1134]: 62% OFF
+                - generic [ref=e1135]: "4.8"
+              - generic [ref=e1139]:
+                - generic [ref=e1140]:
+                  - generic [ref=e1141]: Mithilakart
+                  - heading "Analog Wrist Watch" [level=3] [ref=e1142]
+                  - generic [ref=e1143]:
+                    - generic [ref=e1144]: ₹1,499
+                    - generic [ref=e1145]: ₹3,999
+                - button "Add" [ref=e1147]
+            - generic [ref=e1148] [cursor=pointer]:
+              - generic [ref=e1153]:
+                - img "Woolen Knit Winter Sweater" [ref=e1154]
+                - button [ref=e1155]
+                - generic [ref=e1158]: 52% OFF
+                - generic [ref=e1159]: "4.7"
+              - generic [ref=e1163]:
+                - generic [ref=e1164]:
+                  - generic [ref=e1165]: Mithilakart
+                  - heading "Woolen Knit Winter Sweater" [level=3] [ref=e1166]
+                  - generic [ref=e1167]:
+                    - generic [ref=e1168]: ₹1,199
+                    - generic [ref=e1169]: ₹2,499
+                - button "Add" [ref=e1171]
+            - generic [ref=e1172] [cursor=pointer]:
+              - generic [ref=e1177]:
+                - img "Men's Classic Leather Boots" [ref=e1178]
+                - button [ref=e1179]
+                - generic [ref=e1182]: 51% OFF
+                - generic [ref=e1183]: "4.8"
+              - generic [ref=e1187]:
+                - generic [ref=e1188]:
+                  - generic [ref=e1189]: Mithilakart
+                  - heading "Men's Classic Leather Boots" [level=3] [ref=e1190]
+                  - generic [ref=e1191]:
+                    - generic [ref=e1192]: ₹2,199
+                    - generic [ref=e1193]: ₹4,499
+                - button "Add" [ref=e1195]
+    - contentinfo [ref=e858]:
+      - img "Mithila Art Footer Border" [ref=e860]
+      - generic [ref=e861]:
+        - link [ref=e862] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=e865] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=e868] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=e872] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=e875] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=e878]:
+        - img "Mithilakart Logo" [ref=e879]
+        - generic [ref=e880]:
+          - text: Mithilakart
+          - generic [ref=e881]: ™
+  - navigation [ref=e882]:
+    - link "Home" [ref=e883] [cursor=pointer]:
+      - /url: /home
+    - link "Categories" [ref=e888] [cursor=pointer]:
+      - /url: /categories?flow=mithilakart
+    - link "1 Cart" [ref=e895] [cursor=pointer]:
+      - /url: /cart
+      - generic [ref=e896]: "1"
+      - generic [ref=e902]: Cart
+    - button "You" [ref=e903]
+  - generic [ref=e908] [cursor=pointer]:
+    - generic [ref=e913]:
+      - paragraph [ref=e914]: 1 item
+      - paragraph [ref=e915]: ₹2,499
+    - generic [ref=e916]:
+      - generic [ref=e917]: View Cart
+      - button "Dismiss cart notification" [ref=e921]

@@ -1,3 +1,4 @@
+import { AddButton } from '../components/common/AddToCartButton';
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Camera, Mic, Scan, Star, Heart, Plus, ChevronDown, ShoppingBag } from 'lucide-react';
@@ -293,13 +294,7 @@ const DealsPage = () => {
 
                   {/* Add to Cart Button */}
                   <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[#EADCC9]/40">
-                    <button
-                      onClick={(e) => handleAddToCart(product.product || product, e)}
-                      className="w-full py-1.5 px-2 bg-[#FFF8EE] hover:bg-[#3E5A44] text-[#3E5A44] hover:text-white border border-[#3E5A44]/30 rounded-xl text-[10px] md:text-[11px] font-black flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 shadow-xs"
-                    >
-                      <ShoppingBag size={12} strokeWidth={2.2} />
-                      <span>{t('auto.addToCart')}</span>
-                    </button>
+                    <AddButton onClick={(e) => handleAddToCart(product.product || product, e)} />
                   </div>
 
                   <CardBottomDivider />

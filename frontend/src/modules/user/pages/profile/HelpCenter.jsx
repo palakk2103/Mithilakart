@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchHelpCenter } from '../../../../config/helpCenter';
 import { ArrowLeft, Search, MessageCircle, Phone, Mail, HelpCircle, ChevronRight, FileText, Send, MapPin, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -32,9 +33,18 @@ const HelpCenter = () => {
     }
   };
 
-  const faqs = [
-    { 
-      q: 'How to track my order?', 
+  // Admin-managed content (Admin → Storefront → Help & Support Page). Until the admin
+  // customises it, the built-in (translated) copy below is shown.
+  const [remote, setRemote] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    fetchHelpCenter().then((data) => { if (alive && data?.isCustom) setRemote(data); });
+    return () => { alive = false; };
+  }, []);
+
+  const defaultFaqs = [
+    {
+      q: 'How to track my order?',
       a: 'You can track your order in the "My Orders" section. Click on any order to see real-time tracking updates and estimated delivery time.' 
     },
     { 
@@ -59,29 +69,31 @@ const HelpCenter = () => {
     }
   ];
 
-  const contactMethods = [
-    {
-      icon: <Phone size={24} />,
-      title: 'Call Us',
-      subtitle: 'Mon-Sat (9am-6pm)',
-      detail: '+91 1800-123-4567',
-      color: 'bg-primary-light text-[#3E5A44]'
-    },
-    {
-      icon: <Mail size={24} />,
-      title: 'Email Us',
-      subtitle: '24/7 support',
-      detail: 'support@mithilakart.com',
-      color: 'bg-green-50 text-green-600'
-    },
-    {
-      icon: <MessageCircle size={24} />,
-      title: 'Live Chat',
-      subtitle: 'Instant response',
-      detail: 'Chat with us now',
-      color: 'bg-purple-50 text-purple-600'
-    }
+  const methodStyle = {
+    call: { icon: <Phone size={24} />, color: 'bg-primary-light text-[#3E5A44]' },
+    email: { icon: <Mail size={24} />, color: 'bg-green-50 text-green-600' },
+    chat: { icon: <MessageCircle size={24} />, color: 'bg-purple-50 text-purple-600' },
+  };
+
+  const defaultContactMethods = [
+    { id: 'call', title: 'Call Us', subtitle: 'Mon-Sat (9am-6pm)', detail: '+91 1800-123-4567' },
+    { id: 'email', title: 'Email Us', subtitle: '24/7 support', detail: 'support@mithilakart.com' },
+    { id: 'chat', title: 'Live Chat', subtitle: 'Instant response', detail: 'Chat with us now' },
   ];
+
+  const faqs = remote ? remote.faqs.map((f) => ({ q: f.question, a: f.answer })) : defaultFaqs;
+  const contactMethods = (remote ? remote.contactMethods : defaultContactMethods)
+    .map((m) => ({ ...m, ...methodStyle[m.id] }));
+
+  const lines = (s) => String(s || '').split('\n').filter(Boolean);
+  const cs = remote?.contactSection;
+  const intro = cs ? cs.intro : t('auto.canTFindWhatYou');
+  const phone = cs ? cs.phone : '+91 1800-123-4567';
+  const phoneNote = cs ? cs.phoneNote : t('auto.monSat900Am');
+  const email = cs ? cs.email : 'support@mithilakart.com';
+  const emailNote = cs ? cs.emailNote : t('auto.responseWithin24Hours');
+  const addressLines = cs ? lines(cs.address) : [t('x.companyName'), t('x.companyStreet'), t('auto.mumbaiMaharashtra400069')];
+  const hoursLines = cs ? lines(cs.hours) : [t('auto.mondaySaturday900Am'), t('auto.sundayClosed')];
 
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
@@ -200,61 +212,72 @@ const HelpCenter = () => {
             <h2 className="text-[16px] font-bold text-slate-900">{t('auto.contactUs')}</h2>
           </div>
           
-          <p className="text-[13px] text-gray-600 mb-4 leading-relaxed">
-            {t('auto.canTFindWhatYou')}
-          </p>
+          {intro && (
+            <p className="text-[13px] text-gray-600 mb-4 leading-relaxed">
+              {intro}
+            </p>
+          )}
 
           <div className="space-y-3">
             {/* Phone */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Phone size={16} className="text-[#3E5A44]" />
+            {phone && (
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg border border-gray-200">
+                  <Phone size={16} className="text-[#3E5A44]" />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-slate-900">{t('auto.phoneSupport')}</p>
+                  <p className="text-[13px] text-[#3E5A44] font-bold">{phone}</p>
+                  {phoneNote && <p className="text-[11px] text-gray-500">{phoneNote}</p>}
+                </div>
               </div>
-              <div>
-                <p className="text-[12px] font-bold text-slate-900">{t('auto.phoneSupport')}</p>
-                <p className="text-[13px] text-[#3E5A44] font-bold">+91 1800-123-4567</p>
-                <p className="text-[11px] text-gray-500">{t('auto.monSat900Am')}</p>
-              </div>
-            </div>
+            )}
 
             {/* Email */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Mail size={16} className="text-[#3E5A44]" />
+            {email && (
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg border border-gray-200">
+                  <Mail size={16} className="text-[#3E5A44]" />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-slate-900">{t('auto.emailSupport')}</p>
+                  <p className="text-[13px] text-[#3E5A44] font-bold">{email}</p>
+                  {emailNote && <p className="text-[11px] text-gray-500">{emailNote}</p>}
+                </div>
               </div>
-              <div>
-                <p className="text-[12px] font-bold text-slate-900">{t('auto.emailSupport')}</p>
-                <p className="text-[13px] text-[#3E5A44] font-bold">support@mithilakart.com</p>
-                <p className="text-[11px] text-gray-500">{t('auto.responseWithin24Hours')}</p>
-              </div>
-            </div>
+            )}
 
             {/* Address */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <MapPin size={16} className="text-[#3E5A44]" />
+            {addressLines.length > 0 && (
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg border border-gray-200">
+                  <MapPin size={16} className="text-[#3E5A44]" />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-slate-900">{t('auto.officeAddress')}</p>
+                  <p className="text-[12px] text-gray-600 leading-relaxed">
+                    {addressLines.map((line, i) => (
+                      <React.Fragment key={i}>{i > 0 && <br />}{line}</React.Fragment>
+                    ))}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[12px] font-bold text-slate-900">{t('auto.officeAddress')}</p>
-                <p className="text-[12px] text-gray-600 leading-relaxed">
-                  {t('x.companyName')}<br />
-                  {t('x.companyStreet')}<br />
-                  {t('auto.mumbaiMaharashtra400069')}
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* Business Hours */}
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white rounded-lg border border-gray-200">
-                <Clock size={16} className="text-[#3E5A44]" />
+            {hoursLines.length > 0 && (
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg border border-gray-200">
+                  <Clock size={16} className="text-[#3E5A44]" />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-slate-900">{t('auto.businessHours')}</p>
+                  {hoursLines.map((line, i) => (
+                    <p key={i} className="text-[12px] text-gray-600">{line}</p>
+                  ))}
+                </div>
               </div>
-              <div>
-                <p className="text-[12px] font-bold text-slate-900">{t('auto.businessHours')}</p>
-                <p className="text-[12px] text-gray-600">{t('auto.mondaySaturday900Am')}</p>
-                <p className="text-[12px] text-gray-600">{t('auto.sundayClosed')}</p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* CTA Button */}

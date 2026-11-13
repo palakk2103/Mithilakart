@@ -76,8 +76,14 @@ async function resolveCategoryHits(categoryRepository, tokens) {
   return hits;
 }
 
+/** Match the token (or synonym) anywhere inside the text, so partial words like "amsu" or "shirt" in "tshirt" hit. */
+const containsTok = (tok) => {
+  const alts = [tok, ...(SYNONYMS[tok] || [])].map(escapeRegex).join('|');
+  return new RegExp(`(?:${alts})`, 'i');
+};
+
 function tokenClause(tok, categoryHits) {
-  const rx = wordStart(tok);
+  const rx = containsTok(tok);
   const or = [{ title: rx }, { brand: rx }, { tags: rx }];
   if (categoryHits.has(tok)) or.push(categoryMatchClause(categoryHits.get(tok)));
   return { $or: or };
@@ -102,8 +108,11 @@ function scoreProduct(p, phrase, tokens, categoryHits) {
   for (const tok of tokens) {
     const rx = wordStart(tok);
     if (rx.test(title)) score += title.startsWith(tok) ? 60 : 40;
+    else if (title.includes(tok)) score += 15;
     if (rx.test(brand)) score += 30;
+    else if (brand.includes(tok)) score += 10;
     if (tags.some((t) => rx.test(t))) score += 20;
+    else if (tags.some((t) => t.includes(tok))) score += 5;
     const ids = categoryHits.get(tok);
     if (ids && ids.some((id) => cats.has(id))) score += 10;
   }

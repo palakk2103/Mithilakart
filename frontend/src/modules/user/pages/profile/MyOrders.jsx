@@ -377,7 +377,7 @@ const MyOrders = () => {
                       for (const item of (order.items || [])) {
                         const pId = item.productId || item.id;
                         if (pId) {
-                          await addCartItem({ productId: pId, quantity: item.quantity || 1 }).catch(() => {});
+                          await addCartItem({ productId: pId, quantity: item.quantity || 1, ...(order?.marketplaceTab ? { marketplaceTab: order.marketplaceTab } : {}) }).catch(() => {});
                         }
                       }
                       toast.success(t('auto.itemsAddedToBag'));

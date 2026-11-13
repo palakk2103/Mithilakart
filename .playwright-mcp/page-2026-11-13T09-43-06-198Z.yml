@@ -1,0 +1,42 @@
+- generic [ref=e3]:
+  - button [ref=e5]
+  - generic [ref=e10]:
+    - generic [ref=e63]:
+      - heading "Welcome back" [level=2] [ref=e64]
+      - paragraph [ref=e105]: Fresh Food & Handcrafted Items Delivered
+    - generic [ref=e106]:
+      - button "Continue With Phone" [ref=e107]
+      - button "Continue With Email" [ref=e111]
+    - generic [ref=e116]:
+      - generic [ref=e117]:
+        - generic [ref=e118]: Phone Number
+        - generic [ref=e119]:
+          - combobox [ref=e121] [cursor=pointer]:
+            - option "+91" [selected]
+            - option "+1"
+            - option "+44"
+            - option "+971"
+          - textbox "9876543210" [ref=e126]
+      - button "Send OTP" [ref=e127] [cursor=pointer]
+    - generic [ref=e129]:
+      - text: Don't have an account?
+      - link "Register here!" [ref=e130] [cursor=pointer]:
+        - /url: /signup
+    - generic [ref=e131]:
+      - paragraph [ref=e132]: Connect With Us
+      - generic [ref=e133]:
+        - link "Facebook" [ref=e134] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link "YouTube" [ref=e137] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link "Instagram" [ref=e140] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link "X" [ref=e144] [cursor=pointer]:
+          - /url: https://x.com
+        - link "WhatsApp" [ref=e147] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+  - generic [ref=e150]:
+    - img "Mithilakart" [ref=e151]
+    - generic [ref=e152]:
+      - text: Mithilakart
+      - generic [ref=e153]: ™

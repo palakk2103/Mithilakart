@@ -1,0 +1,56 @@
+- generic [ref=f3e3]:
+  - banner [ref=f3e4]:
+    - generic [ref=f3e5]:
+      - generic [ref=f3e6] [cursor=pointer]:
+        - img "Mithilakart" [ref=f3e8]
+        - generic [ref=f3e9]: Mithilakart
+      - generic [ref=f3e10] [cursor=pointer]: Quick Shop
+      - generic [ref=f3e16] [cursor=pointer]: Mithilak
+      - generic [ref=f3e22] [cursor=pointer]: Fresh & Groceries
+    - generic [ref=f3e29]:
+      - generic [ref=f3e30]:
+        - button "Deliver to Corporate House, RNT Marg, South Tukoganj, Indore" [ref=f3e31]:
+          - generic [ref=f3e35]:
+            - generic [ref=f3e36]: Deliver to
+            - generic [ref=f3e37]: Corporate House, RNT Marg, South Tukoganj, Indore
+        - generic [ref=f3e40]:
+          - button "English English" [ref=f3e42] [cursor=pointer]:
+            - img "English" [ref=f3e43]
+            - generic [ref=f3e44]: English
+          - generic [ref=f3e45]: 15 mins
+      - generic [ref=f3e49]:
+        - searchbox "Search for products, categories..." [ref=f3e50]
+        - generic [ref=f3e52]:
+          - img [aria-hidden] [ref=f3e53] [cursor=pointer]
+          - img [aria-hidden] [ref=f3e56] [cursor=pointer]
+  - generic [ref=f3e59]:
+    - main [ref=f3e62]:
+      - status "Loading" [ref=f3e63]
+    - contentinfo [ref=f3e65]:
+      - img "Mithila Art Footer Border" [ref=f3e67]
+      - generic [ref=f3e68]:
+        - link [ref=f3e69] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=f3e72] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=f3e75] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=f3e79] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=f3e82] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=f3e85]:
+        - img "Mithilakart Logo" [ref=f3e86]
+        - generic [ref=f3e87]:
+          - text: Mithilakart
+          - generic [ref=f3e88]: ™
+  - navigation [ref=f3e89]:
+    - link "Home" [ref=f3e90] [cursor=pointer]:
+      - /url: /quick-shop
+    - link "Categories" [ref=f3e95] [cursor=pointer]:
+      - /url: /categories?flow=quickshop
+    - link "0 Cart" [ref=f3e102] [cursor=pointer]:
+      - /url: /cart
+      - generic [ref=f3e103]: "0"
+      - generic [ref=f3e109]: Cart
+    - button "You" [ref=f3e110]

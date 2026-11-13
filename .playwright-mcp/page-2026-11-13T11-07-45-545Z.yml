@@ -1,0 +1,29 @@
+- main [ref=f4e111]:
+  - generic [ref=f4e1022]:
+    - generic [ref=f4e1023]:
+      - generic [ref=f4e1024]:
+        - generic [ref=f4e1025]:
+          - link [ref=f4e1026] [cursor=pointer]:
+            - /url: /home
+          - heading "Action Figures" [level=1] [ref=f4e1029]
+        - generic [ref=f4e1030]:
+          - link [ref=f4e1031] [cursor=pointer]:
+            - /url: /search?tab=mithilak
+          - link [ref=f4e1035] [cursor=pointer]:
+            - /url: /cart
+      - generic [ref=f4e1040]:
+        - 'button "Sort: Popularity" [ref=f4e1041]':
+          - text: "Sort:"
+          - generic [ref=f4e1042]: Popularity
+        - button "Filter" [ref=f4e1046]
+    - generic [ref=f4e1048]:
+      - generic [ref=f4e1049]:
+        - heading "Action Figures" [level=2] [ref=f4e1050]
+        - paragraph [ref=f4e1051]: 0 items available
+      - generic [ref=f4e1052]:
+        - generic [ref=f4e1053]: NEW
+        - generic [ref=f4e1054]: SALE
+    - generic [ref=f4e1057]:
+      - generic [ref=f4e1058]: Trending
+      - heading "Hot and latest for you" [level=2] [ref=f4e1059]
+    - heading "For You" [level=2] [ref=f4e1062]

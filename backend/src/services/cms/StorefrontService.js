@@ -100,6 +100,7 @@ class StorefrontService extends BaseService {
             key: section.sectionKey,
             title: localizedTitle,
             originalTitle: section.title,
+            viewAllLink: section.viewAllLink || '',
             sortOrder: section.sortOrder,
             products: await this._resolveSectionProducts(section.productIds, lang),
           };
@@ -138,6 +139,11 @@ class StorefrontService extends BaseService {
   async getYouPopup() {
     if (!this.platformConfigService) return { items: [] };
     return this.platformConfigService.getYouPopup();
+  }
+
+  async getHelpCenter() {
+    if (!this.platformConfigService) return null;
+    return this.platformConfigService.getHelpCenter();
   }
 
   async getHeaderTabs() {

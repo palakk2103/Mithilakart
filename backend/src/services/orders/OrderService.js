@@ -97,12 +97,15 @@ class OrderService extends BaseService {
       }
     }
 
+    // Each tab has its own cart; this order only ever reads and clears that one.
+    const orderTab = resolveTabFromQuery({ commerceFlow }) || 'mithilakart';
+
     const result = await withTransaction(async (session) => {
       await this._releaseStalePendingOrders(userId, session);
 
       const cart = items
         ? await this._buildCartFromItems({ items, commerceFlow, couponCode, userId })
-        : await this.cartService.getCart({ userId, sessionId: null, commerceFlow, couponCode });
+        : await this.cartService.getCart({ userId, sessionId: null, commerceFlow, marketplaceTab: orderTab, couponCode });
 
       if (!cart.items || cart.items.length === 0) {
         throw AppError.validation('Cart is empty');
@@ -112,7 +115,7 @@ class OrderService extends BaseService {
       // listed in several tabs (Quick Shop AND Mithilakart) used to turn every
       // Mithilakart order for it into a quick one; product flows are no longer
       // consulted here.
-      const marketplaceTab = cart.marketplaceTab || resolveTabFromQuery({ commerceFlow }) || 'mithilakart';
+      const marketplaceTab = cart.marketplaceTab || orderTab;
       if (cart.items.some((it) => it.marketplaceTab && it.marketplaceTab !== marketplaceTab)) {
         throw AppError.conflict(
           'Your cart has items from different sections. Please check out one section at a time.',
@@ -213,6 +216,7 @@ class OrderService extends BaseService {
         cartRepository: this.cartRepository,
         cartItemRepository: this.cartItemRepository,
         session,
+        marketplaceTab: orderTab,
       });
 
       const paymentResult = await this.paymentService.initiatePayment({
@@ -270,7 +274,7 @@ class OrderService extends BaseService {
     // everything. The app clears the cart once the payment is verified.
     if (placedFromCart && result?.orderId && result.paymentStatus === PAYMENT_STATUS.PAID) {
       try {
-        await this.cartService.clearCart({ userId, sessionId: null });
+        await this.cartService.clearCart({ userId, sessionId: null, marketplaceTab: orderTab });
       } catch (err) {
         // The order is already committed — a cart-clearing failure must never
         // fail the request. Logged via the module logger; `this.logger` does

@@ -28,7 +28,7 @@ const CategoryCard = ({ item, onClick }) => {
         </div>
 
         {/* Category Title */}
-        <span className="text-[11px] font-semibold text-center text-[#3F2A20] mt-2 leading-tight tracking-tight line-clamp-2 h-[32px] w-full flex items-start justify-center">
+        <span className="text-[11px] font-semibold text-center text-[#3F2A20] mt-2 leading-tight tracking-tight min-h-[32px] w-full break-words">
           {item.name.replace('Mithila ', '')}
         </span>
       </div>
@@ -52,7 +52,7 @@ const CategoryCard = ({ item, onClick }) => {
       </div>
 
       {/* Category Title */}
-      <span className="text-[11px] font-medium text-center text-gray-800 mt-2 leading-tight tracking-tight line-clamp-2 h-[32px] w-full flex items-start justify-center">
+      <span className="text-[11px] font-medium text-center text-gray-800 mt-2 leading-tight tracking-tight min-h-[32px] w-full break-words">
         {item.name}
       </span>
     </div>
