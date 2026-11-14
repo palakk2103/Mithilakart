@@ -47,6 +47,7 @@ class PricingService extends BaseService {
     taxRate = PRICING.DEFAULT_TAX_RATE,
     pincode = null,
     paymentMethod = null,
+    enforceMinOrder = false,
   }) {
     const subtotal = items.reduce(
       (sum, item) => sum + (item.unitPrice || 0) * (item.quantity || 0),
@@ -58,7 +59,7 @@ class PricingService extends BaseService {
       : DEFAULT_PLATFORM_SETTINGS;
 
     const minOrderAmount = Number(config.minOrderAmount) || 0;
-    if (minOrderAmount > 0 && subtotal < minOrderAmount) {
+    if (enforceMinOrder && minOrderAmount > 0 && subtotal < minOrderAmount) {
       throw AppError.validation(`Minimum order value is ₹${minOrderAmount}`, [
         { field: 'subtotal', message: `Minimum order is ₹${minOrderAmount}` },
       ]);

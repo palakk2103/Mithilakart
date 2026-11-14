@@ -111,6 +111,12 @@ class OrderService extends BaseService {
         throw AppError.validation('Cart is empty');
       }
 
+      if (cart.minOrderAmount > 0 && cart.subtotal < cart.minOrderAmount) {
+        throw AppError.validation(`Minimum order value is ₹${cart.minOrderAmount}`, [
+          { field: 'subtotal', message: `Minimum order is ₹${cart.minOrderAmount}` },
+        ]);
+      }
+
       // The tab the customer shopped in decides the delivery mode. A product
       // listed in several tabs (Quick Shop AND Mithilakart) used to turn every
       // Mithilakart order for it into a quick one; product flows are no longer
