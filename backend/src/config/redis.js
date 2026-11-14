@@ -20,15 +20,21 @@ async function connectRedis(config) {
 
   const Redis = require('ioredis');
   redisClient = new Redis(config.redis.url, {
-    maxRetriesPerRequest: 1,
-    connectTimeout: 2000,
-    retryStrategy: () => null,
+    maxRetriesPerRequest: 3,
+    connectTimeout: 5000,
+    retryStrategy: (times) => Math.min(times * 100, 2000),
     lazyConnect: true,
   });
 
   redisClient.on('error', (error) => {
     const { logger } = require('../utils/logger');
     logger.error({ err: error }, 'Redis connection error');
+  });
+
+  redisClient.on('connect', () => {
+    const { logger } = require('../utils/logger');
+    logger.info('Connected to Redis successfully');
+    isConnected = true;
   });
 
   try {
@@ -68,16 +74,6 @@ async function disconnectRedis() {
 
 function getRedisClient() {
   if (!redisClient) {
-    redisClient = new MemoryRedisClient();
-    isConnected = true;
-    return redisClient;
-  }
-  // If ioredis client dropped connection (status: 'close' or 'end'),
-  // fall back to in-memory so rate limiter never crashes with "Connection is closed"
-  if (
-    typeof redisClient.status === 'string' &&
-    (redisClient.status === 'close' || redisClient.status === 'end')
-  ) {
     redisClient = new MemoryRedisClient();
     isConnected = true;
   }

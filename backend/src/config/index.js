@@ -67,7 +67,7 @@ function loadConfig() {
     },
     redis: {
       url: optional('REDIS_URL', process.env.REDIS_URL, 'redis://localhost:6379'),
-      useMemory: isTest || parseBoolean(process.env.REDIS_USE_MEMORY, false),
+      useMemory: isTest || (isProduction && process.env.REDIS_URL ? false : parseBoolean(process.env.REDIS_USE_MEMORY, false)),
     },
     jwt: buildJwtConfig(isTest),
     logging: {
