@@ -40,6 +40,7 @@ router.use('/orders', container.routes.orders);
 router.use('/users', container.routes.users);
 router.use('/coupons', container.routes.coupons);
 router.use('/', container.routes.deals);
+router.use('/', container.routes.packages);
 router.use('/', container.routes.engagement);
 router.use('/seller', container.routes.seller);
 router.use('/seller', container.routes.sellerListings);

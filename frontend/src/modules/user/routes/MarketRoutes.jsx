@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense , useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import lazyWithRetry from '../../../shared/utils/lazyWithRetry';
 import PageLoader from '../../../shared/components/PageLoader';
@@ -32,6 +32,7 @@ const ContinueShopping = lazyWithRetry(() => import('../pages/ContinueShopping')
 const TermsOfUse = lazyWithRetry(() => import('../pages/TermsOfUse'));
 const LegalPrivacy = lazyWithRetry(() => import('../pages/LegalPrivacy'));
 const CancellationReturns = lazyWithRetry(() => import('../pages/CancellationReturns'));
+const PackageBuilder = lazyWithRetry(() => import('../pages/PackageBuilder'));
 const ShippingPolicy = lazyWithRetry(() => import('../pages/ShippingPolicy'));
 const QuickShop = lazyWithRetry(() => import('../pages/QuickShop'));
 const QuickShopSubcategory = lazyWithRetry(() => import('../pages/QuickShopSubcategory'));
@@ -57,7 +58,20 @@ const Maintenance = lazyWithRetry(() => import('../pages/Maintenance'));
 const ErrorPage = lazyWithRetry(() => import('../pages/ErrorPage'));
 
 
+// Warm the other tabs' code while the shopper is idle, so tapping a tab is instant instead of
+// waiting for that page's chunk to download and compile.
+const prefetchTabPages = () => {
+  [() => import('../pages/QuickShop'), () => import('../pages/Mithilak'), () => import('../pages/Categories'),
+    () => import('../pages/Cart'), () => import('../pages/ProductDetail'), () => import('../pages/QuickShopSubcategory')]
+    .forEach((load, i) => setTimeout(() => load().catch(() => {}), 400 * i));
+};
+
 const MarketRoutes = () => {
+  useEffect(() => {
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+    const handle = idle(prefetchTabPages, { timeout: 4000 });
+    return () => { if (window.cancelIdleCallback && typeof handle === 'number') window.cancelIdleCallback(handle); };
+  }, []);
   return (
     // Routes outside VendorLayout suspend here; layout routes suspend inside
     // VendorLayout's <Outlet /> so the header/nav stay on screen.
@@ -68,6 +82,8 @@ const MarketRoutes = () => {
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/package/:slug" element={<PackageBuilder />} />
+      <Route path="/vendor/package/:slug" element={<PackageBuilder />} />
       <Route path="/order-confirmation" element={<OrderConfirmation />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/privacy" element={<LegalPrivacy />} />

@@ -57,8 +57,14 @@ class PlatformConfigService extends BaseService {
       codHandlingFee: Number(config.codHandlingFee) || 0,
       platformFee: Number(config.platformFee) || 0,
       packagingFee: Number(config.packagingFee) || 0,
-      freeShippingThreshold: Number(config.freeShippingThreshold) || 500,
-      defaultDeliveryCharge: Number(config.defaultDeliveryCharge) || 39,
+      freeShippingThreshold: Number.isFinite(Number(config.freeShippingThreshold)) ? Number(config.freeShippingThreshold) : 150,
+      defaultDeliveryCharge: Number.isFinite(Number(config.defaultDeliveryCharge)) ? Number(config.defaultDeliveryCharge) : 25,
+      handlingFee: Number(config.handlingFee) || 0,
+      handlingFeeTiers: Array.isArray(config.handlingFeeTiers) ? config.handlingFeeTiers : [],
+      maxQuantityPerItem: Number(config.maxQuantityPerItem) || 0,
+      maxCartItems: Number(config.maxCartItems) || 0,
+      limitedQuantityMessage: config.limitedQuantityMessage || 'Limited quantity due to high demand',
+      loginRequired: config.loginRequired !== false,
       taxRate: Number(config.taxRate) || (Number(config.gst) ? Number(config.gst) / 100 : 0),
       gst: config.gst || '',
       quickCommerceEnabled: config.quickCommerceEnabled !== false,
@@ -156,6 +162,15 @@ class PlatformConfigService extends BaseService {
   }
 
   _computeDeliveryChargeFromConfig(config, subtotal, pincode) {
+    return this.describeDelivery(config, subtotal, pincode).charge;
+  }
+
+  /**
+   * Delivery fee breakdown: the base fee, the free-delivery threshold and what
+   * the customer actually pays. The cart shows the base fee crossed out once the
+   * threshold is reached, and "add ₹X more for free delivery" below it.
+   */
+  describeDelivery(config, subtotal, pincode = null) {
     const rules = config.deliveryRules || [];
     let rule = null;
 
@@ -171,11 +186,59 @@ class PlatformConfigService extends BaseService {
       rule = rules.find((entry) => entry.isActive !== false && !entry.pincodePrefix) || rules[0];
     }
 
-    const freeAbove = rule?.freeAbove ?? Number(config.freeShippingThreshold) ?? 500;
-    if (subtotal >= freeAbove) return 0;
+    const configured = Number(config.freeShippingThreshold);
+    const freeAbove = rule?.freeAbove ?? (Number.isFinite(configured) ? configured : 150);
+    const baseCharge = rule?.baseCharge != null
+      ? Number(rule.baseCharge)
+      : (Number.isFinite(Number(config.defaultDeliveryCharge)) ? Number(config.defaultDeliveryCharge) : 25);
+    const isFree = freeAbove > 0 && subtotal >= freeAbove;
 
-    if (rule?.baseCharge != null) return Number(rule.baseCharge);
-    return Number(config.defaultDeliveryCharge) || 39;
+    return {
+      baseCharge,
+      freeAbove,
+      charge: isFree ? 0 : baseCharge,
+      amountToFree: isFree || !(freeAbove > 0) ? 0 : Math.max(0, Math.round((freeAbove - subtotal) * 100) / 100),
+    };
+  }
+
+  /**
+   * Handling fee: a base fee that is struck down by a percentage as the order
+   * value grows (e.g. ₹11 → 30% off from ₹99 → 60% off from ₹150 → free from ₹250).
+   * Tiers come from admin settings; the highest tier the order reaches applies.
+   */
+  computeHandlingFee(config, subtotal) {
+    const base = Math.max(0, Number(config.handlingFee) || 0);
+    const tiers = (Array.isArray(config.handlingFeeTiers) ? config.handlingFeeTiers : [])
+      .map((t) => ({ minSubtotal: Number(t?.minSubtotal), discountPercent: Number(t?.discountPercent) }))
+      .filter((t) => Number.isFinite(t.minSubtotal) && Number.isFinite(t.discountPercent))
+      .sort((a, b) => a.minSubtotal - b.minSubtotal);
+
+    let applied = null;
+    for (const tier of tiers) if (subtotal >= tier.minSubtotal) applied = tier;
+    const next = tiers.find((t) => t.minSubtotal > subtotal) || null;
+    const percent = applied ? Math.min(100, Math.max(0, applied.discountPercent)) : 0;
+
+    return {
+      original: base,
+      discountPercent: percent,
+      fee: Math.round(base * (1 - percent / 100) * 100) / 100,
+      appliedTier: applied ? { minSubtotal: applied.minSubtotal, discountPercent: percent } : null,
+      nextTier: next && base > 0
+        ? { minSubtotal: next.minSubtotal, discountPercent: Math.min(100, Math.max(0, next.discountPercent)) }
+        : null,
+    };
+  }
+
+  /** Per-customer purchase limits the cart enforces (admin editable). */
+  async getPurchaseLimits() {
+    const config = await this.getConfig();
+    const perItem = Number(config.maxQuantityPerItem);
+    const cartItems = Number(config.maxCartItems);
+    return {
+      maxQuantityPerItem: Number.isFinite(perItem) && perItem > 0 ? Math.floor(perItem) : 0,
+      maxCartItems: Number.isFinite(cartItems) && cartItems > 0 ? Math.floor(cartItems) : 0,
+      message: config.limitedQuantityMessage || 'Limited quantity due to high demand',
+    };
   }
 }
 

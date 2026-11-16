@@ -72,7 +72,21 @@ class PricingService extends BaseService {
     });
 
     const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
-    const deliveryCharge = await this.computeDeliveryCharge(discountedSubtotal, { pincode });
+    const delivery = this.platformConfigService
+      ? this.platformConfigService.describeDelivery(config, discountedSubtotal, pincode)
+      : {
+        baseCharge: CART.SHIPPING_FEE,
+        freeAbove: CART.FREE_SHIPPING_THRESHOLD,
+        charge: discountedSubtotal >= CART.FREE_SHIPPING_THRESHOLD ? 0 : CART.SHIPPING_FEE,
+        amountToFree: Math.max(0, CART.FREE_SHIPPING_THRESHOLD - discountedSubtotal),
+      };
+    const deliveryCharge = delivery.charge;
+    const handling = this.platformConfigService
+      ? this.platformConfigService.computeHandlingFee(config, discountedSubtotal)
+      : { original: 0, discountPercent: 0, fee: 0, appliedTier: null, nextTier: null };
+    // An empty cart owes nothing; the fees only apply once there is something to deliver.
+    const hasItems = items.length > 0 && subtotal > 0;
+    const handlingFee = hasItems ? handling.fee : 0;
     const platformFee = Number(config.platformFee) || 0;
     const packagingFee = Number(config.packagingFee) || 0;
     let codHandlingFee = 0;
@@ -93,15 +107,31 @@ class PricingService extends BaseService {
 
     const tax = this.computeTax(discountedSubtotal, resolvedTaxRate);
     const total = Math.round(
-      (discountedSubtotal + deliveryCharge + platformFee + packagingFee + codHandlingFee + tax) * 100
+      (discountedSubtotal + (hasItems ? deliveryCharge : 0) + platformFee + packagingFee + handlingFee + codHandlingFee + tax) * 100
     ) / 100;
+
+    const mrpTotal = items.reduce(
+      (sum, item) => sum + Math.max(Number(item.mrp) || 0, Number(item.unitPrice) || 0) * (item.quantity || 0),
+      0
+    );
+    const productDiscount = Math.max(0, mrpTotal - subtotal);
 
     return {
       subtotal,
+      mrpTotal,
+      productDiscount,
       couponDiscount,
       discount: couponDiscount,
-      deliveryCharge,
-      shippingFee: deliveryCharge,
+      deliveryCharge: hasItems ? deliveryCharge : 0,
+      shippingFee: hasItems ? deliveryCharge : 0,
+      deliveryChargeOriginal: delivery.baseCharge,
+      freeDeliveryThreshold: delivery.freeAbove,
+      amountToFreeDelivery: hasItems ? delivery.amountToFree : 0,
+      handlingFee,
+      handlingFeeOriginal: handling.original,
+      handlingFeeDiscountPercent: handling.discountPercent,
+      handlingFeeTier: handling.appliedTier || null,
+      handlingFeeNextTier: handling.nextTier,
       platformFee,
       packagingFee,
       codHandlingFee,

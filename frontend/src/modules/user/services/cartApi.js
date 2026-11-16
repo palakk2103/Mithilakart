@@ -2,8 +2,12 @@ import customerApi from '../../../shared/api/client';
 
 // Every cart call names the shopping tab it acts on. Each tab has its own
 // cart on the server, so the tab is part of the address of the cart.
-export const getCart = (marketplaceTab) =>
-  customerApi.get('/cart', { params: marketplaceTab ? { marketplaceTab } : undefined });
+export const getCart = (marketplaceTab, couponCode) =>
+  customerApi.get('/cart', {
+    params: (marketplaceTab || couponCode)
+      ? { ...(marketplaceTab ? { marketplaceTab } : {}), ...(couponCode ? { couponCode } : {}) }
+      : undefined,
+  });
 
 export const addCartItem = (data) => customerApi.post('/cart/items', data);
 

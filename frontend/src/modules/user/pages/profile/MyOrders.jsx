@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import LoginGate from '../../../../shared/components/LoginGate';
+import { Package as PackageGate } from 'lucide-react';
 import { 
   ArrowLeft, ChevronRight, Search, ListFilter, Star, 
   Edit3, ShoppingBag, X, Check, Calendar, Package, Filter, MessageSquare,
@@ -150,7 +152,7 @@ const BannerCarousel = () => {
   );
 };
 
-const MyOrders = () => {
+const MyOrdersPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { orders, setOrders } = useAccountStore();
@@ -739,6 +741,12 @@ const MyOrders = () => {
     </div>
   );
 };
+
+const MyOrders = () => (
+  <LoginGate title="My Orders" cardTitle="Login to see your orders" subtitle="Your orders will appear here once you log in." icon={PackageGate}>
+    <MyOrdersPage />
+  </LoginGate>
+);
 
 export default MyOrders;
 

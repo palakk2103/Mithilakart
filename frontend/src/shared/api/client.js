@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getTokens, setTokens, clearTokens } from './tokenStorage';
+import { withPublicCache } from './publicCache';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -151,12 +152,12 @@ export function createApiClient({ portal, baseURL = API_BASE, onUnauthorized } =
   return instance;
 }
 
-export const customerApi = createApiClient({
+export const customerApi = withPublicCache(createApiClient({
   portal: 'customer',
   onUnauthorized: () => {
     window.dispatchEvent(new Event('customer-auth-changed'));
   },
-});
+}));
 
 export const sellerApiClient = createApiClient({
   portal: 'seller',

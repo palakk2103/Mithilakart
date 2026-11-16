@@ -12,10 +12,45 @@ const tabColours = Joi.object({
   accent: hexColor.optional(),
   light: hexColor.optional(),
 });
+const EFFECT_TYPES = ['none', 'snow', 'summer', 'rain', 'diwali', 'holi', 'petals', 'confetti', 'stars', 'custom'];
+const ICONS = ['leaf', 'snowflake', 'sun', 'rain', 'diya', 'palette', 'flower', 'party', 'moon', 'sparkle', 'gift', 'tag', 'flag'];
+const SHAPES = ['heart', 'star', 'sparkle', 'balloon', 'gift', 'drop', 'diamond', 'leaf', 'flower', 'snowflake'];
+const level = Joi.number().integer().min(1).max(5);
+// No markup is ever stored: banner text and emojis are plain strings without < or >.
+const plain = (max) => Joi.string().trim().allow('').max(max).pattern(/^[^<>]*$/);
+const effectsSchema = Joi.object({
+  type: Joi.string().valid(...EFFECT_TYPES).required(),
+  intensity: level.optional(),
+  speed: level.optional(),
+  size: level.optional(),
+  ambient: Joi.boolean().optional(),
+  tabs: Joi.array().items(Joi.string().valid('mithilakart', 'mithilak', 'quickshop', 'freshgrocery')).max(4).optional(),
+  colors: Joi.array().items(hexColor).max(5).optional(),
+  motion: Joi.string().valid('fall', 'rise', 'float').optional(),
+  shapes: Joi.array().items(Joi.string().valid(...SHAPES)).max(6).optional(),
+  banner: Joi.object({
+    enabled: Joi.boolean().optional(),
+    icon: Joi.string().valid(...ICONS).optional(),
+    text: plain(120).optional(),
+    emoji: Joi.any().strip(),
+  }).optional(),
+  hero: Joi.object({
+    enabled: Joi.boolean().optional(),
+    headline: plain(60).optional(),
+    subtext: plain(110).optional(),
+    ctaLabel: plain(24).optional(),
+    // In-app paths only — never an external or javascript: URL.
+    ctaLink: Joi.string().trim().allow('').max(200).pattern(/^\/[A-Za-z0-9\-_/?=&%.#]*$/).optional(),
+  }).optional(),
+  emojis: Joi.any().strip(),
+  startsAt: Joi.date().iso().allow(null).optional(),
+  endsAt: Joi.date().iso().allow(null).optional(),
+});
 /** themes: null restores the built-in colours. */
 const tabThemesSchema = Joi.object({
   themes: Joi.object({
     preset: Joi.string().trim().max(40).allow(null, '').optional(),
+    effects: effectsSchema.optional(),
     tabs: Joi.object({
       mithilakart: tabColours.optional(),
       mithilak: tabColours.optional(),

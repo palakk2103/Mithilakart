@@ -1,4 +1,6 @@
 import { AddButton } from '../components/common/AddToCartButton';
+import SeasonalHero from '../../../shared/components/SeasonalHero';
+import PackagePromo from '../components/vendor/PackagePromo';
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useWishlistToggle from '../hooks/useWishlistToggle';
@@ -87,10 +89,10 @@ export const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaL
   return (
     <div
       onClick={() => onNavigate(prod)}
-      className="flex flex-col cursor-pointer group w-full h-full relative bg-[#FFFDF9] border border-[#207C8A]/25 rounded-[18px] md:rounded-[24px] p-2 md:p-3 shadow-[0_2px_8px_rgba(32,124,138,0.02)] hover:shadow-[0_6px_18px_rgba(32,124,138,0.06)] hover:border-[#207C8A]/50 transition-all duration-300 transform select-none justify-between"
+      className="flex flex-col cursor-pointer group w-full h-full relative bg-[#FFFDF9] border border-[color:var(--ml-primary,#207C8A)]/25 rounded-[18px] md:rounded-[24px] p-2 md:p-3 shadow-[0_2px_8px_rgba(32,124,138,0.02)] hover:shadow-[0_6px_18px_rgba(32,124,138,0.06)] hover:border-[color:var(--ml-primary,#207C8A)]/50 transition-all duration-300 transform select-none justify-between"
     >
       {/* Inner Decorative Dashed Border */}
-      <div className="absolute inset-0.5 md:inset-1 pointer-events-none border border-dashed border-[#207C8A]/20 rounded-[15px] md:rounded-[20px]" />
+      <div className="absolute inset-0.5 md:inset-1 pointer-events-none border border-dashed border-[color:var(--ml-primary,#207C8A)]/20 rounded-[15px] md:rounded-[20px]" />
 
       {/* Corner Ornaments */}
       <div className="absolute top-0.5 left-0.5 md:top-1 md:left-1 z-10"><MithilaCornerFlower /></div>
@@ -99,7 +101,7 @@ export const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaL
       <div className="absolute bottom-0.5 right-0.5 md:bottom-1 md:right-1 z-10"><MithilaCornerFlower /></div>
 
       {/* Product Image Section */}
-      <div className="relative aspect-square rounded-[14px] md:rounded-[18px] overflow-hidden bg-white/50 border border-[#207C8A]/15 p-1">
+      <div className="relative aspect-square rounded-[14px] md:rounded-[18px] overflow-hidden bg-white/50 border border-[color:var(--ml-primary,#207C8A)]/15 p-1">
         <img
           src={image}
           alt={name}
@@ -122,14 +124,14 @@ export const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaL
 
         {/* Discount Badge */}
         {discount && (
-          <div className="absolute top-1.5 left-1.5 bg-[#207C8A] text-white text-[7.5px] md:text-[8.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
+          <div className="absolute top-1.5 left-1.5 bg-[color:var(--ml-primary,#207C8A)] text-white text-[7.5px] md:text-[8.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
             {tName(discount)}
           </div>
         )}
 
         {/* Rating Badge */}
         {rating > 0 && (
-          <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 bg-white/95 backdrop-blur-xs px-1.5 py-0.5 rounded-[4px] shadow-xs border border-[#207C8A]/20">
+          <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 bg-white/95 backdrop-blur-xs px-1.5 py-0.5 rounded-[4px] shadow-xs border border-[color:var(--ml-primary,#207C8A)]/20">
             <span className="text-[8px] md:text-[9.5px] font-black text-slate-800">{rating}</span>
             <Star size={7} fill="currentColor" className="text-amber-500 stroke-none" />
           </div>
@@ -153,7 +155,7 @@ export const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaL
         </div>
 
         {/* Add to Cart Button */}
-        <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[#207C8A]/20">
+        <div className="mt-2.5 flex items-center justify-between gap-1 pt-1 border-t border-[color:var(--ml-primary,#207C8A)]/20">
           <AddButton onClick={(e) => onAddToCart(prod, e)} disabled={ctaDisabled} label={ctaLabel} />
         </div>
 
@@ -185,7 +187,7 @@ const MithilaChip = ({ chip, onClick, width = CHIP_W, active = false }) => {
       data-active={active ? 'true' : undefined}
       className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform outline-none"
     >
-      <div className={`w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full flex items-center justify-center border text-[#207C8A] shadow-[0_1.5px_4px_rgba(32,124,138,0.06)] ${active ? 'bg-[#E3F3F5] border-[#207C8A] ring-2 ring-[#207C8A]/40' : 'bg-white border-[#207C8A]/30'}`}>
+      <div className={`w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full flex items-center justify-center border text-[color:var(--ml-primary,#207C8A)] shadow-[0_1.5px_4px_rgba(32,124,138,0.06)] ${active ? 'bg-[#E3F3F5] border-[color:var(--ml-primary,#207C8A)] ring-2 ring-[color:var(--ml-primary,#207C8A)]/40' : 'bg-white border-[color:var(--ml-primary,#207C8A)]/30'}`}>
         {chip.imageUrl ? (
           <img src={chip.imageUrl} alt={label} className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
         ) : DynamicIcon ? (
@@ -194,7 +196,7 @@ const MithilaChip = ({ chip, onClick, width = CHIP_W, active = false }) => {
           <ShoppingBag size={18} />
         )}
       </div>
-      <span className={`w-full text-[11px] sm:text-[12px] mt-1.5 leading-[1.15] text-center line-clamp-2 break-words min-h-[2.3em] font-bold ${active ? 'text-[#207C8A]' : 'text-[#3F2A20]'}`}>
+      <span className={`w-full text-[11px] sm:text-[12px] mt-1.5 leading-[1.15] text-center line-clamp-2 break-words min-h-[2.3em] font-bold ${active ? 'text-[color:var(--ml-primary,#207C8A)]' : 'text-[#3F2A20]'}`}>
         {label}
       </span>
     </button>
@@ -272,7 +274,7 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
 
   return (
     <>
-      <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F5F9FA]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(32,124,138,0.06)] border-b border-[#207C8A]/15 py-2">
+      <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F5F9FA]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(32,124,138,0.06)] border-b border-[color:var(--ml-primary,#207C8A)]/15 py-2">
         <div ref={rowRef} className="flex items-start overflow-hidden px-2 sm:px-3" style={{ gap: CHIP_GAP }}>
           {visible.map((chip) => (
             <MithilaChip key={chip.id} chip={chip} width={chipW} active={Boolean(isChipActive && isChipActive(chip))} onClick={() => onSelect(chip)} />
@@ -287,7 +289,7 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
               style={{ width: MORE_W }}
               className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
             >
-              <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full bg-[#207C8A] border border-[#207C8A] text-white flex items-center justify-center shadow-xs">
+              <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full bg-[color:var(--ml-primary,#207C8A)] border border-[color:var(--ml-primary,#207C8A)] text-white flex items-center justify-center shadow-xs">
                 <MoreHorizontal size={18} />
               </div>
               <span className="text-[11px] sm:text-[12px] font-bold text-[#3F2A20] mt-1.5 leading-[1.15]">{t('common.more')}</span>
@@ -300,7 +302,7 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
         <div
           ref={menuRef}
           role="menu"
-          className="fixed z-[70] w-[220px] overflow-y-auto overscroll-contain rounded-2xl border border-[#207C8A]/20 bg-white shadow-[0_12px_30px_rgba(32,124,138,0.2)] p-2"
+          className="fixed z-[70] w-[220px] overflow-y-auto overscroll-contain rounded-2xl border border-[color:var(--ml-primary,#207C8A)]/20 bg-white shadow-[0_12px_30px_rgba(32,124,138,0.2)] p-2"
           style={{ top: menuPos.top, left: menuPos.left, maxHeight: `min(70vh, calc(100dvh - ${menuPos.top + 76}px))` }}
         >
           {hidden.map((chip) => {
@@ -314,7 +316,7 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
                 onClick={() => { onSelect(chip); setMoreOpen(false); }}
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left text-[12.5px] font-bold text-[#3F2A20] hover:bg-[#F0F9FA] transition-colors cursor-pointer"
               >
-                <span className="w-7 h-7 rounded-full bg-[#207C8A]/10 flex items-center justify-center flex-shrink-0 text-[#207C8A]">
+                <span className="w-7 h-7 rounded-full bg-[color:var(--ml-primary,#207C8A)]/10 flex items-center justify-center flex-shrink-0 text-[color:var(--ml-primary,#207C8A)]">
                   {chip.imageUrl ? (
                     <img src={chip.imageUrl} alt={label} className="w-4 h-4 object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
                   ) : DynamicIcon ? (
@@ -415,6 +417,9 @@ const Mithilak = () => {
         }}
       />
 
+      <SeasonalHero className="mx-4 mt-4" />
+      <PackagePromo marketplaceTab="mithilak" />
+
       <div className="px-4 py-5">
       {/* 1. Page Title Header */}
 
@@ -444,7 +449,7 @@ const Mithilak = () => {
           )}
         </div>
       ) : (
-      <div className="mb-6 bg-gradient-to-r from-[#207C8A] to-[#5DB6C3] rounded-2xl p-4 text-white relative overflow-hidden shadow-sm flex items-center justify-between h-[165px]">
+      <div className="mb-6 bg-gradient-to-r from-[color:var(--ml-primary,#207C8A)] to-[#5DB6C3] rounded-2xl p-4 text-white relative overflow-hidden shadow-sm flex items-center justify-between h-[165px]">
         <div className="z-10 flex-1 max-w-[65%] flex flex-col justify-center h-full">
           <span className="bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full w-max uppercase tracking-wider">
             {t('auto.mithilaUtsav')}
@@ -478,7 +483,7 @@ const Mithilak = () => {
                 localStorage.setItem('isQuickShopFlow', 'false');
                 navigate('/categories?flow=mithilak');
               }}
-              className="text-[13px] font-bold text-[#207C8A] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
+              className="text-[13px] font-bold text-[color:var(--ml-primary,#207C8A)] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
             >
               {t('auto.viewAll')}
             </span>
@@ -487,7 +492,7 @@ const Mithilak = () => {
           <div className="flex items-center gap-2 mb-3.5 overflow-x-auto no-scrollbar pb-0.5">
             <button
               type="button"
-              className="px-3.5 py-1.5 rounded-full text-[12px] md:text-[13px] font-black whitespace-nowrap border bg-[#207C8A] text-white border-[#207C8A] shadow-xs"
+              className="px-3.5 py-1.5 rounded-full text-[12px] md:text-[13px] font-black whitespace-nowrap border bg-[color:var(--ml-primary,#207C8A)] text-white border-[color:var(--ml-primary,#207C8A)] shadow-xs"
             >
               {t('auto.allCategories')}
             </button>
@@ -500,7 +505,7 @@ const Mithilak = () => {
                 onClick={() => openCategoryExplorer(navigate, { flow: 'mithilak', id: item.id, name: item.name })}
                 className="flex-shrink-0 w-[104px] sm:w-[120px] md:w-[140px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
               >
-                <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[#207C8A]/40 transition-all duration-300 transform">
+                <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[color:var(--ml-primary,#207C8A)]/40 transition-all duration-300 transform">
                   <div className="w-full h-[38px] sm:h-[40px] md:h-[44px] flex items-center justify-center px-0.5">
                     <span className="text-[13px] sm:text-[14px] md:text-[15px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
                       {getDisplayName(item.name)}
@@ -514,7 +519,7 @@ const Mithilak = () => {
                         onError={handleImageError}
                         className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500" loading="lazy" decoding="async" />
                     ) : (
-                      <span className="text-[12px] font-black text-[#207C8A]">{item.name.charAt(0)}</span>
+                      <span className="text-[12px] font-black text-[color:var(--ml-primary,#207C8A)]">{item.name.charAt(0)}</span>
                     )}
                   </div>
                 </div>
@@ -544,7 +549,7 @@ const Mithilak = () => {
               localStorage.setItem('isQuickShopFlow', 'false');
               navigate('/mithilak/category', { state: { category: mithilaCategories[0]?.name || 'Mithila Handcrafted Items', categoryId: mithilaCategories[0]?.id } });
             }}
-            className="text-[12px] text-[#207C8A] font-bold cursor-pointer hover:underline flex items-center gap-0.5"
+            className="text-[12px] text-[color:var(--ml-primary,#207C8A)] font-bold cursor-pointer hover:underline flex items-center gap-0.5"
           >
             {t('common.viewAll')} <ChevronRight size={13} strokeWidth={2.5} className="inline-block" />
           </span>

@@ -42,16 +42,16 @@ const BrandsSpotlight = ({ items = [] }) => {
               onClick={() => handleBrandClick(card)}
               className="flex flex-col gap-1 cursor-pointer group active:scale-95 transition-transform"
             >
-              <div className="relative aspect-square rounded-lg overflow-hidden bg-white border border-gray-100 shadow-sm flex items-center justify-center p-2">
+              {/* Same square frame for every image: the picture is positioned to fill it edge to edge
+                  (object-cover), so padding no longer changes with the image's own size or ratio. */}
+              <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-50 border border-gray-100 shadow-sm">
                 <img
                   src={card.img}
                   alt={tName(card.title)}
-                  className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center text-gray-400 text-[8px]">${t('common.noImage') || 'No Image'}</div>`;
-                  }}
+                  decoding="async"
+                  onError={handleImageError}
                 />
                 <div className="absolute top-1 right-1 bg-black/10 backdrop-blur-sm text-white text-[6px] px-1 py-0.5 rounded-sm font-bold border border-white/20">{t('common.ad') || 'AD'}</div>
                 <div className="absolute bottom-0 left-0 right-0 bg-[#ff0000] text-white text-center py-0.5 text-[8.5px] font-black leading-tight">
@@ -89,12 +89,12 @@ const BrandsSpotlight = ({ items = [] }) => {
                 className="flex flex-col gap-3.5 cursor-pointer group active:scale-95 transition-transform"
               >
                 {/* Soft grey rounded image container box */}
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100/60 flex items-center justify-center p-5 group-hover:bg-slate-100/60 transition-colors duration-300">
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100/60 transition-colors duration-300">
                   <img
                     src={card.img}
                     alt={tName(card.title)}
-                    className="h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy" onError={handleImageError} />
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy" decoding="async" onError={handleImageError} />
                   <div className="absolute top-3 right-3 bg-black/10 backdrop-blur-sm text-white text-[8px] px-1.5 py-0.5 rounded font-black border border-white/20">{t('common.ad') || 'AD'}</div>
                 </div>
 

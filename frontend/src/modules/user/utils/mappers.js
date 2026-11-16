@@ -145,6 +145,10 @@ export const mapCartItem = (item, lang = '') => {
     marketplaceTab: item.marketplaceTab || item.tab || null,
     commerceFlow: item.commerceFlow || null,
     deliveryPromiseMinutes: item.deliveryPromiseMinutes || null,
+    listingId: item.listingId || null,
+    stock: item.availableStock ?? null,
+    // Highest quantity the shopper may reach: admin purchase limit and stock, whichever is lower.
+    maxQuantity: item.maxQuantity || item.availableStock || null,
   };
 };
 

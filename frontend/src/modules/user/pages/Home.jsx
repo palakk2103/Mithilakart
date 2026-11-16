@@ -1,4 +1,5 @@
 import { AddButton } from '../components/common/AddToCartButton';
+import SeasonalHero from '../../../shared/components/SeasonalHero';
 import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import useWishlistToggle from '../hooks/useWishlistToggle';
@@ -535,6 +536,7 @@ const Home = () => {
       )}
 
       {/* 2. HERO BANNER CAROUSEL (Auto-scrolling Banner Section) */}
+      {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && <SeasonalHero />}
       {(selectedCategory === 'You Buy' || selectedCategory === 'Home') && (
         <div className="px-3 mb-5 md:mb-8">
           <BannerCarousel banners={categoryBanners[selectedCategory] || categoryBanners['Home']} />

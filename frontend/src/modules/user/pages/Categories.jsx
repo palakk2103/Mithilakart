@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CategoryCard from '../components/vendor/CategoryCard';
+import CategoryProductsPanel from '../components/vendor/CategoryProductsPanel';
 import useVendorStore from '../../../store/useVendorStore';
 import { getCategories } from '../services/catalogApi';
 import { mapCategorySections } from '../utils/mappers';
@@ -309,24 +310,24 @@ const Categories = () => {
       : (isQuickShopFlow ? 'bg-[#FFF9F5]' : 'bg-[#F6F8F3]');
 
   const headerBg = isMithilakFlow 
-    ? 'bg-[#207C8A]' 
+    ? 'bg-[color:var(--ml-primary,#207C8A)]' 
     : isFreshGroceryFlow 
-      ? 'bg-[#D9A21B]' 
-      : (isQuickShopFlow ? 'bg-gradient-to-r from-[#F26522] to-[#FF8C00]' : 'bg-[#3E5A44]');
+      ? 'bg-[color:var(--fg-primary,#D9A21B)]' 
+      : (isQuickShopFlow ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[#FF8C00]' : 'bg-[#3E5A44]');
 
   const headerTextColor = 'text-white';
 
   const textPrimary = isMithilakFlow 
-    ? 'text-[#207C8A]' 
+    ? 'text-[color:var(--ml-primary,#207C8A)]' 
     : isFreshGroceryFlow 
-      ? 'text-[#D9A21B]' 
-      : (isQuickShopFlow ? 'text-[#F26522]' : 'text-[#3E5A44]');
+      ? 'text-[color:var(--fg-primary,#D9A21B)]' 
+      : (isQuickShopFlow ? 'text-[color:var(--qs-primary,#F26522)]' : 'text-[#3E5A44]');
 
   const activeIndicatorColor = isMithilakFlow 
-    ? 'bg-[#207C8A]' 
+    ? 'bg-[color:var(--ml-primary,#207C8A)]' 
     : isFreshGroceryFlow 
-      ? 'bg-[#D9A21B]' 
-      : (isQuickShopFlow ? 'bg-[#F26522]' : 'bg-[#65B842]');
+      ? 'bg-[color:var(--fg-primary,#D9A21B)]' 
+      : (isQuickShopFlow ? 'bg-[color:var(--qs-primary,#F26522)]' : 'bg-[color:var(--mk-primary,#65B842)]');
 
   const [activeSectionIndex, setActiveSectionIndex] = React.useState(0);
   const [selectedSubCategory, setSelectedSubCategory] = React.useState(null);
@@ -334,6 +335,35 @@ const Categories = () => {
 
   const sidebarRef = React.useRef(null);
   const appliedSelectionRef = React.useRef(null);
+  const savedScrollRef = React.useRef(0);
+
+  // Child category whose products are open in this page (lives in history state).
+  const openChild = location.state?.catChild || null;
+  const marketplaceTab = isMithilakFlow ? 'mithilak' : isFreshGroceryFlow ? 'groceries_fresh' : isQuickShopFlow ? 'quick_shop' : 'mithilakart';
+
+  // Reload / deep link into a child view: rebuild the parent selection from its id.
+  React.useEffect(() => {
+    if (loading || !openChild || selectedSubCategory) return;
+    for (let i = 0; i < sectionsList.length; i += 1) {
+      const parent = sectionsList[i].items.find((it) => String(it.id) === String(openChild.parentId));
+      if (parent) {
+        setActiveSectionIndex(i);
+        setSelectedSubCategory(parent);
+        return;
+      }
+    }
+  }, [loading, openChild, selectedSubCategory, sectionsList]);
+
+  // Coming back from a child's products: put the grid back exactly where it was.
+  const prevChildIdRef = React.useRef(null);
+  React.useEffect(() => {
+    const prev = prevChildIdRef.current;
+    const now = openChild?.id || null;
+    prevChildIdRef.current = now;
+    if (!rightContentRef.current || prev === now) return;
+    const top = now ? 0 : savedScrollRef.current;
+    requestAnimationFrame(() => { if (rightContentRef.current) rightContentRef.current.scrollTop = top; });
+  }, [openChild?.id]);
 
   // Deep link from the landing page (Shop by Categories): pre-select the clicked
   // category so it behaves exactly like browsing there via the bottom Category icon.
@@ -394,11 +424,28 @@ const Categories = () => {
     }
   };
 
+  // Opens a child category's products IN this page. It is pushed as its own history
+  // entry (state.catChild) so the browser/phone Back button and the on-screen arrows
+  // both return to the subcategory grid the shopper tapped from — same section, same
+  // parent, same scroll position — instead of leaving for a separate page.
   const handleSubCategoryClick = (subItem) => {
-    const parentName = selectedSubCategory?.rawName || selectedSubCategory?.name || '';
-    const subName = subItem.rawName || subItem.name || '';
-    navigate(`/category-products?category=${encodeURIComponent(parentName)}&subcategory=${encodeURIComponent(subName)}`);
+    if (!subItem?.id) return;
+    savedScrollRef.current = rightContentRef.current?.scrollTop || 0;
+    const { categoryId: _c, category: _n, ...rest } = location.state || {}; // a deep-link must not re-apply and undo the selection
+    navigate(`${location.pathname}${location.search}`, {
+      state: {
+        ...rest,
+        catChild: {
+          id: String(subItem.id),
+          name: subItem.name,
+          parentId: selectedSubCategory?.id ? String(selectedSubCategory.id) : null,
+          parentName: selectedSubCategory?.name || '',
+        },
+      },
+    });
   };
+
+  const closeChild = () => navigate(-1);
 
   const handleViewAllForSubCategory = () => {
     const catName = selectedSubCategory?.rawName || selectedSubCategory?.name || '';
@@ -423,12 +470,14 @@ const Categories = () => {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => {
-              if (selectedSubCategory) {
+              if (openChild) {
+                closeChild();
+              } else if (selectedSubCategory) {
                 setSelectedSubCategory(null);
               } else {
                 navigate(-1);
               }
-            }} 
+            }}
             className={`p-0.5 active:scale-95 transition-transform ${headerTextColor}`}
           >
             <ArrowLeft size={22} />
@@ -460,6 +509,11 @@ const Categories = () => {
                 key={sIdx}
                 data-active={isActive ? 'true' : 'false'}
                 onClick={() => {
+                  if (openChild) {
+                    // Switching section leaves the child's products; drop its history state.
+                    const { catChild: _closed, ...rest } = location.state || {};
+                    navigate(`${location.pathname}${location.search}`, { replace: true, state: rest });
+                  }
                   setActiveSectionIndex(sIdx);
                   setSelectedSubCategory(null);
                 }}
@@ -499,7 +553,16 @@ const Categories = () => {
 
         {/* Right Content Area */}
         <div ref={rightContentRef} className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-3 min-[360px]:p-4">
-          {selectedSubCategory ? (
+          {openChild ? (
+            <CategoryProductsPanel
+              key={openChild.id}
+              categoryId={openChild.id}
+              categoryName={tName(openChild.name)}
+              parentName={tName(openChild.parentName || '')}
+              marketplaceTab={marketplaceTab}
+              onBack={closeChild}
+            />
+          ) : selectedSubCategory ? (
             <div className="space-y-4 animate-in fade-in duration-200">
               {/* Back button & Title Header */}
               <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
@@ -541,13 +604,15 @@ const Categories = () => {
                       onClick={() => handleSubCategoryClick(sub)}
                       className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
                     >
-                      <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 relative shadow-[0_2px_6px_rgba(0,0,0,0.03)] hover:border-emerald-300 transition-colors">
+                      {/* Image fills the whole tile; the name sits below it, outside the image. */}
+                      <div className="w-full aspect-square rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden relative shadow-[0_2px_6px_rgba(0,0,0,0.03)] hover:border-emerald-300 transition-colors">
                         <img
                           src={sub.img || DEFAULT_PRODUCT_IMAGE}
                           alt={tName(sub.name)}
                           onError={handleImageError}
-                          className="w-full h-full object-cover rounded-xl"
+                          className="absolute inset-0 w-full h-full object-cover"
                           loading="lazy"
+                          decoding="async"
                         />
                       </div>
                       <span className="text-[12.5px] min-[360px]:text-[13px] font-medium text-slate-900 text-center leading-[1.25] break-words w-full">
@@ -573,14 +638,16 @@ const Categories = () => {
                       onClick={() => handleCategoryItemClick(item)}
                       className="flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-transform"
                     >
-                      <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1 relative shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
-                        <img 
-                          src={item.img || DEFAULT_PRODUCT_IMAGE} 
-                          alt={tName(item.name)} 
-                          onError={handleImageError}
-                          className="w-full h-full object-cover rounded-xl" loading="lazy" decoding="async" />
+                      <div className="relative w-full">
+                        <div className="w-full aspect-square rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden relative shadow-[0_2px_6px_rgba(0,0,0,0.03)]">
+                          <img
+                            src={item.img || DEFAULT_PRODUCT_IMAGE}
+                            alt={tName(item.name)}
+                            onError={handleImageError}
+                            className="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" />
+                        </div>
                         {item.children && item.children.length > 0 && (
-                          <div className="absolute -bottom-1 -right-1 bg-[#6FAE4A] text-white text-[7.5px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
+                          <div className="absolute -bottom-1 -right-1 bg-[#6FAE4A] text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-xs">
                             {item.children.length}
                           </div>
                         )}

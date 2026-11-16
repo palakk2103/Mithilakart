@@ -123,8 +123,8 @@ const DealsPage = () => {
     try {
       await addProductToCart(product);
       toast.success(t('auto.addedToCart'));
-    } catch {
-      toast.error(t('auto.couldNotAddToCart'));
+    } catch (err) {
+      if (err?.code !== 'LOGIN_REQUIRED') toast.error(err?.message || t('auto.couldNotAddToCart'));
     }
   };
 

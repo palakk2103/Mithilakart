@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { getAlreadyBought } from '../../../services/userApi';
-import { addProductToCart } from '../../../utils/cartUtils';
+import { addProductToCart, getMarketplaceTab } from '../../../utils/cartUtils';
+
+const TAB_LABEL = { mithilakart: 'Mithilakart', mithilak: 'Mithilak', quick_shop: 'Quick Shop', groceries_fresh: 'Fresh & Groceries' };
 import { getTokens, getUser, isAuthenticated } from '../../../../../shared/api/tokenStorage';
 
 const PAGE_SIZE = 12;
@@ -77,9 +79,11 @@ const AlreadyBoughtSection = ({ CardComponent }) => {
         variantId: it.variantId,
         marketplaceTab: it.marketplaceTab || 'mithilakart',
       }, 1, it.commerceFlow || undefined);
-      toast.success(t('common.addedToCart', { name: deal.title }));
+      // Each tab has its own cart: say where the item went when it is not the cart being viewed.
+      const wentTo = it.marketplaceTab && it.marketplaceTab !== getMarketplaceTab() ? TAB_LABEL[it.marketplaceTab] : null;
+      toast.success(wentTo ? `Added to your ${wentTo} cart` : t('common.addedToCart', { name: deal.title }));
     } catch (err) {
-      toast.error(err?.message || t('common.couldNotAddToCart'));
+      if (err?.code !== 'LOGIN_REQUIRED') toast.error(err?.message || t('common.couldNotAddToCart'));
     }
   }, []);
 

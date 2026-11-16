@@ -16,6 +16,8 @@ import { setDomTranslationLanguage } from './shared/utils/domTranslator';
 import LocationPrompt from './shared/components/LocationPrompt';
 import { PublicConfigLoader } from './shared/config/publicConfig';
 import ScrollToTop from './shared/components/ScrollToTop';
+import LoginRequiredBridge from './shared/components/LoginRequiredBridge';
+import SeasonalEffects from './shared/components/SeasonalEffects';
 import PageLoader from './shared/components/PageLoader';
 import lazyWithRetry from './shared/utils/lazyWithRetry';
 
@@ -61,6 +63,8 @@ function App() {
         <LocationProvider>
           <BrowserRouter>
           <ScrollToTop />
+          <LoginRequiredBridge />
+          <SeasonalEffects />
           {showSplash && (
             <SplashScreen
               onComplete={() => {

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import LoginGate from '../../../../shared/components/LoginGate';
+import { MapPin as MapPinGate } from 'lucide-react';
 import {
   ArrowLeft, Plus, MapPin, Edit2, Trash2,
   Home, Building2, MoreVertical, X, Phone, User, CheckCircle2
@@ -40,7 +42,7 @@ const toAddressPayload = (formData, liveLocation) => ({
   placeId: formData.placeId ?? liveLocation?.placeId,
 });
 
-const SavedAddresses = () => {
+const SavedAddressesPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { setSavedAddresses, setSelectedAddress } = useAccountStore();
@@ -426,5 +428,11 @@ const SavedAddresses = () => {
     </motion.div>
   );
 };
+
+const SavedAddresses = () => (
+  <LoginGate title="Saved Addresses" cardTitle="Login to see your addresses" subtitle="Log in to view and manage your delivery addresses." icon={MapPinGate}>
+    <SavedAddressesPage />
+  </LoginGate>
+);
 
 export default SavedAddresses;

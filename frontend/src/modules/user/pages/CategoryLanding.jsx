@@ -26,7 +26,7 @@ const SubcategorySlider = ({ items, onSelect, title }) => (
           onClick={() => onSelect(item)}
           className="min-w-0 w-full flex flex-col items-center cursor-pointer group active:scale-95 transition-transform outline-none"
         >
-          <div className="w-full aspect-square rounded-[18px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/60 group-hover:border-[#207C8A]/40 group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] transition-all p-1">
+          <div className="w-full aspect-square rounded-[18px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/60 group-hover:border-[color:var(--ml-primary,#207C8A)]/40 group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] transition-all p-1">
             <img
               src={getImageUrl(item.imageUrl || item.iconUrl)}
               alt={item.name}
@@ -51,10 +51,10 @@ const ProductSection = ({ block, onProduct, onAdd, onCta }) => (
     <div className="flex items-end justify-between mb-3 px-1 gap-3">
       <div className="min-w-0">
         <h2 className="text-[17px] md:text-[19px] font-bold text-[#3F2A20] tracking-tight leading-tight">{block.title}</h2>
-        {block.subtitle && <p className="text-[11px] text-[#207C8A] font-extrabold tracking-wide uppercase mt-0.5 line-clamp-1">{block.subtitle}</p>}
+        {block.subtitle && <p className="text-[11px] text-[color:var(--ml-primary,#207C8A)] font-extrabold tracking-wide uppercase mt-0.5 line-clamp-1">{block.subtitle}</p>}
       </div>
       {block.ctaText && (
-        <button type="button" onClick={() => onCta(block)} className="text-[12px] text-[#207C8A] font-bold hover:underline flex items-center gap-0.5 flex-shrink-0">
+        <button type="button" onClick={() => onCta(block)} className="text-[12px] text-[color:var(--ml-primary,#207C8A)] font-bold hover:underline flex items-center gap-0.5 flex-shrink-0">
           {block.ctaText} <ChevronRight size={13} strokeWidth={2.5} />
         </button>
       )}
@@ -64,7 +64,7 @@ const ProductSection = ({ block, onProduct, onAdd, onCta }) => (
       <div
         role={block.ctaLink ? 'link' : undefined}
         onClick={() => block.ctaLink && onCta(block)}
-        className={`mb-3 w-full aspect-[16/5] md:aspect-[21/5] rounded-[18px] overflow-hidden border border-[#207C8A]/20 bg-[#E3F3F5] ${block.ctaLink ? 'cursor-pointer' : ''}`}
+        className={`mb-3 w-full aspect-[16/5] md:aspect-[21/5] rounded-[18px] overflow-hidden border border-[color:var(--ml-primary,#207C8A)]/20 bg-[#E3F3F5] ${block.ctaLink ? 'cursor-pointer' : ''}`}
       >
         <img src={getImageUrl(block.imageUrl)} alt={block.title} loading="lazy" decoding="async" onError={handleImageError} className="w-full h-full object-cover" />
       </div>
@@ -216,10 +216,10 @@ const CategoryLanding = () => {
           <div className="py-16 text-center space-y-3" data-testid="landing-error">
             <p className="text-[#3F2A20] font-bold">We couldn&apos;t load this page.</p>
             <div className="flex justify-center gap-2">
-              <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="px-4 py-2 rounded-full bg-[#207C8A] text-white text-[12px] font-black">
+              <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="px-4 py-2 rounded-full bg-[color:var(--ml-primary,#207C8A)] text-white text-[12px] font-black">
                 Try again
               </button>
-              <button type="button" onClick={() => fallbackToListing()} className="px-4 py-2 rounded-full border border-[#207C8A] text-[#207C8A] text-[12px] font-black">
+              <button type="button" onClick={() => fallbackToListing()} className="px-4 py-2 rounded-full border border-[color:var(--ml-primary,#207C8A)] text-[color:var(--ml-primary,#207C8A)] text-[12px] font-black">
                 Browse products
               </button>
             </div>
