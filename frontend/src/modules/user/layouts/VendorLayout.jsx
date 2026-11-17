@@ -28,7 +28,7 @@ import { tName } from '../../../shared/utils/translateName';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import Footer from '../../../shared/components/Footer';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
-import { useHydrateAddresses, getDisplayAddress } from '../../../shared/hooks/useDeliverToAddress';
+import { useHydrateAddresses, getDisplayAddress, findSelectedAddress } from '../../../shared/hooks/useDeliverToAddress';
 
 const getMithilakartHeaderBg = (category) => {
   switch (category) {
@@ -81,7 +81,7 @@ const VendorLayout = () => {
     // Refreshes only if the cached config is older than 30s.
     fetchYouPopupItems().then(setYouItems);
   };
-  const { savedAddresses, selectedAddressId, isDarkMode } = useAccountStore();
+  const { savedAddresses, selectedAddressId, deliveryMode, isDarkMode } = useAccountStore();
   const activeFlow = useVendorStore((state) => state.activeFlow);
   const setActiveFlow = useVendorStore((state) => state.setActiveFlow);
   const selectedCategory = useVendorStore((state) => state.selectedCategory);
@@ -90,9 +90,9 @@ const VendorLayout = () => {
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
   useHydrateAddresses();
   const deliverTo = useMemo(() => {
-    return getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
-  }, [savedAddresses, selectedAddressId, liveLocation?.latitude, liveLocation?.longitude, liveLocation?.city, liveLocation?.shortLabel]);
-  const selectedAddress = savedAddresses.find(a => a.id === selectedAddressId) || savedAddresses[0];
+    return getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation, deliveryMode });
+  }, [savedAddresses, selectedAddressId, deliveryMode, liveLocation?.latitude, liveLocation?.longitude, liveLocation?.city, liveLocation?.shortLabel]);
+  const selectedAddress = findSelectedAddress(savedAddresses, selectedAddressId);
 
   const effectiveFlow = useMemo(() => {
     if (location.pathname.includes('/quick-shop')) return 'quickshop';

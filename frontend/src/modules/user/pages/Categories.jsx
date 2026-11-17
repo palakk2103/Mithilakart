@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import CategoryCard from '../components/vendor/CategoryCard';
 import useVendorStore from '../../../store/useVendorStore';
-import { getCategories } from '../services/catalogApi';
-import { mapCategorySections } from '../utils/mappers';
+import { getCategories, getCategoryProducts } from '../services/catalogApi';
+import { mapCategorySections, extractList, mapProductForCard, findCategoryByName } from '../utils/mappers';
 import { DEFAULT_PRODUCT_IMAGE, handleImageError } from '../../../shared/utils/imageUtils';
 import { useTranslation } from 'react-i18next';
 import { tName } from '../../../shared/utils/translateName';
 import { useLanguage } from '../../../shared/context/LanguageContext';
+import { getStoredHeaderTabs } from '../../../config/userAppTabs';
 
 // Import Assets (aligned with categories)
 import SamsungS24 from '../../../assets/products/product01.jpg';
@@ -209,11 +210,16 @@ const FRESH_GROCERY_CATEGORIES = [
   }
 ];
 
+// Remembers exactly where the user was on this page (section, subcategory,
+// child category, scroll) so coming Back (e.g. from a product page) restores it.
+const VIEW_STATE_KEY = 'categoriesPageViewState';
+
 const Categories = () => {
   const { t } = useTranslation();
   const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const navigationType = useNavigationType();
   const searchParams = new URLSearchParams(location.search);
   const flowParam = searchParams.get('flow') || searchParams.get('tab') || location.state?.flow;
   const storeFlow = useVendorStore((state) => state.activeFlow);
@@ -335,15 +341,80 @@ const Categories = () => {
   const sidebarRef = React.useRef(null);
   const appliedSelectionRef = React.useRef(null);
 
+  // Level-3 (child) category whose products are shown inline in the right pane.
+  const [selectedChild, setSelectedChild] = React.useState(null);
+  const [childProducts, setChildProducts] = React.useState([]);
+  const [childLoading, setChildLoading] = React.useState(false);
+  const [childLoadedFor, setChildLoadedFor] = React.useState(null);
+  const gridScrollRef = React.useRef(0); // scroll of the subcategory grid when a child was opened
+  const pendingScrollRef = React.useRef(null); // scroll to apply after the next view change
+  const scrollTopRef = React.useRef(0);
+  const viewStateRef = React.useRef(null);
+
+  const marketplaceTab = isMithilakFlow
+    ? 'mithilak'
+    : isFreshGroceryFlow
+      ? 'groceries_fresh'
+      : isQuickShopFlow
+        ? 'quick_shop'
+        : 'mithilakart';
+
+  viewStateRef.current = {
+    key: `${location.key}|${currentFlow}`,
+    sectionIndex: activeSectionIndex,
+    sectionId: sectionsList[activeSectionIndex]?.id || null,
+    subId: selectedSubCategory?.id || null,
+    subName: selectedSubCategory?.rawName || selectedSubCategory?.name || null,
+    childId: selectedChild?.id || null,
+    childName: selectedChild?.rawName || selectedChild?.name || null,
+    gridScrollTop: gridScrollRef.current,
+  };
+
+  // Persist the current view when leaving the page so Back returns to it.
+  React.useEffect(() => () => {
+    try {
+      sessionStorage.setItem(VIEW_STATE_KEY, JSON.stringify({ ...viewStateRef.current, scrollTop: scrollTopRef.current }));
+    } catch { /* storage unavailable */ }
+  }, []);
+
   // Deep link from the landing page (Shop by Categories): pre-select the clicked
   // category so it behaves exactly like browsing there via the bottom Category icon.
   React.useEffect(() => {
     if (loading) return;
+    const key = `${location.key}|${currentFlow}`;
+    if (appliedSelectionRef.current === key) return;
+
+    // Returning via Back: restore exactly the view the user left from.
+    if (navigationType === 'POP') {
+      let snap = null;
+      try { snap = JSON.parse(sessionStorage.getItem(VIEW_STATE_KEY) || 'null'); } catch { snap = null; }
+      if (snap && snap.key === key) {
+        appliedSelectionRef.current = key;
+        let sIdx = snap.sectionId ? sectionsList.findIndex((s) => String(s.id) === String(snap.sectionId)) : -1;
+        if (sIdx < 0 && snap.sectionIndex < sectionsList.length) sIdx = snap.sectionIndex;
+        if (sIdx < 0) return;
+        const items = sectionsList[sIdx]?.items || [];
+        const sub = (snap.subId || snap.subName)
+          ? items.find((it) => (snap.subId && String(it.id) === String(snap.subId)) || (snap.subName && (it.rawName || it.name) === snap.subName))
+          : null;
+        const child = sub && (snap.childId || snap.childName)
+          ? (sub.children || []).find((c) => (snap.childId && String(c.id) === String(snap.childId)) || (snap.childName && (c.rawName || c.name) === snap.childName))
+          : null;
+        setActiveSectionIndex(sIdx);
+        setSelectedSubCategory(sub && sub.children?.length > 0 ? sub : null);
+        setSelectedChild(child || null);
+        gridScrollRef.current = snap.gridScrollTop || 0;
+        pendingScrollRef.current = snap.scrollTop || 0;
+        requestAnimationFrame(() => {
+          sidebarRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
+        });
+        return;
+      }
+    }
+
     const wantedId = location.state?.categoryId ? String(location.state.categoryId) : null;
     const wantedName = String(location.state?.category || '').trim().toLowerCase();
     if (!wantedId && !wantedName) return;
-    const key = `${location.key}|${currentFlow}`;
-    if (appliedSelectionRef.current === key) return;
     appliedSelectionRef.current = key;
 
     const sameName = (...names) => !!wantedName && names.some((n) => String(n || '').trim().toLowerCase() === wantedName);
@@ -358,17 +429,79 @@ const Categories = () => {
     if (sIdx < 0) return;
     setActiveSectionIndex(sIdx);
     setSelectedSubCategory(item && item.children?.length > 0 ? item : null);
+    setSelectedChild(null);
     // Bring the selected sidebar entry into view.
     requestAnimationFrame(() => {
       sidebarRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
     });
-  }, [loading, sectionsList, location.key, currentFlow]);
+  }, [loading, sectionsList, location.key, currentFlow, navigationType]);
 
   React.useEffect(() => {
-    if (rightContentRef.current) {
-      rightContentRef.current.scrollTop = 0;
+    const el = rightContentRef.current;
+    if (!el) return;
+    // Product list restore waits until its products have loaded (see below).
+    if (selectedChild && pendingScrollRef.current != null) return;
+    el.scrollTop = pendingScrollRef.current ?? 0;
+    scrollTopRef.current = el.scrollTop;
+    pendingScrollRef.current = null;
+  }, [activeSectionIndex, selectedSubCategory, selectedChild]);
+
+  React.useEffect(() => {
+    if (!selectedChild || childLoading || childLoadedFor !== selectedChild || pendingScrollRef.current == null) return;
+    const target = pendingScrollRef.current;
+    pendingScrollRef.current = null;
+    requestAnimationFrame(() => {
+      if (rightContentRef.current) {
+        rightContentRef.current.scrollTop = target;
+        scrollTopRef.current = target;
+      }
+    });
+  }, [selectedChild, childLoading, childLoadedFor]);
+
+  // Load products of the selected child category inline (no page change).
+  React.useEffect(() => {
+    if (!selectedChild) {
+      setChildProducts([]);
+      setChildLoading(false);
+      return undefined;
     }
-  }, [activeSectionIndex, selectedSubCategory]);
+    let cancelled = false;
+    setChildLoading(true);
+    setChildProducts([]);
+    (async () => {
+      try {
+        let catId = selectedChild.id;
+        if (!catId) {
+          const cats = await getCategories({ marketplaceTab });
+          catId = findCategoryByName(cats, selectedChild.rawName || selectedChild.name)?.id;
+        }
+        if (!catId) {
+          if (!cancelled) setChildProducts([]);
+          return;
+        }
+        const data = await getCategoryProducts(catId, { limit: 40, marketplaceTab });
+        if (!cancelled) setChildProducts(extractList(data).map((p) => mapProductForCard(p, '', currentLanguage)));
+      } catch {
+        if (!cancelled) setChildProducts([]);
+      } finally {
+        if (!cancelled) {
+          setChildLoading(false);
+          setChildLoadedFor(selectedChild);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedChild, marketplaceTab, currentLanguage]);
+
+  const openChildCategory = (child) => {
+    gridScrollRef.current = rightContentRef.current?.scrollTop || 0;
+    setSelectedChild(child);
+  };
+
+  const closeChildCategory = () => {
+    pendingScrollRef.current = gridScrollRef.current;
+    setSelectedChild(null);
+  };
 
   const handleCategoryItemClick = (item) => {
     // If the category has Level 3 subcategories, display them inside this page!
@@ -394,10 +527,9 @@ const Categories = () => {
     }
   };
 
+  // Child (level 3) category: show its products right here instead of a new page.
   const handleSubCategoryClick = (subItem) => {
-    const parentName = selectedSubCategory?.rawName || selectedSubCategory?.name || '';
-    const subName = subItem.rawName || subItem.name || '';
-    navigate(`/category-products?category=${encodeURIComponent(parentName)}&subcategory=${encodeURIComponent(subName)}`);
+    openChildCategory(subItem);
   };
 
   const handleViewAllForSubCategory = () => {
@@ -423,7 +555,9 @@ const Categories = () => {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => {
-              if (selectedSubCategory) {
+              if (selectedChild) {
+                closeChildCategory();
+              } else if (selectedSubCategory) {
                 setSelectedSubCategory(null);
               } else {
                 navigate(-1);
@@ -434,7 +568,11 @@ const Categories = () => {
             <ArrowLeft size={22} />
           </button>
           <h1 className={`text-[19px] font-black tracking-tight ${headerTextColor}`}>
-            {isMithilakFlow ? t('categoriesPage.mithilaSpecialities') : isFreshGroceryFlow ? t('categoriesPage.freshGroceries') : isQuickShopFlow ? t('categoriesPage.quickCategories') : t('categoriesPage.categories')}
+            {isMithilakFlow ? t('categoriesPage.mithilaSpecialities') : isFreshGroceryFlow ? t('categoriesPage.freshGroceries') : isQuickShopFlow ? (() => {
+              const tab = getStoredHeaderTabs().find((tb) => tb.id === 'quickshop');
+              if (!tab) return t('nav.quickShop');
+              return tab.i18nKey ? t(tab.i18nKey, { defaultValue: tab.label }) : tab.label;
+            })() : t('categoriesPage.categories')}
           </h1>
         </div>
         <button 
@@ -462,6 +600,7 @@ const Categories = () => {
                 onClick={() => {
                   setActiveSectionIndex(sIdx);
                   setSelectedSubCategory(null);
+                  setSelectedChild(null);
                 }}
                 className={`w-full py-4 px-1.5 flex flex-col items-center gap-1.5 border-b border-slate-100 relative transition-all duration-200 ${
                   isActive 
@@ -498,8 +637,82 @@ const Categories = () => {
         </div>
 
         {/* Right Content Area */}
-        <div ref={rightContentRef} className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-3 min-[360px]:p-4">
-          {selectedSubCategory ? (
+        <div
+          ref={rightContentRef}
+          onScroll={(e) => { scrollTopRef.current = e.currentTarget.scrollTop; }}
+          className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-3 min-[360px]:p-4"
+        >
+          {selectedSubCategory && selectedChild ? (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Back to the subcategory grid & Title Header */}
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                <button
+                  onClick={closeChildCategory}
+                  className="p-1.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 active:scale-95 transition-all flex items-center justify-center shadow-xs"
+                  aria-label={t('common.back')}
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider break-words">
+                    {tName(selectedSubCategory.name)}
+                  </div>
+                  <h2 className="text-[14px] font-black text-slate-800 tracking-tight uppercase break-words leading-tight">
+                    {tName(selectedChild.name)}
+                  </h2>
+                </div>
+              </div>
+
+              {childLoading ? (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="rounded-xl border border-slate-100 p-1.5 animate-pulse">
+                      <div className="aspect-square rounded-lg bg-slate-100" />
+                      <div className="h-2.5 bg-slate-100 rounded mt-2 w-4/5" />
+                      <div className="h-2.5 bg-slate-100 rounded mt-1.5 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : childProducts.length === 0 ? (
+                <div className="py-12 text-center text-[12px] font-semibold text-slate-400">
+                  {t('common.noProductsFound', 'No products found')}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {childProducts.map((product, idx) => (
+                    <div
+                      key={product.listingId || product.id || idx}
+                      onClick={() => navigate('/product-detail', { state: { product } })}
+                      className="flex flex-col rounded-xl border border-slate-100 bg-white p-1.5 cursor-pointer active:scale-[0.98] transition-transform shadow-[0_2px_6px_rgba(0,0,0,0.03)]"
+                    >
+                      <div className="aspect-square rounded-lg overflow-hidden bg-slate-50">
+                        <img
+                          src={product.image || DEFAULT_PRODUCT_IMAGE}
+                          alt={product.name}
+                          onError={handleImageError}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
+                      <h3 className="mt-1.5 text-[11.5px] font-semibold text-slate-800 line-clamp-2 leading-tight min-h-[2.4em]">
+                        {product.name}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-1 flex-wrap">
+                        <span className="text-[12.5px] font-black text-slate-900">₹{product.price}</span>
+                        {product.oldPrice && product.oldPrice !== product.price && (
+                          <span className="text-[9.5px] text-slate-400 line-through font-semibold">₹{product.oldPrice}</span>
+                        )}
+                      </div>
+                      {product.off && (
+                        <span className="text-[9.5px] font-bold text-emerald-600">{product.off}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : selectedSubCategory ? (
             <div className="space-y-4 animate-in fade-in duration-200">
               {/* Back button & Title Header */}
               <div className="flex items-center gap-2 pb-2 border-b border-slate-100">

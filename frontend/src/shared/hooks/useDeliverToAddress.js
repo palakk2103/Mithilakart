@@ -36,6 +36,9 @@ export const useHydrateAddresses = () => {
         if (cancelled) return;
         const mapped = (Array.isArray(list) ? list : []).map(mapApiAddress);
         setSavedAddresses(mapped);
+        // Keep the customer's chosen address if it still exists; otherwise fall back to default.
+        const currentId = useAccountStore.getState().selectedAddressId;
+        if (currentId != null && mapped.some((a) => String(a.id) === String(currentId))) return;
         const defaultAddr = mapped.find((a) => a.isDefault) || mapped[0];
         if (defaultAddr) setSelectedAddress(defaultAddr.id);
       } catch {
@@ -47,8 +50,17 @@ export const useHydrateAddresses = () => {
   }, [setSavedAddresses, setSelectedAddress]);
 };
 
-export const getDisplayAddress = ({ savedAddresses, selectedAddressId, liveLocation }) => {
-  if (hasLiveGps(liveLocation)) {
+export const findSelectedAddress = (savedAddresses = [], selectedAddressId) =>
+  savedAddresses.find((a) => String(a.id) === String(selectedAddressId)) || savedAddresses[0];
+
+export const getDisplayAddress = ({
+  savedAddresses,
+  selectedAddressId,
+  liveLocation,
+  deliveryMode = useAccountStore.getState().deliveryMode,
+}) => {
+  const preferSaved = deliveryMode === 'saved' && savedAddresses?.length > 0;
+  if (!preferSaved && hasLiveGps(liveLocation)) {
     return {
       label: formatLocationLabel(liveLocation),
       city: liveLocation.city,
@@ -58,7 +70,7 @@ export const getDisplayAddress = ({ savedAddresses, selectedAddressId, liveLocat
     };
   }
 
-  const selected = savedAddresses.find((a) => a.id === selectedAddressId) || savedAddresses[0];
+  const selected = findSelectedAddress(savedAddresses, selectedAddressId);
   if (selected?.address) {
     return {
       label: selected.address,
@@ -66,6 +78,7 @@ export const getDisplayAddress = ({ savedAddresses, selectedAddressId, liveLocat
       latitude: selected.latitude,
       longitude: selected.longitude,
       source: 'saved',
+      addressId: selected.id,
     };
   }
 

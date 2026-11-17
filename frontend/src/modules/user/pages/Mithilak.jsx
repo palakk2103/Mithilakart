@@ -392,7 +392,7 @@ const Mithilak = () => {
   };
 
   return (
-    <div className="bg-[#F5F9FA] min-h-screen select-none pb-24">
+    <div className="bg-[#F5F9FA] min-h-screen select-none pb-6">
       {/* 0. Header Categories (admin-managed for Mithilak tab) */}
       <MithilaHeaderChips
         chips={headerChips}

@@ -434,7 +434,7 @@ const QuickShop = () => {
 
   if (isFreshGrocery) {
     return (
-      <div className="min-h-screen pb-24 bg-[#FFF8EE] flex flex-col font-sans text-[#3F2A20] relative overflow-x-hidden">
+      <div className="min-h-screen pb-6 bg-[#FFF8EE] flex flex-col font-sans text-[#3F2A20] relative overflow-x-hidden">
         
         {/* Repeating Mithila Art Page Background Texture */}
         <div 
@@ -870,7 +870,7 @@ const QuickShop = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-4 gap-1.5 -mx-2 md:mx-0 md:gap-3 md:grid-cols-[repeat(auto-fill,110px)]">
             {categoriesLoading && Array.from({ length: 8 }).map((_, idx) => (
               <div key={idx} className="h-[92px] bg-white border border-slate-100 rounded-2xl animate-pulse" />
             ))}
@@ -881,16 +881,18 @@ const QuickShop = () => {
                   localStorage.setItem('isQuickShopFlow', 'true');
                   openCategoryExplorer(navigate, { flow: 'quickshop', id: cat.id, name: cat.name });
                 }}
-                className="bg-white border border-[#FFD9C7]/60 rounded-2xl p-2 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#F26522]"
+                className="bg-white border border-[#FFD9C7]/60 rounded-2xl p-1 flex flex-col items-center justify-start text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#F26522]"
               >
-                <div className="w-12 h-12 flex items-center justify-center mb-1.5 bg-[#FFF7ED] rounded-xl overflow-hidden p-1">
+                <div className="w-full aspect-square flex items-center justify-center mb-1.5 bg-[#FFF7ED] rounded-xl overflow-hidden p-2">
                   {cat.imageUrl || cat.iconUrl ? (
-                    <img src={getImageUrl(cat.imageUrl || cat.iconUrl)} alt={cat.name} className="w-full h-full object-contain" onError={handleImageError} loading="lazy" decoding="async" />
+                    <img src={getImageUrl(cat.imageUrl || cat.iconUrl)} alt={cat.name} className="w-full h-full object-contain scale-110" onError={handleImageError} loading="lazy" decoding="async" />
                   ) : (
-                    <GroceryCategoryIcon category={cat} />
+                    <GroceryCategoryIcon category={cat} imgClassName="scale-110" />
                   )}
                 </div>
-                <span className="text-[10px] md:text-[11px] font-black text-slate-800 leading-tight line-clamp-2">{cat.name}</span>
+                <div className="min-h-[2.5em] flex items-center justify-center text-[10px] md:text-[11px] font-black text-slate-800 leading-tight">
+                  <span className="line-clamp-2">{cat.name}</span>
+                </div>
               </div>
             ))}
             {!categoriesLoading && categoryTree.length === 0 && (

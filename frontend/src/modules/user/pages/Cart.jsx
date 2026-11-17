@@ -26,9 +26,9 @@ const Cart = () => {
   const [shippingConfig, setShippingConfig] = useState({ threshold: 500, fee: 39 });
   const navigate = useNavigate();
   const { location: liveLocation, setPromptOpen } = useLiveLocation();
-  const { savedAddresses, selectedAddressId, wishlist, addToWishlist: addToWishlistStore, removeFromWishlist: removeFromWishlistStore } = useAccountStore();
+  const { savedAddresses, selectedAddressId, deliveryMode, wishlist, addToWishlist: addToWishlistStore, removeFromWishlist: removeFromWishlistStore } = useAccountStore();
   useHydrateAddresses();
-  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
+  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation, deliveryMode });
 
   const theme = useTabTheme();
   const isMithilakFlow = theme.activeFlow === 'mithilak';
