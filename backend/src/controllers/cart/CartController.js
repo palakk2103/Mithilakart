@@ -34,6 +34,12 @@ class CartController extends BaseController {
     };
   }
 
+  _loginRequiredError() {
+    const err = AppError.unauthorized('Please log in to continue');
+    err.details = [{ code: 'LOGIN_REQUIRED' }];
+    return err;
+  }
+
   /** Tab of the cart being acted on: query string (GET/DELETE) or body (PATCH). */
   _tabOf(req) {
     return {
@@ -42,19 +48,37 @@ class CartController extends BaseController {
     };
   }
 
+  /**
+   * Guests have no cart. Reads return an empty one (so the badge shows 0);
+   * anything that would change a cart is refused with LOGIN_REQUIRED so the
+   * storefront can send the shopper to log in first.
+   */
+  async _guestGate(req, userId) {
+    if (userId) return false;
+    return this.service.isLoginRequired();
+  }
+
   getCart = asyncHandler(async (req, res) => {
+    if (await this._guestGate(req, req.user?.id || null)) {
+      return ApiResponse.success(res, await this.service.getEmptyCart({
+        marketplaceTab: req.query.marketplaceTab || null,
+        commerceFlow: req.query.commerceFlow || null,
+      }));
+    }
     const { userId, sessionId } = this._resolveCartContext(req, res);
     const data = await this.service.getCart({
       userId,
       sessionId,
       commerceFlow: req.query.commerceFlow || 'standard',
       marketplaceTab: req.query.marketplaceTab || null,
+      couponCode: req.query.couponCode ? String(req.query.couponCode).trim().toUpperCase() : null,
     });
 
     return ApiResponse.success(res, data);
   });
 
   addItem = asyncHandler(async (req, res) => {
+    if (await this._guestGate(req, req.user?.id || null)) throw this._loginRequiredError();
     const { userId, sessionId } = this._resolveCartContext(req, res);
     const data = await this.service.addItem({
       userId,
@@ -71,6 +95,7 @@ class CartController extends BaseController {
   });
 
   updateItem = asyncHandler(async (req, res) => {
+    if (await this._guestGate(req, req.user?.id || null)) throw this._loginRequiredError();
     const { userId, sessionId } = this._resolveCartContext(req, res);
     const data = await this.service.updateItemQuantity({
       userId,
@@ -84,6 +109,7 @@ class CartController extends BaseController {
   });
 
   removeItem = asyncHandler(async (req, res) => {
+    if (await this._guestGate(req, req.user?.id || null)) throw this._loginRequiredError();
     const { userId, sessionId } = this._resolveCartContext(req, res);
     const data = await this.service.removeItem({
       userId,
@@ -96,6 +122,7 @@ class CartController extends BaseController {
   });
 
   clearCart = asyncHandler(async (req, res) => {
+    if (await this._guestGate(req, req.user?.id || null)) throw this._loginRequiredError();
     const { userId, sessionId } = this._resolveCartContext(req, res);
     const data = await this.service.clearCart({ userId, sessionId, ...this._tabOf(req) });
     return ApiResponse.success(res, data);

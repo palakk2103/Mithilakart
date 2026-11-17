@@ -513,6 +513,53 @@ class MarketplaceListingService extends BaseService {
     return { listing, product };
   }
 
+  /**
+   * Keeps a product's marketplace listings in step with the product's
+   * moderation status. Approving a product only flipped Product.status, so the
+   * listings seller-created products start with (pending / invisible) never
+   * reached the storefront — the product looked "added but not shown".
+   *
+   * approve  -> pending/draft listings become approved + visible (listings an
+   *             admin explicitly rejected or suspended are left alone)
+   * reject   -> every live listing of the product is hidden
+   */
+  async syncListingsWithProductStatus(productIds, status, note = null) {
+    const ids = (Array.isArray(productIds) ? productIds : [productIds]).filter(Boolean);
+    if (!ids.length) return { modified: 0 };
+    const Model = this.marketplaceListingRepository.model;
+
+    if (status === PRODUCT_STATUS.APPROVED) {
+      const now = new Date();
+      const res = await Model.updateMany(
+        {
+          productId: { $in: ids },
+          deletedAt: null,
+          listingStatus: { $in: [LISTING_STATUS.PENDING, LISTING_STATUS.DRAFT] },
+        },
+        {
+          $set: {
+            listingStatus: LISTING_STATUS.APPROVED,
+            isVisible: true,
+            approvedAt: now,
+            publishedAt: now,
+            rejectedAt: null,
+            moderationNote: null,
+          },
+        }
+      );
+      return { modified: res.modifiedCount || 0 };
+    }
+
+    if (status === PRODUCT_STATUS.REJECTED) {
+      const res = await Model.updateMany(
+        { productId: { $in: ids }, deletedAt: null },
+        { $set: { listingStatus: LISTING_STATUS.REJECTED, isVisible: false, rejectedAt: new Date(), moderationNote: note } }
+      );
+      return { modified: res.modifiedCount || 0 };
+    }
+    return { modified: 0 };
+  }
+
   async approveListing(adminId, listingId, note = null) {
     const listing = await this.marketplaceListingRepository.findOne({ _id: listingId, deletedAt: null });
     if (!listing) throw AppError.notFound('Listing not found');

@@ -16,6 +16,8 @@ import CategoryChipsManager from '../catalog/CategoryChipsManager';
 import HomeSectionsManager from '../catalog/HomeSectionsManager';
 import HeaderTabsManager from '../catalog/HeaderTabsManager';
 import YouPopupManager from '../catalog/YouPopupManager';
+import PackageManager from '../catalog/PackageManager';
+import TabThemes from '../pages/content/TabThemes';
 import HelpCenterManager from '../catalog/HelpCenterManager';
 
 // New Admin Pages
@@ -103,6 +105,8 @@ const AdminRoutes = () => {
         <Route path="storefront/chips" element={<CategoryChipsManager />} />
         <Route path="storefront/tabs" element={<HeaderTabsManager />} />
         <Route path="storefront/you-popup" element={<YouPopupManager />} />
+        <Route path="storefront/packages" element={<PackageManager />} />
+        <Route path="storefront/themes" element={<TabThemes />} />
         <Route path="storefront/help-center" element={<HelpCenterManager />} />
         <Route path="storefront/sections/:section" element={<HomeSectionsManager />} />
         

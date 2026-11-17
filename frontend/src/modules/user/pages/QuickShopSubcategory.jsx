@@ -164,15 +164,15 @@ const QuickShopSubcategory = () => {
   }, []);
   
   const primaryText = theme.primaryText;
-  const primaryBg = isFreshGroceryFlow ? 'bg-[#D9A21B]' : isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#F26522]';
+  const primaryBg = isFreshGroceryFlow ? 'bg-[color:var(--fg-primary,#D9A21B)]' : isMithilakFlow ? 'bg-[color:var(--ml-primary,#207C8A)]' : 'bg-[color:var(--qs-primary,#F26522)]';
   const primaryBgHover = isFreshGroceryFlow ? 'hover:bg-[#FFF8EE] bg-white' : isMithilakFlow ? 'hover:bg-[#F5F9FA] bg-white' : 'hover:bg-orange-50 bg-white';
-  const primaryBorder = isFreshGroceryFlow ? 'border-[#D9A21B]' : isMithilakFlow ? 'border-[#207C8A]' : 'border-[#F26522]';
-  const primaryBorderLight = isFreshGroceryFlow ? 'border-[#D9A21B]/30' : isMithilakFlow ? 'border-[#207C8A]/30' : 'border-[#F26522]/30';
+  const primaryBorder = isFreshGroceryFlow ? 'border-[color:var(--fg-primary,#D9A21B)]' : isMithilakFlow ? 'border-[color:var(--ml-primary,#207C8A)]' : 'border-[color:var(--qs-primary,#F26522)]';
+  const primaryBorderLight = isFreshGroceryFlow ? 'border-[color:var(--fg-primary,#D9A21B)]/30' : isMithilakFlow ? 'border-[color:var(--ml-primary,#207C8A)]/30' : 'border-[color:var(--qs-primary,#F26522)]/30';
   const primaryLightBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]' : 'bg-orange-50';
-  const primarySidebarAccent = isFreshGroceryFlow ? 'bg-[#D9A21B]' : isMithilakFlow ? 'bg-[#207C8A]' : 'bg-[#F26522]';
+  const primarySidebarAccent = isFreshGroceryFlow ? 'bg-[color:var(--fg-primary,#D9A21B)]' : isMithilakFlow ? 'bg-[color:var(--ml-primary,#207C8A)]' : 'bg-[color:var(--qs-primary,#F26522)]';
   
   const rightGridBg = isFreshGroceryFlow ? 'bg-[#FFF8EE]' : isMithilakFlow ? 'bg-[#F5F9FA]/30' : 'bg-orange-50/15';
-  const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[#D9A21B]/25' : isMithilakFlow ? 'bg-[#F5F9FA] border border-[#207C8A]/25' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
+  const promoBg = isFreshGroceryFlow ? 'bg-[#FFF8EE] border border-[color:var(--fg-primary,#D9A21B)]/25' : isMithilakFlow ? 'bg-[#F5F9FA] border border-[color:var(--ml-primary,#207C8A)]/25' : 'bg-[#FFF5EE] border border-[#FFD9C7]/40';
 
   const [subCategories, setSubCategories] = useState([{ id: 'all', name: 'All', icon: FALLBACK_IMAGE, children: [] }]);
   const [productsList, setProductsList] = useState([]);
@@ -532,11 +532,19 @@ const QuickShopSubcategory = () => {
     const requestKey = listKeyRef.current;
     const { params, categoryId } = listParams;
     if (!categoryId || !sourceMode) return { items: [], hasMore: false };
-    const fromNearby = sourceMode === 'nearby';
-    const res = fromNearby
+    let fromNearby = sourceMode === 'nearby';
+    let res = fromNearby
       ? await getNearbyProducts({ lat: effectiveLat, lng: effectiveLng, commerceFlow, categoryId, page, limit, ...params })
       : await getCategoryProducts(categoryId, { marketplaceTab, page, limit, ...params });
-    const list = extractList(res?.data ?? res);
+    let list = extractList(res?.data ?? res);
+    // "Nearby" only knows sellers with a pinned location inside the delivery radius. A product
+    // added to this category without one (e.g. just added by admin) would show "No products here
+    // yet" even though the catalog has it, so an empty nearby result falls back to the catalog.
+    if (fromNearby && page === 1 && list.length === 0) {
+      res = await getCategoryProducts(categoryId, { marketplaceTab, page, limit, ...params });
+      list = extractList(res?.data ?? res);
+      fromNearby = false;
+    }
     const meta = res?.meta ?? res?.data?.meta;
     // Ignore the count of a superseded request (rapid category switching).
     if (page === 1 && requestKey === listKeyRef.current) setListTotal(meta?.total ?? list.length);
@@ -602,7 +610,7 @@ const QuickShopSubcategory = () => {
 
       {/* Header Bar */}
       <div className={`flex-shrink-0 z-50 border-b border-gray-100 px-4 py-2 flex items-center justify-between shadow-3xs transition-colors duration-300 ${
-        isFreshGroceryFlow ? 'bg-[#D9A21B] text-white' : isMithilakFlow ? 'bg-[#207C8A] text-white' : 'bg-[#F26522] text-white'
+        isFreshGroceryFlow ? 'bg-[color:var(--fg-primary,#D9A21B)] text-white' : isMithilakFlow ? 'bg-[color:var(--ml-primary,#207C8A)] text-white' : 'bg-[color:var(--qs-primary,#F26522)] text-white'
       }`}>
         <div className="flex items-center gap-3">
           <button 
@@ -799,7 +807,7 @@ const QuickShopSubcategory = () => {
       <div className={`flex-1 flex flex-col overflow-hidden ${isClosed ? "filter grayscale opacity-75 select-none" : ""}`}>
 
       {/* Filters & Sort Header */}
-      <div className={`flex-shrink-0 border-b border-gray-100/80 px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-3xs transition-colors duration-300 relative ${
+      <div className={`flex-shrink-0 border-b border-gray-100/80 px-4 py-2.5 flex items-center gap-2.5 overflow-x-auto no-scrollbar shadow-3xs transition-colors duration-300 relative ${
         isFreshGroceryFlow ? 'bg-[#FFFDF3]' : 'bg-white'
       }`}>
         <button 
@@ -811,18 +819,18 @@ const QuickShopSubcategory = () => {
             setTempDiscountOnly(filterDiscountOnly);
             setOpenModal(openModal === 'filter' ? null : 'filter');
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+          className={`flex items-center gap-1.5 px-4 min-h-[40px] border rounded-full text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 active:scale-95 ${
             hasActiveFilters 
               ? `${primaryBg} text-white ${primaryBorder} shadow-2xs` 
               : 'border-gray-200/80 text-gray-700 hover:bg-gray-50'
           }`}
         >
-          <SlidersHorizontalIcon /> {t('auto.filters')} {hasActiveFilters && `(${activeFilterCount})`} <ChevronDown size={10} />
+          <SlidersHorizontalIcon /> {t('auto.filters')} {hasActiveFilters && `(${activeFilterCount})`} <ChevronDown size={14} />
         </button>
 
         <button 
           onClick={() => setOpenModal(openModal === 'sort' ? null : 'sort')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+          className={`flex items-center gap-1.5 px-4 min-h-[40px] border rounded-full text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 active:scale-95 ${
             sortBy !== 'relevance'
               ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
               : 'border-gray-200/80 text-gray-700 hover:bg-gray-50'
@@ -832,12 +840,12 @@ const QuickShopSubcategory = () => {
             <>{t('auto.sort2')} <span className="font-extrabold">{tName(sortLabel)}</span></>
           ) : (
             t('common.sort')
-          )} <ChevronDown size={10} />
+          )} <ChevronDown size={14} />
         </button>
 
         <button 
           onClick={() => setOpenModal(openModal === 'type' ? null : 'type')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+          className={`flex items-center gap-1.5 px-4 min-h-[40px] border rounded-full text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 active:scale-95 ${
             filterType !== 'all'
               ? `${primaryBg} text-white ${primaryBorder} shadow-2xs`
               : 'border-gray-200/80 text-gray-700 hover:bg-gray-50'
@@ -847,13 +855,13 @@ const QuickShopSubcategory = () => {
             <>{t('auto.type')} <span className="font-extrabold">{tName(typeLabel)}</span></>
           ) : (
             t('x.typeWord')
-          )} <ChevronDown size={10} />
+          )} <ChevronDown size={14} />
         </button>
 
         {isAnyFilterOrSortActive && (
           <button
             onClick={resetAllFilters}
-            className="text-[10.5px] font-bold text-red-500 hover:underline px-2 py-1 flex items-center gap-1 flex-shrink-0 cursor-pointer whitespace-nowrap"
+            className="text-[12.5px] font-bold text-red-500 hover:underline px-2 min-h-[40px] flex items-center gap-1 flex-shrink-0 cursor-pointer whitespace-nowrap"
           >
             {t('auto.clearAll')}
           </button>

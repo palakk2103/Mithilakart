@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { settingsApi } from '../services/api';
 import {
   Globe, Shield, Save, CheckCircle2, ChevronRight, X,
-  AlertCircle, Lock, Terminal, User, Truck, CreditCard, Zap
+  AlertCircle, Lock, Terminal, User, Truck, CreditCard, Zap, Receipt, Plus, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+
+// Empty / invalid input falls back; a real 0 is kept.
+const num = (value, fallback) => {
+  if (value === '' || value === null || value === undefined) return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
 
 const Settings = () => {
   const [activeSection, setActiveSection] = useState('General');
@@ -25,8 +32,19 @@ const Settings = () => {
     codEnabled: true,
     codHandlingFee: 0,
     expressSurcharge: 0,
-    freeShippingThreshold: 500,
-    defaultDeliveryCharge: 39,
+    freeShippingThreshold: 150,
+    defaultDeliveryCharge: 25,
+    handlingFee: 11,
+    handlingFeeTiers: [
+      { minSubtotal: 99, discountPercent: 30 },
+      { minSubtotal: 150, discountPercent: 60 },
+      { minSubtotal: 250, discountPercent: 100 },
+    ],
+    maxQuantityPerItem: 10,
+    maxCartItems: 30,
+    limitedQuantityMessage: 'Limited quantity due to high demand',
+    loginRequired: true,
+    packageMinPricePercent: 40,
     razorpayEnabled: true,
     quickCommerceEnabled: true,
     ecommerceEnabled: true,
@@ -58,6 +76,13 @@ const Settings = () => {
           expressSurcharge: s.expressSurcharge ?? prev.expressSurcharge,
           freeShippingThreshold: s.freeShippingThreshold ?? prev.freeShippingThreshold,
           defaultDeliveryCharge: s.defaultDeliveryCharge ?? prev.defaultDeliveryCharge,
+          handlingFee: s.handlingFee ?? prev.handlingFee,
+          handlingFeeTiers: Array.isArray(s.handlingFeeTiers) ? s.handlingFeeTiers : prev.handlingFeeTiers,
+          maxQuantityPerItem: s.maxQuantityPerItem ?? prev.maxQuantityPerItem,
+          maxCartItems: s.maxCartItems ?? prev.maxCartItems,
+          limitedQuantityMessage: s.limitedQuantityMessage ?? prev.limitedQuantityMessage,
+          loginRequired: s.loginRequired ?? prev.loginRequired,
+          packageMinPricePercent: s.packageMinPricePercent ?? prev.packageMinPricePercent,
           razorpayEnabled: s.razorpayEnabled ?? prev.razorpayEnabled,
           quickCommerceEnabled: s.quickCommerceEnabled ?? prev.quickCommerceEnabled,
           ecommerceEnabled: s.ecommerceEnabled ?? prev.ecommerceEnabled,
@@ -72,6 +97,7 @@ const Settings = () => {
   const sections = [
     { id: 'General', icon: Globe, label: 'Platform Info' },
     { id: 'Commerce', icon: Truck, label: 'Commerce & Delivery' },
+    { id: 'Checkout', icon: Receipt, label: 'Checkout Fees & Limits' },
     { id: 'Business', icon: Shield, label: 'Fees & Commission' },
     { id: 'Payments', icon: CreditCard, label: 'Payments' },
     { id: 'Modes', icon: Zap, label: 'Mode Config' },
@@ -93,8 +119,18 @@ const Settings = () => {
       codEnabled: formValues.codEnabled,
       codHandlingFee: Number(formValues.codHandlingFee) || 0,
       expressSurcharge: Number(formValues.expressSurcharge) || 0,
-      freeShippingThreshold: Number(formValues.freeShippingThreshold) || 500,
-      defaultDeliveryCharge: Number(formValues.defaultDeliveryCharge) || 39,
+      // 0 is a real value here (free delivery for everyone / no handling fee), so no `|| default`.
+      freeShippingThreshold: num(formValues.freeShippingThreshold, 150),
+      defaultDeliveryCharge: num(formValues.defaultDeliveryCharge, 25),
+      handlingFee: num(formValues.handlingFee, 11),
+      handlingFeeTiers: formValues.handlingFeeTiers
+        .map((t) => ({ minSubtotal: num(t.minSubtotal, 0), discountPercent: num(t.discountPercent, 0) }))
+        .sort((a, b) => a.minSubtotal - b.minSubtotal),
+      maxQuantityPerItem: Math.floor(num(formValues.maxQuantityPerItem, 0)),
+      maxCartItems: Math.floor(num(formValues.maxCartItems, 0)),
+      limitedQuantityMessage: String(formValues.limitedQuantityMessage || '').trim() || 'Limited quantity due to high demand',
+      loginRequired: formValues.loginRequired,
+      packageMinPricePercent: num(formValues.packageMinPricePercent, 40),
       razorpayEnabled: formValues.razorpayEnabled,
       quickCommerceEnabled: formValues.quickCommerceEnabled,
       ecommerceEnabled: formValues.ecommerceEnabled,
@@ -232,6 +268,84 @@ const Settings = () => {
                       checked={formValues.codEnabled}
                       onChange={(v) => updateField('codEnabled', v)}
                     />
+                  </div>
+                </div>
+              )}
+
+              {activeSection === 'Checkout' && (
+                <div className="space-y-8">
+                  <div>
+                    <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-1">Handling fee</h3>
+                    <p className="text-xs text-slate-500 mb-4">Shown to customers as a crossed-out base fee with a discount that grows with the order value.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <NumberField label="Base handling fee" field="handlingFee" suffix="₹" />
+                    </div>
+                    <div className="mt-5 space-y-3">
+                      {formValues.handlingFeeTiers.map((tier, i) => (
+                        <div key={i} className="flex flex-wrap items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
+                          <span className="text-[10px] font-black text-slate-400 uppercase">Orders from ₹</span>
+                          <input
+                            type="number" min="0" value={tier.minSubtotal}
+                            aria-label={`Tier ${i + 1} minimum order value`}
+                            onChange={(e) => updateField('handlingFeeTiers', formValues.handlingFeeTiers.map((t, j) => (j === i ? { ...t, minSubtotal: e.target.value } : t)))}
+                            className="w-24 bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-bold outline-none"
+                          />
+                          <span className="text-[10px] font-black text-slate-400 uppercase">get</span>
+                          <input
+                            type="number" min="0" max="100" value={tier.discountPercent}
+                            aria-label={`Tier ${i + 1} discount percent`}
+                            onChange={(e) => updateField('handlingFeeTiers', formValues.handlingFeeTiers.map((t, j) => (j === i ? { ...t, discountPercent: e.target.value } : t)))}
+                            className="w-20 bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-bold outline-none"
+                          />
+                          <span className="text-[10px] font-black text-slate-400 uppercase">% off (100 = free)</span>
+                          <button
+                            type="button" aria-label={`Remove tier ${i + 1}`}
+                            onClick={() => updateField('handlingFeeTiers', formValues.handlingFeeTiers.filter((_, j) => j !== i))}
+                            className="ml-auto p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
+                          ><Trash2 size={16} /></button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => updateField('handlingFeeTiers', [...formValues.handlingFeeTiers, { minSubtotal: '', discountPercent: '' }])}
+                        className="flex items-center gap-2 text-xs font-black text-blue-600 uppercase tracking-wider"
+                      ><Plus size={14} /> Add tier</button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-1">Delivery fee</h3>
+                    <p className="text-xs text-slate-500 mb-4">Charged below the free-delivery value; shown crossed out once the customer qualifies.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <NumberField label="Delivery fee" field="defaultDeliveryCharge" suffix="₹" />
+                      <NumberField label="Free delivery on orders above" field="freeShippingThreshold" suffix="₹" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-1">Purchase limits (per customer)</h3>
+                    <p className="text-xs text-slate-500 mb-4">A product&apos;s own &quot;max order quantity&quot; can only tighten these. 0 means no limit.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <NumberField label="Max quantity of one item" field="maxQuantityPerItem" />
+                      <NumberField label="Max different items in a cart" field="maxCartItems" />
+                    </div>
+                    <div className="space-y-2 mt-6">
+                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block">Message shown at the limit</label>
+                      <input type="text" maxLength={160} value={formValues.limitedQuantityMessage} onChange={(e) => updateField('limitedQuantityMessage', e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold outline-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-4">Accounts &amp; packages</h3>
+                    <div className="space-y-4">
+                      <Toggle
+                        label="Login required to shop"
+                        hint="On: no guest carts — visitors are asked to log in before adding to cart"
+                        checked={formValues.loginRequired}
+                        onChange={(v) => updateField('loginRequired', v)}
+                      />
+                      <NumberField label="Default minimum value of a customised package (% of full price)" field="packageMinPricePercent" suffix="%" />
+                    </div>
                   </div>
                 </div>
               )}

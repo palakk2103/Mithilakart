@@ -106,6 +106,7 @@ const orderSchema = new mongoose.Schema(
 
     platformFee: { type: Number, default: 0, min: 0 },
     packagingFee: { type: Number, default: 0, min: 0 },
+    handlingFee: { type: Number, default: 0, min: 0 },
 
     cancelledAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },

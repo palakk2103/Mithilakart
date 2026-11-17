@@ -31,7 +31,7 @@ const DesktopHeader = React.forwardRef(({
   onLocationClick,
   cartTotalItems = 0,
   cartTotalPrice = 0,
-  cartBadgeBg = 'bg-[#65B842]',
+  cartBadgeBg = 'bg-[color:var(--mk-primary,#65B842)]',
 }, ref) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -105,11 +105,11 @@ const DesktopHeader = React.forwardRef(({
 
   // Header background theme styling
   const headerBgClass = effectiveFlow === 'mithilak'
-    ? 'bg-gradient-to-r from-[#144f58] via-[#207C8A] to-[#144f58]'
+    ? 'bg-gradient-to-r from-[color:var(--ml-dark,#144F58)] via-[color:var(--ml-primary,#207C8A)] to-[color:var(--ml-dark,#144F58)]'
     : effectiveFlow === 'freshgrocery'
-      ? 'bg-gradient-to-r from-[#b37e09] via-[#D9A21B] to-[#b37e09]'
+      ? 'bg-gradient-to-r from-[#b37e09] via-[color:var(--fg-primary,#D9A21B)] to-[#b37e09]'
       : effectiveFlow === 'quickshop'
-        ? 'bg-gradient-to-r from-[#cf470c] via-[#F26522] to-[#cf470c]'
+        ? 'bg-gradient-to-r from-[#cf470c] via-[color:var(--qs-primary,#F26522)] to-[#cf470c]'
         : 'bg-gradient-to-r from-[#448b29] via-[#5ca83b] to-[#448b29]';
 
   const searchPlaceholder = effectiveFlow === 'quickshop'

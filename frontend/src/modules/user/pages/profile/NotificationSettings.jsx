@@ -1,37 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { isAuthenticated } from '../../../../shared/api/tokenStorage';
+import LoginRequiredCard from '../../../../shared/components/LoginRequiredCard';
 import { ArrowLeft, Bell, Smartphone, Mail, Zap, ChevronRight, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { updateNotificationPreferences } from '../../services/userApi';
+import { updateNotificationPreferences, getProfile } from '../../services/userApi';
 import { registerPushToken, sendTestPush, detectPlatform } from '../../../../shared/services/pushNotifications';
 import { useTranslation } from 'react-i18next';
 
 const NotificationSettings = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const loggedIn = isAuthenticated('customer');
+  // Keys are the server's notificationPreferences fields.
   const [settings, setSettings] = useState({
-    offers: true,
-    updates: true,
-    orders: true,
-    security: true,
-    newsletter: false
+    pushEnabled: true,
+    promotions: true,
+    orderUpdates: true,
+    systemUpdates: true,
+    securityAlerts: true,
+    newsletter: false,
   });
-  const [saving, setSaving] = useState(false);
+  const [savingKey, setSavingKey] = useState(null);
   const [testingPush, setTestingPush] = useState(false);
   const [registeringDevice, setRegisteringDevice] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
+  // Show what is actually saved on the account instead of hard-coded defaults.
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+    let cancelled = false;
+    getProfile()
+      .then((profile) => {
+        const saved = (profile?.data ?? profile)?.notificationPreferences;
+        if (!cancelled && saved) setSettings((prev) => ({ ...prev, ...saved }));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [loggedIn]);
+
   const toggleSetting = async (key) => {
-    const next = { ...settings, [key]: !settings[key] };
-    setSettings(next);
-    setSaving(true);
+    if (savingKey) return;
+    const previous = settings[key];
+    const nextValue = !previous;
+    setSettings((s) => ({ ...s, [key]: nextValue }));
+    setSavingKey(key);
     try {
-      await updateNotificationPreferences(next);
-    } catch {
-      setSettings(settings);
+      // Turning push on must also register this device, or "on" would do nothing.
+      if (key === 'pushEnabled' && nextValue) {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+          throw new Error('Notifications are blocked in your browser settings. Allow them for this site, then try again.');
+        }
+        await registerPushToken('customer', detectPlatform());
+      }
+      // Only the changed key is sent; the server merges it into the saved preferences.
+      await updateNotificationPreferences({ [key]: nextValue });
+    } catch (err) {
+      setSettings((s) => ({ ...s, [key]: previous }));
+      toast.error(err?.message || 'Could not update notification setting');
     } finally {
-      setSaving(false);
+      setSavingKey(null);
     }
   };
 
@@ -105,6 +134,9 @@ const NotificationSettings = () => {
         <h1 className={`text-[17px] font-black uppercase tracking-widest ${headerTextColor}`}>{t('auto.notifications')}</h1>
       </div>
 
+      {!loggedIn ? (
+        <LoginRequiredCard title="Login to manage notifications" subtitle="Log in to choose which alerts you receive." icon={Bell} />
+      ) : (
       <div className="container mx-auto px-4 py-8 w-full space-y-8 relative z-10">
         <div className="bg-white border border-slate-100 shadow-sm rounded-3xl p-5 flex items-center gap-4 mb-8">
            <div className={`p-3 ${primaryLightBg} rounded-2xl`}>
@@ -121,10 +153,11 @@ const NotificationSettings = () => {
           
           <div className="bg-white border border-slate-100 shadow-sm rounded-3xl overflow-hidden divide-y divide-slate-100">
              {[
-               { id: 'offers', title: t('common.promotionsOffers'), icon: Zap, iconColor: 'text-amber-600', bgColor: 'bg-amber-50' },
-               { id: 'orders', title: t('common.orderUpdates'), icon: Smartphone, iconColor: 'text-emerald-600', bgColor: 'bg-emerald-50' },
-               { id: 'updates', title: t('common.systemUpdates'), icon: Bell, iconColor: 'text-purple-600', bgColor: 'bg-purple-50' },
-               { id: 'security', title: t('auto.accountSecurity'), icon: Bell, iconColor: 'text-red-600', bgColor: 'bg-red-50' }
+               { id: 'pushEnabled', title: 'Push notifications', icon: Bell, iconColor: 'text-sky-600', bgColor: 'bg-sky-50' },
+               { id: 'promotions', title: t('common.promotionsOffers'), icon: Zap, iconColor: 'text-amber-600', bgColor: 'bg-amber-50' },
+               { id: 'orderUpdates', title: t('common.orderUpdates'), icon: Smartphone, iconColor: 'text-emerald-600', bgColor: 'bg-emerald-50' },
+               { id: 'systemUpdates', title: t('common.systemUpdates'), icon: Bell, iconColor: 'text-purple-600', bgColor: 'bg-purple-50' },
+               { id: 'securityAlerts', title: t('auto.accountSecurity'), icon: Bell, iconColor: 'text-red-600', bgColor: 'bg-red-50' }
              ].map((item) => (
                <div key={item.id} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                   <div className="flex items-center gap-4">
@@ -133,11 +166,16 @@ const NotificationSettings = () => {
                      </div>
                      <span className="text-xs font-black tracking-tight text-slate-800">{item.title}</span>
                   </div>
-                  <button 
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={Boolean(settings[item.id])}
+                    aria-label={item.title}
+                    disabled={savingKey === item.id}
                     onClick={() => toggleSetting(item.id)}
-                    className={`w-12 h-6.5 rounded-full transition-all relative ${settings[item.id] ? primaryBg : 'bg-slate-200'}`}
+                    className={`w-12 h-7 rounded-full transition-colors relative flex-shrink-0 disabled:opacity-60 ${settings[item.id] ? primaryBg : 'bg-slate-300'}`}
                   >
-                    <div className={`absolute top-1 w-4.5 h-4.5 bg-white rounded-full transition-all shadow-sm ${settings[item.id] ? 'right-1' : 'left-1'}`}></div>
+                    <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${settings[item.id] ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
                </div>
              ))}
@@ -153,11 +191,16 @@ const NotificationSettings = () => {
                  </div>
                  <span className="text-xs font-black tracking-tight text-slate-800">{t('auto.weeklyNewsletter')}</span>
               </div>
-              <button 
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(settings.newsletter)}
+                aria-label={t('auto.weeklyNewsletter')}
+                disabled={savingKey === 'newsletter'}
                 onClick={() => toggleSetting('newsletter')}
-                className={`w-12 h-6.5 rounded-full transition-all relative ${settings.newsletter ? primaryBg : 'bg-slate-200'}`}
+                className={`w-12 h-7 rounded-full transition-colors relative flex-shrink-0 disabled:opacity-60 ${settings.newsletter ? primaryBg : 'bg-slate-300'}`}
               >
-                <div className={`absolute top-1 w-4.5 h-4.5 bg-white rounded-full transition-all shadow-sm ${settings.newsletter ? 'right-1' : 'left-1'}`}></div>
+                <span className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${settings.newsletter ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
            </div>
         </div>
@@ -208,6 +251,7 @@ const NotificationSettings = () => {
            </div>
         </div>
       </div>
+      )}
     </motion.div>
   );
 };

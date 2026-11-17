@@ -182,7 +182,7 @@ const VendorProfile = () => {
             </div>
             <div>
               <h1 className="text-[18px] font-black tracking-tight">
-                {authed ? (userProfile.name || (loadingProfile ? t('auto.loading2') : t('auto.user'))) : t('auto.guestUser')}
+                {authed ? (userProfile.name || (loadingProfile ? t('auto.loading2') : t('auto.user'))) : t('auto.welcomeToMithilakart', { defaultValue: 'Welcome to Mithilakart' })}
               </h1>
               <p className="text-[11px] font-medium opacity-90 mt-1 leading-normal">
                 {authed
@@ -196,7 +196,7 @@ const VendorProfile = () => {
             <div>
               <p className="text-[9px] font-black opacity-80 uppercase tracking-widest leading-none">{t('auto.status')}</p>
               <p className="text-[13px] font-black text-yellow-400 mt-1 flex items-center gap-1.5">
-                {authed ? t('x.verifiedMember') : t('x.guest')}
+                {authed ? t('x.verifiedMember') : t('auto.notLoggedIn', { defaultValue: 'Not logged in' })}
               </p>
             </div>
             {authed && (

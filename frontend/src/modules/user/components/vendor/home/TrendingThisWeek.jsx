@@ -136,7 +136,7 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
             data-testid="section-view-all-trendingThisWeek"
             className={`font-bold flex items-center flex-shrink-0 whitespace-nowrap transition-colors duration-200 ${
               isMithilak
-                ? 'text-[11px] md:text-sm px-2 py-0.5 rounded-full bg-white border border-[#207C8A]/40 text-[#207C8A] hover:bg-[#207C8A] hover:text-white'
+                ? 'text-[11px] md:text-sm px-2 py-0.5 rounded-full bg-white border border-[color:var(--ml-primary,#207C8A)]/40 text-[color:var(--ml-primary,#207C8A)] hover:bg-[color:var(--ml-primary,#207C8A)] hover:text-white'
                 : 'text-[11px] md:text-sm px-2 py-0.5 rounded-full bg-white border border-[#4B6C36]/40 text-[#4B6C36] hover:bg-[#4B6C36] hover:text-white'
             }`}
           >
@@ -152,13 +152,13 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
               onClick={() => handleProductClick(item)}
               className={`flex-shrink-0 flex flex-col items-center cursor-pointer transition-all duration-300 group ${
                 isMithilak
-                  ? 'w-[126px] min-[375px]:w-[136px] md:w-[168px] bg-gradient-to-b from-white to-[#F2FAFB] rounded-t-[75px] md:rounded-t-[90px] rounded-b-[16px] md:rounded-b-[20px] px-3 pb-2 pt-7 md:px-3 md:pt-9 border border-[#BCE3E8] shadow-[0_3px_10px_rgba(32,124,138,0.12)] hover:border-[#207C8A] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(32,124,138,0.22)]'
+                  ? 'w-[126px] min-[375px]:w-[136px] md:w-[168px] bg-gradient-to-b from-white to-[#F2FAFB] rounded-t-[75px] md:rounded-t-[90px] rounded-b-[16px] md:rounded-b-[20px] px-3 pb-2 pt-7 md:px-3 md:pt-9 border border-[#BCE3E8] shadow-[0_3px_10px_rgba(32,124,138,0.12)] hover:border-[color:var(--ml-primary,#207C8A)] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(32,124,138,0.22)]'
                   : 'w-[126px] min-[375px]:w-[136px] md:w-[168px] bg-gradient-to-b from-white to-[#FCF7EE] rounded-t-[75px] md:rounded-t-[90px] rounded-b-[16px] md:rounded-b-[20px] px-3 pb-2 pt-7 md:px-3 md:pt-9 border border-[#F1E1CE] shadow-[0_3px_10px_rgba(211,84,0,0.10)] hover:border-[#E5D2BA] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(211,84,0,0.18)]'
               }`}
             >
               <span className={`font-black text-center mb-1 transition-colors duration-200 line-clamp-2 w-full leading-snug break-words ${
                 isMithilak
-                  ? 'text-[11px] md:text-[13px] min-h-[30px] md:min-h-[36px] px-1 text-[#0F3D45] group-hover:text-[#207C8A]'
+                  ? 'text-[11px] md:text-[13px] min-h-[30px] md:min-h-[36px] px-1 text-[#0F3D45] group-hover:text-[color:var(--ml-primary,#207C8A)]'
                   : 'text-[11px] md:text-[13px] min-h-[30px] md:min-h-[36px] px-1 text-[#3C2415] group-hover:text-[#D35400]'
               }`}>
                 {item.name}
@@ -189,7 +189,7 @@ const TrendingThisWeek = ({ theme, maxItems }) => {
 
               <span className={`font-black uppercase transition-colors duration-200 ${
                 isMithilak
-                  ? 'text-[9px] md:text-[11px] tracking-wider mt-0.5 text-[#207C8A] group-hover:text-[#165A64]'
+                  ? 'text-[9px] md:text-[11px] tracking-wider mt-0.5 text-[color:var(--ml-primary,#207C8A)] group-hover:text-[#165A64]'
                   : 'text-[9px] md:text-[11px] tracking-wider mt-0.5 text-[#4B6C36] group-hover:text-[#D35400]'
               }`}>
                 {item.price ? `₹${item.price}` : t('product.viewProduct', { defaultValue: t('auto.viewProduct') })}

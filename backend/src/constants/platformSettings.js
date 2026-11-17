@@ -55,6 +55,17 @@ const PLATFORM_SETTING_KEYS = {
 
   // ── Customer app colour theme per marketplace tab (festival themes) ────────
   TAB_THEMES: 'tabThemes',
+
+  // ── Checkout fees & purchase limits (all admin-editable) ───────────────────
+  HANDLING_FEE: 'handlingFee',
+  HANDLING_FEE_TIERS: 'handlingFeeTiers',
+  MAX_QUANTITY_PER_ITEM: 'maxQuantityPerItem',
+  MAX_CART_ITEMS: 'maxCartItems',
+  LIMITED_QUANTITY_MESSAGE: 'limitedQuantityMessage',
+  LOGIN_REQUIRED: 'loginRequired',
+
+  // ── Customised packages (e.g. Mithila Dwirangman) ──────────────────────────
+  PACKAGE_MIN_PRICE_PERCENT: 'packageMinPricePercent',
 };
 
 /**
@@ -85,6 +96,12 @@ const DEFAULT_PARTNER_RANKING_WEIGHTS = {
   locationFreshness: 0.10,
 };
 
+const DEFAULT_HANDLING_FEE_TIERS = [
+  { minSubtotal: 99, discountPercent: 30 },
+  { minSubtotal: 150, discountPercent: 60 },
+  { minSubtotal: 250, discountPercent: 100 },
+];
+
 const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.PLATFORM_NAME]: 'Mithilakart',
   [PLATFORM_SETTING_KEYS.SUPPORT_EMAIL]: 'support@mithilakart.com',
@@ -100,8 +117,22 @@ const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.RAZORPAY_ENABLED]: true,
   [PLATFORM_SETTING_KEYS.QUICK_COMMERCE_ENABLED]: true,
   [PLATFORM_SETTING_KEYS.ECOMMERCE_ENABLED]: true,
-  [PLATFORM_SETTING_KEYS.FREE_SHIPPING_THRESHOLD]: 500,
-  [PLATFORM_SETTING_KEYS.DEFAULT_DELIVERY_CHARGE]: 39,
+  // Delivery ₹25, free from ₹150 (admin can change both).
+  [PLATFORM_SETTING_KEYS.FREE_SHIPPING_THRESHOLD]: 150,
+  [PLATFORM_SETTING_KEYS.DEFAULT_DELIVERY_CHARGE]: 25,
+
+  // Handling fee ₹11, struck down 30% from ₹99, 60% from ₹150, 100% (free) from ₹250.
+  // The highest tier whose minSubtotal the order reaches applies.
+  [PLATFORM_SETTING_KEYS.HANDLING_FEE]: 11,
+  [PLATFORM_SETTING_KEYS.HANDLING_FEE_TIERS]: DEFAULT_HANDLING_FEE_TIERS,
+  // Per customer, per cart line. A listing's own maxOrderQuantity can only tighten this.
+  [PLATFORM_SETTING_KEYS.MAX_QUANTITY_PER_ITEM]: 10,
+  // 0 = unlimited distinct lines in one cart.
+  [PLATFORM_SETTING_KEYS.MAX_CART_ITEMS]: 30,
+  [PLATFORM_SETTING_KEYS.LIMITED_QUANTITY_MESSAGE]: 'Limited quantity due to high demand',
+  [PLATFORM_SETTING_KEYS.LOGIN_REQUIRED]: true,
+  // A customised package may not be cut below this % of its full price.
+  [PLATFORM_SETTING_KEYS.PACKAGE_MIN_PRICE_PERCENT]: 40,
 
   // ── CR-002 ─────────────────────────────────────────────────────────────────
   // The CR's 30-second discovery window. Configurable, never hardcoded.

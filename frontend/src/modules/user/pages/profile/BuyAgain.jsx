@@ -72,7 +72,7 @@ const BuyAgain = () => {
                   type="button"
                   disabled={!it.inStock}
                   onClick={() => buyAgain(it)}
-                  className="mt-2 min-h-[40px] rounded-lg bg-[#65B842] text-white text-[12.5px] font-black disabled:opacity-50"
+                  className="mt-2 min-h-[40px] rounded-lg bg-[color:var(--mk-primary,#65B842)] text-white text-[12.5px] font-black disabled:opacity-50"
                 >
                   {it.inStock ? t('common.buyAgain', { defaultValue: 'Buy Again' }) : t('common.outOfStock', { defaultValue: 'Out of stock' })}
                 </button>

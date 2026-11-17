@@ -59,6 +59,9 @@ function createUsersRoutes(controllers, middleware) {
     pushEnabled: Joi.boolean().optional(),
     smsEnabled: Joi.boolean().optional(),
     emailEnabled: Joi.boolean().optional(),
+    systemUpdates: Joi.boolean().optional(),
+    securityAlerts: Joi.boolean().optional(),
+    newsletter: Joi.boolean().optional(),
   })), notificationController.updatePreferences);
 
   // MithilaKart - You Buy - Already Bought Products (the customer's own purchases only).

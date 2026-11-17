@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import LoginGate from '../../../../shared/components/LoginGate';
+import { Heart as HeartGate } from 'lucide-react';
 import { ArrowLeft, ShoppingCart, Lock, Share2, Edit2, MoreVertical, Star, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +9,7 @@ import { getWishlist, removeFromWishlist as removeWishlistApi } from '../../serv
 import { extractList, mapWishlistItem } from '../../utils/mappers';
 import { addProductToCart, fetchCartCount } from '../../utils/cartUtils';
 
-const Wishlist = () => {
+const WishlistPage = () => {
   const navigate = useNavigate();
   const { wishlist, setWishlist, removeFromWishlist } = useAccountStore();
   const [cartCount, setCartCount] = useState(0);
@@ -206,6 +208,12 @@ const Wishlist = () => {
     </div>
   );
 };
+
+const Wishlist = () => (
+  <LoginGate title="Wishlist" cardTitle="Login to see your wishlist" subtitle="Log in to view and manage the items you have saved." icon={HeartGate}>
+    <WishlistPage />
+  </LoginGate>
+);
 
 export default Wishlist;
 

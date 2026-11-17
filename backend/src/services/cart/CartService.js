@@ -12,6 +12,11 @@ class CartService extends BaseService {
     this.productRepository = productRepository;
     this.pricingService = pricingService;
     this.marketplaceListingService = marketplaceListingService;
+    this.packageService = null;
+  }
+
+  setPackageService(packageService) {
+    this.packageService = packageService;
   }
 
   /** Pre-tab key. Still read once to migrate old carts; never written to except to drop migrated lines. */
@@ -75,6 +80,51 @@ class CartService extends BaseService {
     return state;
   }
 
+  /** Admin-set purchase limits (per customer, per line, per cart). 0 means "no limit". */
+  async _limits() {
+    const svc = this.pricingService?.platformConfigService;
+    if (!svc?.getPurchaseLimits) return { maxQuantityPerItem: 0, maxCartItems: 0, message: 'Limited quantity due to high demand' };
+    return svc.getPurchaseLimits();
+  }
+
+  /** Admin switch: when on (default) a customer must be logged in to use the cart. */
+  async isLoginRequired() {
+    const svc = this.pricingService?.platformConfigService;
+    if (!svc?.getConfig) return true;
+    return (await svc.getConfig()).loginRequired !== false;
+  }
+
+  /** What a logged-out visitor sees: a real, empty cart (0 items) with the current fee rules. */
+  async getEmptyCart({ marketplaceTab = null, commerceFlow = null } = {}) {
+    const tab = this._resolveTab({ marketplaceTab, commerceFlow });
+    const pricing = await this.pricingService.calculateTotals({ items: [] });
+    return {
+      userId: null,
+      sessionId: null,
+      commerceFlow: toLegacyCommerceFlow(tab),
+      marketplaceTab: tab,
+      couponCode: null,
+      items: [],
+      loginRequired: true,
+      limits: await this._limits(),
+      ...pricing,
+    };
+  }
+
+  /** Effective max for one line: admin cap, tightened by the listing's own cap. */
+  _lineMax(limits, listingMax = null) {
+    const caps = [limits.maxQuantityPerItem, Number(listingMax) || 0].filter((n) => n > 0);
+    return caps.length ? Math.min(...caps) : 0;
+  }
+
+  _assertWithinLimit(nextQty, max, limits) {
+    if (max > 0 && nextQty > max) {
+      throw AppError.conflict(`${limits.message}. You can buy up to ${max} of this item.`, [
+        { code: 'QUANTITY_LIMIT_EXCEEDED', field: 'quantity', maxQuantity: max },
+      ]);
+    }
+  }
+
   _serialize(state) {
     return JSON.stringify(state);
   }
@@ -90,9 +140,45 @@ class CartService extends BaseService {
 
   async _hydrateCartItems(items = []) {
     if (!items.length) return [];
+    const limits = await this._limits();
 
     return Promise.all(
       items.map(async (item) => {
+        if (item.packageId && this.packageService) {
+          try {
+            const { pkg, quote } = await this.packageService.resolveForCart(item.packageId, item.selectedItemIds || []);
+            const { listing, product } = await this.marketplaceListingService.resolveListingForCart(item.listingId || pkg.productId);
+            const availableStock = this.productRepository.getAvailableStock(product);
+            const imageUrl = pkg.imageUrl || product.images?.[0]?.url || null;
+            return {
+              ...item,
+              productId: String(product._id),
+              listingId: String(listing._id),
+              name: pkg.name,
+              title: pkg.name,
+              brand: product.brand || '',
+              mrp: pkg.fullPrice,
+              unitPrice: quote.price,
+              price: quote.price,
+              deliveryPromiseMinutes: listing.deliveryPromiseMinutes,
+              marketplaceTab: listing.marketplaceTab,
+              image: imageUrl,
+              imageUrl,
+              availableStock,
+              maxQuantity: this._effectiveMax(limits, listing.maxOrderQuantity, availableStock),
+              customization: {
+                packageId: String(pkg._id),
+                packageName: pkg.name,
+                selectedCount: quote.selectedCount,
+                totalCount: quote.totalCount,
+                items: quote.selectedItems,
+              },
+            };
+          } catch {
+            return { ...item, name: 'Package', title: 'Package' };
+          }
+        }
+
         if (item.listingId && this.marketplaceListingService) {
           try {
             const { listing, product } = await this.marketplaceListingService.resolveListingForCart(item.listingId);
@@ -113,6 +199,7 @@ class CartService extends BaseService {
               image: imageUrl,
               imageUrl,
               availableStock,
+              maxQuantity: this._effectiveMax(limits, listing.maxOrderQuantity, availableStock),
             };
           } catch {
             return { ...item, name: 'Product', title: 'Product' };
@@ -138,9 +225,16 @@ class CartService extends BaseService {
           image: imageUrl,
           imageUrl,
           availableStock,
+          maxQuantity: this._effectiveMax(limits, null, availableStock),
         };
       })
     );
+  }
+
+  /** What the +/- stepper may reach: purchase limit and stock, whichever is lower. */
+  _effectiveMax(limits, listingMax, availableStock) {
+    const caps = [this._lineMax(limits, listingMax), Number(availableStock) || 0].filter((n) => n > 0);
+    return caps.length ? Math.min(...caps) : 0;
   }
 
   async getCart({ userId, sessionId, commerceFlow = 'standard', marketplaceTab = null, couponCode = null }) {
@@ -162,6 +256,7 @@ class CartService extends BaseService {
       marketplaceTab: tab,
       couponCode: couponCode || state?.couponCode || null,
       items,
+      limits: await this._limits(),
       ...pricing,
     };
   }
@@ -173,14 +268,30 @@ class CartService extends BaseService {
     marketplaceTab = null,
     productId,
     listingId = null,
+    packageId = null,
+    selectedItemIds = [],
     variantId = null,
     quantity,
   }) {
+    if (packageId) {
+      return this._addPackage({ userId, sessionId, commerceFlow, marketplaceTab, packageId, selectedItemIds, quantity });
+    }
     let tab = this._resolveTab({ marketplaceTab, commerceFlow: marketplaceTab ? null : commerceFlow });
     const owner = { userId, sessionId };
 
     if (listingId && this.marketplaceListingService) {
-      const { listing, product } = await this.marketplaceListingService.resolveListingForCart(listingId, marketplaceTab ? tab : undefined);
+      let resolvedListing;
+      try {
+        resolvedListing = await this.marketplaceListingService.resolveListingForCart(listingId, marketplaceTab ? tab : undefined);
+      } catch (err) {
+        // A card can carry a listing id that was since hidden, rejected or replaced.
+        // When the caller also knows the product, fall back to it rather than failing the add.
+        if (err?.statusCode === 404 && productId) {
+          return this.addItem({ userId, sessionId, commerceFlow, marketplaceTab, productId, listingId: null, variantId, quantity });
+        }
+        throw err;
+      }
+      const { listing, product } = resolvedListing;
 
       // A listing belongs to exactly one tab; with no explicit tab it decides.
       if (marketplaceTab && listing.marketplaceTab !== tab) {
@@ -203,6 +314,14 @@ class CartService extends BaseService {
       const itemKey = `listing:${listingId}`;
       const existing = state.items.find((it) => it.itemKey === itemKey);
       const nextQty = existing ? existing.quantity + quantity : quantity;
+
+      const limits = await this._limits();
+      this._assertWithinLimit(nextQty, this._lineMax(limits, listing.maxOrderQuantity), limits);
+      if (!existing && limits.maxCartItems > 0 && state.items.length >= limits.maxCartItems) {
+        throw AppError.conflict(`Your cart can hold up to ${limits.maxCartItems} different items.`, [
+          { code: 'CART_ITEM_LIMIT_EXCEEDED', maxCartItems: limits.maxCartItems },
+        ]);
+      }
 
       if (availableStock < nextQty) {
         throw AppError.conflict('Insufficient stock', [
@@ -271,6 +390,14 @@ class CartService extends BaseService {
     const existing = state.items.find((it) => it.itemKey === itemKey);
     const nextQty = existing ? existing.quantity + quantity : quantity;
 
+    const limits = await this._limits();
+    this._assertWithinLimit(nextQty, this._lineMax(limits), limits);
+    if (!existing && limits.maxCartItems > 0 && state.items.length >= limits.maxCartItems) {
+      throw AppError.conflict(`Your cart can hold up to ${limits.maxCartItems} different items.`, [
+        { code: 'CART_ITEM_LIMIT_EXCEEDED', maxCartItems: limits.maxCartItems },
+      ]);
+    }
+
     if (availableStock < nextQty) {
       throw AppError.conflict('Insufficient stock', [
         { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
@@ -307,6 +434,62 @@ class CartService extends BaseService {
   }
 
   /**
+   * Adds a customised package. The selection is re-priced here from the package's own
+   * item list; the stored line carries only ids, and every read re-prices it again.
+   */
+  async _addPackage({ userId, sessionId, commerceFlow, marketplaceTab, packageId, selectedItemIds, quantity }) {
+    if (!this.packageService || !this.marketplaceListingService) throw AppError.badRequest('Packages are not available');
+    const { pkg, quote } = await this.packageService.resolveForCart(packageId, selectedItemIds);
+    const { listing, product } = await this.marketplaceListingService.resolveListingForCart(
+      pkg.productId,
+      marketplaceTab ? this._resolveTab({ marketplaceTab }) : pkg.marketplaceTab
+    );
+
+    const tab = listing.marketplaceTab;
+    const owner = { userId, sessionId };
+    const availableStock = this.productRepository.getAvailableStock(product);
+    const key = this._cartKey({ ...owner, tab });
+    const state = (await this._loadState(owner, tab)) || { items: [] };
+
+    const itemKey = `package:${pkg._id}:${this.packageService.selectionHash(quote.selectedItemIds)}`;
+    const existing = state.items.find((it) => it.itemKey === itemKey);
+    const nextQty = existing ? existing.quantity + quantity : quantity;
+
+    const limits = await this._limits();
+    this._assertWithinLimit(nextQty, this._lineMax(limits, listing.maxOrderQuantity), limits);
+    if (availableStock < nextQty) {
+      throw AppError.conflict('Insufficient stock', [
+        { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
+      ]);
+    }
+    if (!existing && limits.maxCartItems > 0 && state.items.length >= limits.maxCartItems) {
+      throw AppError.conflict(`Your cart can hold up to ${limits.maxCartItems} different items.`, [
+        { code: 'CART_ITEM_LIMIT_EXCEEDED', maxCartItems: limits.maxCartItems },
+      ]);
+    }
+
+    const line = {
+      itemKey,
+      packageId: String(pkg._id),
+      selectedItemIds: quote.selectedItemIds,
+      listingId: String(listing._id),
+      productId: String(product._id),
+      sellerId: String(product.sellerId),
+      quantity: nextQty,
+      unitPrice: quote.price,
+      deliveryPromiseMinutes: listing.deliveryPromiseMinutes,
+      marketplaceTab: listing.marketplaceTab,
+    };
+    if (existing) Object.assign(existing, line); else state.items.push(line);
+
+    state.marketplaceTab = tab;
+    state.commerceFlow = toLegacyCommerceFlow(tab) || commerceFlow;
+    state.updatedAt = new Date().toISOString();
+    await this.redis.set(key, this._serialize(state), 'EX', CART.CART_KEY_TTL_SECONDS);
+    return this.getCart({ userId, sessionId, marketplaceTab: tab, couponCode: state.couponCode });
+  }
+
+  /**
    * Finds a cart line by the itemKey the cart hands out ("listing:<id>" or
    * "<productId>:<variantId>"). Older clients send a bare listing/product id.
    * Matching only "<productId>:" broke +/- and Remove for every listing line.
@@ -331,6 +514,15 @@ class CartService extends BaseService {
     if (!product) throw AppError.notFound('Product not found');
 
     const availableStock = this.productRepository.getAvailableStock(product);
+
+    const limits = await this._limits();
+    let listingMax = null;
+    if (item.listingId && this.marketplaceListingService) {
+      try {
+        listingMax = (await this.marketplaceListingService.resolveListingForCart(item.listingId)).listing.maxOrderQuantity;
+      } catch { /* listing gone: the stock check below still applies */ }
+    }
+    this._assertWithinLimit(quantity, this._lineMax(limits, listingMax), limits);
 
     if (quantity > availableStock) {
       throw AppError.conflict('Requested quantity exceeds available stock', [
