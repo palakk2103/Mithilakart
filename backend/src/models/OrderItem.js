@@ -10,6 +10,8 @@ const orderItemSchema = new mongoose.Schema(
     variantId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductVariant', default: null },
 
     listingSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Customised package: which items the customer kept, so the seller packs exactly that.
+    customization: { type: mongoose.Schema.Types.Mixed, default: null },
 
     quantity: { type: Number, required: true, min: 1 },
     unitPrice: { type: Number, required: true, min: 0 },

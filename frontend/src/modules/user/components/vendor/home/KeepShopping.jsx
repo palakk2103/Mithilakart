@@ -64,7 +64,7 @@ const KeepShopping = () => {
           <span
             onClick={handleViewAll}
             data-testid="section-view-all-keepShopping"
-            className="text-[10.5px] font-black text-[#65B842] uppercase tracking-tighter cursor-pointer flex items-center"
+            className="text-[10.5px] font-black text-[color:var(--mk-primary,#65B842)] uppercase tracking-tighter cursor-pointer flex items-center"
           >
             {t('common.viewAll', { defaultValue: 'View All' })} <ViewAllIcon />
           </span>

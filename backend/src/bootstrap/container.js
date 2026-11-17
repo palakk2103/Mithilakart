@@ -232,6 +232,9 @@ const { createAdminOperationsRoutes } = require('../routes/v1/admin.operations.r
 const { createUsersRoutes } = require('../routes/v1/users.routes');
 const { createCouponsRoutes } = require('../routes/v1/coupons.routes');
 const { createDealsRoutes } = require('../routes/v1/deals.routes');
+const { createPackageRoutes } = require('../routes/v1/packages.routes');
+const { PackageService } = require('../services/catalog/PackageService');
+const { PackageController } = require('../controllers/catalog/PackageController');
 const { createEngagementRoutes } = require('../routes/v1/engagement.routes');
 const { createAdminPlatformRoutes } = require('../routes/v1/admin.platform.routes');
 const { createAdminPromotionRoutes } = require('../routes/v1/admin.promotions.routes');
@@ -347,6 +350,10 @@ function buildContainer() {
     pricingService,
     marketplaceListingService,
   });
+
+  const packageService = new PackageService({ productRepository, platformConfigService });
+  cartService.setPackageService(packageService);
+  const packageController = new PackageController(packageService);
 
   const cartMergeService = new CartMergeService({
     redisClient,
@@ -1049,6 +1056,7 @@ function buildContainer() {
       realtime: createRealtimeRoutes(middleware),
       coupons: createCouponsRoutes(couponController, middleware),
       deals: createDealsRoutes(promotionController),
+      packages: createPackageRoutes(packageController, middleware),
       engagement: createEngagementRoutes({ reviewController, qnaController }, middleware),
       payments: createPaymentsRoutes(paymentController, middleware),
       shipping: createShippingRoutes(shippingController, middleware),

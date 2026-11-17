@@ -25,7 +25,50 @@ class AdminPlatformSettingsService extends BaseService {
     };
   }
 
+  /**
+   * Checkout fees, purchase limits and package rules are read straight into customers'
+   * bills, so a malformed value must never reach the store (a string fee would turn every
+   * total into NaN). Only the keys below are checked; all other settings keep their
+   * existing behaviour.
+   */
+  _validateCheckoutSettings(updates) {
+    const num = (key, { min = 0, max = 10000000, integer = false } = {}) => {
+      if (updates[key] === undefined) return;
+      const v = updates[key];
+      if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max || (integer && !Number.isInteger(v))) {
+        throw AppError.validation(`${key} must be ${integer ? 'a whole ' : 'a '}number between ${min} and ${max}`);
+      }
+    };
+    ['handlingFee', 'defaultDeliveryCharge', 'freeShippingThreshold', 'platformFee', 'packagingFee', 'minOrderAmount', 'codHandlingFee'].forEach((k) => num(k));
+    num('maxQuantityPerItem', { max: 1000, integer: true });
+    num('maxCartItems', { max: 1000, integer: true });
+    num('packageMinPricePercent', { max: 100 });
+
+    if (updates.loginRequired !== undefined && typeof updates.loginRequired !== 'boolean') {
+      throw AppError.validation('loginRequired must be true or false');
+    }
+    if (updates.limitedQuantityMessage !== undefined) {
+      const m = updates.limitedQuantityMessage;
+      if (typeof m !== 'string' || !m.trim() || m.length > 160 || /[<>]/.test(m)) {
+        throw AppError.validation('limitedQuantityMessage must be 1-160 characters without < or >');
+      }
+    }
+    if (updates.handlingFeeTiers !== undefined) {
+      const tiers = updates.handlingFeeTiers;
+      if (!Array.isArray(tiers) || tiers.length > 10) throw AppError.validation('handlingFeeTiers must be a list of at most 10 tiers');
+      const seen = new Set();
+      tiers.forEach((t) => {
+        const ok = t && Number.isFinite(t.minSubtotal) && t.minSubtotal >= 0
+          && Number.isFinite(t.discountPercent) && t.discountPercent >= 0 && t.discountPercent <= 100;
+        if (!ok) throw AppError.validation('Each handling-fee tier needs minSubtotal >= 0 and discountPercent between 0 and 100');
+        if (seen.has(t.minSubtotal)) throw AppError.validation('Two handling-fee tiers cannot start at the same order value');
+        seen.add(t.minSubtotal);
+      });
+    }
+  }
+
   async updateSettings(updates, adminId) {
+    this._validateCheckoutSettings(updates || {});
     const results = [];
     for (const [key, value] of Object.entries(updates)) {
       const existing = await this.platformSettingRepository.findByKey(key);

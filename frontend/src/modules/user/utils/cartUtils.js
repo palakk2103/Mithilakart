@@ -1,6 +1,8 @@
 import { getCart, addCartItem, updateCartItem, removeCartItem, clearCart } from '../services/cartApi';
 import { mapCartItem } from './mappers';
 import useVendorStore from '../../../store/useVendorStore';
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import { requestLogin } from '../../../shared/utils/loginRequired';
 
 export const dispatchCartUpdated = () => {
   window.dispatchEvent(new Event('cartUpdated'));
@@ -9,9 +11,9 @@ export const dispatchCartUpdated = () => {
 // Fetches ONE tab's cart (the active tab unless told otherwise). `tab` is
 // echoed back so callers can drop a response that arrives after the shopper
 // has already switched to another tab.
-export const fetchCartItems = async (tab = getMarketplaceTab()) => {
+export const fetchCartItems = async (tab = getMarketplaceTab(), couponCode) => {
   try {
-    const cart = await getCart(tab);
+    const cart = await getCart(tab, couponCode);
     const items = (cart?.items || []).map(mapCartItem);
     return { cart, items, tab };
   } catch {
@@ -33,14 +35,34 @@ const normalizeCommerceFlow = (flow) => {
   return flow;
 };
 
+const OBJECT_ID = /^[a-f0-9]{24}$/i;
+
+/** There is no guest cart: a logged-out shopper is sent to log in, then returned here. */
+export const ensureLoggedIn = (message = 'Please log in to add items to your cart') => {
+  if (isAuthenticated('customer')) return;
+  requestLogin(message);
+  const err = new Error(message);
+  err.code = 'LOGIN_REQUIRED';
+  throw err;
+};
+
 export const addProductToCart = async (product, quantity = 1, commerceFlow) => {
+  ensureLoggedIn();
   const listingId = product.listingId;
   const productId = product.productId || product.id || product._id;
   const flow = normalizeCommerceFlow(commerceFlow || product.commerceFlow || getCommerceFlow());
   const marketplaceTab = product.marketplaceTab || (flow === 'quick_shop' ? 'quick_shop' : flow === 'fresh_grocery' ? 'groceries_fresh' : getMarketplaceTab());
 
   if (listingId) {
-    await addCartItem({ listingId, marketplaceTab, quantity, commerceFlow: flow });
+    // productId rides along so the server can fall back to the product when a card's
+    // listing has since been hidden or replaced ("listing not found" on Add).
+    await addCartItem({
+      listingId,
+      ...(productId && OBJECT_ID.test(String(productId)) ? { productId } : {}),
+      marketplaceTab,
+      quantity,
+      commerceFlow: flow,
+    });
   } else if (productId) {
     await addCartItem({
       productId,

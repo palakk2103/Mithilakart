@@ -253,7 +253,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             } else {
               // Graceful fallback if database has 0 products initially
               const fallback = allCategoryProducts[selectedCategory] || allCategoryProducts['Fashion'] || [];
-              setAllProducts(fallback.map((p) => mapProductForCard(p)));
+              setAllProducts(fallback.map((p) => ({ ...mapProductForCard(p), isDemo: true })));
             }
           }
         } else {
@@ -261,13 +261,13 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             setAdminSubcategories([]);
             setLandingCategoryId(null);
             const fallback = allCategoryProducts[selectedCategory] || allCategoryProducts['Fashion'] || [];
-            setAllProducts(fallback.map((p) => mapProductForCard(p)));
+            setAllProducts(fallback.map((p) => ({ ...mapProductForCard(p), isDemo: true })));
           }
         }
       } catch {
         if (!cancelled) {
           const fallback = allCategoryProducts[selectedCategory] || allCategoryProducts['Fashion'] || [];
-          setAllProducts(fallback.map((p) => mapProductForCard(p)));
+          setAllProducts(fallback.map((p) => ({ ...mapProductForCard(p), isDemo: true })));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -600,6 +600,12 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
   const handleAddToCart = useCallback(async (product, e) => {
     e.stopPropagation();
+    // Placeholder products (shown only when the category has no real products yet) are not in the
+    // database, so the cart can never accept them.
+    if (product.isDemo) {
+      toast.error('This is a sample product. Add real products to this category in Admin to enable ordering.');
+      return;
+    }
     try {
       await addProductToCart({
         id: product.productId || product.product?._id || product.product?.id || product.id,

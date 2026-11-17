@@ -111,6 +111,12 @@ class OrderService extends BaseService {
         throw AppError.validation('Cart is empty');
       }
 
+      if (cart.minOrderAmount > 0 && cart.subtotal < cart.minOrderAmount) {
+        throw AppError.validation(`Minimum order value is ₹${cart.minOrderAmount}`, [
+          { field: 'subtotal', message: `Minimum order is ₹${cart.minOrderAmount}` },
+        ]);
+      }
+
       // The tab the customer shopped in decides the delivery mode. A product
       // listed in several tabs (Quick Shop AND Mithilakart) used to turn every
       // Mithilakart order for it into a quick one; product flows are no longer
@@ -163,6 +169,9 @@ class OrderService extends BaseService {
           couponDiscount: cart.couponDiscount || 0,
           tax: cart.tax || 0,
           deliveryCharge: cart.deliveryCharge ?? cart.shippingFee ?? 0,
+          handlingFee: cart.handlingFee || 0,
+          platformFee: cart.platformFee || 0,
+          packagingFee: cart.packagingFee || 0,
           total: cart.total,
           paymentMethod,
           paymentStatus: PAYMENT_STATUS.PENDING,
@@ -187,6 +196,7 @@ class OrderService extends BaseService {
         quantity: it.quantity,
         unitPrice: it.unitPrice,
         lineTotal: it.unitPrice * it.quantity,
+        customization: it.customization || null,
         listingSnapshot: it.listingId ? {
           listingId: it.listingId,
           marketplaceTab: it.marketplaceTab || marketplaceTab,
@@ -1334,6 +1344,7 @@ class OrderService extends BaseService {
       shippingCharge: order.deliveryCharge,
       platformFee: order.platformFee || 0,
       packagingFee: order.packagingFee || 0,
+      handlingFee: order.handlingFee || 0,
       total: order.total,
       sellerSubOrders: order.sellerSubOrders,
       addressSnapshot: order.addressSnapshot,

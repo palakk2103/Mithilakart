@@ -253,9 +253,14 @@ class NotificationService extends BaseService {
   }
 
   async updatePreferences(userId, preferences) {
-    return this.userRepository.updateById(userId, {
-      notificationPreferences: preferences,
-    });
+    // Merge key by key: replacing the whole object dropped every preference the
+    // request did not mention (toggling one switch reset the others).
+    const set = {};
+    for (const [key, value] of Object.entries(preferences || {})) {
+      set[`notificationPreferences.${key}`] = value;
+    }
+    const updated = await this.userRepository.updateById(userId, { $set: set });
+    return updated.notificationPreferences;
   }
 
   async registerDeviceToken(userId, portal, deviceId, fcmToken, platform = 'web') {

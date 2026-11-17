@@ -82,7 +82,8 @@ const AddToCartButton = ({ product, variant = 'outline', className = '', commerc
       }, 1, commerceFlow || product.commerceFlow || undefined);
       toast.success(t('common.addedToCart', { name: product.name || product.title || '' }));
     } catch (err) {
-      toast.error(err?.message || t('common.couldNotAddToCart'));
+      // Logged-out shoppers are already being sent to /login; no second toast.
+      if (err?.code !== 'LOGIN_REQUIRED') toast.error(err?.message || t('common.couldNotAddToCart'));
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,5 @@
 import { openCategoryExplorer } from '../utils/categoryLandingNav';
+import SeasonalHero from '../../../shared/components/SeasonalHero';
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { MapPin, ChevronDown, Search, Camera, Mic, ScanLine, Star, Home as HomeIcon, LayoutGrid, ShoppingCart, User, ChevronRight, Zap } from 'lucide-react';
@@ -148,7 +149,7 @@ const GroceryCategoryIcon = ({ category, imgClassName = '' }) => {
   }
   const Icon = GROCERY_ICON_RULES.find(([pattern]) => pattern.test(category.name))?.[1];
   if (Icon) return <Icon />;
-  return <span className="text-[18px] font-black text-[#D9A21B]">{category.name.charAt(0).toUpperCase()}</span>;
+  return <span className="text-[18px] font-black text-[color:var(--fg-primary,#D9A21B)]">{category.name.charAt(0).toUpperCase()}</span>;
 };
 
 // In-memory cache across tab switches to render instantly and eliminate page blinking
@@ -488,7 +489,7 @@ const QuickShop = () => {
                     localStorage.setItem('isFreshGroceryFlow', 'true');
                     openCategoryExplorer(navigate, { flow: 'freshgrocery', id: cat.id, name: cat.name });
                   }}
-                  className="bg-white border border-[#EADCC9]/55 rounded-2xl p-1 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#D9A21B]"
+                  className="bg-white border border-[#EADCC9]/55 rounded-2xl p-1 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[color:var(--fg-primary,#D9A21B)]"
                 >
                   <div className="w-full aspect-square flex items-center justify-center mb-1.5 bg-[#FFF8EE] rounded-xl overflow-hidden p-2">
                     <GroceryCategoryIcon category={cat} imgClassName="scale-110" />
@@ -571,7 +572,7 @@ const QuickShop = () => {
                   onClick={() => setActiveFilter(tab)}
                   className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-[12px] font-black tracking-tight transition-all duration-200 border ${
                     isActive
-                      ? 'bg-[#D9A21B] border-[#D9A21B] text-white shadow-xs'
+                      ? 'bg-[color:var(--fg-primary,#D9A21B)] border-[color:var(--fg-primary,#D9A21B)] text-white shadow-xs'
                       : 'bg-white border-[#EADCC9]/55 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
@@ -655,7 +656,7 @@ const QuickShop = () => {
               <span className="text-[12.5px] font-extrabold text-[#3F2A20] leading-snug">
                 {t('auto.shareYourLocationToAccess')}
               </span>
-              <button className="bg-[#D9A21B] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs">
+              <button className="bg-[color:var(--fg-primary,#D9A21B)] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs">
                 {t('auto.shareLocation')}
               </button>
             </div>
@@ -727,12 +728,12 @@ const QuickShop = () => {
                 <h2 className="text-[19px] font-black text-[#3F2A20] tracking-tight leading-tight">
                   {t('auto.exploreAllCategories', 'Explore All Categories')}
                 </h2>
-                <div className="mt-1.5 h-[3px] w-14 rounded-full bg-[#D9A21B]" />
+                <div className="mt-1.5 h-[3px] w-14 rounded-full bg-[color:var(--fg-primary,#D9A21B)]" />
               </div>
             )}
             {categorySections.map((section, sIdx) => (
               <div key={sIdx} className="mb-6">
-                <h2 className="text-[15px] font-extrabold text-[#D9A21B] mb-3 tracking-tight pl-1">
+                <h2 className="text-[15px] font-extrabold text-[color:var(--fg-primary,#D9A21B)] mb-3 tracking-tight pl-1">
                   {section.title}
                 </h2>
                 <div className="grid grid-cols-4 gap-2 justify-items-center">
@@ -758,13 +759,13 @@ const QuickShop = () => {
                 <h2 className="text-[26px] font-black text-[#3F2A20] tracking-tight leading-tight">
                   {t('auto.exploreAllCategories', 'Explore All Categories')}
                 </h2>
-                <div className="mt-2 h-[3px] w-16 rounded-full bg-[#D9A21B]" />
+                <div className="mt-2 h-[3px] w-16 rounded-full bg-[color:var(--fg-primary,#D9A21B)]" />
               </div>
             )}
             {categorySections.map((section, sIdx) => (
               <div key={sIdx} className="flex flex-col">
                 {/* Header Banner */}
-                <div className="px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[#D9A21B]">
+                <div className="px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[color:var(--fg-primary,#D9A21B)]">
                   <h2 className="text-[15px] font-black uppercase tracking-wider">
                     {section.title}
                   </h2>
@@ -792,7 +793,7 @@ const QuickShop = () => {
                             onError={handleImageError}
                           />
                         </div>
-                        <span className="text-[13px] font-black text-center text-[#3F2A20] leading-tight tracking-tight mt-1 group-hover:text-[#D9A21B] transition-colors">
+                        <span className="text-[13px] font-black text-center text-[#3F2A20] leading-tight tracking-tight mt-1 group-hover:text-[color:var(--fg-primary,#D9A21B)] transition-colors">
                           {item.name}
                         </span>
                       </div>
@@ -821,14 +822,15 @@ const QuickShop = () => {
       />
 
       <div className="relative z-10 flex flex-col">
+        <SeasonalHero className="mx-4 mt-4" />
         {/* ── HERO BANNER SECTION ── */}
         <div
           className="mx-4 my-4 p-5 rounded-3xl border border-[#FFD9C7] flex items-center justify-between shadow-xs overflow-hidden relative"
           style={{ backgroundImage: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)' }}
         >
           <div className="flex-1 z-10 pr-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F26522]/10 text-[#F26522] text-[10px] font-black uppercase tracking-wider mb-1.5">
-              <Zap size={11} className="fill-[#F26522]" /> {t('common.deliveryIn1530')}
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[color:var(--qs-primary,#F26522)]/10 text-[color:var(--qs-primary,#F26522)] text-[10px] font-black uppercase tracking-wider mb-1.5">
+              <Zap size={11} className="fill-[color:var(--qs-primary,#F26522)]" /> {t('common.deliveryIn1530')}
             </div>
             <h1 className="text-[19px] md:text-[22px] font-black text-slate-900 leading-tight mb-1">
               {t('auto.quickShopEssentials')}
@@ -841,7 +843,7 @@ const QuickShop = () => {
                 const el = document.getElementById('quick-categories-grid');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="bg-[#F26522] text-white text-[12px] font-black px-6 py-2.5 rounded-full shadow-md active:scale-95 transition-transform hover:brightness-105"
+              className="bg-[color:var(--qs-primary,#F26522)] text-white text-[12px] font-black px-6 py-2.5 rounded-full shadow-md active:scale-95 transition-transform hover:brightness-105"
             >
               {t('auto.exploreCategories')}
             </button>
@@ -864,7 +866,7 @@ const QuickShop = () => {
                 localStorage.setItem('isQuickShopFlow', 'true');
                 navigate('/categories?flow=quickshop', { state: { flow: 'quickshop' } });
               }}
-              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
+              className="text-[color:var(--qs-primary,#F26522)] text-[12.5px] font-black cursor-pointer hover:underline"
             >
               {t('auto.viewAll')}
             </span>
@@ -881,7 +883,7 @@ const QuickShop = () => {
                   localStorage.setItem('isQuickShopFlow', 'true');
                   openCategoryExplorer(navigate, { flow: 'quickshop', id: cat.id, name: cat.name });
                 }}
-                className="bg-white border border-[#FFD9C7]/60 rounded-2xl p-1 flex flex-col items-center justify-start text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[#F26522]"
+                className="bg-white border border-[#FFD9C7]/60 rounded-2xl p-1 flex flex-col items-center justify-start text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[color:var(--qs-primary,#F26522)]"
               >
                 <div className="w-full aspect-square flex items-center justify-center mb-1.5 bg-[#FFF7ED] rounded-xl overflow-hidden p-2">
                   {cat.imageUrl || cat.iconUrl ? (
@@ -912,7 +914,7 @@ const QuickShop = () => {
                 localStorage.setItem('isQuickShopFlow', 'true');
                 navigate('/categories?flow=quickshop', { state: { flow: 'quickshop' } });
               }}
-              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
+              className="text-[color:var(--qs-primary,#F26522)] text-[12.5px] font-black cursor-pointer hover:underline"
             >
               {t('auto.viewAll')}
             </span>
@@ -948,7 +950,7 @@ const QuickShop = () => {
 
                   <div>
                     <div className="flex items-center gap-1 mb-0.5">
-                      <span className="text-[#F26522] text-[8px] font-black">{prod.deliveryEtaText || '⚡ 15-25m'}</span>
+                      <span className="text-[color:var(--qs-primary,#F26522)] text-[8px] font-black">{prod.deliveryEtaText || '⚡ 15-25m'}</span>
                       {prod.distanceKm != null && (
                         <span className="text-slate-400 text-[8px] font-bold">• {prod.distanceKm.toFixed(1)} km</span>
                       )}
@@ -987,7 +989,7 @@ const QuickShop = () => {
                 onClick={() => setActiveFilter(tab)}
                 className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-[12px] font-black tracking-tight transition-all duration-200 border ${
                   isActive
-                    ? 'bg-[#F26522] border-[#F26522] text-white shadow-xs'
+                    ? 'bg-[color:var(--qs-primary,#F26522)] border-[color:var(--qs-primary,#F26522)] text-white shadow-xs'
                     : 'bg-white border-[#EADCC9]/55 text-slate-700 hover:bg-slate-50'
                 }`}
               >
@@ -1082,7 +1084,7 @@ const QuickShop = () => {
             <button
               type="button"
               onClick={() => setPromptOpen(true)}
-              className="bg-[#F26522] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs"
+              className="bg-[color:var(--qs-primary,#F26522)] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs"
             >
               {t('auto.shareLocation')}
             </button>
@@ -1099,7 +1101,7 @@ const QuickShop = () => {
                 localStorage.setItem('isQuickShopFlow', 'true');
                 navigate('/categories?flow=quickshop', { state: { flow: 'quickshop' } });
               }}
-              className="text-[#F26522] text-[12.5px] font-black cursor-pointer hover:underline"
+              className="text-[color:var(--qs-primary,#F26522)] text-[12.5px] font-black cursor-pointer hover:underline"
             >
               {t('auto.viewAll')}
             </span>
@@ -1136,7 +1138,7 @@ const QuickShop = () => {
 
                   <div>
                     <div className="flex items-center gap-1">
-                      <span className="text-[#F26522] text-[8px] font-black">{prod.deliveryEtaText || '⚡ 15-25m'}</span>
+                      <span className="text-[color:var(--qs-primary,#F26522)] text-[8px] font-black">{prod.deliveryEtaText || '⚡ 15-25m'}</span>
                       {prod.distanceKm != null && (
                         <span className="text-slate-400 text-[8px] font-bold">• {prod.distanceKm.toFixed(1)} km</span>
                       )}
@@ -1186,12 +1188,12 @@ const QuickShop = () => {
             <h2 className="text-[19px] font-black text-slate-900 tracking-tight leading-tight">
               {t('auto.exploreAllCategories', 'Explore All Categories')}
             </h2>
-            <div className="mt-1.5 h-[3px] w-14 rounded-full bg-[#F26522]" />
+            <div className="mt-1.5 h-[3px] w-14 rounded-full bg-[color:var(--qs-primary,#F26522)]" />
           </div>
         )}
         {!categoriesLoading && categorySections.map((section, sIdx) => (
           <div key={sIdx} className="mb-6">
-            <h2 className="text-[15px] font-extrabold text-[#F26522] mb-3 tracking-tight pl-1">
+            <h2 className="text-[15px] font-extrabold text-[color:var(--qs-primary,#F26522)] mb-3 tracking-tight pl-1">
               {section.title}
             </h2>
             <div className="grid grid-cols-4 gap-2 justify-items-center">
@@ -1214,7 +1216,7 @@ const QuickShop = () => {
       <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-4 md:py-6 space-y-8">
         {categoriesLoading && (
           <div className="space-y-6">
-            <div className="h-10 bg-[#F26522]/30 rounded-t-3xl animate-pulse" />
+            <div className="h-10 bg-[color:var(--qs-primary,#F26522)]/30 rounded-t-3xl animate-pulse" />
             <div className="bg-white p-6 rounded-b-3xl border border-slate-100 shadow-md grid grid-cols-4 lg:grid-cols-8 gap-6">
               {Array.from({ length: 8 }).map((_, idx) => (
                 <div key={idx} className="h-28 bg-slate-100 rounded-2xl animate-pulse" />
@@ -1227,13 +1229,13 @@ const QuickShop = () => {
             <h2 className="text-[26px] font-black text-slate-900 tracking-tight leading-tight">
               {t('auto.exploreAllCategories', 'Explore All Categories')}
             </h2>
-            <div className="mt-2 h-[3px] w-16 rounded-full bg-[#F26522]" />
+            <div className="mt-2 h-[3px] w-16 rounded-full bg-[color:var(--qs-primary,#F26522)]" />
           </div>
         )}
         {!categoriesLoading && categorySections.map((section, sIdx) => (
           <div key={sIdx} className="flex flex-col">
             {/* Header Banner */}
-            <div className={`px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[#F26522]`}>
+            <div className={`px-6 py-3.5 rounded-t-3xl flex items-center justify-between shadow-sm text-white bg-[color:var(--qs-primary,#F26522)]`}>
               <h2 className="text-[15px] font-black uppercase tracking-wider">
                 {section.title}
               </h2>
@@ -1261,7 +1263,7 @@ const QuickShop = () => {
                         onError={handleImageError}
                       />
                     </div>
-                    <span className="text-[13px] font-black text-center text-slate-850 leading-tight tracking-tight mt-1 group-hover:text-[#F26522] transition-colors">
+                    <span className="text-[13px] font-black text-center text-slate-850 leading-tight tracking-tight mt-1 group-hover:text-[color:var(--qs-primary,#F26522)] transition-colors">
                       {item.name}
                     </span>
                   </div>

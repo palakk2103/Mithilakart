@@ -215,6 +215,7 @@ class ProductService extends BaseService {
 
     await this.productRepository.updateStatus(id, PRODUCT_STATUS.APPROVED);
     await this.productRepository.updateById(id, { masterStatus: PRODUCT_STATUS.APPROVED });
+    await this._syncListingStatus([id], PRODUCT_STATUS.APPROVED);
     await this._invalidateProductCache(id);
     eventBus.publish('product.approved', { productId: id, adminId });
     return this.getAdminById(id);
@@ -223,6 +224,7 @@ class ProductService extends BaseService {
   async reject(id, moderationNote, adminId) {
     await this.getAdminById(id);
     await this.productRepository.updateStatus(id, PRODUCT_STATUS.REJECTED, moderationNote);
+    await this._syncListingStatus([id], PRODUCT_STATUS.REJECTED, moderationNote);
     await this._invalidateProductCache(id);
     eventBus.publish('product.rejected', { productId: id, adminId, moderationNote });
     return this.getAdminById(id);
@@ -300,8 +302,10 @@ class ProductService extends BaseService {
 
     if (action === 'approve') {
       await this.productRepository.bulkUpdateStatus(ids, PRODUCT_STATUS.APPROVED);
+      await this._syncListingStatus(ids, PRODUCT_STATUS.APPROVED);
     } else if (action === 'reject') {
       await this.productRepository.bulkUpdateStatus(ids, PRODUCT_STATUS.REJECTED);
+      await this._syncListingStatus(ids, PRODUCT_STATUS.REJECTED, 'Bulk rejection');
     } else if (action === 'delete') {
       await this.productRepository.softDeleteMany(ids);
     } else {
@@ -311,6 +315,16 @@ class ProductService extends BaseService {
     await Promise.all(ids.map((id) => this._invalidateProductCache(id)));
 
     return { updatedCount: ids.length, action };
+  }
+
+  /** Propagates a moderation decision to the product's marketplace listings (never blocks the decision). */
+  async _syncListingStatus(ids, status, note = null) {
+    if (!this.marketplaceListingService?.syncListingsWithProductStatus) return;
+    try {
+      await this.marketplaceListingService.syncListingsWithProductStatus(ids, status, note);
+    } catch (_err) {
+      // Best-effort: the product decision itself already succeeded.
+    }
   }
 
   async _ensureCategoryExists(categoryId) {

@@ -13,11 +13,14 @@ const ALLOWED_COMMERCE_FLOWS = [
 const addCartItemSchema = Joi.object({
   productId: objectIdSchema.optional(),
   listingId: objectIdSchema.optional(),
+  // Customised package: the server re-prices the selection; a client price is never accepted.
+  packageId: objectIdSchema.optional(),
+  selectedItemIds: Joi.array().items(objectIdSchema).max(200).optional(),
   variantId: objectIdSchema.optional().allow(null),
   quantity: Joi.number().integer().min(1).max(100).required(),
   commerceFlow: Joi.string().valid(...ALLOWED_COMMERCE_FLOWS).optional(),
   marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).optional(),
-}).or('productId', 'listingId');
+}).or('productId', 'listingId', 'packageId');
 
 const updateCartItemSchema = Joi.object({
   quantity: Joi.number().integer().min(1).max(100).required(),

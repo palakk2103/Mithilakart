@@ -72,11 +72,15 @@ class CustomerAuthService extends BaseService {
 
     // Phase 3: merge guest cart into customer cart on successful login.
     if (this.cartMergeService?.mergeGuestIntoCustomer && sessionMeta?.sessionId) {
-      await this.cartMergeService.mergeGuestIntoCustomer({
-        guestSessionId: sessionMeta.sessionId,
-        customerId: user._id.toString(),
-        commerceFlow: 'standard',
-      });
+      try {
+        await this.cartMergeService.mergeGuestIntoCustomer({
+          guestSessionId: sessionMeta.sessionId,
+          customerId: user._id.toString(),
+          commerceFlow: 'standard',
+        });
+      } catch (mergeErr) {
+        // Non-blocking: cart merge error should never prevent the user from logging in
+      }
     }
 
     const tokens = await this.tokenService.issueTokenPair({
@@ -130,11 +134,15 @@ class CustomerAuthService extends BaseService {
 
     // Phase 3: merge guest cart into customer cart on successful login.
     if (this.cartMergeService?.mergeGuestIntoCustomer && sessionMeta?.sessionId) {
-      await this.cartMergeService.mergeGuestIntoCustomer({
-        guestSessionId: sessionMeta.sessionId,
-        customerId: user._id.toString(),
-        commerceFlow: 'standard',
-      });
+      try {
+        await this.cartMergeService.mergeGuestIntoCustomer({
+          guestSessionId: sessionMeta.sessionId,
+          customerId: user._id.toString(),
+          commerceFlow: 'standard',
+        });
+      } catch (mergeErr) {
+        // Non-blocking: cart merge error should never prevent the user from logging in
+      }
     }
 
     const tokens = await this.tokenService.issueTokenPair({

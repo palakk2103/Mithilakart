@@ -5,7 +5,8 @@ const { addCartItemSchema, updateCartItemSchema } = require('../../validators/ca
 
 // A cart line is addressed by the itemKey the cart returns ("listing:<id>",
 // "<productId>:<variantId>") or, from older clients, a bare product/listing id.
-const cartLineIdSchema = Joi.string().trim().pattern(/^(listing:)?[a-f0-9]{24}(:([a-f0-9]{24})?)?$/i).required();
+// Customised packages use "package:<packageId>:<selectionHash>".
+const cartLineIdSchema = Joi.string().trim().pattern(/^((listing:)?[a-f0-9]{24}(:([a-f0-9]{24})?)?|package:[a-f0-9]{24}:[a-f0-9]{12})$/i).required();
 
 function createCartRoutes(cartController, middleware) {
   const router = express.Router();

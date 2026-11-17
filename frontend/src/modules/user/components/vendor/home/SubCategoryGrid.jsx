@@ -162,7 +162,7 @@ const SubCategoryGrid = () => {
         </h2>
         <span
           onClick={() => navigate('/categories')}
-          className="text-[15px] md:text-[16px] font-bold text-[#65B842] hover:text-[#529C33] cursor-pointer hover:underline transition-colors"
+          className="text-[15px] md:text-[16px] font-bold text-[color:var(--mk-primary,#65B842)] hover:text-[#529C33] cursor-pointer hover:underline transition-colors"
         >
           {t('common.viewAll', { defaultValue: t('auto.viewAll') })}
         </span>
@@ -233,7 +233,7 @@ const SubCategoryGrid = () => {
             onClick={() => handleCategorySelect(item)}
             className="flex-shrink-0 w-[112px] sm:w-[126px] md:w-[148px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
           >
-            <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(61,35,20,0.05)] group-hover:border-[#65B842]/40 transition-all duration-300 transform">
+            <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(61,35,20,0.05)] group-hover:border-[color:var(--mk-primary,#65B842)]/40 transition-all duration-300 transform">
               <div className="w-full h-[38px] sm:h-[40px] md:h-[44px] flex items-center justify-center px-0.5">
                 <span className="text-[13px] sm:text-[14px] md:text-[15px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
                   {tName(item.name)}
@@ -248,7 +248,7 @@ const SubCategoryGrid = () => {
                     onError={handleImageError}
                     className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500" loading="lazy" decoding="async" />
                 ) : (
-                  <span className="text-[12px] font-black text-[#65B842]">{item.name.charAt(0)}</span>
+                  <span className="text-[12px] font-black text-[color:var(--mk-primary,#65B842)]">{item.name.charAt(0)}</span>
                 )}
               </div>
             </div>
