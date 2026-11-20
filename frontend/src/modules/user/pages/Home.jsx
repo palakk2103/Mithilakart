@@ -214,7 +214,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
-  const { selectedCategory, setSelectedCategory, homeSections, bannersByFlow, homeChips, fetchHomeSections } = useVendorStore();
+  const { selectedCategory, setSelectedCategory, homeSections, bannersByFlow, homeChips, homeError, fetchHomeSections } = useVendorStore();
   const homeBanners = bannersByFlow.standard;
 
   useEffect(() => {
@@ -236,7 +236,14 @@ const Home = () => {
       { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: t('home.fbFestival') }
     ];
 
-    const homeBannerList = mapHomeBanners(homeBanners, fallbackBanners);
+    // Only fall back to the built-in images when the request FAILED. If the admin has no active
+    // banners the list is genuinely empty — showing placeholders there looked like "old banners came back".
+    let homeBannerList;
+    if (Array.isArray(homeBanners)) {
+      homeBannerList = homeBanners.length ? mapHomeBanners(homeBanners) : [];
+    } else {
+      homeBannerList = homeError ? fallbackBanners : []; // still loading → render nothing, no flash of placeholders
+    }
 
     return {
       'Home': homeBannerList,
@@ -248,7 +255,7 @@ const Home = () => {
       'Cosmetics': homeBannerList,
       'Fashion': homeBannerList
     };
-  }, [homeBanners, t]);
+  }, [homeBanners, homeError, t]);
 
   const mainCategoriesList = useMemo(() => {
     const iconMap = {
