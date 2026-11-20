@@ -1,0 +1,5 @@
+[     711ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[    2653ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[    2653ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[  476484ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/src/modules/user/pages/Mithilak.jsx?t=1795091486417:1
+[  476488ms] [ERROR] [vite] Failed to reload /src/modules/user/pages/Mithilak.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:882

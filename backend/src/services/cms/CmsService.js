@@ -73,7 +73,13 @@ class CmsService extends BaseService {
 
   async updateBanner(id, data) {
     const payload = await this._prepareBannerPayload(data);
+    const before = await this.bannerRepository.findById(id);
     const banner = await this.bannerRepository.updateById(id, payload);
+    if (!banner) throw AppError.notFound('Banner not found');
+    // If the banner moved to another flow, the old flow's cached home still lists it.
+    if (before && before.commerceFlow !== banner.commerceFlow) {
+      await this._invalidateStorefrontCache(before.commerceFlow);
+    }
     await this._invalidateStorefrontCache(banner.commerceFlow);
     return banner;
   }
@@ -231,6 +237,9 @@ class CmsService extends BaseService {
       content: page.content,
       version: page.version,
       updatedAt: page.updatedAt,
+      // Seed scripts leave updatedBy empty; only an admin save sets it. The apps
+      // show their built-in policy text until an admin has really published one.
+      publishedByAdmin: Boolean(page.updatedBy),
     };
   }
 

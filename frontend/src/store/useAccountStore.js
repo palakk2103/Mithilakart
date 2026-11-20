@@ -1,5 +1,17 @@
 import { create } from 'zustand';
 
+// Remember the customer's delivery choice across reloads.
+// deliveryMode: 'auto' (live GPS if available, else saved), 'saved', 'live'
+const readPref = (key) => {
+  try { return localStorage.getItem(key); } catch { return null; }
+};
+const writePref = (key, value) => {
+  try {
+    if (value == null) localStorage.removeItem(key);
+    else localStorage.setItem(key, String(value));
+  } catch { /* ignore */ }
+};
+
 const useAccountStore = create((set) => ({
   userProfile: {
     name: '',
@@ -15,10 +27,26 @@ const useAccountStore = create((set) => ({
   wishlist: [],
   coupons: [],
   notifications: [],
-  selectedAddressId: null,
+  selectedAddressId: readPref('mk_selected_address_id'),
+  deliveryMode: readPref('mk_delivery_mode') || 'auto',
   isDarkMode: false,
 
-  setSelectedAddress: (id) => set({ selectedAddressId: id }),
+  setSelectedAddress: (id) => {
+    writePref('mk_selected_address_id', id);
+    set({ selectedAddressId: id });
+  },
+
+  // Customer explicitly picked a saved address from the "Deliver to" sheet.
+  chooseSavedAddress: (id) => {
+    writePref('mk_selected_address_id', id);
+    writePref('mk_delivery_mode', 'saved');
+    set({ selectedAddressId: id, deliveryMode: 'saved' });
+  },
+
+  setDeliveryMode: (mode) => {
+    writePref('mk_delivery_mode', mode);
+    set({ deliveryMode: mode });
+  },
 
   setSavedAddresses: (savedAddresses) => set({ savedAddresses }),
 

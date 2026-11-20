@@ -730,17 +730,17 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               onClick={handleClearSubcategory}
               className={`flex-shrink-0 w-[115px] sm:w-[130px] rounded-[18px] p-2.5 flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 border ${
                 !selectedSubcategory
-                  ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-md ring-2 ring-[#3E5A44]/30'
+                  ? 'bg-gradient-to-b from-[#F1F8EC] to-[#E3F0DC] text-[#2F4A35] border-2 border-[#5E8A62] shadow-[0_6px_16px_-8px_rgba(62,90,68,0.45)]'
                   : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:bg-[#FFF8EE]'
               }`}
             >
               <div className={`w-9 h-9 rounded-full flex items-center justify-center mb-1.5 ${
-                !selectedSubcategory ? 'bg-white/20 text-white' : 'bg-[#FFF8EE] text-[#3E5A44]'
+                !selectedSubcategory ? 'bg-[#5E8A62] text-white' : 'bg-[#FFF8EE] text-[#3E5A44]'
               }`}>
                 <Layers size={17} />
               </div>
               <span className="text-[12px] md:text-[13px] font-black leading-tight text-center">{t('common.allItems')}</span>
-              <span className={`text-[10.5px] mt-0.5 ${!selectedSubcategory ? 'text-[#FDE68A]' : 'text-slate-400'}`}>
+              <span className={`text-[10.5px] mt-0.5 ${!selectedSubcategory ? 'text-[#5E8A62] font-bold' : 'text-slate-400'}`}>
                 {allProducts.length} items
               </span>
             </button>
@@ -764,7 +764,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                   }}
                   className={`flex-shrink-0 w-[125px] sm:w-[140px] md:w-[155px] cursor-pointer transition-all duration-200 active:scale-95 rounded-[18px] p-2.5 flex flex-col justify-between text-left ${
                     isSelected
-                      ? 'bg-gradient-to-br from-[#283E2D] via-[#3E5A44] to-[#1E2E22] text-white border-2 border-[#3E5A44] shadow-md ring-2 ring-[#3E5A44]/30'
+                      ? 'bg-gradient-to-b from-[#F1F8EC] to-[#E3F0DC] text-[#2F4A35] border-2 border-[#5E8A62] shadow-[0_6px_16px_-8px_rgba(62,90,68,0.45)] -translate-y-0.5'
                       : 'bg-[#FFF8EE] text-[#3F2A20] border border-[#EADCC9] hover:border-[#3E5A44]/60 hover:shadow-xs'
                   }`}
                 >
@@ -775,21 +775,21 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                       onError={handleImageError}
                       className="w-full h-full object-cover rounded-[10px] group-hover:scale-105 transition-transform duration-500" loading="lazy" decoding="async" />
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 bg-[#3E5A44] text-white w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
+                      <div className="absolute top-1.5 right-1.5 bg-[#5E8A62] text-white w-5 h-5 rounded-full flex items-center justify-center shadow-sm ring-2 ring-white">
                         <Check size={12} strokeWidth={3} />
                       </div>
                     )}
                   </div>
                   <div className="mt-2 text-center w-full">
-                    <h4 className={`text-[12px] md:text-[13px] font-black leading-tight truncate px-0.5 ${isSelected ? 'text-white' : 'text-[#3F2A20]'}`}>
+                    <h4 className={`text-[12px] md:text-[13px] font-black leading-tight truncate px-0.5 ${isSelected ? 'text-[#2F4A35]' : 'text-[#3F2A20]'}`}>
                       {sub.name}
                     </h4>
                     {sub.offer ? (
-                      <span className={`text-[11px] font-extrabold block mt-0.5 ${isSelected ? 'text-[#FDE68A]' : 'text-[#E26D22]'}`}>
+                      <span className="text-[11px] font-extrabold block mt-0.5 text-[#E26D22]">
                         {sub.offer}
                       </span>
                     ) : (
-                      <span className={`text-[10.5px] font-semibold block mt-0.5 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
+                      <span className={`text-[10.5px] block mt-0.5 ${isSelected ? 'text-[#5E8A62] font-bold' : 'text-slate-500 font-semibold'}`}>
                         {isSelected ? t('common.selected') : t('common.filterByThis')}
                       </span>
                     )}
@@ -804,15 +804,18 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       {/* ── SECTION 1B: Secondary / Nested Subcategories Strip (e.g. Men's Wear -> Casual Shirts, Jeans, Denim, Festive, etc.) ── */}
       {activeParentSub && Array.isArray(activeParentSub.children) && activeParentSub.children.length > 0 && (
         <div className="mb-6 bg-[#FAF9F5] border border-[#EADCC9]/80 rounded-2xl p-3 shadow-xs">
-          <div className="flex items-center justify-between mb-2.5 px-0.5">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#3E5A44]" />
-              <h4 className="text-[13px] font-black text-[#3F2A20]">
-                {activeParentSub.name} Collections ({activeParentSub.children.length})
-              </h4>
-              <nav aria-label="Category path" data-testid="category-breadcrumb" className="text-[11px] font-semibold text-slate-400 truncate">
-                {[selectedCategory, activeParentSub.name, activeChildSub?.name].filter(Boolean).join(' / ')}
-              </nav>
+          <div className="flex items-start justify-between gap-2 mb-2.5 px-0.5">
+            <div className="flex items-start gap-2 min-w-0">
+              <span className="w-2 h-2 mt-[5px] rounded-full bg-[#3E5A44] flex-shrink-0" />
+              <div className="min-w-0">
+                <h4 className="text-[13px] font-black text-[#3F2A20] truncate">
+                  {activeParentSub.name} Collections{' '}
+                  <span className="text-[#3E5A44]">({activeParentSub.children.length})</span>
+                </h4>
+                <nav aria-label="Category path" data-testid="category-breadcrumb" className="text-[11px] font-semibold text-slate-400 truncate">
+                  {[selectedCategory, activeParentSub.name, activeChildSub?.name].filter(Boolean).join(' / ')}
+                </nav>
+              </div>
             </div>
             {activeChildSub && (
               <button
@@ -825,18 +828,36 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             )}
           </div>
 
-          <ScrollRow className="flex items-center gap-2.5 pb-1 pt-0.5 -mx-0.5 px-0.5">
-            {/* "All [Parent]" pill */}
+          <ScrollRow className="flex items-stretch gap-2.5 sm:gap-3 pb-2 pt-1 -mx-0.5 px-0.5 snap-x">
+            {/* "All [Parent]" tile */}
             <button
               type="button"
               onClick={() => handleSubcategoryClick(activeParentSub)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-[13px] sm:text-[14px] md:text-[15px] font-black cursor-pointer transition-all active:scale-95 border ${
+              aria-pressed={!activeChildSub}
+              className={`group snap-start flex-shrink-0 w-[84px] sm:w-[96px] md:w-[104px] flex flex-col items-center rounded-2xl p-2 pb-2.5 cursor-pointer transition-all duration-200 active:scale-95 border ${
                 !activeChildSub
-                  ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
-                  : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:bg-[#FFF8EE]'
+                  ? 'bg-gradient-to-b from-[#F1F8EC] to-[#E3F0DC] border-[#5E8A62] ring-1 ring-[#5E8A62] shadow-[0_6px_16px_-8px_rgba(62,90,68,0.45)]'
+                  : 'bg-white border-[#EFE6DA] shadow-[0_2px_10px_-4px_rgba(63,42,32,0.12)] hover:-translate-y-0.5 hover:shadow-[0_8px_18px_-8px_rgba(63,42,32,0.25)]'
               }`}
             >
-              All {activeParentSub.name}
+              <div
+                className={`w-full aspect-square rounded-xl flex items-center justify-center transition-colors ${
+                  !activeChildSub ? 'bg-white' : 'bg-gradient-to-br from-[#EEF4EC] to-[#FFF6E9]'
+                }`}
+              >
+                <Layers
+                  size={30}
+                  strokeWidth={2.2}
+                  className="transition-transform duration-200 group-hover:scale-110 text-[#3E5A44]"
+                />
+              </div>
+              <span
+                className={`mt-1.5 w-full text-center text-[11.5px] sm:text-[12.5px] font-extrabold leading-tight line-clamp-2 min-h-[2.4em] flex items-center justify-center ${
+                  !activeChildSub ? 'text-[#2F4A35]' : 'text-[#3F2A20]'
+                }`}
+              >
+                All {activeParentSub.name}
+              </span>
             </button>
 
             {/* Child subcategories: Casual Shirts, Jeans, Denim Wear, Festive Wear, Workwear, Sleepwear, etc. */}
@@ -853,20 +874,35 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
                   key={child.id}
                   type="button"
                   onClick={() => handleChildSubcategoryClick(child, activeParentSub)}
-                  className={`flex-shrink-0 flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[13px] sm:text-[14px] md:text-[15px] font-bold cursor-pointer transition-all active:scale-95 border ${
+                  aria-pressed={!!isChildSelected}
+                  className={`group relative snap-start flex-shrink-0 w-[84px] sm:w-[96px] md:w-[104px] flex flex-col items-center rounded-2xl p-2 pb-2.5 cursor-pointer transition-all duration-200 active:scale-95 border ${
                     isChildSelected
-                      ? 'bg-[#3E5A44] text-white border-[#3E5A44] shadow-xs'
-                      : 'bg-white text-[#3F2A20] border-[#EADCC9] hover:border-[#3E5A44]/60 hover:bg-[#FFF8EE]'
+                      ? 'bg-gradient-to-b from-[#F1F8EC] to-[#E3F0DC] border-[#5E8A62] ring-1 ring-[#5E8A62] shadow-[0_6px_16px_-8px_rgba(62,90,68,0.45)]'
+                      : 'bg-white border-[#EFE6DA] shadow-[0_2px_10px_-4px_rgba(63,42,32,0.12)] hover:-translate-y-0.5 hover:shadow-[0_8px_18px_-8px_rgba(63,42,32,0.25)]'
                   }`}
                 >
-                  <div className="w-5 h-5 rounded-lg overflow-hidden bg-[#FAF9F5] flex-shrink-0 border border-[#EADCC9]/60">
+                  {isChildSelected && (
+                    <span className="absolute top-1 right-1 z-10 w-[18px] h-[18px] rounded-full bg-[#5E8A62] text-white ring-2 ring-white flex items-center justify-center shadow-sm">
+                      <Check size={11} strokeWidth={3.5} />
+                    </span>
+                  )}
+                  <div className="w-full aspect-square rounded-xl overflow-hidden bg-[#FAF6EF]">
                     <img
                       src={child.img || fallbackImg}
                       alt={child.name}
                       onError={handleImageError}
-                      className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </div>
-                  <span className="whitespace-nowrap">{child.name}</span>
+                  <span
+                    className={`mt-1.5 w-full text-center text-[11.5px] sm:text-[12.5px] font-bold leading-tight line-clamp-2 min-h-[2.4em] flex items-center justify-center ${
+                      isChildSelected ? 'text-[#2F4A35] font-extrabold' : 'text-[#3F2A20]'
+                    }`}
+                  >
+                    {child.name}
+                  </span>
                 </button>
               );
             })}

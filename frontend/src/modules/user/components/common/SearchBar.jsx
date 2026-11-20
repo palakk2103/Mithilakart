@@ -148,10 +148,11 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
   }, [stream]);
 
   const displayAddress = deliverTo?.label
-    || (selectedAddress?.address ? selectedAddress.address.slice(0, 32) : 'Set delivery location');
+    || selectedAddress?.address
+    || 'Set delivery location';
 
   return (
-    <div className="px-3 pb-2.5 pt-0.5 flex flex-col gap-2 md:px-4 md:pb-3 md:flex-col md:gap-3">
+    <div className="px-4 pb-1 pt-1 flex flex-col gap-3 md:px-4 md:pt-3 md:pb-3 md:flex-col md:gap-3">
       {/* Hidden file input for camera upload */}
       <input 
         type="file" 
@@ -162,53 +163,28 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
       />
 
 
-      <div className="flex items-center justify-between gap-1.5 py-0.5 md:py-1">
-        {isFreshGroceryActive ? (
-          <button
-            type="button"
-            onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1.5 min-w-0 text-white hover:text-white/95 text-left py-0.5 px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
-          >
-            <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0 text-white" />
-            <div className="flex flex-col text-left leading-tight min-w-0">
-              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
-              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px]">
-                {displayAddress}
-              </span>
-            </div>
-            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
-          </button>
-        ) : isMithilakActive ? (
-          <button
-            type="button"
-            onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1.5 min-w-0 text-white/95 hover:text-white text-left py-0.5 px-2.5 bg-white/15 border border-white/20 rounded-full shadow-xs transition-all"
-          >
-            <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0" />
-            <div className="flex flex-col text-left leading-tight min-w-0">
-              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
-              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px]">
-                {displayAddress}
-              </span>
-            </div>
-            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
-            className="flex items-center gap-1.5 min-w-0 text-white bg-white/20 hover:bg-white/30 border border-white/25 px-2.5 py-0.5 rounded-full shadow-xs transition-all text-left"
-          >
-            <MapPin size={14} strokeWidth={2.5} className="w-[14px] h-[14px] flex-shrink-0 text-white" />
-            <div className="flex flex-col text-left leading-tight min-w-0">
-              <span className="text-[8.5px] font-medium text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
-              <span className="text-[11px] font-bold truncate max-w-[170px] sm:max-w-[220px] md:max-w-[280px] text-white">
-                {displayAddress}
-              </span>
-            </div>
-            <ChevronDown size={11} strokeWidth={3} className="w-[11px] h-[11px] flex-shrink-0 text-white" />
-          </button>
-        )}
+      <div className="flex items-center justify-between gap-3 md:py-1">
+        <button
+          type="button"
+          onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
+          aria-label={t('nav.deliverTo', { defaultValue: 'Deliver to' })}
+          className={`flex-1 flex items-center gap-2 min-w-0 text-white text-left py-1.5 pl-2 pr-3 border rounded-2xl shadow-xs transition-all active:scale-[0.98] ${
+            isFreshGroceryActive || isMithilakActive
+              ? 'bg-white/15 hover:bg-white/20 border-white/20'
+              : 'bg-white/20 hover:bg-white/30 border-white/25'
+          }`}
+        >
+          <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+            <MapPin size={16} strokeWidth={2.5} className="w-4 h-4 text-white" />
+          </span>
+          <div className="flex flex-col text-left min-w-0 flex-1 gap-1">
+            <span className="text-[10.5px] font-semibold text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
+            <span className="text-[13px] font-bold truncate leading-tight text-white">
+              {displayAddress}
+            </span>
+          </div>
+          <ChevronDown size={16} strokeWidth={2.75} className="w-4 h-4 flex-shrink-0 text-white" />
+        </button>
 
         {/* Language Pill + Coin/Star/Delivery Badge */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -217,20 +193,20 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
           
           {/* Custom Coins/Stars Badge or Delivery Time Badge */}
           {isFreshGroceryActive ? (
-            <div className="flex items-center gap-1 px-2.5 h-[25px] bg-white/20 border border-white/15 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
+            <div className="flex items-center gap-1 px-3 h-8 bg-white/20 border border-white/15 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
               <span>15 mins</span>
             </div>
           ) : isQuickShopActive ? (
-            <div className="flex items-center gap-1 px-2.5 h-[25px] bg-[color:var(--qs-dark,#D45014)] border border-white/20 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
+            <div className="flex items-center gap-1 px-3 h-8 bg-[color:var(--qs-dark,#D45014)] border border-white/20 rounded-full text-white font-black text-[11px] shadow-xs whitespace-nowrap">
               <span>15 mins</span>
             </div>
           ) : isMithilakActive ? (
-            <div className="flex items-center gap-0.5 px-2.5 h-[25px] bg-[color:var(--ml-primary,#207C8A)] border border-white/20 rounded-full text-white font-extrabold text-[11px] shadow-xs">
+            <div className="flex items-center gap-0.5 px-3 h-8 bg-[color:var(--ml-primary,#207C8A)] border border-white/20 rounded-full text-white font-extrabold text-[11px] shadow-xs">
               <Star size={11} className="text-yellow-300 fill-yellow-300" />
               <span>3</span>
             </div>
           ) : (
-            <div className="flex items-center gap-0.5 px-2.5 h-[25px] bg-[#54A034] rounded-full text-white border border-white/20 shadow-xs">
+            <div className="flex items-center gap-0.5 px-3 h-8 bg-[#54A034] rounded-full text-white border border-white/20 shadow-xs">
               <Star size={11} className="text-yellow-300 fill-yellow-300" />
               <span className="text-[11px] font-extrabold">3</span>
             </div>

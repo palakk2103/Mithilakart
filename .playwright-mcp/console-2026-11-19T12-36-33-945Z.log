@@ -1,0 +1,59 @@
+[     522ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[    1462ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-ritual-sanskar-packages @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:4925
+[    1463ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-traditional-toys-dolls @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:4925
+[    1560ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/dfbb6927-cd33-46eb-bb13-8bda72932037.webp:1
+[    1576ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/38358b9a-2471-4422-8a88-48258c373346.webp:1
+[    1577ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/82ff5c5f-3559-4d67-8af8-d5e1c13ad343.webp:1
+[    1578ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/61b7acc0-a8b4-4ef3-92d3-5f3b5c3f9432.webp:1
+[    1612ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/c7e72b36-892b-46cc-9d94-c0cb73156f5c.webp:1
+[    1613ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/572f2435-45e6-4b49-9300-03e4a1ac4d2c.webp:1
+[    1614ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/7b673671-683e-4851-b0cb-bd6269c5ed9e.webp:1
+[    1616ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/b8285162-3740-4540-9d55-769943733421.webp:1
+[    1619ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/750c2f0c-fd85-48cf-97ea-2cef116be96c.webp:1
+[   11444ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-traditional-toys-dolls @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:4925
+[   11462ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/839a7b9f-365b-41db-b956-dbc8c96124c2.webp:1
+[  521752ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-ritual-sanskar-packages @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:4925
+[  521752ms] [ERROR] Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. mithila-traditional-toys-dolls @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:4925
+[  521795ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[  522600ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/dfbb6927-cd33-46eb-bb13-8bda72932037.webp:1
+[  522612ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/38358b9a-2471-4422-8a88-48258c373346.webp:1
+[  522613ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/82ff5c5f-3559-4d67-8af8-d5e1c13ad343.webp:1
+[  522613ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/61b7acc0-a8b4-4ef3-92d3-5f3b5c3f9432.webp:1
+[  522619ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/c7e72b36-892b-46cc-9d94-c0cb73156f5c.webp:1
+[  522629ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/572f2435-45e6-4b49-9300-03e4a1ac4d2c.webp:1
+[  522682ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/7b673671-683e-4851-b0cb-bd6269c5ed9e.webp:1
+[  522684ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/b8285162-3740-4540-9d55-769943733421.webp:1
+[  532336ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  532538ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/config:1
+[  532540ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[  532541ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/src/config/userAppTabs.js:113
+[  532542ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/src/config/userAppTabs.js:113
+[  532542ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/src/config/userAppTabs.js:113
+[  532542ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/src/config/userAppTabs.js:113
+[  532542ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/you-popup:1
+[  532543ms] [WARNING] You popup config unavailable, using cached/default: Request failed with status code 500 @ http://localhost:5173/src/config/youPopup.js:60
+[  532543ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilak:1
+[  532544ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[  532550ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilak:1
+[  532782ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/packages?marketplaceTab=mithilak:1
+[  532794ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilak:1
+[  532835ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=mithilak:1
+[  532841ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/categories?commerceFlow=mithilak:1
+[  532843ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilak:1
+[  603297ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=38bb20a6:20103
+[  603664ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/config:1
+[  603670ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[  603671ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/src/config/userAppTabs.js:113
+[  603671ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/src/config/userAppTabs.js:113
+[  603671ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/src/config/userAppTabs.js:113
+[  603671ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/src/config/userAppTabs.js:113
+[  603671ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/you-popup:1
+[  603673ms] [WARNING] You popup config unavailable, using cached/default: Request failed with status code 500 @ http://localhost:5173/src/config/youPopup.js:60
+[  603722ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilak:1
+[  603725ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[  603730ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilak:1
+[  603848ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/packages?marketplaceTab=mithilak:1
+[  603854ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilak:1
+[  603857ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=mithilak:1
+[  603899ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/categories?commerceFlow=mithilak:1
+[  603908ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilak:1

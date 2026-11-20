@@ -1,0 +1,97 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img "Mithilakart" [ref=e8]
+        - generic [ref=e9]: Mithilakart
+      - generic [ref=e10] [cursor=pointer]: Quick Shop
+      - generic [ref=e16] [cursor=pointer]: Mithilak
+      - generic [ref=e22] [cursor=pointer]: Fresh & Groceries
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - button "Deliver to" [ref=e26]:
+          - generic [ref=e31]:
+            - generic [ref=e32]: Deliver to
+            - generic [ref=e33]: Tap to set delivery location
+        - generic [ref=e36]:
+          - button "English English" [ref=e38] [cursor=pointer]:
+            - img "English" [ref=e39]
+            - generic [ref=e40]: English
+          - generic [ref=e41]: "3"
+      - generic [ref=e47]:
+        - searchbox "Search for products, categories..." [ref=e48]
+        - generic [ref=e50]:
+          - img [aria-hidden] [ref=e51] [cursor=pointer]
+          - img [aria-hidden] [ref=e54] [cursor=pointer]
+  - generic [ref=e57]:
+    - main [ref=e60]:
+      - generic [ref=e61]:
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - button "You Buy" [ref=e65] [cursor=pointer]
+            - button "Fashion" [ref=e73] [cursor=pointer]
+            - button "Beauty" [ref=e78] [cursor=pointer]
+            - button "Electronics" [ref=e84] [cursor=pointer]
+            - button "Jewellery" [ref=e89] [cursor=pointer]
+            - button "Toys" [ref=e95] [cursor=pointer]
+          - generic [ref=e100]:
+            - button "Stationery" [ref=e101] [cursor=pointer]
+            - button "Gifting" [ref=e106] [cursor=pointer]
+            - button "Electrical" [ref=e113] [cursor=pointer]
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - img "Shop More Save More" [ref=e122]
+            - generic [ref=e123]:
+              - generic [ref=e124]: Special Collection
+              - heading "Shop More Save More" [level=3] [ref=e125]
+          - generic [aria-hidden]:
+            - generic:
+              - generic: Special Collection
+              - heading [level=3]: Authentic Mithila Artistry
+          - generic [aria-hidden]:
+            - generic:
+              - generic: Special Collection
+              - heading [level=3]: Cultural Heritage Collection
+          - generic [aria-hidden]:
+            - generic:
+              - generic: Special Collection
+              - heading [level=3]: Special Festival Handicrafts
+          - generic [ref=e126]:
+            - button [ref=e127]
+            - button [ref=e128]
+            - button [ref=e129]
+            - button [ref=e130]
+        - generic [ref=e132]:
+          - heading "Today's Special Deals" [level=2] [ref=e133]
+          - generic [ref=e134] [cursor=pointer]: View All
+        - generic [ref=e141]:
+          - heading "Top Selection" [level=2] [ref=e154]
+          - button "View all top selection" [ref=e166]
+    - contentinfo [ref=e171]:
+      - img "Mithila Art Footer Border" [ref=e173]
+      - generic [ref=e174]:
+        - link [ref=e175] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=e178] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=e181] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=e185] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=e188] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=e191]:
+        - img "Mithilakart Logo" [ref=e192]
+        - generic [ref=e193]:
+          - text: Mithilakart
+          - generic [ref=e194]: ™
+  - navigation [ref=e195]:
+    - link "Home" [ref=e196] [cursor=pointer]:
+      - /url: /home
+    - link "Categories" [ref=e201] [cursor=pointer]:
+      - /url: /categories?flow=mithilakart
+    - link "0 Cart" [ref=e208] [cursor=pointer]:
+      - /url: /cart
+      - generic [ref=e209]: "0"
+      - generic [ref=e215]: Cart
+    - button "You" [ref=e216]

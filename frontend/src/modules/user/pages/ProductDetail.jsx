@@ -44,9 +44,9 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { id: paramId } = useParams();
   const { location: liveLocation } = useLiveLocation();
-  const { savedAddresses, selectedAddressId } = useAccountStore();
+  const { savedAddresses, selectedAddressId, deliveryMode } = useAccountStore();
   useHydrateAddresses();
-  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
+  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation, deliveryMode });
 
   const theme = useTabTheme();
   const {

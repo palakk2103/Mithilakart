@@ -80,7 +80,7 @@ export default function useLegalPage(type) {
   useEffect(() => {
     let cancelled = false;
     setTranslated(null);
-    if (!page || lang === 'en') return undefined;
+    if (!page || !page.publishedByAdmin || lang === 'en') return undefined;
     (async () => {
       const [title, content] = await Promise.all([
         translateText(page.title, lang),
@@ -95,5 +95,9 @@ export default function useLegalPage(type) {
     ? { ...page, title: translated.title, content: translated.content }
     : page;
 
-  return { page: shown, loading, error };
+  // Seeded placeholder rows (never saved by an admin) must not replace the
+  // page's built-in policy text, so only admin-published content is returned.
+  const published = shown?.publishedByAdmin ? shown : null;
+
+  return { page: published, loading, error };
 }

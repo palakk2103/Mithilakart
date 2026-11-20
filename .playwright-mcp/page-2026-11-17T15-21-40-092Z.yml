@@ -1,0 +1,513 @@
+- generic [ref=e2]:
+  - generic [ref=e205]:
+    - generic [ref=e208]:
+      - generic [ref=e209]:
+        - paragraph [ref=e210]: Choose delivery address
+        - paragraph [ref=e211]: Nearby sellers & faster delivery
+      - button "Close" [ref=e212]
+    - generic [ref=e216]:
+      - button [ref=e217]:
+        - generic [ref=e221]:
+          - paragraph [ref=e222]: Use live location
+          - paragraph [ref=e223]: Allow live location
+      - button "Log in to use saved addresses" [ref=e226]
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6] [cursor=pointer]:
+          - img "Mithilakart" [ref=e8]
+          - generic [ref=e9]: Mithilakart
+        - generic [ref=e10] [cursor=pointer]: Quick Shop
+        - generic [ref=e16] [cursor=pointer]: Mithilak
+        - generic [ref=e22] [cursor=pointer]: Fresh & Groceries
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - button "Deliver to" [active] [ref=e26]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: Deliver to
+              - generic [ref=e33]: Tap to set delivery location
+          - generic [ref=e36]:
+            - button "English English" [ref=e38] [cursor=pointer]:
+              - img "English" [ref=e39]
+              - generic [ref=e40]: English
+            - generic [ref=e41]: "3"
+        - generic [ref=e47]:
+          - searchbox "Search for products, categories..." [ref=e48]
+          - generic [ref=e50]:
+            - img [aria-hidden] [ref=e51] [cursor=pointer]
+            - img [aria-hidden] [ref=e54] [cursor=pointer]
+    - generic [ref=e57]:
+      - main [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e63]:
+            - button "You Buy" [ref=e64] [cursor=pointer]
+            - button "Today's Deals" [ref=e228] [cursor=pointer]
+            - button "Fashion" [ref=e72] [cursor=pointer]
+            - button "Beauty & Care" [ref=e235] [cursor=pointer]
+            - button "More categories" [ref=e94] [cursor=pointer]:
+              - generic [ref=e100]: More
+          - generic [ref=e103]:
+            - generic [aria-hidden]:
+              - generic:
+                - generic: Special Collection
+                - heading [level=3]: Shop More Save More
+            - generic [aria-hidden]:
+              - generic:
+                - generic: Special Collection
+                - heading [level=3]: Authentic Mithila Artistry
+            - generic [ref=e242]:
+              - generic [ref=e243]: Special Collection
+              - heading [level=3] [ref=e244]: Cultural Heritage Collection
+            - generic [ref=e245]:
+              - img "Special Festival Handicrafts" [ref=e246]
+              - generic [ref=e247]:
+                - generic [ref=e248]: Special Collection
+                - heading "Special Festival Handicrafts" [level=3] [ref=e249]
+            - generic [ref=e109]:
+              - button [ref=e110]
+              - button [ref=e111]
+              - button [ref=e112]
+              - button [ref=e113]
+          - generic [ref=e251]:
+            - generic [ref=e252]:
+              - heading "Shop by Categories" [level=2] [ref=e253]
+              - generic [ref=e254] [cursor=pointer]: View All
+            - generic [ref=e255]:
+              - button "All Categories" [ref=e256] [cursor=pointer]
+              - button "Men's Wear 30" [ref=e257] [cursor=pointer]:
+                - generic [ref=e258]: Men's Wear
+                - generic [ref=e259]: "30"
+              - button "Women's Wear 45" [ref=e260] [cursor=pointer]:
+                - generic [ref=e261]: Women's Wear
+                - generic [ref=e262]: "45"
+            - generic [ref=e264]:
+              - generic [ref=e266] [cursor=pointer]:
+                - generic [ref=e267]: Today's Deals
+                - generic [ref=e269]: T
+              - generic [ref=e272] [cursor=pointer]:
+                - generic [ref=e273]: Trendy Fashion
+                - img "Trendy Fashion" [ref=e276]
+              - generic [ref=e278] [cursor=pointer]:
+                - generic [ref=e279]: Beauty & Personal Care
+                - img "Beauty & Personal Care" [ref=e282]
+              - generic [ref=e284] [cursor=pointer]:
+                - generic [ref=e285]: Art Jewellery
+                - img "Art Jewellery" [ref=e288]
+              - generic [ref=e290] [cursor=pointer]:
+                - generic [ref=e291]: Pooja Needs
+                - img "Pooja Needs" [ref=e294]
+              - generic [ref=e296] [cursor=pointer]:
+                - generic [ref=e297]: Wellness & Hygiene
+                - img "Wellness & Hygiene" [ref=e300]
+              - generic [ref=e302] [cursor=pointer]:
+                - generic [ref=e303]: Smart Gadgets
+                - img "Smart Gadgets" [ref=e306]
+              - generic [ref=e308] [cursor=pointer]:
+                - generic [ref=e309]: Electricals
+                - img "Electricals" [ref=e312]
+              - generic [ref=e314] [cursor=pointer]:
+                - generic [ref=e315]: Appliances
+                - generic [ref=e317]: A
+              - generic [ref=e320] [cursor=pointer]:
+                - generic [ref=e321]: Daily Needs
+                - generic [ref=e323]: D
+              - generic [ref=e326] [cursor=pointer]:
+                - generic [ref=e327]: Kids & Toys
+                - img "Kids & Toys" [ref=e330]
+              - generic [ref=e332] [cursor=pointer]:
+                - generic [ref=e333]: Home & Decors
+                - generic [ref=e335]: H
+              - generic [ref=e338] [cursor=pointer]:
+                - generic [ref=e339]: Office & Books
+                - img "Office & Books" [ref=e342]
+              - generic [ref=e344] [cursor=pointer]:
+                - generic [ref=e345]: Books & Magazine
+                - img "Books & Magazine" [ref=e348]
+              - generic [ref=e350] [cursor=pointer]:
+                - generic [ref=e351]: Disposable
+                - generic [ref=e353]: D
+              - generic [ref=e356] [cursor=pointer]:
+                - generic [ref=e357]: Furniture
+                - img "Furniture" [ref=e360]
+              - generic [ref=e362] [cursor=pointer]:
+                - generic [ref=e363]: Home Utensils
+                - generic [ref=e365]: H
+              - generic [ref=e368] [cursor=pointer]:
+                - generic [ref=e369]: Gifts & Hampers
+                - img "Gifts & Hampers" [ref=e372]
+              - generic [ref=e374] [cursor=pointer]:
+                - generic [ref=e375]: Offer Zone
+                - generic [ref=e377]: O
+              - generic [ref=e380] [cursor=pointer]:
+                - generic [ref=e381]: Pet Store
+                - generic [ref=e383]: P
+              - generic [ref=e386] [cursor=pointer]:
+                - generic [ref=e387]: Plants & Decor
+                - generic [ref=e389]: P
+              - generic [ref=e392] [cursor=pointer]:
+                - generic [ref=e393]: Beauty & Care
+                - generic [ref=e395]: B
+              - generic [ref=e398] [cursor=pointer]:
+                - generic [ref=e399]: Mobiles
+                - img "Mobiles" [ref=e402]
+              - generic [ref=e404] [cursor=pointer]:
+                - generic [ref=e405]: Paan Store
+                - generic [ref=e407]: P
+              - generic [ref=e410] [cursor=pointer]:
+                - generic [ref=e411]: Sweets & Namkeens
+                - generic [ref=e413]: S
+              - generic [ref=e416] [cursor=pointer]:
+                - generic [ref=e417]: Sports & Fitness
+                - generic [ref=e419]: S
+              - generic [ref=e422] [cursor=pointer]:
+                - generic [ref=e423]: Automotive & Car Accessories
+                - generic [ref=e425]: A
+              - generic [ref=e428] [cursor=pointer]:
+                - generic [ref=e429]: Health & Wellness
+                - generic [ref=e431]: H
+              - generic [ref=e434] [cursor=pointer]:
+                - generic [ref=e435]: Tools & Hardware
+                - generic [ref=e437]: T
+              - generic [ref=e440] [cursor=pointer]:
+                - generic [ref=e441]: Musical Instruments
+                - generic [ref=e443]: M
+              - generic [ref=e446] [cursor=pointer]:
+                - generic [ref=e447]: Gaming & Video Games
+                - generic [ref=e449]: G
+              - generic [ref=e452] [cursor=pointer]:
+                - generic [ref=e453]: Software & Digital Products
+                - generic [ref=e455]: S
+              - generic [ref=e458] [cursor=pointer]:
+                - generic [ref=e459]: Luggage & Travel
+                - generic [ref=e461]: L
+              - generic [ref=e464] [cursor=pointer]:
+                - generic [ref=e465]: Industrial Supplies
+                - generic [ref=e467]: I
+              - generic [ref=e470] [cursor=pointer]:
+                - generic [ref=e471]: Office Products
+                - generic [ref=e473]: O
+              - generic [ref=e476] [cursor=pointer]:
+                - generic [ref=e477]: Collectibles
+                - generic [ref=e479]: C
+              - generic [ref=e482] [cursor=pointer]:
+                - generic [ref=e483]: Handmade Products
+                - generic [ref=e485]: H
+              - generic [ref=e488] [cursor=pointer]:
+                - generic [ref=e489]: Gardening & Outdoors
+                - generic [ref=e491]: G
+              - generic [ref=e494] [cursor=pointer]:
+                - generic [ref=e495]: Dairy & Breads
+                - img "Dairy & Breads" [ref=e498]
+              - generic [ref=e500] [cursor=pointer]:
+                - generic [ref=e501]: Bestsellers
+                - generic [ref=e503]: B
+              - generic [ref=e506] [cursor=pointer]:
+                - generic [ref=e507]: New Releases
+                - generic [ref=e509]: "N"
+              - generic [ref=e512] [cursor=pointer]:
+                - generic [ref=e513]: Deals Under 49
+                - img "Deals Under 49" [ref=e516]
+              - generic [ref=e518] [cursor=pointer]:
+                - generic [ref=e519]: Deals Under 99
+                - img "Deals Under 99" [ref=e522]
+              - generic [ref=e524] [cursor=pointer]:
+                - generic [ref=e525]: Deals Under 199
+                - img "Deals Under 199" [ref=e528]
+              - generic [ref=e530] [cursor=pointer]:
+                - generic [ref=e531]: Deals Under 299
+                - img "Deals Under 299" [ref=e534]
+              - generic [ref=e536] [cursor=pointer]:
+                - generic [ref=e537]: Deals Under 499
+                - img "Deals Under 499" [ref=e540]
+              - generic [ref=e542] [cursor=pointer]:
+                - generic [ref=e543]: Deals Under 349
+                - generic [ref=e545]: D
+              - generic [ref=e548] [cursor=pointer]:
+                - generic [ref=e549]: Deals Under 649
+                - generic [ref=e551]: D
+              - generic [ref=e554] [cursor=pointer]:
+                - generic [ref=e555]: Sprots & Fitness
+                - generic [ref=e557]: S
+              - generic [ref=e560] [cursor=pointer]:
+                - generic [ref=e561]: Atta, Flours & Grains
+                - img "Atta, Flours & Grains" [ref=e564]
+              - generic [ref=e566] [cursor=pointer]:
+                - generic [ref=e567]: Electronics & Gadgets
+                - img "Electronics & Gadgets" [ref=e570]
+          - generic [ref=e573]:
+            - generic [ref=e574]:
+              - heading "Trending Products" [level=3] [ref=e587]
+              - button "View All" [ref=e599]
+            - generic [ref=e603]:
+              - generic [ref=e604] [cursor=pointer]:
+                - generic [ref=e605]: Large Madhubani Fish Painting A2
+                - img "Large Madhubani Fish Painting A2" [ref=e608]
+                - generic [ref=e625]: ₹2499
+                - button "Add" [ref=e627]
+              - generic [ref=e630] [cursor=pointer]:
+                - generic [ref=e631]: Kumkumadi Tailam Brightening Face Oil 30ml
+                - img "Kumkumadi Tailam Brightening Face Oil 30ml" [ref=e634]
+                - generic [ref=e651]: ₹699
+                - button "Add" [ref=e653]
+              - generic [ref=e656] [cursor=pointer]:
+                - generic [ref=e657]: Handloom Pure Silk Saree Mithila Motif Border
+                - img "Handloom Pure Silk Saree Mithila Motif Border" [ref=e660]
+                - generic [ref=e677]: ₹4999
+                - button "Add" [ref=e679]
+              - generic [ref=e682] [cursor=pointer]:
+                - generic [ref=e683]: Wooden Hand-Carved Elephant Pair Madhubani Painted
+                - img "Wooden Hand-Carved Elephant Pair Madhubani Painted" [ref=e686]
+                - generic [ref=e703]: ₹799
+                - button "Add" [ref=e705]
+              - generic [ref=e708] [cursor=pointer]:
+                - generic [ref=e709]: Oxidised Silver Payal Anklet Pair with Ghungroo
+                - img "Oxidised Silver Payal Anklet Pair with Ghungroo" [ref=e712]
+                - generic [ref=e729]: ₹799
+                - button "Add" [ref=e731]
+              - generic [ref=e734] [cursor=pointer]:
+                - generic [ref=e735]: Mithila Dokra Brass Jewellery Set Necklace and Earrings
+                - img "Mithila Dokra Brass Jewellery Set Necklace and Earrings" [ref=e738]
+                - generic [ref=e755]: ₹899
+                - button "Add" [ref=e757]
+          - generic [ref=e114]:
+            - generic [ref=e115]:
+              - heading "Today's Special Deals" [level=2] [ref=e116]
+              - generic [ref=e117] [cursor=pointer]: View All
+            - generic [ref=e120]:
+              - generic [ref=e761] [cursor=pointer]:
+                - generic [ref=e766]:
+                  - img "Madhubani Peacock Painting A3 Framed" [ref=e767]
+                  - button [ref=e768]
+                  - generic [ref=e771]: 35% OFF
+                  - generic [ref=e772]: "4.7"
+                - generic [ref=e776]:
+                  - generic [ref=e777]:
+                    - generic [ref=e778]: Mithila Art House
+                    - heading "Madhubani Peacock Painting A3 Framed" [level=3] [ref=e779]
+                    - generic [ref=e780]:
+                      - generic [ref=e781]: ₹1299
+                      - generic [ref=e782]: ₹1999
+                  - button "Add" [ref=e784]
+              - generic [ref=e786] [cursor=pointer]:
+                - generic [ref=e791]:
+                  - img "10 Percent Vitamin C Brightening Face Serum 50ml" [ref=e792]
+                  - button [ref=e793]
+                  - generic [ref=e796]: 31% OFF
+                  - generic [ref=e797]: "4.6"
+                - generic [ref=e801]:
+                  - generic [ref=e802]:
+                    - generic [ref=e803]: Priya Naturals
+                    - heading "10 Percent Vitamin C Brightening Face Serum 50ml" [level=3] [ref=e804]
+                    - generic [ref=e805]:
+                      - generic [ref=e806]: ₹549
+                      - generic [ref=e807]: ₹799
+                  - button "Add" [ref=e809]
+              - generic [ref=e811] [cursor=pointer]:
+                - generic [ref=e816]:
+                  - img "Daily Essentials Starter Kit Toothpaste Shampoo Soap Handwash" [ref=e817]
+                  - button [ref=e818]
+                  - generic [ref=e821]: 31% OFF
+                  - generic [ref=e822]: "4.5"
+                - generic [ref=e826]:
+                  - generic [ref=e827]:
+                    - generic [ref=e828]: QuickMart
+                    - heading "Daily Essentials Starter Kit Toothpaste Shampoo Soap Handwash" [level=3] [ref=e829]
+                    - generic [ref=e830]:
+                      - generic [ref=e831]: ₹399
+                      - generic [ref=e832]: ₹580
+                  - button "Add" [ref=e834]
+              - generic [ref=e836] [cursor=pointer]:
+                - generic [ref=e841]:
+                  - img "Educational Wooden Puzzle 36 Pieces India Map" [ref=e842]
+                  - button [ref=e843]
+                  - generic [ref=e846]: 29% OFF
+                  - generic [ref=e847]: "4.5"
+                - generic [ref=e851]:
+                  - generic [ref=e852]:
+                    - generic [ref=e853]: PlayCraft Mithila
+                    - heading "Educational Wooden Puzzle 36 Pieces India Map" [level=3] [ref=e854]
+                    - generic [ref=e855]:
+                      - generic [ref=e856]: ₹499
+                      - generic [ref=e857]: ₹699
+                  - button "Add" [ref=e859]
+              - generic [ref=e861] [cursor=pointer]:
+                - generic [ref=e866]:
+                  - img "Mens Khadi Kurta Off-White Full Sleeve" [ref=e867]
+                  - button [ref=e868]
+                  - generic [ref=e871]: 33% OFF
+                  - generic [ref=e872]: "4.3"
+                - generic [ref=e876]:
+                  - generic [ref=e877]:
+                    - generic [ref=e878]: Mithila Handloom
+                    - heading "Mens Khadi Kurta Off-White Full Sleeve" [level=3] [ref=e879]
+                    - generic [ref=e880]:
+                      - generic [ref=e881]: ₹799
+                      - generic [ref=e882]: ₹1199
+                  - button "Add" [ref=e884]
+              - generic [ref=e886] [cursor=pointer]:
+                - generic [ref=e891]:
+                  - img "Organic Toor Dal Arhar 1kg Premium" [ref=e892]
+                  - button [ref=e893]
+                  - generic [ref=e896]: 25% OFF
+                  - generic [ref=e897]: "4.6"
+                - generic [ref=e901]:
+                  - generic [ref=e902]:
+                    - generic [ref=e903]: Fresh Farm Bihar
+                    - heading "Organic Toor Dal Arhar 1kg Premium" [level=3] [ref=e904]
+                    - generic [ref=e905]:
+                      - generic [ref=e906]: ₹149
+                      - generic [ref=e907]: ₹199
+                  - button "Add" [ref=e909]
+          - generic [ref=e123]:
+            - generic [ref=e124]:
+              - heading "Top Selection" [level=2] [ref=e137]
+              - button "View all top selection" [ref=e149]
+            - generic [ref=e910]:
+              - generic [ref=e911] [cursor=pointer]:
+                - img "Mithila Wedding Ceremony Painting Sita Swayamvar" [ref=e914]
+                - generic [ref=e915]:
+                  - generic [ref=e916]: Mithila Wedding Ceremony Painting Sita Swayamvar
+                  - generic [ref=e917]: Top Selection
+                  - generic [ref=e918]:
+                    - generic [ref=e919]: ₹3999
+                    - button "Add" [ref=e921]
+              - generic [ref=e922] [cursor=pointer]:
+                - img "Kumkumadi Tailam Brightening Face Oil 30ml" [ref=e925]
+                - generic [ref=e926]:
+                  - generic [ref=e927]: Kumkumadi Tailam Brightening Face Oil 30ml
+                  - generic [ref=e928]: Top Selection
+                  - generic [ref=e929]:
+                    - generic [ref=e930]: ₹699
+                    - button "Add" [ref=e932]
+              - generic [ref=e933] [cursor=pointer]:
+                - img "Handloom Pure Silk Saree Mithila Motif Border" [ref=e936]
+                - generic [ref=e937]:
+                  - generic [ref=e938]: Handloom Pure Silk Saree Mithila Motif Border
+                  - generic [ref=e939]: Top Selection
+                  - generic [ref=e940]:
+                    - generic [ref=e941]: ₹4999
+                    - button "Add" [ref=e943]
+              - generic [ref=e944] [cursor=pointer]:
+                - img "Wooden Hand-Carved Elephant Pair Madhubani Painted" [ref=e947]
+                - generic [ref=e948]:
+                  - generic [ref=e949]: Wooden Hand-Carved Elephant Pair Madhubani Painted
+                  - generic [ref=e950]: Top Selection
+                  - generic [ref=e951]:
+                    - generic [ref=e952]: ₹799
+                    - button "Add" [ref=e954]
+          - generic [ref=e957]:
+            - heading "Brands Spotlight" [level=2] [ref=e958]
+            - generic [ref=e959]:
+              - generic [ref=e960] [cursor=pointer]:
+                - generic [ref=e961]:
+                  - img "30% OFF" [ref=e962]
+                  - generic [ref=e963]: AD
+                  - generic [ref=e964]: 30% OFF
+                - generic [ref=e965]:
+                  - paragraph [ref=e966]: Kumkumadi Tailam Brightening Face Oil 30ml
+                  - paragraph [ref=e967]: Sponsored
+              - generic [ref=e968] [cursor=pointer]:
+                - generic [ref=e969]:
+                  - img "31% OFF" [ref=e970]
+                  - generic [ref=e971]: AD
+                  - generic [ref=e972]: 31% OFF
+                - generic [ref=e973]:
+                  - paragraph [ref=e974]: 10 Percent Vitamin C Brightening Face Serum 50ml
+                  - paragraph [ref=e975]: Sponsored
+              - generic [ref=e976] [cursor=pointer]:
+                - generic [ref=e977]:
+                  - img "2% OFF" [ref=e978]
+                  - generic [ref=e979]: AD
+                  - generic [ref=e980]: 2% OFF
+                - generic [ref=e981]:
+                  - paragraph [ref=e982]: LOreal Paris Hyaluron Moisture Shampoo 200ml
+                  - paragraph [ref=e983]: Sponsored
+              - generic [ref=e984] [cursor=pointer]:
+                - generic [ref=e985]:
+                  - img "24% OFF" [ref=e986]
+                  - generic [ref=e987]: AD
+                  - generic [ref=e988]: 24% OFF
+                - generic [ref=e989]:
+                  - paragraph [ref=e990]: Wellcore Creatine Monohydrate 122g
+                  - paragraph [ref=e991]: Sponsored
+              - generic [ref=e992] [cursor=pointer]:
+                - generic [ref=e993]:
+                  - img "29% OFF" [ref=e994]
+                  - generic [ref=e995]: AD
+                  - generic [ref=e996]: 29% OFF
+                - generic [ref=e997]:
+                  - paragraph [ref=e998]: Handloom Pure Silk Saree Mithila Motif Border
+                  - paragraph [ref=e999]: Sponsored
+              - generic [ref=e1000] [cursor=pointer]:
+                - generic [ref=e1001]:
+                  - img "33% OFF" [ref=e1002]
+                  - generic [ref=e1003]: AD
+                  - generic [ref=e1004]: 33% OFF
+                - generic [ref=e1005]:
+                  - paragraph [ref=e1006]: Wooden Hand-Carved Elephant Pair Madhubani Painted
+                  - paragraph [ref=e1007]: Sponsored
+          - generic [ref=e1008]:
+            - generic [ref=e1009]:
+              - heading "Best Quality Guaranteed" [level=2] [ref=e1022]
+              - button "View all best quality products" [ref=e1034]
+            - generic [ref=e1037]:
+              - generic [ref=e1038] [cursor=pointer]:
+                - img "24K 999 Pure Gold Coin 1 Gram (BIS Hallmarked)" [ref=e1041]
+                - generic [ref=e1042]:
+                  - generic [ref=e1043]: 24K 999 Pure Gold Coin 1 Gram (BIS Hallmarked)
+                  - generic [ref=e1044]: Best Quality Guaranteed
+                  - generic [ref=e1045]:
+                    - generic [ref=e1046]: ₹6497
+                    - button "Add" [ref=e1048]
+              - generic [ref=e1049] [cursor=pointer]:
+                - img "Velvet Matte Long Stay Waterproof Lipstick" [ref=e1052]
+                - generic [ref=e1053]:
+                  - generic [ref=e1054]: Velvet Matte Long Stay Waterproof Lipstick
+                  - generic [ref=e1055]: Best Quality Guaranteed
+                  - generic [ref=e1056]:
+                    - generic [ref=e1057]: ₹499
+                    - button "Add" [ref=e1059]
+              - generic [ref=e1060] [cursor=pointer]:
+                - img "Luxury Assorted Festive Gift Hamper Box" [ref=e1063]
+                - generic [ref=e1064]:
+                  - generic [ref=e1065]: Luxury Assorted Festive Gift Hamper Box
+                  - generic [ref=e1066]: Best Quality Guaranteed
+                  - generic [ref=e1067]:
+                    - generic [ref=e1068]: ₹1299
+                    - button "Add" [ref=e1070]
+              - generic [ref=e1071] [cursor=pointer]:
+                - img "kajal" [ref=e1074]
+                - generic [ref=e1075]:
+                  - generic [ref=e1076]: kajal
+                  - generic [ref=e1077]: Best Quality Guaranteed
+                  - generic [ref=e1078]:
+                    - generic [ref=e1079]: ₹120
+                    - button "Add" [ref=e1081]
+      - contentinfo [ref=e154]:
+        - img "Mithila Art Footer Border" [ref=e156]
+        - generic [ref=e157]:
+          - link [ref=e158] [cursor=pointer]:
+            - /url: https://www.facebook.com/mithilakart
+          - link [ref=e161] [cursor=pointer]:
+            - /url: https://www.youtube.com/@mithilakart
+          - link [ref=e164] [cursor=pointer]:
+            - /url: https://www.instagram.com/mithilakart
+          - link [ref=e168] [cursor=pointer]:
+            - /url: https://x.com
+          - link [ref=e171] [cursor=pointer]:
+            - /url: https://wa.me/918076109547
+        - generic [ref=e174]:
+          - img "Mithilakart Logo" [ref=e175]
+          - generic [ref=e176]:
+            - text: Mithilakart
+            - generic [ref=e177]: ™
+    - navigation [ref=e178]:
+      - link "Home" [ref=e179] [cursor=pointer]:
+        - /url: /home
+      - link "Categories" [ref=e184] [cursor=pointer]:
+        - /url: /categories?flow=mithilakart
+      - link "0 Cart" [ref=e191] [cursor=pointer]:
+        - /url: /cart
+        - generic [ref=e192]: "0"
+        - generic [ref=e198]: Cart
+      - button "You" [ref=e199]

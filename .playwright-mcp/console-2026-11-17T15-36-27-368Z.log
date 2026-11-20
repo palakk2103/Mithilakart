@@ -1,0 +1,85 @@
+[     859ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:20103
+[    1779ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilakart:1
+[    1843ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilakart:1
+[    2387ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[    2391ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[   71575ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[   71577ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[   71580ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[   71582ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/userAppTabs.js:113
+[   71591ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[   71706ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/you-popup:1
+[   71707ms] [WARNING] You popup config unavailable, using cached/default: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/youPopup.js:60
+[   71708ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilakart:1
+[   71710ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[   71711ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/userAppTabs.js:113
+[   71712ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[   75631ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[   75634ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[   75634ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/userAppTabs.js:113
+[   75635ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[   75766ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[   75767ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/you-popup:1
+[   75768ms] [WARNING] You popup config unavailable, using cached/default: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/youPopup.js:60
+[   75770ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilakart:1
+[   75772ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[   75773ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/userAppTabs.js:113
+[   75774ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[ 1062193ms] [ERROR] %o
+
+%s
+
+%s
+ ReferenceError: visibleCount is not defined
+    at Home (http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/modules/user/pages/Home.jsx?t=1794930848240:716:22)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:8525:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:997:72)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:12561:98)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:12424:43)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:12408:13)
+    at performWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:11827:37) The above error occurred in the <Home> component. React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:7001
+[ 1062195ms] [ERROR] Uncaught error caught by ErrorBoundary: ReferenceError: visibleCount is not defined
+    at Home (http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/modules/user/pages/Home.jsx?t=1794930848240:716:22)
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:18509:20)
+    at renderWithHooks (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:5654:24)
+    at updateFunctionComponent (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:7475:21)
+    at beginWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:8525:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:997:72)
+    at performUnitOfWork (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:12561:98)
+    at workLoopSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:12424:43)
+    at renderRootSync (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:12408:13)
+    at performWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=bfa1b367:11827:37) {componentStack: 
+    at Home (http://localhost:5173/@fs/C:/Users/H…s/.vite/deps/chunk-URRAVK5H.js?v=907725f8:923:11)} @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/shared/components/ErrorBoundary.jsx:15
+[ 1062219ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/modules/user/pages/Home.jsx?t=1794930849383:1
+[ 1062221ms] [ERROR] [vite] Failed to reload /@fs/C:\Users\HP\Desktop\Mithilakart\frontend\src\modules\user\pages\Home.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:882
+[ 1067465ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[ 1067466ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[ 1067494ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilakart:1
+[ 1083168ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[ 1083168ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/userAppTabs.js:113
+[ 1083183ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[ 1083341ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilakart:1
+[ 1083342ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[ 1083342ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/userAppTabs.js:113
+[ 1083344ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[ 1083756ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[ 1083756ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[ 1086642ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[ 1086643ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/userAppTabs.js:113
+[ 1086644ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[ 1086644ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[ 1086756ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[ 1086757ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/cart?marketplaceTab=mithilakart:1
+[ 1086758ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/header-tabs:1
+[ 1086759ms] [WARNING] Failed to fetch header tabs from backend, using cache/defaults: Request failed with status code 500 @ http://localhost:5173/@fs/C:/Users/HP/Desktop/Mithilakart/frontend/src/config/userAppTabs.js:113
+[ 1086759ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[ 1088026ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[ 1088027ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1
+[ 1088030ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[ 1089384ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[ 1089675ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/api/v1/storefront/home?commerceFlow=standard:1
+[ 1089785ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/cecb24f4-e6a2-47a3-bc7b-6a7d50e9f83a.webp:1
+[ 1089786ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/uploads/cms/sample-banner.jpg:1

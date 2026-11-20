@@ -1,0 +1,93 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img "Mithilakart" [ref=e8]
+        - generic [ref=e9]: Mithilakart
+      - generic [ref=e10] [cursor=pointer]: Quick Shop
+      - generic [ref=e16] [cursor=pointer]: Mithilak
+      - generic [ref=e22] [cursor=pointer]: Fresh & Groceries
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - button "Deliver to" [ref=e26]:
+          - generic [ref=e31]:
+            - generic [ref=e32]: Deliver to
+            - generic [ref=e33]: Tap to set delivery location
+        - generic [ref=e36]:
+          - button "English English" [ref=e38] [cursor=pointer]:
+            - img "English" [ref=e39]
+            - generic [ref=e40]: English
+          - generic [ref=e41]: "3"
+      - generic [ref=e47]:
+        - searchbox "Search for products, categories..." [ref=e48]
+        - generic [ref=e50]:
+          - img [aria-hidden] [ref=e51] [cursor=pointer]
+          - img [aria-hidden] [ref=e54] [cursor=pointer]
+  - generic [ref=e57]:
+    - main [ref=e60]:
+      - generic [ref=e61]:
+        - generic [ref=e63]:
+          - button "You Buy" [ref=e64] [cursor=pointer]
+          - button "Fashion" [ref=e72] [cursor=pointer]
+          - button "Beauty" [ref=e77] [cursor=pointer]
+          - button "Electronics" [ref=e83] [cursor=pointer]
+          - button "Jewellery" [ref=e88] [cursor=pointer]
+          - button "More categories" [ref=e94] [cursor=pointer]:
+            - generic [ref=e100]: More
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - img "Shop More Save More" [ref=e105]
+            - generic [ref=e106]:
+              - generic [ref=e107]: Special Collection
+              - heading "Shop More Save More" [level=3] [ref=e108]
+          - generic [aria-hidden]:
+            - generic:
+              - generic: Special Collection
+              - heading [level=3]: Authentic Mithila Artistry
+          - generic [aria-hidden]:
+            - generic:
+              - generic: Special Collection
+              - heading [level=3]: Cultural Heritage Collection
+          - generic [aria-hidden]:
+            - generic:
+              - generic: Special Collection
+              - heading [level=3]: Special Festival Handicrafts
+          - generic [ref=e109]:
+            - button [ref=e110]
+            - button [ref=e111]
+            - button [ref=e112]
+            - button [ref=e113]
+        - generic [ref=e115]:
+          - heading "Today's Special Deals" [level=2] [ref=e116]
+          - generic [ref=e117] [cursor=pointer]: View All
+        - generic [ref=e124]:
+          - heading "Top Selection" [level=2] [ref=e137]
+          - button "View all top selection" [ref=e149]
+    - contentinfo [ref=e154]:
+      - img "Mithila Art Footer Border" [ref=e156]
+      - generic [ref=e157]:
+        - link [ref=e158] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=e161] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=e164] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=e168] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=e171] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=e174]:
+        - img "Mithilakart Logo" [ref=e175]
+        - generic [ref=e176]:
+          - text: Mithilakart
+          - generic [ref=e177]: ™
+  - navigation [ref=e178]:
+    - link "Home" [ref=e179] [cursor=pointer]:
+      - /url: /home
+    - link "Categories" [ref=e184] [cursor=pointer]:
+      - /url: /categories?flow=mithilakart
+    - link "0 Cart" [ref=e191] [cursor=pointer]:
+      - /url: /cart
+      - generic [ref=e192]: "0"
+      - generic [ref=e198]: Cart
+    - button "You" [ref=e199]

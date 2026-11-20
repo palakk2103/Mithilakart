@@ -64,7 +64,7 @@ const CategoryChip = ({ cat, active, onClick }) => {
         )}
       </div>
       <span
-        className={`text-[11.5px] sm:text-[12px] mt-1.5 leading-none text-center whitespace-nowrap ${
+        className={`text-[13px] mt-1.5 leading-none tracking-tight text-center whitespace-nowrap ${
           active ? 'font-black text-[#3E5A44]' : 'font-bold text-[#3F2A20]'
         }`}
       >
@@ -214,7 +214,8 @@ const Home = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
-  const { selectedCategory, setSelectedCategory, homeSections, homeBanners, homeChips, fetchHomeSections } = useVendorStore();
+  const { selectedCategory, setSelectedCategory, homeSections, bannersByFlow, homeChips, homeError, fetchHomeSections } = useVendorStore();
+  const homeBanners = bannersByFlow.standard;
 
   useEffect(() => {
     fetchHomeSections('standard');
@@ -235,7 +236,14 @@ const Home = () => {
       { id: 'g4', image: '/Gemini_Generated_Image_xaqtwqxaqtwqxaqt.png', title: t('home.fbFestival') }
     ];
 
-    const homeBannerList = mapHomeBanners(homeBanners, fallbackBanners);
+    // Only fall back to the built-in images when the request FAILED. If the admin has no active
+    // banners the list is genuinely empty — showing placeholders there looked like "old banners came back".
+    let homeBannerList;
+    if (Array.isArray(homeBanners)) {
+      homeBannerList = homeBanners.length ? mapHomeBanners(homeBanners) : [];
+    } else {
+      homeBannerList = homeError ? fallbackBanners : []; // still loading → render nothing, no flash of placeholders
+    }
 
     return {
       'Home': homeBannerList,
@@ -247,7 +255,7 @@ const Home = () => {
       'Cosmetics': homeBannerList,
       'Fashion': homeBannerList
     };
-  }, [homeBanners, t]);
+  }, [homeBanners, homeError, t]);
 
   const mainCategoriesList = useMemo(() => {
     const iconMap = {
@@ -394,12 +402,13 @@ const Home = () => {
     setMoreOpen((prev) => !prev);
   }, [moreOpen]);
 
-  // ── Fit chips into the first visible screen; the rest go into "More" ──
-  // A hidden measuring row renders every chip (and the More button) so we know real widths,
-  // then we keep as many chips as fit in the row width and put "More" right after them.
+  // ── Two swipeable screens of chips; the rest go into "More" ──
+  // Screen 1: as many chips as fit the device width (no More button).
+  // Screen 2 (reached by horizontal scroll): the next chips that fit, with "More" at the end.
+  // A hidden measuring row renders every chip (and the More button) so we know real widths.
   const chipRowRef = useRef(null);
   const measureRef = useRef(null);
-  const [visibleCount, setVisibleCount] = useState(null); // null = show all until measured
+  const [pageCounts, setPageCounts] = useState(null); // { first, second } — null = show all until measured
 
   useLayoutEffect(() => {
     const row = chipRowRef.current;
@@ -411,26 +420,40 @@ const Home = () => {
       if (kids.length === 0) return;
       const moreEl = kids[kids.length - 1];
       const chipEls = kids.slice(0, -1);
-      const cs = window.getComputedStyle(row);
+      const cs = window.getComputedStyle(measure);
       const gap = parseFloat(cs.columnGap) || 8;
       const available = row.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
       const moreW = moreEl.getBoundingClientRect().width;
       const widths = chipEls.map((el) => el.getBoundingClientRect().width);
+      const sumWithGaps = (arr) => arr.reduce((s, w) => s + w, 0) + gap * Math.max(arr.length - 1, 0);
 
-      const total = widths.reduce((s, w) => s + w, 0) + gap * Math.max(widths.length - 1, 0);
-      if (total <= available) {
-        setVisibleCount(widths.length); // everything fits, no More needed
+      // Screen 1: fill the width, no More button
+      let used = 0;
+      let first = 0;
+      for (let i = 0; i < widths.length; i += 1) {
+        const next = used + (first > 0 ? gap : 0) + widths[i];
+        if (next > available) break;
+        used = next;
+        first += 1;
+      }
+      first = Math.max(first, 1);
+
+      const rest = widths.slice(first);
+      if (rest.length === 0 || sumWithGaps(rest) <= available) {
+        setPageCounts({ first, second: rest.length }); // everything else fits on screen 2, no More needed
         return;
       }
-      let used = 0;
-      let count = 0;
-      for (let i = 0; i < widths.length; i += 1) {
-        const next = used + widths[i] + gap;
+
+      // Screen 2: same fit logic as before — chips + "More" right after them
+      used = 0;
+      let second = 0;
+      for (let i = 0; i < rest.length; i += 1) {
+        const next = used + rest[i] + gap;
         if (next + moreW > available) break;
         used = next;
-        count += 1;
+        second += 1;
       }
-      setVisibleCount(Math.max(count, 1));
+      setPageCounts({ first, second: Math.max(second, 1) });
     };
 
     compute();
@@ -442,8 +465,10 @@ const Home = () => {
     return () => ro.disconnect();
   }, [mainCategoriesList]);
 
-  const shownCount = visibleCount ?? mainCategoriesList.length;
-  const visibleChips = mainCategoriesList.slice(0, shownCount);
+  const firstCount = pageCounts ? pageCounts.first : mainCategoriesList.length;
+  const shownCount = pageCounts ? pageCounts.first + pageCounts.second : mainCategoriesList.length;
+  const firstPageChips = mainCategoriesList.slice(0, firstCount);
+  const secondPageChips = mainCategoriesList.slice(firstCount, shownCount);
   const hiddenChipsList = mainCategoriesList.slice(shownCount);
   const showMore = hiddenChipsList.length > 0;
 
@@ -457,17 +482,29 @@ const Home = () => {
     <div className="pb-2 bg-transparent text-primary-dark">
       {/* 1. TOP HORIZONTAL CATEGORY ROW (Sticky Header Categories on Scroll) */}
       <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F6F8F3]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(63,42,32,0.04)] border-b border-[#EADCC9]/40 py-2 mb-3 transition-all duration-200">
-        <div ref={chipRowRef} data-testid="category-chip-row" className="relative flex items-center justify-between gap-2 sm:gap-3 overflow-hidden px-2 sm:px-3">
+        <div ref={chipRowRef} data-testid="category-chip-row" className="relative flex items-center overflow-x-auto no-scrollbar snap-x snap-mandatory">
           {/* Hidden measuring row (all chips + More) used to compute how many fit */}
-          <div ref={measureRef} aria-hidden="true" className="absolute left-0 top-0 flex items-center gap-2 sm:gap-3 invisible pointer-events-none h-0 overflow-hidden">
-            {mainCategoriesList.map((cat, idx) => (
-              <CategoryChip key={cat.id ?? idx} cat={cat} active={false} onClick={() => {}} />
-            ))}
-            <div className="min-w-[56px] flex-shrink-0 text-[12px] font-bold px-1">{t('common.more')}</div>
+          <div aria-hidden="true" className="absolute left-0 top-0 w-0 h-0 overflow-hidden invisible pointer-events-none">
+            <div ref={measureRef} className="flex items-center gap-1.5 px-2.5 w-max">
+              {mainCategoriesList.map((cat, idx) => (
+                <CategoryChip key={cat.id ?? idx} cat={cat} active={false} onClick={() => {}} />
+              ))}
+              <div className="min-w-[46px] flex-shrink-0 text-[13px] font-bold">{t('common.more')}</div>
+            </div>
           </div>
 
-          {visibleChips.map((cat, idx) => (
-            <CategoryChip key={cat.id ?? idx} cat={cat} active={isCategoryActive(cat)} onClick={() => handleCategoryClick(cat)} />
+          {/* Screen 1 — fits the device width, no More button */}
+          <div className="w-full flex-shrink-0 snap-start flex items-center justify-between gap-1.5 px-2.5">
+            {firstPageChips.map((cat, idx) => (
+              <CategoryChip key={cat.id ?? idx} cat={cat} active={isCategoryActive(cat)} onClick={() => handleCategoryClick(cat)} />
+            ))}
+          </div>
+
+          {/* Screen 2 — reached by horizontal scroll; More sits at the end */}
+          {secondPageChips.length > 0 && (
+          <div className={`w-full flex-shrink-0 snap-start flex items-center gap-1.5 px-2.5 ${showMore ? 'justify-between' : 'justify-start'}`}>
+          {secondPageChips.map((cat, idx) => (
+            <CategoryChip key={cat.id ?? `p2-${idx}`} cat={cat} active={isCategoryActive(cat)} onClick={() => handleCategoryClick(cat)} />
           ))}
 
           {showMore && (
@@ -478,15 +515,17 @@ const Home = () => {
               aria-haspopup="true"
               aria-expanded={moreOpen}
               aria-label={t('home.moreCategories')}
-              className="min-w-[56px] flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
+              className="min-w-[46px] flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
             >
               <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full bg-[#3E5A44] border border-[#3E5A44] text-white flex items-center justify-center shadow-xs">
                 <MoreHorizontal size={18} />
               </div>
-              <span className="text-[11.5px] sm:text-[12px] font-bold text-[#3F2A20] mt-1.5 leading-none">
+              <span className="text-[13px] font-bold text-[#3F2A20] mt-1.5 leading-none">
                 {t('common.more')}
               </span>
             </button>
+          )}
+          </div>
           )}
         </div>
       </div>
@@ -642,18 +681,7 @@ const Home = () => {
       )}
 
       {selectedCategory !== 'You Buy' && selectedCategory !== 'Home' && (
-        <CategoryProductsSection 
-          selectedCategory={selectedCategory}
-          onResetToAll={() => {
-            setSelectedCategory('You Buy');
-            setActiveTab('You Buy');
-            setSearchParams((prev) => {
-              const next = new URLSearchParams(prev);
-              next.delete('category');
-              return next;
-            }, { replace: true });
-          }}
-        />
+        <CategoryProductsSection selectedCategory={selectedCategory} />
       )}
       </div>
     </>

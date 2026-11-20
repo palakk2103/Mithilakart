@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Search, ArrowLeft } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useNavigationType } from 'react-router-dom';
 import CategoryCard from '../components/vendor/CategoryCard';
 import CategoryProductsPanel from '../components/vendor/CategoryProductsPanel';
 import useVendorStore from '../../../store/useVendorStore';
@@ -10,6 +10,7 @@ import { DEFAULT_PRODUCT_IMAGE, handleImageError } from '../../../shared/utils/i
 import { useTranslation } from 'react-i18next';
 import { tName } from '../../../shared/utils/translateName';
 import { useLanguage } from '../../../shared/context/LanguageContext';
+import { getStoredHeaderTabs } from '../../../config/userAppTabs';
 
 // Import Assets (aligned with categories)
 import SamsungS24 from '../../../assets/products/product01.jpg';
@@ -210,11 +211,16 @@ const FRESH_GROCERY_CATEGORIES = [
   }
 ];
 
+// Remembers exactly where the user was on this page (section, subcategory,
+// child category, scroll) so coming Back (e.g. from a product page) restores it.
+const VIEW_STATE_KEY = 'categoriesPageViewState';
+
 const Categories = () => {
   const { t } = useTranslation();
   const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const navigationType = useNavigationType();
   const searchParams = new URLSearchParams(location.search);
   const flowParam = searchParams.get('flow') || searchParams.get('tab') || location.state?.flow;
   const storeFlow = useVendorStore((state) => state.activeFlow);
@@ -365,15 +371,59 @@ const Categories = () => {
     requestAnimationFrame(() => { if (rightContentRef.current) rightContentRef.current.scrollTop = top; });
   }, [openChild?.id]);
 
+  const pendingScrollRef = React.useRef(null); // scroll to apply after the next view change
+  const scrollTopRef = React.useRef(0);
+  const viewStateRef = React.useRef(null);
+
+  viewStateRef.current = {
+    key: `${location.key}|${currentFlow}`,
+    sectionIndex: activeSectionIndex,
+    sectionId: sectionsList[activeSectionIndex]?.id || null,
+    subId: selectedSubCategory?.id || null,
+    subName: selectedSubCategory?.rawName || selectedSubCategory?.name || null,
+  };
+
+  // Persist the current view when leaving the page so Back returns to it.
+  React.useEffect(() => () => {
+    try {
+      sessionStorage.setItem(VIEW_STATE_KEY, JSON.stringify({ ...viewStateRef.current, scrollTop: scrollTopRef.current }));
+    } catch { /* storage unavailable */ }
+  }, []);
+
   // Deep link from the landing page (Shop by Categories): pre-select the clicked
   // category so it behaves exactly like browsing there via the bottom Category icon.
   React.useEffect(() => {
     if (loading) return;
+    const key = `${location.key}|${currentFlow}`;
+    if (appliedSelectionRef.current === key) return;
+
+    // Returning via Back: restore exactly the view the user left from.
+    if (navigationType === 'POP') {
+      let snap = null;
+      try { snap = JSON.parse(sessionStorage.getItem(VIEW_STATE_KEY) || 'null'); } catch { snap = null; }
+      if (snap && snap.key === key) {
+        appliedSelectionRef.current = key;
+        let sIdx = snap.sectionId ? sectionsList.findIndex((s) => String(s.id) === String(snap.sectionId)) : -1;
+        if (sIdx < 0 && snap.sectionIndex < sectionsList.length) sIdx = snap.sectionIndex;
+        if (sIdx < 0) return;
+        const items = sectionsList[sIdx]?.items || [];
+        const sub = (snap.subId || snap.subName)
+          ? items.find((it) => (snap.subId && String(it.id) === String(snap.subId)) || (snap.subName && (it.rawName || it.name) === snap.subName))
+          : null;
+        setActiveSectionIndex(sIdx);
+        setSelectedSubCategory(sub && sub.children?.length > 0 ? sub : null);
+        // The child's products (if any) come back via history state; only the grid scroll is restored here.
+        if (!openChild) pendingScrollRef.current = snap.scrollTop || 0;
+        requestAnimationFrame(() => {
+          sidebarRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
+        });
+        return;
+      }
+    }
+
     const wantedId = location.state?.categoryId ? String(location.state.categoryId) : null;
     const wantedName = String(location.state?.category || '').trim().toLowerCase();
     if (!wantedId && !wantedName) return;
-    const key = `${location.key}|${currentFlow}`;
-    if (appliedSelectionRef.current === key) return;
     appliedSelectionRef.current = key;
 
     const sameName = (...names) => !!wantedName && names.some((n) => String(n || '').trim().toLowerCase() === wantedName);
@@ -392,12 +442,18 @@ const Categories = () => {
     requestAnimationFrame(() => {
       sidebarRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
     });
-  }, [loading, sectionsList, location.key, currentFlow]);
+  }, [loading, sectionsList, location.key, currentFlow, navigationType]);
 
+
+  // Section / subcategory change: jump to the top (or to a restored position).
+  // The child-products view manages its own scroll (see the openChild effect above).
   React.useEffect(() => {
-    if (rightContentRef.current) {
-      rightContentRef.current.scrollTop = 0;
-    }
+    const el = rightContentRef.current;
+    if (!el || openChild) return;
+    el.scrollTop = pendingScrollRef.current ?? 0;
+    scrollTopRef.current = el.scrollTop;
+    pendingScrollRef.current = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSectionIndex, selectedSubCategory]);
 
   const handleCategoryItemClick = (item) => {
@@ -483,7 +539,14 @@ const Categories = () => {
             <ArrowLeft size={22} />
           </button>
           <h1 className={`text-[19px] font-black tracking-tight ${headerTextColor}`}>
-            {isMithilakFlow ? t('categoriesPage.mithilaSpecialities') : isFreshGroceryFlow ? t('categoriesPage.freshGroceries') : isQuickShopFlow ? t('categoriesPage.quickCategories') : t('categoriesPage.categories')}
+            {isFreshGroceryFlow ? t('categoriesPage.freshGroceries') : (() => {
+              // Heading = name of the header tab the shopper is in (Mithilakart / Mithilak / Quick Shop).
+              const tabId = isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quickshop' : 'mithilakart';
+              const fallbackKey = isMithilakFlow ? 'nav.mithilak' : isQuickShopFlow ? 'nav.quickShop' : 'home.title';
+              const tab = getStoredHeaderTabs().find((tb) => tb.id === tabId);
+              if (!tab) return t(fallbackKey);
+              return tab.i18nKey ? t(tab.i18nKey, { defaultValue: tab.label }) : tab.label;
+            })()}
           </h1>
         </div>
         <button 
@@ -552,7 +615,10 @@ const Categories = () => {
         </div>
 
         {/* Right Content Area */}
-        <div ref={rightContentRef} className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-3 min-[360px]:p-4">
+        <div
+          ref={rightContentRef}
+          onScroll={(e) => { scrollTopRef.current = e.currentTarget.scrollTop; }}
+          className="flex-1 bg-white overflow-y-auto overscroll-contain pb-24 p-3 min-[360px]:p-4">
           {openChild ? (
             <CategoryProductsPanel
               key={openChild.id}

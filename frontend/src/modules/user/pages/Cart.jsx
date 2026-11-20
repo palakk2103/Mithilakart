@@ -35,9 +35,9 @@ const Cart = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { location: liveLocation } = useLiveLocation();
-  const { savedAddresses, selectedAddressId, wishlist, addToWishlist: addToWishlistStore } = useAccountStore();
+  const { savedAddresses, selectedAddressId, deliveryMode, wishlist, addToWishlist: addToWishlistStore } = useAccountStore();
   useHydrateAddresses();
-  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation });
+  const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation, deliveryMode });
 
   const theme = useTabTheme();
   const isMithilakFlow = theme.activeFlow === 'mithilak';

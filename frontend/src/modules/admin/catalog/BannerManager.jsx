@@ -4,6 +4,7 @@ import { extractList } from '../utils/mappers';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { uploadCmsImage } from '../../../shared/services/uploadService';
+import { clearPublicCache } from '../../../shared/api/publicCache';
 import { Plus, Trash2, Edit2, Eye, EyeOff, Save, Loader2, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -104,6 +105,7 @@ const BannerManager = () => {
       toast.error(result.error);
       return;
     }
+    clearPublicCache(); // storefront tabs opened in this browser must show the edit right away
     toast.success(editing ? 'Banner updated' : 'Banner created');
     setModalOpen(false);
     loadBanners();
@@ -111,9 +113,16 @@ const BannerManager = () => {
 
   const toggleActive = async (banner) => {
     const id = banner._id || banner.id;
-    const { error } = await bannersApi.update(id, { isActive: banner.isActive === false });
+    const hiding = banner.isActive !== false;
+    // One mis-click here silently took every home banner off the storefront — ask first.
+    if (hiding && !window.confirm(`Hide "${banner.title}" from the storefront?`)) return;
+    const { error } = await bannersApi.update(id, { isActive: !hiding });
     if (error) toast.error(error);
-    else loadBanners();
+    else {
+      clearPublicCache();
+      toast.success(hiding ? 'Banner hidden' : 'Banner is live again');
+      loadBanners();
+    }
   };
 
   const handleDelete = async () => {
@@ -121,6 +130,7 @@ const BannerManager = () => {
     const { error } = await bannersApi.delete(deleteTarget._id || deleteTarget.id);
     if (error) toast.error(error);
     else {
+      clearPublicCache();
       toast.success('Banner deleted');
       setDeleteTarget(null);
       loadBanners();
@@ -153,6 +163,12 @@ const BannerManager = () => {
         ))}
       </div>
 
+      {!loading && flowBanners.length > 0 && !flowBanners.some((b) => b.isActive !== false) && (
+        <div className="px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+          All banners in this section are hidden — shoppers currently see no banners here. Click the eye icon to make one live.
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-16 text-slate-400 gap-2"><Loader2 className="animate-spin" /> Loading...</div>
       ) : (
@@ -161,8 +177,12 @@ const BannerManager = () => {
             <div key={banner._id || banner.id} className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
               <div className="relative h-32 bg-slate-100">
                 <img src={banner.imageUrl} alt={banner.title} className="w-full h-full object-cover" />
+                {banner.isActive === false && (
+                  <span className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-slate-800/80 text-white text-[9px] font-black uppercase tracking-widest">Hidden</span>
+                )}
                 <button
                   onClick={() => toggleActive(banner)}
+                  title={banner.isActive !== false ? 'Live — click to hide' : 'Hidden — click to show'}
                   className={`absolute top-2 right-2 p-1.5 rounded-lg ${banner.isActive !== false ? 'bg-green-500 text-white' : 'bg-slate-400 text-white'}`}
                 >
                   {banner.isActive !== false ? <Eye size={14} /> : <EyeOff size={14} />}

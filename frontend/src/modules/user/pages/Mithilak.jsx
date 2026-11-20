@@ -206,30 +206,49 @@ const MithilaChip = ({ chip, onClick, width = CHIP_W, active = false }) => {
 export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => {
   const { t } = useTranslation();
   const rowRef = useRef(null);
+  const firstPageRef = useRef(null);
   const moreBtnRef = useRef(null);
   const menuRef = useRef(null);
-  const [visibleCount, setVisibleCount] = useState(null);
+  // { first, second } — chips on screen 1 (no More) and screen 2 (More at the end).
+  // null = show everything on one screen until measured.
+  const [pageCounts, setPageCounts] = useState(null);
   const [chipW, setChipW] = useState(CHIP_W);
   const [moreOpen, setMoreOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
 
+  // Same behaviour as the Mithilakart header: screen 1 fills the device width with
+  // chips (no More); scrolling horizontally reveals screen 2 with the next chips
+  // and "More" at the end, which holds whatever is left.
   useLayoutEffect(() => {
     const row = rowRef.current;
     if (!row) return undefined;
     const compute = () => {
-      const cs = window.getComputedStyle(row);
-      const available = row.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
-      const total = chips.length * CHIP_W + Math.max(chips.length - 1, 0) * CHIP_GAP;
-      if (total <= available) {
-        setVisibleCount(chips.length);
+      const page = firstPageRef.current;
+      const cs = page ? window.getComputedStyle(page) : null;
+      const padding = cs ? (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) : 16;
+      const available = row.clientWidth - padding;
+      const fits = (n, w) => n * w + Math.max(n - 1, 0) * CHIP_GAP;
+
+      if (fits(chips.length, CHIP_W) <= available) {
+        setPageCounts({ first: chips.length, second: 0 });
         setChipW(CHIP_W);
         return;
       }
-      // Fit as many chips as possible (min width), then stretch them evenly so
-      // "More" sits right after the last chip with the same gap.
-      const fit = Math.max(Math.floor((available - MORE_W) / (CHIP_MIN_W + CHIP_GAP)), 1);
-      setVisibleCount(fit);
-      setChipW(Math.min(CHIP_W, Math.floor((available - MORE_W - CHIP_GAP * fit) / fit)));
+
+      // Screen 1: as many chips as fit at min width, stretched evenly to fill the row
+      const first = Math.min(Math.max(Math.floor((available + CHIP_GAP) / (CHIP_MIN_W + CHIP_GAP)), 1), chips.length);
+      const w = Math.min(CHIP_W, Math.floor((available - CHIP_GAP * (first - 1)) / first));
+      setChipW(w);
+
+      const restCount = chips.length - first;
+      if (fits(restCount, w) <= available) {
+        setPageCounts({ first, second: restCount }); // everything else fits on screen 2, no More needed
+        return;
+      }
+
+      // Screen 2: chips + "More" right after them
+      const second = Math.max(Math.floor((available - MORE_W) / (w + CHIP_GAP)), 1);
+      setPageCounts({ first, second });
     };
     compute();
     const ro = new ResizeObserver(compute);
@@ -268,17 +287,36 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
   };
 
   if (!chips.length) return null;
-  const shown = visibleCount ?? chips.length;
-  const visible = chips.slice(0, shown);
-  const hidden = chips.slice(shown);
+  const firstCount = pageCounts ? pageCounts.first : chips.length;
+  const shownCount = pageCounts ? pageCounts.first + pageCounts.second : chips.length;
+  const firstPage = chips.slice(0, firstCount);
+  const secondPage = chips.slice(firstCount, shownCount);
+  const hidden = chips.slice(shownCount);
+  const multiPage = secondPage.length > 0;
+  const renderChip = (chip) => (
+    <MithilaChip key={chip.id} chip={chip} width={chipW} active={Boolean(isChipActive && isChipActive(chip))} onClick={() => onSelect(chip)} />
+  );
 
   return (
     <>
       <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F5F9FA]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(32,124,138,0.06)] border-b border-[color:var(--ml-primary,#207C8A)]/15 py-2">
-        <div ref={rowRef} className="flex items-start overflow-hidden px-2 sm:px-3" style={{ gap: CHIP_GAP }}>
-          {visible.map((chip) => (
-            <MithilaChip key={chip.id} chip={chip} width={chipW} active={Boolean(isChipActive && isChipActive(chip))} onClick={() => onSelect(chip)} />
-          ))}
+        <div ref={rowRef} className="flex items-start overflow-x-auto no-scrollbar snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Screen 1 — fits the device width, no More button */}
+          <div
+            ref={firstPageRef}
+            className={`w-full flex-shrink-0 snap-start flex items-start px-2 sm:px-3 ${multiPage ? 'justify-between' : 'justify-start'}`}
+            style={{ gap: CHIP_GAP }}
+          >
+            {firstPage.map(renderChip)}
+          </div>
+
+          {/* Screen 2 — reached by horizontal scroll; More sits at the end */}
+          {multiPage && (
+          <div
+            className={`w-full flex-shrink-0 snap-start flex items-start px-2 sm:px-3 ${hidden.length > 0 ? 'justify-between' : 'justify-start'}`}
+            style={{ gap: CHIP_GAP }}
+          >
+          {secondPage.map(renderChip)}
           {hidden.length > 0 && (
             <button
               ref={moreBtnRef}
@@ -294,6 +332,8 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
               </div>
               <span className="text-[11px] sm:text-[12px] font-bold text-[#3F2A20] mt-1.5 leading-[1.15]">{t('common.more')}</span>
             </button>
+          )}
+          </div>
           )}
         </div>
       </div>
@@ -341,7 +381,8 @@ const Mithilak = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [mithilaCategories, setMithilaCategories] = useState([]);
-  const { fetchHomeSections, homeSections, homeBanners } = useVendorStore();
+  const { fetchHomeSections, homeSections, bannersByFlow } = useVendorStore();
+  const homeBanners = bannersByFlow.mithilak;
   const [bannerIndex, setBannerIndex] = useState(0);
   // Header categories (chips) created by admin for the Mithilak tab
   const [headerChips, setHeaderChips] = useState([]);
@@ -394,7 +435,7 @@ const Mithilak = () => {
   };
 
   return (
-    <div className="bg-[#F5F9FA] min-h-screen select-none pb-24">
+    <div className="bg-[#F5F9FA] min-h-screen select-none pb-6">
       {/* 0. Header Categories (admin-managed for Mithilak tab) */}
       <MithilaHeaderChips
         chips={headerChips}
