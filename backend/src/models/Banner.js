@@ -12,6 +12,8 @@ const bannerSchema = new mongoose.Schema(
     subtitle: { type: String, default: '' },
     ctaText: { type: String, default: '' },
     commerceFlow: { type: String, enum: COMMERCE_FLOW_VALUES, default: 'standard' },
+    // CART-1: 'cart' banners show in the carousel at the top of the cart, not on home.
+    placement: { type: String, enum: ['home', 'cart'], default: 'home' },
     startDate: { type: Date, default: null },
     endDate: { type: Date, default: null },
     sortOrder: { type: Number, default: 0 },

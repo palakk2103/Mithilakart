@@ -10,6 +10,11 @@ class CustomerAuthController extends BaseController {
       'verifyPhoneOtp',
       'sendEmailOtp',
       'verifyEmailOtp',
+      'registerStart',
+      'registerVerifyPhone',
+      'registerVerifyEmail',
+      'registerResend',
+      'logoutAll',
       'refresh',
       'logout',
     ]);
@@ -41,6 +46,31 @@ class CustomerAuthController extends BaseController {
   verifyEmailOtp = asyncHandler(async (req, res) => {
     const result = await this.service.verifyEmailOtp(req.body, this._sessionMeta(req));
     return ApiResponse.success(res, result);
+  });
+
+  registerStart = asyncHandler(async (req, res) => {
+    const result = await this.service.registerStart(req.body);
+    return ApiResponse.success(res, result);
+  });
+
+  registerVerifyPhone = asyncHandler(async (req, res) => {
+    const result = await this.service.registerVerifyPhone(req.body);
+    return ApiResponse.success(res, result);
+  });
+
+  registerVerifyEmail = asyncHandler(async (req, res) => {
+    const result = await this.service.registerVerifyEmail(req.body, this._sessionMeta(req));
+    return ApiResponse.created(res, result);
+  });
+
+  registerResend = asyncHandler(async (req, res) => {
+    const result = await this.service.registerResend(req.body);
+    return ApiResponse.success(res, result);
+  });
+
+  logoutAll = asyncHandler(async (req, res) => {
+    await this.service.logoutAll({ userId: req.user.id, accessToken: req.auth?.token });
+    return ApiResponse.noContent(res);
   });
 
   refresh = asyncHandler(async (req, res) => {

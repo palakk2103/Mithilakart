@@ -29,8 +29,10 @@ class OrderService extends BaseService {
     userAddressRepository = null,
     geocodingService = null,
     courierShipmentService = null,
+    userRepository = null,
   }) {
     super();
+    this.userRepository = userRepository;
     this.cartService = cartService;
     this.productRepository = productRepository;
     this.orderRepository = orderRepository;
@@ -72,6 +74,17 @@ class OrderService extends BaseService {
     return `MK-${Date.now()}-${randomUuid().slice(0, 8)}`.toUpperCase();
   }
 
+  /** The customer's permanent id, copied onto the order for support and reports. */
+  async _customerIdOf(userId) {
+    if (!this.userRepository) return null;
+    try {
+      const user = await this.userRepository.findById(userId);
+      return user?.customerId || null;
+    } catch {
+      return null;
+    }
+  }
+
   async placeOrder({
     userId,
     addressId,
@@ -81,6 +94,7 @@ class OrderService extends BaseService {
     items = null,
     idempotencyKey = null,
     sessionMeta = {},
+    tipAmount = 0,
   }) {
     if (!userId) throw AppError.unauthorized('User required');
 
@@ -104,8 +118,8 @@ class OrderService extends BaseService {
       await this._releaseStalePendingOrders(userId, session);
 
       const cart = items
-        ? await this._buildCartFromItems({ items, commerceFlow, couponCode, userId })
-        : await this.cartService.getCart({ userId, sessionId: null, commerceFlow, marketplaceTab: orderTab, couponCode });
+        ? await this._buildCartFromItems({ items, commerceFlow, couponCode, userId, tipAmount })
+        : await this.cartService.getCart({ userId, sessionId: null, commerceFlow, marketplaceTab: orderTab, couponCode, tipAmount });
 
       if (!cart.items || cart.items.length === 0) {
         throw AppError.validation('Cart is empty');
@@ -170,6 +184,9 @@ class OrderService extends BaseService {
           tax: cart.tax || 0,
           deliveryCharge: cart.deliveryCharge ?? cart.shippingFee ?? 0,
           handlingFee: cart.handlingFee || 0,
+          customerId: await this._customerIdOf(userId),
+          surgeCharge: cart.surgeCharge || 0,
+          tipAmount: cart.tipAmount || 0,
           platformFee: cart.platformFee || 0,
           packagingFee: cart.packagingFee || 0,
           total: cart.total,
@@ -631,7 +648,7 @@ class OrderService extends BaseService {
     }
   }
 
-  async _buildCartFromItems({ items, commerceFlow, couponCode, userId }) {
+  async _buildCartFromItems({ items, commerceFlow, couponCode, userId, tipAmount = 0 }) {
     if (!Array.isArray(items) || items.length === 0) {
       return { items: [], subtotal: 0, shippingFee: 0, total: 0 };
     }
@@ -693,6 +710,8 @@ class OrderService extends BaseService {
       items: lineItems,
       couponCode,
       userId,
+      marketplaceTab: resolvedTab,
+      tipAmount,
     });
 
     return {
@@ -1345,6 +1364,8 @@ class OrderService extends BaseService {
       platformFee: order.platformFee || 0,
       packagingFee: order.packagingFee || 0,
       handlingFee: order.handlingFee || 0,
+      surgeCharge: order.surgeCharge || 0,
+      tipAmount: order.tipAmount || 0,
       total: order.total,
       sellerSubOrders: order.sellerSubOrders,
       addressSnapshot: order.addressSnapshot,

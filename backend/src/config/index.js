@@ -201,6 +201,19 @@ function loadConfig() {
     shipping: {
       provider: optional('SHIPPING_PROVIDER', process.env.SHIPPING_PROVIDER, 'mock'),
     },
+    // Email OTPs (AUTH-4). Any SMTP service works (Gmail app password,
+    // Zoho, Brevo, SES SMTP...). Without SMTP_HOST email OTPs are only logged.
+    email: {
+      host: optional('SMTP_HOST', process.env.SMTP_HOST, null),
+      port: parseInteger('SMTP_PORT', process.env.SMTP_PORT, 587),
+      secure: parseBoolean(process.env.SMTP_SECURE, false),
+      user: optional('SMTP_USER', process.env.SMTP_USER, null),
+      password: optional('SMTP_PASSWORD', process.env.SMTP_PASSWORD, null),
+      from: optional('EMAIL_FROM', process.env.EMAIL_FROM, 'Mithilakart <no-reply@mithilakart.com>'),
+      get enabled() {
+        return Boolean(this.host);
+      },
+    },
     sms: {
       provider: optional('SMS_PROVIDER', process.env.SMS_PROVIDER, null),
       apiKey: optional('SMS_API_KEY', process.env.SMS_API_KEY, null),

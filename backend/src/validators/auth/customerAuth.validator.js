@@ -29,6 +29,26 @@ const verifyEmailOtpSchema = Joi.object({
   deviceId: Joi.string().trim().max(100).optional(),
 });
 
+const registrationIdSchema = Joi.string().trim().pattern(/^[a-f0-9]{32}$/).required();
+
+const registerStartSchema = Joi.object({
+  name: Joi.string().trim().min(2).max(100).required(),
+  countryCode: countryCodeSchema.default('+91'),
+  phone: phoneSchema,
+  email: emailSchema,
+});
+
+const registerVerifySchema = Joi.object({
+  registrationId: registrationIdSchema,
+  otp: otpSchema,
+  deviceId: Joi.string().trim().max(100).optional(),
+});
+
+const registerResendSchema = Joi.object({
+  registrationId: registrationIdSchema,
+  channel: Joi.string().valid('phone', 'email').required(),
+});
+
 const refreshTokenSchema = Joi.object({
   refreshToken: Joi.string().trim().required(),
   deviceId: Joi.string().trim().max(100).optional(),
@@ -43,6 +63,9 @@ module.exports = {
   verifyPhoneOtpSchema,
   sendEmailOtpSchema,
   verifyEmailOtpSchema,
+  registerStartSchema,
+  registerVerifySchema,
+  registerResendSchema,
   refreshTokenSchema,
   logoutSchema,
 };

@@ -6,12 +6,25 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import SurgeSettings, { DEFAULT_SURGE, surgeForSave } from '../components/SurgeSettings';
+import CheckoutContentSettings, { railsForSave, contentForSave } from '../components/CheckoutContentSettings';
 
 // Empty / invalid input falls back; a real 0 is kept.
 const num = (value, fallback) => {
   if (value === '' || value === null || value === undefined) return fallback;
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+};
+
+// Saved values over the server defaults, one level deep (same rule as the storefront).
+const mergeContent = (defaults, saved) => {
+  if (!defaults) return saved || null;
+  const out = { ...defaults };
+  Object.keys(defaults).forEach((k) => {
+    if (saved?.[k] === undefined) return;
+    out[k] = defaults[k] && typeof defaults[k] === 'object' && !Array.isArray(defaults[k]) ? { ...defaults[k], ...saved[k] } : saved[k];
+  });
+  return out;
 };
 
 const Settings = () => {
@@ -44,6 +57,10 @@ const Settings = () => {
     maxCartItems: 30,
     limitedQuantityMessage: 'Limited quantity due to high demand',
     loginRequired: true,
+    surgeConfig: DEFAULT_SURGE,
+    // Filled from the server's defaults + saved values once settings load.
+    cartRails: null,
+    checkoutContent: null,
     packageMinPricePercent: 40,
     razorpayEnabled: true,
     quickCommerceEnabled: true,
@@ -82,6 +99,9 @@ const Settings = () => {
           maxCartItems: s.maxCartItems ?? prev.maxCartItems,
           limitedQuantityMessage: s.limitedQuantityMessage ?? prev.limitedQuantityMessage,
           loginRequired: s.loginRequired ?? prev.loginRequired,
+          surgeConfig: s.surgeConfig && typeof s.surgeConfig === 'object' ? { ...DEFAULT_SURGE, ...s.surgeConfig } : prev.surgeConfig,
+          cartRails: s.cartRails || data.defaults?.cartRails || prev.cartRails,
+          checkoutContent: mergeContent(data.defaults?.checkoutContent, s.checkoutContent) || prev.checkoutContent,
           packageMinPricePercent: s.packageMinPricePercent ?? prev.packageMinPricePercent,
           razorpayEnabled: s.razorpayEnabled ?? prev.razorpayEnabled,
           quickCommerceEnabled: s.quickCommerceEnabled ?? prev.quickCommerceEnabled,
@@ -130,6 +150,9 @@ const Settings = () => {
       maxCartItems: Math.floor(num(formValues.maxCartItems, 0)),
       limitedQuantityMessage: String(formValues.limitedQuantityMessage || '').trim() || 'Limited quantity due to high demand',
       loginRequired: formValues.loginRequired,
+      surgeConfig: surgeForSave(formValues.surgeConfig),
+      ...(formValues.cartRails ? { cartRails: railsForSave(formValues.cartRails) } : {}),
+      ...(formValues.checkoutContent ? { checkoutContent: contentForSave(formValues.checkoutContent) } : {}),
       packageMinPricePercent: num(formValues.packageMinPricePercent, 40),
       razorpayEnabled: formValues.razorpayEnabled,
       quickCommerceEnabled: formValues.quickCommerceEnabled,
@@ -321,6 +344,28 @@ const Settings = () => {
                       <NumberField label="Free delivery on orders above" field="freeShippingThreshold" suffix="₹" />
                     </div>
                   </div>
+
+                  <SurgeSettings
+                    value={formValues.surgeConfig}
+                    onChange={(v) => updateField('surgeConfig', v)}
+                    fees={{
+                      handlingFee: num(formValues.handlingFee, 0),
+                      handlingFeeTiers: formValues.handlingFeeTiers.map((t) => ({ minSubtotal: num(t.minSubtotal, 0), discountPercent: num(t.discountPercent, 0) })),
+                      defaultDeliveryCharge: num(formValues.defaultDeliveryCharge, 0),
+                      freeShippingThreshold: num(formValues.freeShippingThreshold, 0),
+                      platformFee: num(formValues.platformFee, 0),
+                      packagingFee: num(formValues.packagingFee, 0),
+                    }}
+                  />
+
+                  {formValues.cartRails && formValues.checkoutContent && (
+                    <CheckoutContentSettings
+                      rails={formValues.cartRails}
+                      content={formValues.checkoutContent}
+                      onRails={(v) => updateField('cartRails', v)}
+                      onContent={(v) => updateField('checkoutContent', v)}
+                    />
+                  )}
 
                   <div>
                     <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-1">Purchase limits (per customer)</h3>

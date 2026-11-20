@@ -18,6 +18,7 @@ import HeaderTabsManager from '../catalog/HeaderTabsManager';
 import YouPopupManager from '../catalog/YouPopupManager';
 import PackageManager from '../catalog/PackageManager';
 import TabThemes from '../pages/content/TabThemes';
+import CartDesign from '../pages/content/CartDesign';
 import HelpCenterManager from '../catalog/HelpCenterManager';
 
 // New Admin Pages
@@ -107,6 +108,7 @@ const AdminRoutes = () => {
         <Route path="storefront/you-popup" element={<YouPopupManager />} />
         <Route path="storefront/packages" element={<PackageManager />} />
         <Route path="storefront/themes" element={<TabThemes />} />
+        <Route path="storefront/cart-design" element={<CartDesign />} />
         <Route path="storefront/help-center" element={<HelpCenterManager />} />
         <Route path="storefront/sections/:section" element={<HomeSectionsManager />} />
         

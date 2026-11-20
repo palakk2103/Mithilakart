@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { recordRecentlyViewed } from '../utils/recentlyViewed';
 import { 
   ArrowLeft, Search, ShoppingCart, Star, Heart, Send,
   Share2, ChevronRight, X, MapPin, Truck, RotateCcw, IndianRupee,
@@ -288,6 +289,7 @@ const ProductDetail = () => {
           ]);
           if (!cancelled) {
             if (detail) {
+              recordRecentlyViewed(detail._id || detail.id || productId);
               setProduct(mapProductForDetail(detail, incomingProduct?.img || incomingProduct?.image || PlumShampoo));
             } else if (incomingProduct) {
               setProduct(mapProductForDetail(incomingProduct, PlumShampoo));

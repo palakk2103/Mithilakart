@@ -31,6 +31,7 @@ class OrderController extends BaseController {
       commerceFlow: req.body.commerceFlow || 'standard',
       items: req.body.items || null,
       idempotencyKey: req.body.idempotencyKey || null,
+      tipAmount: Number(req.body.tipAmount) || 0,
       sessionMeta: {},
     });
 

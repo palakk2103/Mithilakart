@@ -1,519 +1,314 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { X, User, Mail, Phone, MessageSquare } from 'lucide-react';
+import { User, Mail, Phone, Smartphone, ShieldCheck, Check, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { sendPhoneOtp, verifyPhoneOtp, sendEmailOtp, verifyEmailOtp } from '../services/authApi';
-import { applyOtpSendResult } from '../../../shared/utils/otpResponse';
+import { registerStart, registerVerifyPhone, registerVerifyEmail, registerResend } from '../services/authApi';
+import { isAuthenticated } from '../../../shared/api/tokenStorage';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
 import useVendorStore from '../../../store/useVendorStore';
-import SocialIcons from '../../../shared/components/SocialIcons';
-import { handleImageError } from '../../../shared/utils/imageUtils';
+import AuthShell, { Notice, fieldClass } from '../components/auth/AuthShell';
+import OtpStep from '../components/auth/OtpStep';
+import { toOtpSession, sessionFromRetry } from '../components/auth/useOtpCountdown';
+import { goAfterAuth } from '../components/auth/authRedirect';
 
-const FlowerIcon = ({ className = "w-5 h-5", color = "#F26522" }) => (
-  <svg viewBox="0 0 24 24" className={`${className} inline-block`} fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Leaves/Green details */}
-    <path d="M6 6L18 18M18 6L6 18" stroke="#556b2f" strokeWidth="1.5" strokeLinecap="round" />
-    {/* 8 petals */}
-    <circle cx="12" cy="7" r="2" fill={color} />
-    <circle cx="12" cy="17" r="2" fill={color} />
-    <circle cx="7" cy="12" r="2" fill={color} />
-    <circle cx="17" cy="12" r="2" fill={color} />
-    <circle cx="8.5" cy="8.5" r="2" fill={color} />
-    <circle cx="15.5" cy="15.5" r="2" fill={color} />
-    <circle cx="15.5" cy="8.5" r="2" fill={color} />
-    <circle cx="8.5" cy="15.5" r="2" fill={color} />
-    {/* Center */}
-    <circle cx="12" cy="12" r="3.5" fill="#FFF5EE" stroke="#556b2f" strokeWidth="1" />
-    <circle cx="12" cy="12" r="1.5" fill={color} />
-  </svg>
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const STEPS = [
+  { key: 'phone', label: 'Mobile OTP' },
+  { key: 'email', label: 'Email OTP' },
+  { key: 'done', label: 'Done' },
+];
+
+const Stepper = ({ step, accent }) => {
+  const current = STEPS.findIndex((s) => s.key === step);
+  return (
+    <ol className="flex items-center justify-between mb-5" aria-label="Verification progress">
+      {STEPS.map((s, i) => {
+        const done = i < current || step === 'done';
+        const active = i === current && step !== 'done';
+        return (
+          <li key={s.key} className="flex-1 flex items-center last:flex-none">
+            <div className="flex flex-col items-center gap-1 min-w-[64px]">
+              <span
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold border-2"
+                style={done || active
+                  ? { backgroundColor: done ? accent : '#fff', borderColor: accent, color: done ? '#fff' : accent }
+                  : { borderColor: '#d6cfc8', color: '#a8988c', backgroundColor: '#fff' }}
+                aria-current={active ? 'step' : undefined}
+              >
+                {done ? <Check size={16} strokeWidth={3} /> : i + 1}
+              </span>
+              <span className="text-[11px] font-bold" style={{ color: done || active ? accent : '#a8988c' }}>{s.label}</span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className="flex-1 h-0.5 -mt-5 mx-1 rounded" style={{ backgroundColor: i < current ? accent : '#e6dfd8' }} />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+};
+
+/** Step card of the verify screen. Defined at module level so the OTP boxes inside keep focus while typing. */
+const StepCard = ({ hex, icon: Icon, title, locked = false, children }) => (
+  <section className={`rounded-xl border overflow-hidden bg-white ${locked ? 'opacity-60' : ''}`} style={{ borderColor: `${hex}40` }}>
+    <div className="flex items-center gap-2.5 px-3 py-2" style={{ backgroundColor: `${hex}14` }}>
+      <span className="w-7 h-7 rounded-lg flex items-center justify-center text-white flex-shrink-0" style={{ backgroundColor: hex }}><Icon size={16} /></span>
+      <h2 className="text-[13.5px] font-extrabold text-[#321c13] leading-tight">{title}</h2>
+    </div>
+    <div className="p-3">{children}</div>
+  </section>
 );
 
+const Verified = ({ text }) => (
+  <div className="flex items-center gap-2 bg-green-50 border border-green-100 text-green-700 text-[13px] font-bold rounded-xl px-3 py-2.5">
+    <Check size={16} strokeWidth={3} className="shrink-0" /> {text}
+  </div>
+);
+
+/**
+ * AUTH-1 Create Account → AUTH-2 Verify Your Account (mobile OTP, then email
+ * OTP). The account is created by the server only after both are verified.
+ */
 const Signup = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTabTheme();
   const setActiveFlow = useVendorStore((state) => state.setActiveFlow);
+  const hex = theme.primaryHex;
 
   const [name, setName] = useState('');
-  const [useEmail, setUseEmail] = useState(false);
   const [countryCode, setCountryCode] = useState('+91');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const [reg, setReg] = useState(null); // { registrationId, step, maskedPhone, maskedEmail }
+  const [session, setSession] = useState(null);
   const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [timer, setTimer] = useState(60);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
+  const [alreadyRegistered, setAlreadyRegistered] = useState(null);
   const [success, setSuccess] = useState('');
 
-  const getDefaultRedirect = (flow) => {
-    if (flow === 'quickshop') return '/quick-shop';
-    if (flow === 'mithilak') return '/mithilak';
-    if (flow === 'freshgrocery') return '/fresh-grocery';
-    return '/home';
-  };
-
   useEffect(() => {
-    if (location.state?.flow) {
-      setActiveFlow(location.state.flow);
-    }
+    if (location.state?.flow) setActiveFlow(location.state.flow);
   }, [location.state?.flow, setActiveFlow]);
 
-  // 60-second countdown timer for resending OTP
   useEffect(() => {
-    let interval = null;
-    if (otpSent && timer > 0) {
-      interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
-    } else if (timer === 0) {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [otpSent, timer]);
+    if (isAuthenticated('customer')) goAfterAuth(navigate, location, theme.activeFlow, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleSendOtp = async () => {
+  const applyStep = (data, message = '') => {
+    setReg(data);
+    setSession(toOtpSession(data.otp));
+    setOtp(data.otp?.devOtp || '');
+    setSuccess(message);
+    setError(data.emailOtpError || '');
+  };
+
+  const validateForm = () => {
+    const errs = {};
+    if (name.trim().length < 2) errs.name = 'Enter your full name';
+    if (countryCode === '+91' ? !/^\d{10}$/.test(phone) : !/^\d{8,11}$/.test(phone)) errs.phone = 'Enter a valid mobile number';
+    if (!EMAIL_RE.test(email.trim())) errs.email = 'Enter a valid email address';
+    setFieldErrors(errs);
+    return !Object.keys(errs).length;
+  };
+
+  const start = async (e) => {
+    e.preventDefault();
+    if (busy) return;
     setError('');
-    setSuccess('');
-    
-    if (useEmail) {
-      const trimmedEmail = email.trim();
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!trimmedEmail) {
-        setError(t('auto.emailAddressIsRequired'));
-        return;
+    setAlreadyRegistered(null);
+    if (!validateForm()) return;
+    setBusy(true);
+    try {
+      const data = await registerStart({ name: name.trim(), countryCode, phone, email: email.trim() });
+      applyStep(data);
+    } catch (err) {
+      if (err.code === 'ALREADY_REGISTERED') {
+        const fields = err.details?.fields || [];
+        setAlreadyRegistered((err.message || 'Already registered.').replace(/\s*Please log in instead\.?$/, ''));
+        setFieldErrors({
+          ...(fields.includes('phone') ? { phone: 'This number is already registered' } : {}),
+          ...(fields.includes('email') ? { email: 'This email is already registered' } : {}),
+        });
+      } else {
+        setError(err.message || 'Could not start sign-up. Please try again.');
       }
-      if (!emailRegex.test(trimmedEmail)) {
-        setError(t('auto.pleaseEnterAValidEmail'));
-        return;
-      }
-      
-      setIsSendingOtp(true);
-      try {
-        await sendEmailOtp(trimmedEmail);
-        setOtpSent(true);
-        setTimer(60);
-        setSuccess('OTP sent successfully to your email');
-      } catch (err) {
-        setError(err.message || t('auto.failedToSendOtp'));
-      } finally {
-        setIsSendingOtp(false);
-      }
-    } else {
-      if (!countryCode) {
-        setError(t('auto.countryCodeIsRequired'));
-        return;
-      }
-      if (!/^\+?\d{1,4}$/.test(countryCode)) {
-        setError(t('auto.invalidCountryCode'));
-        return;
-      }
-      if (!phoneNumber) {
-        setError(t('auto.phoneNumberIsRequired'));
-        return;
-      }
-      if (phoneNumber.length < 8 || phoneNumber.length > 11) {
-        setError(t('auto.phoneNumberMustBeBetween'));
-        return;
-      }
-      
-      setIsSendingOtp(true);
-      try {
-        const result = await sendPhoneOtp(countryCode, phoneNumber);
-        applyOtpSendResult(result, { setOtp, setSuccess, setOtpSent, setTimer });
-      } catch (err) {
-        setError(err.message || t('auto.failedToSendOtp'));
-      } finally {
-        setIsSendingOtp(false);
-      }
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const verify = async (code) => {
+    if (busy || code.length !== 6 || !reg) return;
+    setBusy(true);
     setError('');
-    setSuccess('');
-    
-    if (!name.trim()) {
-      setError(t('auto.fullNameIsRequired'));
-      return;
-    }
-    if (!otp) {
-      setError(t('auto.otpCannotBeEmpty'));
-      return;
-    }
-    if (!/^\d{6}$/.test(otp)) {
-      setError(t('auto.otpMustBeA6'));
-      return;
-    }
-    
-    setIsVerifyingOtp(true);
     try {
-      let response;
-      if (useEmail) {
-        response = await verifyEmailOtp(email.trim(), otp, name.trim());
+      if (reg.step === 'phone') {
+        const data = await registerVerifyPhone(reg.registrationId, code);
+        applyStep(data, 'Mobile number verified successfully!');
       } else {
-        response = await verifyPhoneOtp(countryCode, phoneNumber, otp, name.trim());
-      }
-      
-      if (response && response.success) {
-        setSuccess('Account created successfully! Logging in...');
-        setTimeout(() => {
-          const defaultRedirect = getDefaultRedirect(theme.activeFlow);
-          const redirectTo = location.state?.from || defaultRedirect;
-          const redirectState = {};
-          if (location.state?.product) redirectState.product = location.state.product;
-          if (location.state?.checkoutProduct) redirectState.checkoutProduct = location.state.checkoutProduct;
-          navigate(redirectTo, { state: redirectState });
-        }, 800);
+        const result = await registerVerifyEmail(reg.registrationId, code);
+        if (result.success) {
+          setReg((r) => ({ ...r, step: 'done', emailVerified: true }));
+          setSession(null);
+          setSuccess('Email verified successfully! Your account is ready.');
+          setTimeout(() => goAfterAuth(navigate, location, theme.activeFlow, { replace: true }), 1200);
+        }
       }
     } catch (err) {
-      setError(err.message || t('auto.invalidOtpPleaseTryAgain'));
+      setOtp('');
+      if (err.status === 410 && /sign-up session/.test(err.message || '')) {
+        setReg(null);
+        setSession(null);
+      }
+      setError(err.message || 'Incorrect OTP');
     } finally {
-      setIsVerifyingOtp(false);
+      setBusy(false);
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isSendingOtp || isVerifyingOtp) return;
-    if (!otpSent) {
-      handleSendOtp();
-    } else {
-      handleVerifyOtp();
+  const resend = async () => {
+    if (!reg || resending) return;
+    setResending(true);
+    setError('');
+    try {
+      const data = await registerResend(reg.registrationId, reg.step === 'email' ? 'email' : 'phone');
+      applyStep(data, reg.step === 'email' ? 'A new OTP is on its way to your email.' : 'A new OTP is on its way to your mobile.');
+    } catch (err) {
+      setSession((s) => sessionFromRetry(s, err));
+      setError(err.message || 'Could not resend the OTP');
+    } finally {
+      setResending(false);
     }
   };
 
-  const handleResendOtp = () => {
-    if (timer > 0 || isSendingOtp || isVerifyingOtp) return;
-    handleSendOtp();
-  };
+  const loginState = { ...(location.state || {}) };
 
-  // Inline SVG pattern for background
-  const backgroundPattern = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><path d="M10 20c2-3 5-5 8-5s6 2 8 5-2 8-5 8-6-2-8-5zm30 20c2-3 5-5 8-5s6 2 8 5-2 8-5 8-6-2-8-5zM25 45c1-2 3-3 5-3s4 1 5 3-1 4-3 4-4-1-5-3zM45 15c1-2 3-3 5-3s4 1 5 3-1 4-3 4-4-1-5-3z" fill="%23ffffff" fill-opacity="0.12" fill-rule="evenodd"/></svg>`;
+  // ── Screen 2: Verify Your Account (Step 1 and Step 2 cards shown together) ──
+  if (reg) {
+    const phoneDone = Boolean(reg.phoneVerified);
+    const allDone = reg.step === 'done';
+    const otpProps = { session, otp, setOtp, onVerify: verify, onResend: resend, verifying: busy, resending, accent: hex, invalid: Boolean(error) };
+    return (
+      <AuthShell
+        title="Verify Your Account"
+        subtitle="Complete two-step verification to activate your account"
+        onBack={allDone ? undefined : () => { setReg(null); setSession(null); setOtp(''); setError(''); setSuccess(''); }}
+      >
+        <Stepper step={reg.step} accent={hex} />
+        <div className="space-y-2.5">
+          <Notice kind="error">{error}</Notice>
 
-  const primaryBg = theme.primaryBg;
-  const primaryBgHover = theme.primaryBgHover;
-  const primaryText = theme.primaryText;
-  const primaryBorder = theme.primaryBorder;
-  const primaryLightBg = theme.primaryLightBg;
+          {phoneDone ? (
+            <Verified text="Mobile number verified successfully!" />
+          ) : (
+            <StepCard hex={hex} icon={Smartphone} title="Step 1: Verify Your Mobile Number">
+              <OtpStep {...otpProps} sentTo={reg.maskedPhone} verifyLabel="Verify Mobile OTP" />
+            </StepCard>
+          )}
 
-  const outerBgMap = {
-    quickshop: 'bg-[#f7f4eb]',
-    mithilak: 'bg-[#eef5f6]',
-    freshgrocery: 'bg-[#faf6eb]',
-    mithilakart: 'bg-[#f2f7f1]'
-  };
-  const cardBgMap = {
-    quickshop: 'bg-[#FFF9F3]/95',
-    mithilak: 'bg-[#fafdff]/95',
-    freshgrocery: 'bg-[#FFFdfa]/95',
-    mithilakart: 'bg-[#fbfdfa]/95'
-  };
-  
-  const outerBg = outerBgMap[theme.activeFlow] || 'bg-[#f2f7f1]';
-  const cardBg = cardBgMap[theme.activeFlow] || 'bg-[#fbfdfa]/95';
+          <StepCard hex={hex} icon={Mail} title="Step 2: Verify Your Email Address" locked={!phoneDone}>
+            {allDone ? (
+              <Verified text="Email verified successfully! Your account is ready." />
+            ) : phoneDone ? (
+              <OtpStep {...otpProps} sentTo={reg.maskedEmail} verifyLabel="Verify Email OTP" />
+            ) : (
+              <p className="text-[12.5px] text-[#705c53] font-semibold text-center py-1">
+                Verify your mobile number first. We will then send an OTP to <span className="text-[#321c13] font-bold">{reg.maskedEmail}</span>.
+              </p>
+            )}
+          </StepCard>
+
+          <div className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-100 text-sky-900 text-[12px] font-semibold px-3 py-2">
+            <ShieldCheck size={16} className="shrink-0" />
+            Both mobile and email must be verified to complete registration.
+          </div>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  // ── Screen 1: Create Account ───────────────────────────────────────────────
+  const border = (field) => ({ borderColor: fieldErrors[field] ? '#ef4444' : `${hex}40` });
+  const FieldError = ({ field }) => (fieldErrors[field] ? <p className="text-[12px] text-red-600 font-semibold mt-1 px-1">{fieldErrors[field]}</p> : null);
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-between p-2.5 py-3 md:p-6 relative overflow-hidden ${outerBg}`}>
-      {/* Background Image with lower opacity */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-25 pointer-events-none"
-        style={{ backgroundImage: `url('/login_signup_bg.png')` }}
-      />
-
-      {/* Top Header Row */}
-      <div className="w-full max-w-[420px] flex items-center justify-between z-10">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-full backdrop-blur-md active:scale-95 transition-all"
-          style={{ backgroundColor: `${theme.primaryHex}1a`, color: theme.primaryHex }}
-        >
-          <X size={20} strokeWidth={2.5} />
-        </button>
-        <div className="w-9"></div> {/* Spacer for symmetry */}
-      </div>
-
-      {/* Main card */}
-      <div className={`w-full max-w-[420px] rounded-[36px] p-2.5 shadow-2xl border backdrop-blur-md z-10 my-2.5 md:my-6 relative overflow-hidden ${cardBg}`} style={{ borderColor: `${theme.primaryHex}33` }}>
-        <div className="border border-dashed rounded-[28px] px-5 py-5 md:px-6 md:py-8 relative" style={{ borderColor: `${theme.primaryHex}66` }}>
-          
-          {/* Faint mandala background watermark */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden">
-            <svg className="w-80 h-80 fill-current" style={{ color: theme.primaryHex }} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="1" fill="none" />
-              <path d="M50 10 C55 25, 45 25, 50 10 Z" />
-              <path d="M50 90 C55 75, 45 75, 50 90 Z" />
-              <path d="M10 50 C25 55, 25 45, 10 50 Z" />
-              <path d="M90 50 C75 55, 75 45, 90 50 Z" />
-              <circle cx="50" cy="50" r="20" stroke="currentColor" strokeWidth="1" fill="none" />
-              <path d="M50 30 C55 40, 45 40, 50 30 Z" />
-              <path d="M50 70 C55 60, 45 60, 50 70 Z" />
-              <path d="M30 50 C40 55, 40 45, 30 50 Z" />
-              <path d="M70 50 C60 55, 60 45, 70 50 Z" />
-            </svg>
-          </div>
-
-          {/* Corner Flowers */}
-          <div className="absolute top-2.5 left-2.5"><FlowerIcon className="w-4 h-4" color={theme.primaryHex} /></div>
-          <div className="absolute top-2.5 right-2.5"><FlowerIcon className="w-4 h-4" color={theme.primaryHex} /></div>
-          <div className="absolute bottom-2.5 left-2.5"><FlowerIcon className="w-4 h-4" color={theme.primaryHex} /></div>
-          <div className="absolute bottom-2.5 right-2.5"><FlowerIcon className="w-4 h-4" color={theme.primaryHex} /></div>
-
-          <div className="text-center mb-4 md:mb-6 z-10 relative">
-            <h2 className="text-2xl md:text-3xl font-extrabold font-serif text-[#321c13] flex items-center justify-center gap-2">
-              <FlowerIcon className="w-5 h-5" color={theme.primaryHex} />
-              <span>{t('auto.createAccount')}</span>
-              <FlowerIcon className="w-5 h-5" color={theme.primaryHex} />
-            </h2>
-            {/* Divider */}
-            <div className="flex items-center justify-center gap-2 my-2 md:my-2.5">
-              <div className="w-16 border-t border-dashed" style={{ borderColor: `${theme.primaryHex}66` }}></div>
-              <FlowerIcon className="w-3.5 h-3.5" color={theme.primaryHex} />
-              <div className="w-16 border-t border-dashed" style={{ borderColor: `${theme.primaryHex}66` }}></div>
-            </div>
-            <p className="text-[#705c53] text-[13px] font-semibold mt-1">
-              {t('auto.freshFoodHandcraftedItemsDelivered')}
-            </p>
-          </div>
-
-          {/* Authentication Toggle */}
-          <div className={`flex gap-1.5 border p-1 rounded-2xl mb-4 md:mb-5 z-10 relative ${theme.primaryLightBg}`} style={{ borderColor: `${theme.primaryHex}40` }}>
-            <button
-              type="button"
-              disabled={isSendingOtp || isVerifyingOtp}
-              onClick={() => {
-                setUseEmail(false);
-                setOtpSent(false);
-                setError('');
-                setSuccess('');
-                setOtp('');
-              }}
-              className={`flex-1 py-3 px-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-bold rounded-xl transition-all capitalize tracking-normal whitespace-nowrap relative ${
-                !useEmail 
-                  ? `${theme.primaryBg} text-white shadow-md` 
-                  : `${theme.primaryText} hover:bg-black/5`
-              }`}
+    <AuthShell title={t('auto.createAccount', 'Create Account')} badge="One account · Two verified identities" social>
+      <form onSubmit={start} className="space-y-4" noValidate>
+        {alreadyRegistered && (
+          <div role="alert" className="bg-amber-50 border border-amber-200 text-amber-900 text-[13px] font-semibold p-3 rounded-2xl text-center">
+            {alreadyRegistered}{' '}
+            <Link
+              to="/login"
+              state={{ ...loginState, ...(fieldErrors.email && !fieldErrors.phone ? { useEmail: true, email: email.trim() } : { phone }) }}
+              className="font-extrabold underline"
+              style={{ color: hex }}
             >
-              {!useEmail && (
-                <div className="absolute inset-0.5 border border-dashed border-white/40 rounded-lg pointer-events-none" />
-              )}
-              <Phone size={14} />
-              <span>{t('auto.continueWithPhone')}</span>
-            </button>
-            <button
-              type="button"
-              disabled={isSendingOtp || isVerifyingOtp}
-              onClick={() => {
-                setUseEmail(true);
-                setOtpSent(false);
-                setError('');
-                setSuccess('');
-                setOtp('');
-              }}
-              className={`flex-1 py-3 px-2 flex items-center justify-center gap-1.5 text-center text-[11px] font-bold rounded-xl transition-all capitalize tracking-normal whitespace-nowrap relative ${
-                useEmail 
-                  ? `${theme.primaryBg} text-white shadow-md` 
-                  : `${theme.primaryText} hover:bg-black/5`
-              }`}
-            >
-              {useEmail && (
-                <div className="absolute inset-0.5 border border-dashed border-white/40 rounded-lg pointer-events-none" />
-              )}
-              <Mail size={14} />
-              <span>{t('auto.continueWithEmail')}</span>
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4 z-10 relative">
-            {error && (
-              <div className="bg-red-50 border border-red-100 text-red-500 text-[11px] font-bold p-3.5 rounded-2xl text-center uppercase tracking-wider">
-                {error}
-              </div>
-            )}
-            {success && (
-              <div className="bg-green-50 border border-green-100 text-green-600 text-[11px] font-bold p-3.5 rounded-2xl text-center uppercase tracking-wider">
-                {success}
-              </div>
-            )}
-
-            {/* Name Field */}
-            <div>
-              <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
-                {t('auto.fullName')}
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#b8a090]">
-                  <User size={18} />
-                </span>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t('auto.enterYourFullName')}
-                  className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
-                  style={{ borderColor: `${theme.primaryHex}40` }}
-                  disabled={isVerifyingOtp}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Email / Phone Field */}
-            {!useEmail ? (
-              <div>
-                <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
-                  {t('auto.phoneNumber')}
-                </label>
-                <div className="flex gap-2">
-                  <div className="w-[85px] relative">
-                    <select
-                      value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value)}
-                      className="w-full pl-3 pr-6 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] focus:outline-none transition-all shadow-xs appearance-none text-center cursor-pointer"
-                      style={{ borderColor: `${theme.primaryHex}40` }}
-                      disabled={otpSent || isSendingOtp || isVerifyingOtp}
-                    >
-                      <option value="+91">+91</option>
-                      <option value="+1">+1</option>
-                      <option value="+44">+44</option>
-                      <option value="+971">+971</option>
-                    </select>
-                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#b8a090]">
-                      <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
-                    </div>
-                  </div>
-                  <div className="flex-1 relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${theme.primaryHex}b3` }}>
-                      <Phone size={18} />
-                    </span>
-                    <input
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                      placeholder="9876543210"
-                      className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
-                      style={{ borderColor: `${theme.primaryHex}40` }}
-                      disabled={otpSent || isSendingOtp || isVerifyingOtp}
-                      required
-                      maxLength={10}
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
-                  {t('auto.emailAddress')}
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${theme.primaryHex}b3` }}>
-                    <Mail size={18} />
-                  </span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="example@gmail.com"
-                    className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs"
-                    style={{ borderColor: `${theme.primaryHex}40` }}
-                    disabled={otpSent || isSendingOtp || isVerifyingOtp}
-                    required
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* OTP Field & Resend Timer */}
-            {otpSent && (
-              <div className="space-y-2">
-                <div>
-                  <label className="block text-[10px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">
-                    {t('x.sixDigitOtp')}
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${theme.primaryHex}b3` }}>
-                      <MessageSquare size={18} />
-                    </span>
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                      placeholder="••••••"
-                      maxLength={6}
-                      className="w-full pl-11 pr-4 py-2.5 bg-[#FFFdfa] border focus:ring-1 rounded-[16px] text-[14px] font-semibold text-[#321c13] placeholder-[#b8a090] focus:outline-none transition-all shadow-xs tracking-widest text-center"
-                      style={{ borderColor: `${theme.primaryHex}40` }}
-                      disabled={isVerifyingOtp}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Resend Timer */}
-                <div className="flex items-center justify-between text-[12px] font-bold px-1" style={{ color: `${theme.primaryHex}cc` }}>
-                  <span>{t('x.otpExpiresIn')}: {timer}s</span>
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={timer > 0 || isSendingOtp || isVerifyingOtp}
-                    className="hover:underline font-bold transition-all cursor-pointer"
-                    style={{ color: theme.primaryHex }}
-                  >
-                    {t('auto.resendOtp')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Sign up Button / Send OTP */}
-            <motion.button
-              type="submit"
-              whileTap={{ scale: 0.97 }}
-              disabled={isSendingOtp || isVerifyingOtp}
-              className={`w-full py-4 mt-2 text-white rounded-[16px] text-[15px] font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden font-serif ${primaryBg} ${primaryBgHover}`}
-            >
-              <div className="absolute inset-1 border border-dashed border-white/50 rounded-xl pointer-events-none" />
-              {isSendingOtp || isVerifyingOtp ? (
-                <span>{t('auto.processing')}</span>
-              ) : otpSent ? (
-                <span>{t('auto.verifyOtpCreateAccount')}</span>
-              ) : (
-                <span>{t('auto.sendOtp')}</span>
-              )}
-            </motion.button>
-          </form>
-
-          {/* Link to Login */}
-          <div className="text-center mt-5 text-[12px] font-bold text-[#705c53] z-10 relative">
-            {t('auth.alreadyHaveAccount')}{' '}
-            <Link to="/login" state={location.state} className="hover:underline" style={{ color: theme.primaryHex }}>
-              {t('auto.logInHere')}
+              Log in instead
             </Link>
           </div>
+        )}
+        <Notice kind="error">{error}</Notice>
 
-          {/* Social Icons */}
-          <div className="mt-4 pt-3.5 border-t border-dashed z-10 relative flex flex-col items-center gap-2.5" style={{ borderColor: `${theme.primaryHex}33` }}>
-            <p className="text-center text-[10px] font-extrabold text-[#705c53] uppercase tracking-wider">
-              {t('auto.connectWithUs')}
-            </p>
-            <SocialIcons />
+        <div>
+          <label htmlFor="su-name" className="block text-[11px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">Full Name *</label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${hex}b3` }}><User size={18} /></span>
+            <input id="su-name" type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" className={fieldClass} style={border('name')} disabled={busy} aria-invalid={Boolean(fieldErrors.name)} />
           </div>
+          <FieldError field="name" />
         </div>
-      </div>
 
-      {/* Footer Logo & Styling */}
-      <div className="flex flex-col items-center gap-1 my-1 md:my-3 z-10">
-        <img 
-          src="/mthibg.png" 
-          alt="Mithilakart" 
-          className="h-10 md:h-16 w-auto object-contain" onError={handleImageError} />
-        <div className="flex items-center text-[13px] md:text-[14px] font-bold text-black tracking-wide italic">
-          Mithilakart<span className="text-[10px] align-super ml-0.5">™</span>
+        <div>
+          <label htmlFor="su-phone" className="block text-[11px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">Primary Mobile Number *</label>
+          <div className="flex gap-2">
+            <select aria-label="Country code" value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="w-[84px] h-12 px-2 bg-[#FFFdfa] border rounded-[16px] text-[15px] font-semibold text-[#321c13] focus:outline-none text-center" style={{ borderColor: `${hex}40` }} disabled={busy}>
+              <option value="+91">+91</option>
+              <option value="+1">+1</option>
+              <option value="+44">+44</option>
+              <option value="+971">+971</option>
+            </select>
+            <div className="flex-1 relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${hex}b3` }}><Phone size={18} /></span>
+              <input id="su-phone" type="tel" inputMode="numeric" autoComplete="tel-national" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="98765 43210" className={fieldClass} style={border('phone')} disabled={busy} aria-invalid={Boolean(fieldErrors.phone)} />
+            </div>
+          </div>
+          {fieldErrors.phone ? <FieldError field="phone" /> : <p className="text-[12px] text-[#8a766b] mt-1 px-1">Your primary customer contact</p>}
         </div>
+
+        <div>
+          <label htmlFor="su-email" className="block text-[11px] font-bold text-[#556b2f] mb-1.5 px-1 uppercase tracking-wider">Email Address *</label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: `${hex}b3` }}><Mail size={18} /></span>
+            <input id="su-email" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@gmail.com" className={fieldClass} style={border('email')} disabled={busy} aria-invalid={Boolean(fieldErrors.email)} />
+          </div>
+          {fieldErrors.email ? <FieldError field="email" /> : <p className="text-[12px] text-[#8a766b] mt-1 px-1">Your associated email for login &amp; orders</p>}
+        </div>
+
+        <div className="flex gap-2.5 items-start rounded-2xl p-3 text-[12.5px] font-semibold text-[#5b4a40]" style={{ backgroundColor: `${hex}12` }}>
+          <ShieldCheck size={18} className="shrink-0 mt-0.5" style={{ color: hex }} />
+          <span>We will verify both identities – you will receive separate OTPs on your mobile number and email address.</span>
+        </div>
+
+        <motion.button type="submit" whileTap={{ scale: 0.97 }} disabled={busy} className="w-full h-12 text-white rounded-[16px] text-[15px] font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-60" style={{ backgroundColor: hex }}>
+          {busy ? 'Sending OTP…' : <>Continue to Verification <ArrowRight size={18} /></>}
+        </motion.button>
+      </form>
+
+      <div className="text-center mt-6 text-[13px] font-bold text-[#705c53]">
+        Already have an account?{' '}
+        <Link to="/login" state={loginState} className="inline-block py-2 hover:underline" style={{ color: hex }}>Log in here!</Link>
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

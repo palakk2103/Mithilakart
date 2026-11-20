@@ -7,7 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
  * `anchorRef` is the "You" nav button so taps on it are handled by its own
  * toggle handler rather than being treated as an outside click.
  */
-const YouPopup = ({ items, onClose, anchorRef, bottom = 56 }) => {
+const YouPopup = ({ items, onClose, anchorRef, bottom = 56, loggedIn = true }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const panelRef = useRef(null);
@@ -42,7 +42,19 @@ const YouPopup = ({ items, onClose, anchorRef, bottom = 56 }) => {
       className="md:hidden fixed left-0 right-0 z-40 bg-[#FFF8EE] border-t border-[#EADCC9] rounded-t-2xl px-3 pt-3 pb-3 shadow-[0_-6px_20px_rgba(63,42,32,0.14)]"
       style={{ bottom }}
     >
-      {items.length === 0 ? (
+      {!loggedIn ? (
+        // No guest menu: a logged-out visitor only gets a login prompt.
+        <div className="flex items-center gap-3 px-1" data-testid="you-popup-login">
+          <p className="flex-1 text-[13px] font-semibold text-[#3F2A20]">Login to see your account, orders and wishlist</p>
+          <button
+            type="button"
+            onClick={() => { navigate('/login', { state: { from: location.pathname + location.search } }); onClose(); }}
+            className="h-11 px-6 rounded-full bg-[color:var(--mk-primary,#65B842)] text-white text-[13px] font-bold active:scale-95 transition-transform"
+          >
+            Login
+          </button>
+        </div>
+      ) : items.length === 0 ? (
         <p className="text-center text-[12px] font-semibold text-[#3F2A20]/60 py-2">Nothing to show right now</p>
       ) : (
         <div className="flex gap-2">

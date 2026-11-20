@@ -4,6 +4,8 @@ const { PRICING } = require('../../constants/pricing');
 const { DEFAULT_PLATFORM_SETTINGS } = require('../../constants/platformSettings');
 const { AppError } = require('../../utils/AppError');
 
+const MAX_TIP = 500;
+
 class PricingService extends BaseService {
   constructor({ couponService = null, platformConfigService = null } = {}) {
     super();
@@ -48,7 +50,13 @@ class PricingService extends BaseService {
     pincode = null,
     paymentMethod = null,
     enforceMinOrder = false,
+    marketplaceTab = null,
+    now = new Date(),
+    tipAmount = 0,
   }) {
+    // CART-2 delivery tip: whole rupees, 0–500, passed in full to the delivery partner.
+    const tip = Math.round(Number(tipAmount) || 0);
+    if (tip < 0 || tip > MAX_TIP) throw AppError.validation(`Tip must be between ₹0 and ₹${MAX_TIP}`);
     const subtotal = items.reduce(
       (sum, item) => sum + (item.unitPrice || 0) * (item.quantity || 0),
       0
@@ -87,6 +95,11 @@ class PricingService extends BaseService {
     // An empty cart owes nothing; the fees only apply once there is something to deliver.
     const hasItems = items.length > 0 && subtotal > 0;
     const handlingFee = hasItems ? handling.fee : 0;
+    // FEE-3: surge on quick-commerce tabs while the cart value is below the threshold.
+    const surge = this.platformConfigService?.computeSurge
+      ? this.platformConfigService.computeSurge(config, { cartValue: subtotal, marketplaceTab, hasItems, now })
+      : { charge: 0, applies: false, active: false, amount: 0, threshold: 0, amountToAvoid: 0, label: '', note: '' };
+    const surgeCharge = surge.charge;
     const platformFee = Number(config.platformFee) || 0;
     const packagingFee = Number(config.packagingFee) || 0;
     let codHandlingFee = 0;
@@ -107,7 +120,7 @@ class PricingService extends BaseService {
 
     const tax = this.computeTax(discountedSubtotal, resolvedTaxRate);
     const total = Math.round(
-      (discountedSubtotal + (hasItems ? deliveryCharge : 0) + platformFee + packagingFee + handlingFee + codHandlingFee + tax) * 100
+      (discountedSubtotal + (hasItems ? deliveryCharge : 0) + platformFee + packagingFee + handlingFee + surgeCharge + (hasItems ? tip : 0) + codHandlingFee + tax) * 100
     ) / 100;
 
     const mrpTotal = items.reduce(
@@ -132,6 +145,17 @@ class PricingService extends BaseService {
       handlingFeeDiscountPercent: handling.discountPercent,
       handlingFeeTier: handling.appliedTier || null,
       handlingFeeNextTier: handling.nextTier,
+      tipAmount: hasItems ? tip : 0,
+      surgeCharge,
+      surge: {
+        applies: surge.applies,
+        active: surge.active,
+        amount: surge.amount,
+        threshold: surge.threshold,
+        amountToAvoid: surge.amountToAvoid,
+        label: surge.label,
+        note: surge.note,
+      },
       platformFee,
       packagingFee,
       codHandlingFee,

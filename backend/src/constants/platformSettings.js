@@ -1,3 +1,6 @@
+const { DEFAULT_CART_RAILS, DEFAULT_CHECKOUT_CONTENT } = require('./checkoutContent');
+const { DEFAULT_CART_DESIGN } = require('./cartDesign');
+
 const PLATFORM_SETTING_KEYS = {
   PLATFORM_NAME: 'platformName',
   SUPPORT_EMAIL: 'supportEmail',
@@ -63,6 +66,13 @@ const PLATFORM_SETTING_KEYS = {
   MAX_CART_ITEMS: 'maxCartItems',
   LIMITED_QUANTITY_MESSAGE: 'limitedQuantityMessage',
   LOGIN_REQUIRED: 'loginRequired',
+  // FEE-3 — high-demand surge charge on quick-commerce tabs.
+  SURGE_CONFIG: 'surgeConfig',
+  // CART-1/2/3 — cart recommendation rails and checkout page content.
+  CART_RAILS: 'cartRails',
+  CHECKOUT_CONTENT: 'checkoutContent',
+  // Design (colours, spacing, section order/visibility) of the cart, summary and payment pages.
+  CART_DESIGN: 'cartDesign',
 
   // ── Customised packages (e.g. Mithila Dwirangman) ──────────────────────────
   PACKAGE_MIN_PRICE_PERCENT: 'packageMinPricePercent',
@@ -102,6 +112,24 @@ const DEFAULT_HANDLING_FEE_TIERS = [
   { minSubtotal: 250, discountPercent: 100 },
 ];
 
+/**
+ * FEE-3 surge charge. Applies on the listed tabs while the cart value (items at
+ * selling price, before coupons) is below `threshold`. `windows` limit it to
+ * days/times in IST; an empty list means "always". A window whose end is
+ * before its start runs past midnight (22:00 → 02:00).
+ */
+const DEFAULT_SURGE_CONFIG = {
+  enabled: true,
+  amount: 30,
+  threshold: 499,
+  tabs: ['quick_shop', 'groceries_fresh'],
+  windows: [],
+  bannerTitle: 'Place an order above ₹{threshold} to avoid surge charge',
+  bannerText: 'Surge applicable due to high demand',
+  billLabel: 'Surge charge',
+  billNote: 'High demand right now. Add ₹{remaining} more to remove it.',
+};
+
 const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.PLATFORM_NAME]: 'Mithilakart',
   [PLATFORM_SETTING_KEYS.SUPPORT_EMAIL]: 'support@mithilakart.com',
@@ -131,6 +159,10 @@ const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.MAX_CART_ITEMS]: 30,
   [PLATFORM_SETTING_KEYS.LIMITED_QUANTITY_MESSAGE]: 'Limited quantity due to high demand',
   [PLATFORM_SETTING_KEYS.LOGIN_REQUIRED]: true,
+  [PLATFORM_SETTING_KEYS.SURGE_CONFIG]: DEFAULT_SURGE_CONFIG,
+  [PLATFORM_SETTING_KEYS.CART_RAILS]: DEFAULT_CART_RAILS,
+  [PLATFORM_SETTING_KEYS.CHECKOUT_CONTENT]: DEFAULT_CHECKOUT_CONTENT,
+  [PLATFORM_SETTING_KEYS.CART_DESIGN]: DEFAULT_CART_DESIGN,
   // A customised package may not be cut below this % of its full price.
   [PLATFORM_SETTING_KEYS.PACKAGE_MIN_PRICE_PERCENT]: 40,
 
@@ -200,6 +232,7 @@ module.exports = {
   DEFAULT_PLATFORM_SETTINGS,
   DEFAULT_SELLER_RANKING_WEIGHTS,
   DEFAULT_PARTNER_RANKING_WEIGHTS,
+  DEFAULT_SURGE_CONFIG,
   FULFILLMENT_SETTING_RANGES,
   PLATFORM_CONFIG_CACHE_KEY,
   PLATFORM_CONFIG_CACHE_TTL,

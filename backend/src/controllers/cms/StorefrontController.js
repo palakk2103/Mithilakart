@@ -21,7 +21,7 @@ class StorefrontController extends BaseController {
   });
 
   getBanners = asyncHandler(async (req, res) => {
-    const data = await this.service.getBanners(req.query.commerceFlow || 'standard');
+    const data = await this.service.getBanners(req.query.commerceFlow || 'standard', req.query.placement === 'cart' ? 'cart' : 'home');
     return ApiResponse.success(res, data);
   });
 

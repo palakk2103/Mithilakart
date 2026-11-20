@@ -2,10 +2,12 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import fs from "fs";
 import { VitePWA } from "vite-plugin-pwa";
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
+let buildOutDir = path.resolve('dist');
 
 export default defineConfig({
   plugins: [
@@ -77,12 +79,16 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,jpg,jpeg,gif,webp,woff,woff2,ttf,ico}"],
+        // INF-3: precache the app shell only. Precaching every image (~84 MB,
+        // incl. 11 MB PNGs) made the service worker slow to install — Chrome
+        // offers "Install app" only once it is active. Images are cached on
+        // use by the "images" runtime rule below; icons/logos via includeAssets.
+        globPatterns: ["**/*.{js,css,html,ico,woff,woff2,ttf}"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api/],
         // SPA routes (/admin, /seller, /home, etc.) — not only /
         navigateFallbackAllowlist: [/^(?!\/api(?:\/|$)).*/],
-        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com/,
@@ -122,11 +128,25 @@ export default defineConfig({
     }),
     {
       name: 'force-close-build',
+      apply: 'build',
+      configResolved(config) {
+        buildOutDir = path.resolve(config.root, config.build.outDir);
+      },
       closeBundle() {
-        // Forcefully exit the process once the build is successfully completed
-        setTimeout(() => {
-          process.exit(0);
-        }, 3000);
+        // Forcefully exit once the build is complete (something keeps the
+        // process alive on Vercel). It used to exit after a fixed 3 s, which
+        // killed vite-plugin-pwa before it wrote sw.js — every build shipped
+        // without a service worker, so the PWA could never be installed (INF-3).
+        // Wait for sw.js (max 120 s) before exiting.
+        const swPath = path.join(buildOutDir, 'sw.js');
+        const started = Date.now();
+        const timer = setInterval(() => {
+          if (fs.existsSync(swPath) || Date.now() - started > 120000) {
+            clearInterval(timer);
+            if (!fs.existsSync(swPath)) console.error('[force-close-build] sw.js was not generated — the PWA will not be installable');
+            setTimeout(() => process.exit(0), 1000);
+          }
+        }, 500);
       }
     }
   ],

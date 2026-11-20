@@ -49,7 +49,8 @@ describe('auth endpoints', () => {
     resetContainer();
     jest.clearAllMocks();
 
-    User.findOne = jest.fn();
+    // Login now looks the customer up before sending (AUTH-5); "no such user" here.
+    User.findOne = jest.fn(() => ({ exec: async () => null }));
     User.create = jest.fn();
     User.prototype.save = jest.fn().mockResolvedValue(true);
 

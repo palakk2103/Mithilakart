@@ -18,6 +18,12 @@ class UserRepository extends BaseRepository {
     return this.findOne(this._activeFilter({ phone, countryCode }));
   }
 
+  /** Same number saved as "+91" or "91" is the same account. */
+  async findByPhoneAnyCode(phone, countryCode) {
+    const digits = String(countryCode || '+91').replace(/\D/g, '');
+    return this.findOne(this._activeFilter({ phone, countryCode: { $in: [`+${digits}`, digits] } }));
+  }
+
   async createUser(data, session = null) {
     return this.create(data, session);
   }

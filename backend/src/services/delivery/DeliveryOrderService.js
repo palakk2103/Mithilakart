@@ -504,7 +504,8 @@ class DeliveryOrderService extends BaseService {
         partnerId,
         assignmentId: assignment._id,
         orderId,
-        amount: assignment.earningAmount || DEFAULT_DELIVERY_EARNING_AMOUNT,
+        // The customer's tip goes to the partner in full (CART-2).
+        amount: (assignment.earningAmount || DEFAULT_DELIVERY_EARNING_AMOUNT) + (Number(order?.tipAmount) || 0),
         status: DELIVERY_EARNING_STATUS.CREDITED,
         creditedAt: new Date(),
       }, session);

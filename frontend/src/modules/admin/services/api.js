@@ -74,6 +74,7 @@ export const sellersApi = {
 export const productsApi = {
   getAll: (params) => asyncHandler(() => api.get('/products', { params })),
   getById: (id) => asyncHandler(() => api.get(`/products/${id}`)),
+  create: (data) => asyncHandler(() => api.post('/products', data)),
   approve: (id) => asyncHandler(() => api.patch(`/products/${id}/approve`)),
   reject: (id, reason) => asyncHandler(() => api.patch(`/products/${id}/reject`, { reason })),
   delete: (id) => asyncHandler(() => api.delete(`/products/${id}`)),

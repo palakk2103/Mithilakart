@@ -89,6 +89,59 @@ class CouponService extends BaseService {
     return coupons;
   }
 
+  /**
+   * CART-3 "Coupons & Offers": every live platform coupon with what it means
+   * for this cart — Apply (eligible, with the saving) or Locked ("Shop for ₹877
+   * more", "Already used"). Same rules as calculateDiscount, so a coupon shown
+   * as eligible is one the order will accept.
+   */
+  async listOffers({ userId = null, subtotal = 0 }) {
+    const now = new Date();
+    const coupons = await this.couponRepository.find({
+      isActive: true,
+      deletedAt: null,
+      sellerId: null,
+      $or: [{ expiresAt: null }, { expiresAt: { $gte: now } }],
+    }, { limit: 50, sort: '-createdAt' });
+
+    const value = Math.max(0, Number(subtotal) || 0);
+    const offers = await Promise.all(coupons.filter((c) => !this._isExpired(c)).map(async (c) => {
+      const min = Number(c.minOrderAmount) || 0;
+      let lockedReason = null;
+      let amountNeeded = 0;
+      if (c.usageLimit != null && c.usageCount >= c.usageLimit) lockedReason = 'Offer fully claimed';
+      if (!lockedReason && userId && c.perUserLimit && this.couponUsageRepository) {
+        const used = await this.couponUsageRepository.countByCouponAndUser(c._id, userId);
+        if (used >= c.perUserLimit) lockedReason = 'Already used';
+      }
+      if (!lockedReason && value < min) {
+        amountNeeded = Math.round((min - value) * 100) / 100;
+        lockedReason = `Shop for ₹${amountNeeded} more to apply`;
+      }
+      // What it is worth: on this cart if eligible, else at the minimum order.
+      let saving = 0;
+      try { saving = this._computeDiscount(c, lockedReason ? Math.max(value, min) : value); } catch { saving = 0; }
+      saving = Math.round(saving * 100) / 100;
+      return {
+        code: c.code,
+        description: c.description || null,
+        type: c.type,
+        value: c.value,
+        maxDiscount: c.maxDiscount ?? null,
+        minOrderAmount: min,
+        expiresAt: c.expiresAt || null,
+        eligible: !lockedReason && saving > 0,
+        lockedReason,
+        amountNeeded,
+        saving,
+        title: `Save ₹${saving} with ${c.code}`,
+      };
+    }));
+
+    return offers.sort((a, b) => (Number(b.eligible) - Number(a.eligible))
+      || (a.eligible ? b.saving - a.saving : a.amountNeeded - b.amountNeeded));
+  }
+
   async listBySeller(sellerId, query = {}) {
     const page = Number(query.page) || 1;
     const limit = Math.min(Number(query.limit) || 20, 100);

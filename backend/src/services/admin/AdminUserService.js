@@ -14,6 +14,12 @@ class AdminUserService extends BaseService {
     const pagination = parsePagination(query);
     const filter = { deletedAt: null };
     if (query.status) filter.status = query.status;
+    // Search by customer id (MK000123), name, email or phone.
+    const search = String(query.search || query.q || '').trim().slice(0, 80);
+    if (search) {
+      const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      filter.$or = [{ customerId: rx }, { name: rx }, { email: rx }, { phone: rx }];
+    }
 
     const [items, total] = await Promise.all([
       this.userRepository.find(filter, { sort: '-createdAt', skip: pagination.skip, limit: pagination.limit }),
@@ -63,9 +69,9 @@ class AdminUserService extends BaseService {
 
   exportCsv(query = {}) {
     return this.list({ ...query, limit: 1000 }).then(({ items }) => {
-      const header = 'id,name,email,phone,status,createdAt\n';
+      const header = 'customerId,id,name,email,phone,status,createdAt\n';
       const rows = items.map((u) =>
-        [u._id, u.name, u.email, u.phone, u.status, u.createdAt].join(',')
+        [u.customerId, u._id, u.name, u.email, u.phone, u.status, u.createdAt].join(',')
       ).join('\n');
       return header + rows;
     });

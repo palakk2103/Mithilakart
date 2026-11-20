@@ -8,7 +8,7 @@ const { AppError } = require('../../utils/AppError');
 class CartController extends BaseController {
   constructor(cartService) {
     super(cartService);
-    this.bindMethods(['getCart', 'addItem', 'updateItem', 'removeItem', 'clearCart']);
+    this.bindMethods(['getCart', 'addItem', 'updateItem', 'removeItem', 'clearCart', 'recommendations']);
   }
 
   _resolveCartContext(req, res) {
@@ -58,6 +58,22 @@ class CartController extends BaseController {
     return this.service.isLoginRequired();
   }
 
+  setRecommendationService(service) {
+    this.recommendationService = service;
+  }
+
+  /** CART-1 rails for the cart's tab. `recent` = product ids the app saw opened, newest first. */
+  recommendations = asyncHandler(async (req, res) => {
+    const split = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 50);
+    const data = await this.recommendationService.getRails({
+      userId: req.user.id,
+      marketplaceTab: req.query.marketplaceTab,
+      cartProductIds: split(req.query.cart),
+      recentProductIds: split(req.query.recent),
+    });
+    return ApiResponse.success(res, data);
+  });
+
   getCart = asyncHandler(async (req, res) => {
     if (await this._guestGate(req, req.user?.id || null)) {
       return ApiResponse.success(res, await this.service.getEmptyCart({
@@ -72,6 +88,7 @@ class CartController extends BaseController {
       commerceFlow: req.query.commerceFlow || 'standard',
       marketplaceTab: req.query.marketplaceTab || null,
       couponCode: req.query.couponCode ? String(req.query.couponCode).trim().toUpperCase() : null,
+      tipAmount: Number(req.query.tip) || 0,
     });
 
     return ApiResponse.success(res, data);

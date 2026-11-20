@@ -94,7 +94,13 @@ class CategoryService extends BaseService {
     return memo;
   }
 
-  async listAdmin(filters = {}) {
+  async listAdmin(query = {}) {
+    // Only known filters reach the database. The raw query string used to be
+    // passed through, so any extra param (?limit=200, ?page=1) matched no
+    // category and the screen showed 0 / 0 / 0.
+    const filters = {};
+    if (query.isActive === 'true' || query.isActive === true) filters.isActive = true;
+    if (query.isActive === 'false' || query.isActive === false) filters.isActive = false;
     const categories = await this.categoryRepository.findActive(filters, { sort: { sortOrder: 1, name: 1 } });
     const byId = new Map(categories.map((c) => [String(c._id), c]));
     return categories.map((c) => {

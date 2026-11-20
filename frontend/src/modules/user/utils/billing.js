@@ -27,6 +27,9 @@ export const billFromCart = (cart, itemCount = 0) => {
     platformFee: Number(cart.platformFee) || 0,
     packagingFee: Number(cart.packagingFee) || 0,
     codHandlingFee: Number(cart.codHandlingFee) || 0,
+    surgeCharge: Number(cart.surgeCharge) || 0,
+    surge: cart.surge || null,
+    tipAmount: Number(cart.tipAmount) || 0,
     tax: Number(cart.tax) || 0,
     total: Number(cart.total) || 0,
     minOrderAmount: Number(cart.minOrderAmount) || 0,
@@ -38,7 +41,7 @@ export const billFromCart = (cart, itemCount = 0) => {
  * (Buy Now). Same inputs as PricingService: public config + the lines. The order
  * itself is always re-priced by the server when it is placed.
  */
-export const estimateBill = (lines, config = {}, couponDiscount = 0) => {
+export const estimateBill = (lines, config = {}, couponDiscount = 0, marketplaceTab = null, tipAmount = 0) => {
   const subtotal = lines.reduce((sum, l) => sum + parsePrice(l.price) * (Number(l.qty || l.quantity) || 1), 0);
   const mrpTotal = lines.reduce(
     (sum, l) => sum + Math.max(parsePrice(l.oldPrice), parsePrice(l.price)) * (Number(l.qty || l.quantity) || 1),
@@ -63,8 +66,15 @@ export const estimateBill = (lines, config = {}, couponDiscount = 0) => {
   const packagingFee = Number(config.packagingFee) || 0;
   const tax = round2(payable * (Number(config.taxRate) || 0));
 
+  // FEE-3: same rule as the server — on an active tab while the cart value is below the threshold.
+  const surgeCfg = config.surge || {};
+  const surgeOn = Boolean(surgeCfg.enabled && marketplaceTab && (surgeCfg.activeTabs || []).includes(marketplaceTab));
+  const surgeThreshold = Number(surgeCfg.threshold) || 0;
+  const surgeCharge = surgeOn && subtotal > 0 && subtotal < surgeThreshold ? Number(surgeCfg.amount) || 0 : 0;
+
   return {
-    itemCount: lines.reduce((n, l) => n + (Number(l.qty || l.quantity) || 1), 0),
+    itemCount: lines.length,
+    tipAmount: Math.max(0, Math.round(Number(tipAmount) || 0)),
     mrpTotal,
     subtotal,
     productDiscount: Math.max(0, mrpTotal - subtotal),
@@ -81,8 +91,12 @@ export const estimateBill = (lines, config = {}, couponDiscount = 0) => {
     platformFee,
     packagingFee,
     codHandlingFee: 0,
+    surgeCharge,
+    surge: surgeCharge
+      ? { applies: true, amount: surgeCharge, threshold: surgeThreshold, amountToAvoid: round2(surgeThreshold - subtotal), label: surgeCfg.billLabel || 'Surge charge', note: `High demand right now. Add ₹${round2(surgeThreshold - subtotal)} more to remove it.` }
+      : null,
     tax,
-    total: round2(payable + deliveryCharge + handlingFee + platformFee + packagingFee + tax),
+    total: round2(payable + deliveryCharge + handlingFee + platformFee + packagingFee + surgeCharge + Math.max(0, Math.round(Number(tipAmount) || 0)) + tax),
     minOrderAmount: Number(config.minOrderAmount) || 0,
   };
 };
