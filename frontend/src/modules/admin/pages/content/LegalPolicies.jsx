@@ -121,7 +121,9 @@ const LegalPolicies = () => {
 
       const next = {};
       results.forEach(({ id, data, error }) => {
-        if (!error && data) {
+        // Seeded rows (not saved by an admin) are not what customers see — the
+        // app shows its built-in text for those, so the editor starts from it too.
+        if (!error && data && data.publishedByAdmin) {
           next[id] = {
             title: data.title || TABS.find((t) => t.id === id)?.label,
             content: data.content || '',
