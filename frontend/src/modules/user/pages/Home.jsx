@@ -214,7 +214,8 @@ const Home = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
-  const { selectedCategory, setSelectedCategory, homeSections, homeBanners, homeChips, fetchHomeSections } = useVendorStore();
+  const { selectedCategory, setSelectedCategory, homeSections, bannersByFlow, homeChips, fetchHomeSections } = useVendorStore();
+  const homeBanners = bannersByFlow.standard;
 
   useEffect(() => {
     fetchHomeSections('standard');

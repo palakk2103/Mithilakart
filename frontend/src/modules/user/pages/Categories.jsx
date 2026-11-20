@@ -539,11 +539,14 @@ const Categories = () => {
             <ArrowLeft size={22} />
           </button>
           <h1 className={`text-[19px] font-black tracking-tight ${headerTextColor}`}>
-            {isMithilakFlow ? t('categoriesPage.mithilaSpecialities') : isFreshGroceryFlow ? t('categoriesPage.freshGroceries') : isQuickShopFlow ? (() => {
-              const tab = getStoredHeaderTabs().find((tb) => tb.id === 'quickshop');
-              if (!tab) return t('nav.quickShop');
+            {isFreshGroceryFlow ? t('categoriesPage.freshGroceries') : (() => {
+              // Heading = name of the header tab the shopper is in (Mithilakart / Mithilak / Quick Shop).
+              const tabId = isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quickshop' : 'mithilakart';
+              const fallbackKey = isMithilakFlow ? 'nav.mithilak' : isQuickShopFlow ? 'nav.quickShop' : 'home.title';
+              const tab = getStoredHeaderTabs().find((tb) => tb.id === tabId);
+              if (!tab) return t(fallbackKey);
               return tab.i18nKey ? t(tab.i18nKey, { defaultValue: tab.label }) : tab.label;
-            })() : t('categoriesPage.categories')}
+            })()}
           </h1>
         </div>
         <button 

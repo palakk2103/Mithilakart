@@ -4,6 +4,7 @@ import { extractList } from '../utils/mappers';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { uploadCmsImage } from '../../../shared/services/uploadService';
+import { clearPublicCache } from '../../../shared/api/publicCache';
 import { Plus, Trash2, Edit2, Eye, EyeOff, Save, Loader2, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -102,6 +103,7 @@ const BannerManager = () => {
       toast.error(result.error);
       return;
     }
+    clearPublicCache(); // storefront tabs opened in this browser must show the edit right away
     toast.success(editing ? 'Banner updated' : 'Banner created');
     setModalOpen(false);
     loadBanners();
@@ -111,7 +113,7 @@ const BannerManager = () => {
     const id = banner._id || banner.id;
     const { error } = await bannersApi.update(id, { isActive: banner.isActive === false });
     if (error) toast.error(error);
-    else loadBanners();
+    else { clearPublicCache(); loadBanners(); }
   };
 
   const handleDelete = async () => {
@@ -119,6 +121,7 @@ const BannerManager = () => {
     const { error } = await bannersApi.delete(deleteTarget._id || deleteTarget.id);
     if (error) toast.error(error);
     else {
+      clearPublicCache();
       toast.success('Banner deleted');
       setDeleteTarget(null);
       loadBanners();

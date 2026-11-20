@@ -152,7 +152,7 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
     || 'Set delivery location';
 
   return (
-    <div className="px-4 pb-3 pt-3 flex flex-col gap-3 md:px-4 md:pb-3 md:flex-col md:gap-3">
+    <div className="px-4 pb-1 pt-1 flex flex-col gap-3 md:px-4 md:pt-3 md:pb-3 md:flex-col md:gap-3">
       {/* Hidden file input for camera upload */}
       <input 
         type="file" 
@@ -163,21 +163,21 @@ const SearchBar = ({ selectedAddress, deliverTo, onLocationClick }) => {
       />
 
 
-      <div className="flex items-center justify-between gap-2.5 md:py-1">
+      <div className="flex items-center justify-between gap-3 md:py-1">
         <button
           type="button"
           onClick={() => (onLocationClick ? onLocationClick() : navigate('/profile/addresses'))}
           aria-label={t('nav.deliverTo', { defaultValue: 'Deliver to' })}
-          className={`flex-1 flex items-center gap-2.5 min-w-0 text-white text-left py-2 pl-3 pr-3.5 border rounded-2xl shadow-xs transition-all active:scale-[0.98] ${
+          className={`flex-1 flex items-center gap-2 min-w-0 text-white text-left py-1.5 pl-2 pr-3 border rounded-2xl shadow-xs transition-all active:scale-[0.98] ${
             isFreshGroceryActive || isMithilakActive
               ? 'bg-white/15 hover:bg-white/20 border-white/20'
               : 'bg-white/20 hover:bg-white/30 border-white/25'
           }`}
         >
-          <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+          <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
             <MapPin size={16} strokeWidth={2.5} className="w-4 h-4 text-white" />
           </span>
-          <div className="flex flex-col text-left min-w-0 flex-1 gap-0.5">
+          <div className="flex flex-col text-left min-w-0 flex-1 gap-1">
             <span className="text-[10.5px] font-semibold text-white/80 leading-none">{t('nav.deliverTo', { defaultValue: 'Deliver to' })}</span>
             <span className="text-[13px] font-bold truncate leading-tight text-white">
               {displayAddress}

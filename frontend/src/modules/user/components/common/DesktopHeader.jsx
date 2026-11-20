@@ -143,9 +143,9 @@ const DesktopHeader = React.forwardRef(({
       />
 
       {/* ── Top Main Action Bar ── */}
-      <div className="max-w-[1720px] mx-auto px-4 lg:px-6 xl:px-10 py-2.5 flex items-center justify-between gap-2.5 lg:gap-4 xl:gap-6 w-full">
+      <div className="max-w-[1720px] mx-auto px-3 lg:px-6 xl:px-10 py-2.5 flex items-center justify-between gap-2 lg:gap-4 xl:gap-6 w-full min-w-0">
         {/* Brand Logo & Deliver To Location */}
-        <div className="flex items-center gap-2.5 lg:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-2 lg:gap-4 flex-shrink min-w-0">
           <Link
             to="/home"
             className="flex items-center gap-2 group cursor-pointer flex-shrink-0"
@@ -158,7 +158,7 @@ const DesktopHeader = React.forwardRef(({
                 className="w-full h-full object-contain filter drop-shadow-xs"
               />
             </div>
-            <div className="flex flex-col">
+            <div className="hidden lg:flex flex-col">
               <span className="text-[20px] lg:text-[22px] font-black tracking-tight text-white leading-none">
                 Mithilakart
               </span>
@@ -172,7 +172,7 @@ const DesktopHeader = React.forwardRef(({
           <button
             type="button"
             onClick={onLocationClick}
-            className="flex items-center gap-2 px-2.5 lg:px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 border border-white/20 text-white backdrop-blur-xs transition-all shadow-xs group cursor-pointer text-left flex-shrink-0"
+            className="flex items-center gap-2 px-2.5 lg:px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 border border-white/20 text-white backdrop-blur-xs transition-all shadow-xs group cursor-pointer text-left flex-shrink min-w-0"
             title="Change Delivery Location"
           >
             <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -182,7 +182,7 @@ const DesktopHeader = React.forwardRef(({
               <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/75 leading-none">
                 {t('nav.deliverTo', { defaultValue: 'Deliver to' })}
               </span>
-              <span className="text-[11.5px] lg:text-[12px] font-black text-white truncate max-w-[90px] md:max-w-[110px] lg:max-w-[140px] xl:max-w-[180px] mt-0.5">
+              <span className="text-[11.5px] lg:text-[12px] font-black text-white truncate max-w-[80px] lg:max-w-[120px] xl:max-w-[180px] mt-0.5">
                 {tName(deliverTo?.label || 'Select Location')}
               </span>
             </div>
@@ -191,7 +191,7 @@ const DesktopHeader = React.forwardRef(({
         </div>
 
         {/* Central Search Bar */}
-        <div className="flex-1 max-w-[560px] mx-1 lg:mx-2 min-w-[180px]">
+        <div className="flex-1 max-w-[560px] mx-0 lg:mx-2 min-w-[140px]">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center w-full">
             <Search
               size={16}
@@ -304,7 +304,7 @@ const DesktopHeader = React.forwardRef(({
                 {cartTotalItems}
               </span>
             </div>
-            <div className="flex flex-col text-left leading-tight">
+            <div className="hidden lg:flex flex-col text-left leading-tight">
               <span className="text-[8.5px] uppercase font-bold text-slate-500 leading-none">
                 {t('nav.cart', { defaultValue: 'Cart' })}
               </span>
@@ -318,28 +318,30 @@ const DesktopHeader = React.forwardRef(({
 
       {/* ── Bottom Tier: Flow Switcher & Discovery Strip ── */}
       <div className="bg-black/15 border-t border-white/10 backdrop-blur-xs">
-        <div className="max-w-[1720px] mx-auto px-4 lg:px-6 xl:px-10 py-1.5 flex items-center justify-between gap-3 w-full">
-          {/* Flow Switcher Tabs (Desktop Variant) */}
-          <div className="flex-shrink-0">
+        <div className="max-w-[1720px] mx-auto px-3 lg:px-6 xl:px-10 py-1.5 flex items-center justify-between gap-2 lg:gap-3 w-full min-w-0">
+          {/* Flow Switcher Tabs (Desktop Variant) — scrolls horizontally if space runs out */}
+          <div className="min-w-0 flex-shrink overflow-x-auto scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <HeaderTabs variant="desktop" />
           </div>
 
           {/* Secondary Quick Navigation & Trust Badge */}
-          <div className="flex items-center gap-2.5 xl:gap-5 text-white/90 text-[12px] xl:text-[12.5px] font-bold flex-shrink-0">
+          <div className="flex items-center gap-1 lg:gap-2.5 xl:gap-5 text-white/90 text-[12px] xl:text-[12.5px] font-bold flex-shrink-0">
             <Link
               to={`/categories?flow=${effectiveFlow}`}
               className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white/15 hover:text-white transition-colors cursor-pointer"
+              title={t('nav.categories', { defaultValue: 'All Categories' })}
             >
               <LayoutGrid size={14} />
-              <span>{t('nav.categories', { defaultValue: 'All Categories' })}</span>
+              <span className="hidden lg:inline whitespace-nowrap">{t('nav.categories', { defaultValue: 'All Categories' })}</span>
             </Link>
 
             <Link
               to="/all-offers"
               className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white/15 hover:text-white transition-colors cursor-pointer"
+              title={t('nav.offers', { defaultValue: 'Offers' })}
             >
               <Sparkles size={14} className="text-yellow-300" />
-              <span>{t('nav.offers', { defaultValue: 'Offers' })}</span>
+              <span className="hidden lg:inline whitespace-nowrap">{t('nav.offers', { defaultValue: 'Offers' })}</span>
             </Link>
 
             <Link

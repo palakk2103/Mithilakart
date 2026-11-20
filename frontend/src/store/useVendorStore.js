@@ -48,6 +48,9 @@ const useVendorStore = create((set, get) => ({
 
   homeSections: { ...emptyHomeSections },
   homeBanners: [],
+  // Banners kept per commerce flow. The layout always loads the standard flow while a tab
+  // (e.g. Mithilak) loads its own; a single shared list let whichever response landed last win.
+  bannersByFlow: {},
   ...emptyStorefrontMeta,
   homeLoading: false,
   homeError: null,
@@ -68,9 +71,11 @@ const useVendorStore = create((set, get) => ({
 
       const mapped = mapStorefrontSections(data, get().homeSections);
       const isStandardFlow = !commerceFlow || commerceFlow === 'standard';
-      set({
+      const flowKey = data?.commerceFlow || commerceFlow || 'standard';
+      set((state) => ({
         homeSections: mapped,
         homeBanners: data?.banners || [],
+        bannersByFlow: { ...state.bannersByFlow, [flowKey]: data?.banners || [] },
         ...(isStandardFlow
           ? {
               homeChips: data?.chips || [],
@@ -78,7 +83,7 @@ const useVendorStore = create((set, get) => ({
             }
           : {}),
         homeLoading: false,
-      });
+      }));
       return data;
     } catch (err) {
       set({ homeLoading: false, homeError: err.message || 'Failed to load home' });
@@ -91,11 +96,13 @@ const useVendorStore = create((set, get) => ({
     try {
       const data = await getFlowHome(flow);
       const mapped = mapStorefrontSections(data, get().homeSections);
-      set({
+      const flowKey = data?.commerceFlow || flow;
+      set((state) => ({
         homeSections: mapped,
         homeBanners: data?.banners || [],
+        bannersByFlow: { ...state.bannersByFlow, [flowKey]: data?.banners || [] },
         homeLoading: false,
-      });
+      }));
       return data;
     } catch (err) {
       set({ homeLoading: false, homeError: err.message || 'Failed to load home' });

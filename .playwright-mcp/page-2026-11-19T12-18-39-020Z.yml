@@ -1,0 +1,112 @@
+- generic [ref=f2e3]:
+  - generic [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e6]:
+        - link "Mithilakart Mithilakart" [ref=f2e7] [cursor=pointer]:
+          - /url: /home
+          - img "Mithilakart" [ref=f2e9]
+          - generic [ref=f2e10]: Mithilakart
+        - button "Deliver to Tap to set delivery location" [ref=f2e12] [cursor=pointer]:
+          - generic [ref=f2e17]:
+            - generic [ref=f2e18]: Deliver to
+            - generic [ref=f2e19]: Tap to set delivery location
+      - generic [ref=f2e23]:
+        - textbox "Search 15-min delivery items..." [ref=f2e24]
+        - generic [ref=f2e25]:
+          - button "Search by image" [ref=f2e26] [cursor=pointer]
+          - button "Voice search" [ref=f2e30] [cursor=pointer]
+          - button "Submit Search" [ref=f2e34] [cursor=pointer]
+      - generic [ref=f2e38]:
+        - button "English English" [ref=f2e40] [cursor=pointer]:
+          - img "English" [ref=f2e41]
+          - generic [ref=f2e42]: English
+        - link "Wishlist" [ref=f2e43] [cursor=pointer]:
+          - /url: /profile/wishlist
+        - link "Account & Profile" [ref=f2e47] [cursor=pointer]:
+          - /url: /profile
+        - link "0 Cart ₹0" [ref=f2e52] [cursor=pointer]:
+          - /url: /cart
+          - generic [ref=f2e53]: "0"
+          - generic [ref=f2e59]:
+            - generic [ref=f2e60]: Cart
+            - generic [ref=f2e61]: ₹0
+    - generic [ref=f2e63]:
+      - generic [ref=f2e65]:
+        - button "Mithilakart Mithilakart" [ref=f2e66] [cursor=pointer]:
+          - img "Mithilakart" [ref=f2e68]
+          - generic [ref=f2e69]: Mithilakart
+        - button "Quick Shop" [ref=f2e70] [cursor=pointer]
+        - button "Mithilak" [ref=f2e76] [cursor=pointer]
+        - button "Fresh & Groceries" [ref=f2e82] [cursor=pointer]
+      - generic [ref=f2e84]:
+        - link "Categories" [ref=f2e85] [cursor=pointer]:
+          - /url: /categories?flow=quickshop
+        - link "Offers" [ref=f2e92] [cursor=pointer]:
+          - /url: /all-offers
+  - generic [ref=f2e97]:
+    - main [ref=f2e100]:
+      - status "Loading" [ref=f2e101]
+    - contentinfo [ref=f2e103]:
+      - img "Mithila Art Footer Border" [ref=f2e105]
+      - generic [ref=f2e106]:
+        - generic [ref=f2e107]:
+          - heading "About Mithilakart" [level=3] [ref=f2e108]
+          - paragraph [ref=f2e109]: Discover unique, high-quality handcrafted items and fresh goods directly from local artisans. We bridge the gap between traditional craftsmanship and modern convenience.
+        - generic [ref=f2e110]:
+          - heading "Customer Care" [level=3] [ref=f2e111]
+          - list [ref=f2e112]:
+            - listitem [ref=f2e113]:
+              - link "Help Center" [ref=f2e114] [cursor=pointer]:
+                - /url: /profile/help-center
+            - listitem [ref=f2e115]:
+              - link "Track Order" [ref=f2e116] [cursor=pointer]:
+                - /url: /profile/orders
+            - listitem [ref=f2e117]:
+              - link "Cancellations & Returns" [ref=f2e118] [cursor=pointer]:
+                - /url: /cancellation-returns
+            - listitem [ref=f2e119]:
+              - link "Shipping Policy" [ref=f2e120] [cursor=pointer]:
+                - /url: /shipping
+        - generic [ref=f2e121]:
+          - heading "Useful Links" [level=3] [ref=f2e122]
+          - list [ref=f2e123]:
+            - listitem [ref=f2e124]:
+              - link "Terms of Use" [ref=f2e125] [cursor=pointer]:
+                - /url: /terms
+            - listitem [ref=f2e126]:
+              - link "Privacy Policy" [ref=f2e127] [cursor=pointer]:
+                - /url: /privacy
+            - listitem [ref=f2e128]:
+              - link "Home Page" [ref=f2e129] [cursor=pointer]:
+                - /url: /home
+            - listitem [ref=f2e130]:
+              - link "Shop by Categories" [ref=f2e131] [cursor=pointer]:
+                - /url: /categories
+        - generic [ref=f2e132]:
+          - heading "Contact Us" [level=3] [ref=f2e133]
+          - list [ref=f2e134]:
+            - listitem [ref=f2e135]:
+              - strong [ref=f2e136]: "Email:"
+              - text: mail.mithilakart@gmail.com
+            - listitem [ref=f2e137]:
+              - strong [ref=f2e138]: "Phone:"
+              - text: +91 730 321 2949
+            - listitem [ref=f2e139]:
+              - strong [ref=f2e140]: "Address:"
+              - text: Mithilakart Pvt Ltd, Mumbai, India
+      - generic [ref=f2e141]:
+        - link [ref=f2e142] [cursor=pointer]:
+          - /url: https://www.facebook.com/mithilakart
+        - link [ref=f2e145] [cursor=pointer]:
+          - /url: https://www.youtube.com/@mithilakart
+        - link [ref=f2e148] [cursor=pointer]:
+          - /url: https://www.instagram.com/mithilakart
+        - link [ref=f2e152] [cursor=pointer]:
+          - /url: https://x.com
+        - link [ref=f2e155] [cursor=pointer]:
+          - /url: https://wa.me/918076109547
+      - generic [ref=f2e158]:
+        - img "Mithilakart Logo" [ref=f2e159]
+        - generic [ref=f2e160]:
+          - text: Mithilakart
+          - generic [ref=f2e161]: ™

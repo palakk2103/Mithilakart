@@ -73,7 +73,13 @@ class CmsService extends BaseService {
 
   async updateBanner(id, data) {
     const payload = await this._prepareBannerPayload(data);
+    const before = await this.bannerRepository.findById(id);
     const banner = await this.bannerRepository.updateById(id, payload);
+    if (!banner) throw AppError.notFound('Banner not found');
+    // If the banner moved to another flow, the old flow's cached home still lists it.
+    if (before && before.commerceFlow !== banner.commerceFlow) {
+      await this._invalidateStorefrontCache(before.commerceFlow);
+    }
     await this._invalidateStorefrontCache(banner.commerceFlow);
     return banner;
   }
