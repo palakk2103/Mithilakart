@@ -237,6 +237,9 @@ class CmsService extends BaseService {
       content: page.content,
       version: page.version,
       updatedAt: page.updatedAt,
+      // Seed scripts leave updatedBy empty; only an admin save sets it. The apps
+      // show their built-in policy text until an admin has really published one.
+      publishedByAdmin: Boolean(page.updatedBy),
     };
   }
 
