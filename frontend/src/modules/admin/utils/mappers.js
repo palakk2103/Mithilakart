@@ -50,6 +50,7 @@ export const mapUserStatus = (status) => {
 
 export const mapUser = (u = {}) => ({
   id: u._id || u.id || '',
+  customerId: u.customerId || '',
   name: u.name || 'Unknown',
   email: u.email || '—',
   phone: u.phone ? (u.countryCode ? `${u.countryCode} ${u.phone}` : u.phone) : '—',

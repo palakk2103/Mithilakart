@@ -1,5 +1,6 @@
 const { BaseService } = require('../../core/BaseService');
 const { CACHE_KEYS, CACHE_TTL, COMMERCE_FLOWS } = require('../../constants/catalog');
+const { resolveTabFromQuery } = require('../../utils/marketplaceTab');
 
 class StorefrontService extends BaseService {
   constructor({
@@ -11,8 +12,10 @@ class StorefrontService extends BaseService {
     cacheService,
     platformConfigService = null,
     translationService = null,
+    marketplaceListingRepository = null,
   }) {
     super();
+    this.marketplaceListingRepository = marketplaceListingRepository;
     this.bannerRepository = bannerRepository;
     this.categoryChipRepository = categoryChipRepository;
     this.homeSectionRepository = homeSectionRepository;
@@ -29,7 +32,7 @@ class StorefrontService extends BaseService {
     if (cached) return cached;
 
     const [banners, chips, categories, sections] = await Promise.all([
-      this.bannerRepository.findActive({ commerceFlow, categoryId: null }, { sort: { sortOrder: 1 } }),
+      this.bannerRepository.findActive({ commerceFlow, categoryId: null, placement: { $ne: 'cart' } }, { sort: { sortOrder: 1 } }),
       this.categoryChipRepository.findActive({ commerceFlow }, { sort: { sortOrder: 1 } }),
       this.categoryService.listPublicTree(commerceFlow, null, lang),
       this.homeSectionRepository.findByFlow(commerceFlow),
@@ -102,7 +105,7 @@ class StorefrontService extends BaseService {
             originalTitle: section.title,
             viewAllLink: section.viewAllLink || '',
             sortOrder: section.sortOrder,
-            products: await this._resolveSectionProducts(section.productIds, lang),
+            products: await this._resolveSectionProducts(section.productIds, lang, commerceFlow),
           };
         })
       ),
@@ -120,9 +123,9 @@ class StorefrontService extends BaseService {
     return payload;
   }
 
-  async getBanners(commerceFlow = COMMERCE_FLOWS.STANDARD) {
+  async getBanners(commerceFlow = COMMERCE_FLOWS.STANDARD, placement = 'home') {
     const banners = await this.bannerRepository.findActive(
-      { commerceFlow, categoryId: null },
+      { commerceFlow, categoryId: null, placement: placement === 'cart' ? 'cart' : { $ne: 'cart' } },
       { sort: { sortOrder: 1 } }
     );
 
@@ -176,13 +179,31 @@ class StorefrontService extends BaseService {
     };
   }
 
-  async _resolveSectionProducts(productIds = [], lang = 'en') {
+  /**
+   * Only products a customer can actually buy: approved and with a live
+   * listing. Pending/rejected products used to show here (Brands Spotlight)
+   * and their page answered "Add" with "Listing not found or not available".
+   * Each card carries its listing so Add goes to the right one.
+   */
+  async _resolveSectionProducts(productIds = [], lang = 'en', commerceFlow = null) {
     if (!productIds.length) return [];
 
-    const products = await this.productRepository.find(
-      { _id: { $in: productIds }, deletedAt: null },
+    let products = await this.productRepository.findPublic(
+      { _id: { $in: productIds } },
       { limit: productIds.length }
     );
+
+    const listingOf = new Map();
+    if (this.marketplaceListingRepository && products.length) {
+      const tab = resolveTabFromQuery({ commerceFlow });
+      const listings = await this.marketplaceListingRepository.findPublic({ productId: { $in: products.map((p) => p._id) } });
+      for (const listing of listings) {
+        const key = String(listing.productId);
+        const current = listingOf.get(key);
+        if (!current || (listing.marketplaceTab === tab && current.marketplaceTab !== tab)) listingOf.set(key, listing);
+      }
+      products = products.filter((p) => listingOf.has(String(p._id)));
+    }
 
     const isLocalized = lang && lang !== 'en';
     const orderMap = new Map(productIds.map((id, index) => [String(id), index]));
@@ -190,13 +211,17 @@ class StorefrontService extends BaseService {
       .sort((a, b) => (orderMap.get(String(a._id)) ?? 999) - (orderMap.get(String(b._id)) ?? 999))
       .map((product) => {
         const localizedTitle = (isLocalized && product.translations?.[lang]?.title) || product.title;
+        const listing = listingOf.get(String(product._id));
         return {
           id: product._id,
+          productId: product._id,
+          listingId: listing ? String(listing._id) : null,
+          marketplaceTab: listing?.marketplaceTab || null,
           title: localizedTitle,
           originalTitle: product.title,
           translations: product.translations || {},
-          price: product.price,
-          mrp: product.mrp,
+          price: listing?.price ?? product.price,
+          mrp: listing?.mrp ?? product.mrp,
           images: product.images,
           rating: product.rating,
           brand: product.brand,

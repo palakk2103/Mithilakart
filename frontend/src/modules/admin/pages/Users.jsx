@@ -45,7 +45,8 @@ const Users = () => {
   });
 
   const filteredUsers = usersList.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = (user.customerId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           user.phone.toLowerCase().includes(searchQuery.toLowerCase());
     
@@ -257,6 +258,7 @@ const Users = () => {
                        </div>
                        <div>
                           <p className="font-bold text-slate-900 font-montserrat leading-tight">{user.name}</p>
+                          {user.customerId && <p className="text-[10px] text-blue-600 font-black tracking-wider mt-0.5">{user.customerId}</p>}
                           <p className="text-[10px] text-slate-400 font-bold mt-1">{user.email}</p>
                        </div>
                     </div>

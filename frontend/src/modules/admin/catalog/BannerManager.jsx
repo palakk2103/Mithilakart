@@ -20,6 +20,7 @@ const EMPTY = {
   imageUrl: '',
   linkUrl: '/vendor/home',
   commerceFlow: 'standard',
+  placement: 'home',
   sortOrder: 0,
   isActive: true,
 };
@@ -67,6 +68,7 @@ const BannerManager = () => {
       imageUrl: banner.imageUrl || '',
       linkUrl: banner.linkUrl || '/vendor/home',
       commerceFlow: banner.commerceFlow || activeFlow,
+      placement: banner.placement || 'home',
       sortOrder: banner.sortOrder ?? 0,
       isActive: banner.isActive !== false,
     });
@@ -187,7 +189,7 @@ const BannerManager = () => {
                 </button>
               </div>
               <div className="p-4 space-y-2">
-                <h3 className="font-black text-sm text-slate-900">{banner.title}</h3>
+                <h3 className="font-black text-sm text-slate-900 flex items-center gap-2">{banner.title}{banner.placement === 'cart' && <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[9px] font-black uppercase">Cart</span>}</h3>
                 <p className="text-[10px] text-slate-400 truncate">{banner.linkUrl || '—'}</p>
                 <div className="flex gap-2 pt-2">
                   <button onClick={() => openEdit(banner)} className="flex-1 py-2 bg-slate-50 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-1">
@@ -218,6 +220,13 @@ const BannerManager = () => {
             </label>
           </div>
           {form.imageUrl && <img src={form.imageUrl} alt="" className="h-24 w-full object-cover rounded-xl" />}
+          <label className="block text-[11px] font-black uppercase text-slate-500">
+            Show on
+            <select value={form.placement} onChange={(e) => setForm((p) => ({ ...p, placement: e.target.value }))} className="mt-1 w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none">
+              <option value="home">Tab home page</option>
+              <option value="cart">Cart page carousel</option>
+            </select>
+          </label>
           <input type="number" value={form.sortOrder} onChange={(e) => setForm((p) => ({ ...p, sortOrder: e.target.value }))} placeholder="Sort order" className="w-full border rounded-xl px-4 py-3 text-sm font-bold outline-none" />
           <label className="flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} />

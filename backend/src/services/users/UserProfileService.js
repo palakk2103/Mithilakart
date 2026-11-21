@@ -10,6 +10,7 @@ class UserProfileService extends BaseService {
   _serialize(user) {
     return {
       id: user._id,
+      customerId: user.customerId || null,
       name: user.name,
       email: user.email,
       phone: user.phone,

@@ -11,9 +11,9 @@ export const dispatchCartUpdated = () => {
 // Fetches ONE tab's cart (the active tab unless told otherwise). `tab` is
 // echoed back so callers can drop a response that arrives after the shopper
 // has already switched to another tab.
-export const fetchCartItems = async (tab = getMarketplaceTab(), couponCode) => {
+export const fetchCartItems = async (tab = getMarketplaceTab(), couponCode, tip) => {
   try {
-    const cart = await getCart(tab, couponCode);
+    const cart = await getCart(tab, couponCode, tip);
     const items = (cart?.items || []).map(mapCartItem);
     return { cart, items, tab };
   } catch {

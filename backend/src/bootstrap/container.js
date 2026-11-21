@@ -116,6 +116,8 @@ const { AuditService } = require('../services/admin/AuditService');
 const { AdminDashboardService } = require('../services/admin/AdminDashboardService');
 const { AdminUserService } = require('../services/admin/AdminUserService');
 const { AdminVendorService } = require('../services/admin/AdminVendorService');
+const { AdminProductCreateService } = require('../services/admin/AdminProductCreateService');
+const { CartRecommendationService } = require('../services/cart/CartRecommendationService');
 const { AdminRoleService } = require('../services/admin/AdminRoleService');
 const { AdminAuditService } = require('../services/admin/AdminAuditService');
 const { AdminSupportService } = require('../services/admin/AdminSupportService');
@@ -321,7 +323,7 @@ function buildContainer() {
 
   const passwordService = new PasswordService();
   const permissionService = new PermissionService();
-  const otpService = new OtpService(redisClient, config, getProvider('sms'));
+  const otpService = new OtpService(redisClient, config, getProvider('sms'), getProvider('email'));
   const tokenService = new TokenService(refreshTokenRepository, redisClient, config);
   const sessionService = new SessionService(refreshTokenRepository, userDeviceRepository);
   const cacheService = new CacheService(redisClient);
@@ -361,6 +363,7 @@ function buildContainer() {
   });
 
   const customerAuthService = new CustomerAuthService({
+    redisClient,
     userRepository,
     otpService,
     tokenService,
@@ -416,6 +419,7 @@ function buildContainer() {
     cacheService,
     platformConfigService,
     translationService,
+    marketplaceListingRepository,
   });
 
   const cmsService = new CmsService({
@@ -496,6 +500,7 @@ function buildContainer() {
     userAddressRepository,
     geocodingService: geocodingServiceRef,
     courierShipmentService,
+    userRepository,
   });
 
   // ── CR-002 — intelligent fulfillment ──────────────────────────────────────
@@ -588,6 +593,13 @@ function buildContainer() {
     sellerRepository,
     translationService,
   });
+
+  productController.setAdminProductCreateService(new AdminProductCreateService({
+    sellerProductService,
+    sellerRepository,
+    categoryRepository,
+    categoryService,
+  }));
 
   const sellerDashboardService = new SellerDashboardService({
     productRepository,
@@ -782,6 +794,13 @@ function buildContainer() {
   };
 
   const cartController = new CartController(cartService, cartMergeService);
+  cartController.setRecommendationService(new CartRecommendationService({
+    marketplaceListingRepository,
+    productRepository,
+    orderItemRepository,
+    wishlistRepository,
+    platformConfigService,
+  }));
   const orderController = new OrderController(orderService);
   const paymentController = new PaymentController(paymentService, orderRepository);
   const returnController = new ReturnController(returnService);

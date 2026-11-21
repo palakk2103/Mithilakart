@@ -26,6 +26,14 @@ const {
   legalPageSchema,
 } = require('../../validators/cms/cms.validator');
 const { HOME_SECTION_KEYS } = require('../../constants/catalog');
+const { sellerProductCreateSchema } = require('../../validators/seller/seller.validator');
+const { DELIVERY_PROMISE_MINUTES } = require('../../constants/marketplace');
+
+/** Admin "Add Product": the seller form's fields plus the seller it is for. */
+const adminProductCreateSchema = sellerProductCreateSchema.keys({
+  sellerId: objectIdSchema.required(),
+  deliveryPromiseMinutes: Joi.number().valid(...DELIVERY_PROMISE_MINUTES).optional(),
+});
 
 function createAdminCatalogRoutes(controllers, middleware) {
   const router = express.Router();
@@ -47,6 +55,7 @@ function createAdminCatalogRoutes(controllers, middleware) {
   })), categoryController.reorder);
 
   router.get('/products', requirePermission('products.view'), validateQuery(listProductsQuerySchema), productController.listAdmin);
+  router.post('/products', requirePermission('products.edit'), validateBody(adminProductCreateSchema), productController.createAdmin);
   router.get('/products/:id', requirePermission('products.view'), validateParams(Joi.object({ id: objectIdSchema })), productController.getAdminById);
   router.patch('/products/:id/approve', requirePermission('products.approve'), validateParams(Joi.object({ id: objectIdSchema })), productController.approve);
   router.patch('/products/:id/reject', requirePermission('products.approve'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(productRejectSchema), productController.reject);

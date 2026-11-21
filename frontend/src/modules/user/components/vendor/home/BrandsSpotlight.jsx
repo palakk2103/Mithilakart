@@ -2,7 +2,18 @@ import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { tName } from '../../../../../shared/utils/translateName';
-import { handleImageError } from '../../../../../shared/utils/imageUtils';
+import { handleImageError, DEFAULT_PRODUCT_IMAGE } from '../../../../../shared/utils/imageUtils';
+import CartQtyControl from '../../common/CartQtyControl';
+
+/** Cart identity for a spotlight card: the listing the storefront picked for it. */
+const cartProduct = (card) => ({
+  ...card,
+  productId: card.product?.productId || card.id,
+  listingId: card.product?.listingId || undefined,
+  marketplaceTab: card.product?.marketplaceTab || undefined,
+  name: card.sub || card.name,
+  image: card.img,
+});
 
 const BrandsSpotlight = ({ items = [] }) => {
   const navigate = useNavigate();
@@ -13,6 +24,7 @@ const BrandsSpotlight = ({ items = [] }) => {
     navigate('/product-detail', { 
       state: { 
         productId: prodId,
+        listingId: card.product?.listingId,
         product: card.product || { 
           id: prodId,
           name: card.sub || card.title,
@@ -46,7 +58,7 @@ const BrandsSpotlight = ({ items = [] }) => {
                   (object-cover), so padding no longer changes with the image's own size or ratio. */}
               <div className="relative aspect-square rounded-lg overflow-hidden bg-slate-50 border border-gray-100 shadow-sm">
                 <img
-                  src={card.img}
+                  src={card.img || DEFAULT_PRODUCT_IMAGE}
                   alt={tName(card.title)}
                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   loading="lazy"
@@ -62,6 +74,7 @@ const BrandsSpotlight = ({ items = [] }) => {
                 <p className="text-[9px] font-bold text-slate-800 leading-tight line-clamp-1">{card.sub}</p>
                 <p className="text-[8px] font-medium text-gray-400 line-clamp-1">{t('common.sponsored')}</p>
               </div>
+              <CartQtyControl product={cartProduct(card)} className="!h-7 !text-[11px]" />
             </div>
           ))}
         </div>
@@ -91,7 +104,7 @@ const BrandsSpotlight = ({ items = [] }) => {
                 {/* Soft grey rounded image container box */}
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100/60 transition-colors duration-300">
                   <img
-                    src={card.img}
+                    src={card.img || DEFAULT_PRODUCT_IMAGE}
                     alt={tName(card.title)}
                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy" decoding="async" onError={handleImageError} />
@@ -103,6 +116,7 @@ const BrandsSpotlight = ({ items = [] }) => {
                   <h3 className="text-[13px] font-black text-slate-800 leading-snug group-hover:text-[color:var(--mk-primary,#6FAE4A)] transition-colors">{card.sub}</h3>
                   <p className="text-[12px] font-black text-rose-600 mt-1 uppercase tracking-wider">{card.title}</p>
                 </div>
+                <div className="px-1 max-w-[200px]"><CartQtyControl product={cartProduct(card)} /></div>
               </div>
             ))}
           </div>

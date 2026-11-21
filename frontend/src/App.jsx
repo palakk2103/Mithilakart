@@ -15,6 +15,7 @@ import { LanguageProvider, useLanguage } from './shared/context/LanguageContext'
 import { setDomTranslationLanguage } from './shared/utils/domTranslator';
 import LocationPrompt from './shared/components/LocationPrompt';
 import { PublicConfigLoader } from './shared/config/publicConfig';
+import InstallAppPrompt from './shared/components/InstallAppPrompt';
 import ScrollToTop from './shared/components/ScrollToTop';
 import LoginRequiredBridge from './shared/components/LoginRequiredBridge';
 import SeasonalEffects from './shared/components/SeasonalEffects';
@@ -80,6 +81,7 @@ function App() {
           )}
           <LocationPrompt />
           <PublicConfigLoader />
+          <InstallAppPrompt />
           <Toaster position="bottom-center" toastOptions={{
             style: {
               background: '#121212',

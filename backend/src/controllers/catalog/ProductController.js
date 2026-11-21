@@ -18,6 +18,7 @@ class ProductController extends BaseController {
       'update',
       'bulk',
       'setCatalogKey',
+      'createAdmin',
     ]);
   }
 
@@ -78,6 +79,16 @@ class ProductController extends BaseController {
   setCatalogKey = asyncHandler(async (req, res) => {
     const data = await this.service.setCatalogKey(req.body.ids, req.body.catalogKey);
     return ApiResponse.success(res, data);
+  });
+
+  /** Wired in the container — admin creates a product for a chosen seller. */
+  setAdminProductCreateService(service) {
+    this.adminProductCreateService = service;
+  }
+
+  createAdmin = asyncHandler(async (req, res) => {
+    const data = await this.adminProductCreateService.create(req.body);
+    return ApiResponse.created(res, data);
   });
 
   bulk = asyncHandler(async (req, res) => {

@@ -237,7 +237,7 @@ class CartService extends BaseService {
     return caps.length ? Math.min(...caps) : 0;
   }
 
-  async getCart({ userId, sessionId, commerceFlow = 'standard', marketplaceTab = null, couponCode = null }) {
+  async getCart({ userId, sessionId, commerceFlow = 'standard', marketplaceTab = null, couponCode = null, tipAmount = 0 }) {
     const tab = this._resolveTab({ marketplaceTab, commerceFlow });
     const state = await this._loadState({ userId, sessionId }, tab);
 
@@ -247,6 +247,8 @@ class CartService extends BaseService {
       items,
       couponCode: couponCode || state?.couponCode || null,
       userId,
+      marketplaceTab: tab,
+      tipAmount,
     });
 
     return {

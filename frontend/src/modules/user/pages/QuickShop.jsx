@@ -35,6 +35,7 @@ import ClothesImg from '../../../assets/products/product15.webp';
 import ScrollRow from '../components/vendor/home/ScrollRow';
 import AddToCartButton from '../components/common/AddToCartButton';
 import { useTranslation } from 'react-i18next';
+import SurgeBanner from '../components/vendor/SurgeBanner';
 import { tName } from '../../../shared/utils/translateName';
 
 
@@ -447,6 +448,7 @@ const QuickShop = () => {
         />
 
         <div className="relative z-10 flex flex-col">
+          <SurgeBanner marketplaceTab={marketplaceTab} />
           {/* Banner Section */}
           <div className="mx-4 my-4 p-5 rounded-3xl border border-[#F6C453]/35 flex items-center justify-between shadow-xs overflow-hidden relative" style={{ backgroundImage: 'linear-gradient(135deg, #FFFDF8 0%, #FFF9F2 100%)' }}>
             <div className="flex-1 z-10 pr-2">
@@ -822,6 +824,7 @@ const QuickShop = () => {
       />
 
       <div className="relative z-10 flex flex-col">
+          <SurgeBanner marketplaceTab={marketplaceTab} />
         <SeasonalHero className="mx-4 mt-4" />
         {/* ── HERO BANNER SECTION ── */}
         <div

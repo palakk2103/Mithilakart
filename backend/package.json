@@ -1,7 +1,7 @@
 {
   "name": "mithilakart-backend",
   "version": "0.1.0",
-  "description": "Mithilakart API \u2014 Phase 10 production hardening",
+  "description": "Mithilakart API — Phase 10 production hardening",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -50,6 +50,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.3",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.10.1",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
     "prom-client": "^15.1.3",

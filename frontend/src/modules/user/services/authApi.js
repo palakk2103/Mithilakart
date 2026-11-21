@@ -55,6 +55,26 @@ export const verifyEmailOtp = async (email, otp, name) => {
   };
 };
 
+const storeSession = (result) => {
+  const tokens = result?.tokens;
+  if (tokens?.accessToken) {
+    setTokens('customer', tokens);
+    if (result?.user) setUser('customer', result.user);
+  }
+  return { success: Boolean(tokens?.accessToken), user: result?.user, isNewUser: result?.isNewUser };
+};
+
+/* AUTH-1/2 — one account, two verified identities. */
+export const registerStart = (data) => customerApi.post('/auth/register/start', data);
+export const registerVerifyPhone = (registrationId, otp) => customerApi.post('/auth/register/verify-phone', { registrationId, otp });
+export const registerVerifyEmail = async (registrationId, otp) => storeSession(
+  await customerApi.post('/auth/register/verify-email', { registrationId, otp })
+);
+export const registerResend = (registrationId, channel) => customerApi.post('/auth/register/resend', { registrationId, channel });
+
+/** AUTH-5 — sign out of every device. */
+export const logoutAllDevices = () => customerApi.post('/auth/logout-all', {});
+
 export const logoutCustomer = async () => {
   const refreshToken = localStorage.getItem('customer_refresh_token');
   try {

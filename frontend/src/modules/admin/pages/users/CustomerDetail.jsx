@@ -92,6 +92,13 @@ const CustomerDetail = () => {
                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4">Contact Information</h3>
                <div className="space-y-4">
                   <div className="flex items-center gap-4">
+                     <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center border border-blue-100 font-black text-[10px]">ID</div>
+                     <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Customer ID</p>
+                        <p className="text-xs font-black text-slate-900 mt-0.5 tracking-wider">{customer?.customerId || '—'}</p>
+                     </div>
+                  </div>
+                  <div className="flex items-center gap-4">
                      <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center border border-slate-100">
                         <Mail size={18} />
                      </div>

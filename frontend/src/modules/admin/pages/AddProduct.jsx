@@ -1,404 +1,307 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Package, Upload, Plus, X, 
-  Save, CheckCircle2, ChevronRight,
-  Info, Image as ImageIcon, Layers,
-  DollarSign, Tag, FileText, AlertCircle,
-  Truck, ShieldCheck
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { productsApi, categoriesApi } from '../services/api';
-import { extractList, mapCategory } from '../utils/mappers';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, ImagePlus, Loader2, Save, Search, Trash2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { categoriesApi, productsApi, sellersApi } from '../services/api';
+import { extractList } from '../utils/mappers';
+import { uploadProductMedia } from '../../../shared/services/uploadService';
+import { getImageUrl } from '../../../shared/utils/imageUtils';
 
+// Tab → legacy commerce flow the API stores on the product.
+const TABS = [
+  { tab: 'mithilakart', flow: 'standard', label: 'Mithilakart', quick: false },
+  { tab: 'mithilak', flow: 'mithilak', label: 'Mithilak', quick: false },
+  { tab: 'quick_shop', flow: 'quick_shop', label: 'Quick Shop', quick: true },
+  { tab: 'groceries_fresh', flow: 'fresh_grocery', label: 'Groceries & Fresh', quick: true },
+];
+const PROMISES = [15, 20, 25, 30];
+
+const EMPTY = {
+  sellerId: '', title: '', sku: '', brand: '', description: '', categoryId: '',
+  tabs: [], deliveryPromiseMinutes: 30, price: '', mrp: '', stock: '', tags: '',
+  weightKg: '', length: '', width: '', height: '',
+};
+
+const input = 'w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-semibold text-slate-900 outline-none focus:border-blue-400 focus:bg-white';
+const labelCls = 'text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1.5';
+
+const skuFrom = (title) => `${String(title).toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'SKU'}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+
+/**
+ * Admin "Add Product". Creates a real product for a chosen seller; it appears
+ * in the category straight away when the seller is approved and enabled for
+ * the selected tabs (the API explains what to fix otherwise).
+ */
 const AddProduct = () => {
+  const [form, setForm] = useState(EMPTY);
   const [images, setImages] = useState([]);
-  const [saved, setSaved] = useState(false);
+  const [sellers, setSellers] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [created, setCreated] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [categoriesRes, productsRes] = await Promise.all([
+      const [sellersRes, categoriesRes] = await Promise.all([
+        sellersApi.getAll({ kycStatus: 'approved', status: 'active', limit: 100 }),
         categoriesApi.getAll(),
-        productsApi.getAll({ limit: 10 }),
       ]);
       if (cancelled) return;
-      if (!categoriesRes.error) {
-        setCategories(extractList(categoriesRes.data).map(mapCategory));
-      }
-      if (!productsRes.error) {
-        setProducts(extractList(productsRes.data));
-      }
+      if (sellersRes.error) toast.error(`Could not load sellers: ${sellersRes.error}`);
+      if (categoriesRes.error) toast.error(`Could not load categories: ${categoriesRes.error}`);
+      setSellers(extractList(sellersRes.data));
+      setCategories(extractList(categoriesRes.data).filter((c) => c.isActive !== false));
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const handleAddImage = () => {
-    const url = prompt('Enter Image URL');
-    if (url) setImages([...images, url]);
+  const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));
+
+  // "Parent › Child" labels so similarly named categories can be told apart.
+  const categoryOptions = useMemo(() => {
+    const byId = new Map(categories.map((c) => [String(c._id || c.id), c]));
+    const pathOf = (c, depth = 0) => {
+      const pid = c.parentIds?.[0] || c.parentId;
+      const parent = pid ? byId.get(String(pid?._id || pid)) : null;
+      return parent && depth < 4 ? `${pathOf(parent, depth + 1)} › ${c.name}` : c.name;
+    };
+    return categories.map((c) => ({ id: String(c._id || c.id), label: pathOf(c), tabs: c.visibleTabs || [] }));
+  }, [categories]);
+
+  const selectedCategory = categoryOptions.find((c) => c.id === form.categoryId) || null;
+  const matches = useMemo(() => {
+    const q = categorySearch.trim().toLowerCase();
+    if (!q) return [];
+    return categoryOptions.filter((c) => c.label.toLowerCase().includes(q)).slice(0, 30);
+  }, [categoryOptions, categorySearch]);
+
+  const chooseCategory = (option) => {
+    // Start with the tabs the category is shown in.
+    set({ categoryId: option.id, tabs: TABS.filter((t) => option.tabs.includes(t.tab)).map((t) => t.tab) });
+    setCategorySearch('');
   };
 
-  const handleRemoveImage = (index) => {
-    setImages(images.filter((_, i) => i !== index));
+  const toggleTab = (tab) => set({ tabs: form.tabs.includes(tab) ? form.tabs.filter((t) => t !== tab) : [...form.tabs, tab] });
+  const anyQuick = TABS.some((t) => t.quick && form.tabs.includes(t.tab));
+
+  const handleFiles = async (files) => {
+    if (!files?.length) return;
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const url = await uploadProductMedia(file);
+        setImages((prev) => [...prev, url]);
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Image upload failed');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const validate = () => {
+    if (!form.sellerId) return 'Choose the seller';
+    if (form.title.trim().length < 2) return 'Enter the product name';
+    if (!form.categoryId) return 'Choose a category';
+    if (!form.tabs.length) return 'Choose at least one tab to show the product in';
+    const price = Number(form.price);
+    const mrp = Number(form.mrp || form.price);
+    if (!(price > 0)) return 'Enter a selling price';
+    if (mrp < price) return 'MRP cannot be lower than the selling price';
+    if (form.stock === '' || Number(form.stock) < 0) return 'Enter the stock quantity';
+    if (!images.length) return 'Add at least one product image';
+    return null;
+  };
+
+  const handleSave = async () => {
+    const problem = validate();
+    if (problem) { toast.error(problem); return; }
+    setSaving(true);
+    const dims = [form.length, form.width, form.height].map(Number);
+    const attributes = {};
+    if (Number(form.weightKg) > 0) attributes.weight = Number(form.weightKg);
+    if (dims.every((d) => d > 0)) attributes.dimensions = { length: dims[0], width: dims[1], height: dims[2] };
+    const payload = {
+      sellerId: form.sellerId,
+      title: form.title.trim(),
+      sku: form.sku.trim() || skuFrom(form.title),
+      brand: form.brand.trim(),
+      description: form.description.trim(),
+      categoryId: form.categoryId,
+      commerceFlows: TABS.filter((t) => form.tabs.includes(t.tab)).map((t) => t.flow),
+      price: Number(form.price),
+      mrp: Number(form.mrp || form.price),
+      stock: Number(form.stock),
+      images: images.map((url, i) => ({ url, alt: form.title.trim(), sortOrder: i })),
+      tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+      attributes,
+      ...(anyQuick ? { deliveryPromiseMinutes: Number(form.deliveryPromiseMinutes) } : {}),
+    };
+    const { data, error } = await productsApi.create(payload);
+    setSaving(false);
+    if (error) { toast.error(error); return; }
+    setCreated({ id: data?._id || data?.id, title: payload.title, status: data?.status, category: selectedCategory?.label });
+    toast.success('Product saved');
+    setForm({ ...EMPTY, sellerId: form.sellerId });
+    setImages([]);
   };
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-700 max-w-5xl mx-auto">
-      {/* Header */}
+    <div className="space-y-6 pb-20 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-900 tracking-tight font-montserrat uppercase">Catalog Entry</h1>
-          <p className="text-slate-500 text-sm sm:text-base font-medium mt-1 font-raleway">Add new inventory items directly to the platform catalog.</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight font-montserrat uppercase">Add Product</h1>
+          <p className="text-slate-500 text-sm font-medium mt-1">Creates the product for a seller. It shows in its category as soon as it is saved.</p>
         </div>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <button className="flex-1 sm:flex-none px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
-            Save as Draft
-          </button>
-          <button 
-            onClick={handleSave}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg ${saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white shadow-blue-100 hover:scale-105'}`}
-          >
-            {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {saved ? 'Product Published!' : 'Publish to Catalog'}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || uploading}
+          className="flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest bg-blue-500 text-white shadow-lg shadow-blue-100 disabled:opacity-60"
+        >
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {saving ? 'Saving…' : 'Publish to Catalog'}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Form */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Basic Info */}
-          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
-            <div className="flex items-center gap-2 mb-2">
-               <FileText size={18} className="text-blue-500" />
-               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-montserrat">Product Specification</h3>
+      {created && (
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <span className="flex items-start gap-2">
+            <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+            <span>
+              <strong>{created.title}</strong> saved in <strong>{created.category}</strong>
+              {created.status === 'approved' ? ' and is live for customers.' : ` with status "${created.status}".`}
+              {created.id && <> <a className="font-bold underline" href={`/vendor/product-detail/${created.id}`} target="_blank" rel="noopener noreferrer">View in app</a></>}
+            </span>
+          </span>
+          <button type="button" aria-label="Dismiss" onClick={() => setCreated(null)} className="p-1 text-emerald-700"><X size={16} /></button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
+            <div>
+              <label className={labelCls} htmlFor="ap-seller">Seller *</label>
+              <select id="ap-seller" className={input} value={form.sellerId} onChange={(e) => set({ sellerId: e.target.value })}>
+                <option value="">Select seller</option>
+                {sellers.map((s) => <option key={s._id || s.id} value={s._id || s.id}>{s.storeName || s.name} — {s.city || ''}</option>)}
+              </select>
             </div>
-            
-            <div className="space-y-4">
+            <div>
+              <label className={labelCls} htmlFor="ap-title">Product name *</label>
+              <input id="ap-title" className={input} value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Raw Pumpkin (1 kg)" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Product Name *</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Premium Leather Satchel"
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-900 placeholder:text-slate-300"
-                />
+                <label className={labelCls} htmlFor="ap-sku">SKU</label>
+                <input id="ap-sku" className={input} value={form.sku} onChange={(e) => set({ sku: e.target.value })} placeholder="Auto-generated if empty" />
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Category *</label>
-                  <select className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-900 appearance-none">
-                    <option value="">Select Category</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Sub-Category</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Bags & Backpacks"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-900 placeholder:text-slate-300"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Detailed Description</label>
-                <textarea 
-                  rows={6}
-                  placeholder="Tell customers about the product features, materials, and unique selling points..."
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-900 placeholder:text-slate-300 resize-none"
-                />
+                <label className={labelCls} htmlFor="ap-brand">Brand</label>
+                <input id="ap-brand" className={input} value={form.brand} onChange={(e) => set({ brand: e.target.value })} />
               </div>
             </div>
-          </section>
-
-          {/* Pricing & Inventory */}
-          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
-            <div className="flex items-center gap-2 mb-2">
-               <DollarSign size={18} className="text-green-500" />
-               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-montserrat">Pricing & Stocks</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Selling Price (₹)</label>
-                  <input 
-                    type="number" 
-                    placeholder="0.00"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-black focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-900 placeholder:text-slate-300 font-roboto"
-                  />
-               </div>
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">MRP (Strike-off)</label>
-                  <input 
-                    type="number" 
-                    placeholder="0.00"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-400 placeholder:text-slate-300 font-roboto"
-                  />
-               </div>
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Initial Stock</label>
-                  <input 
-                    type="number" 
-                    placeholder="1"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-black focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-900 placeholder:text-slate-300 font-roboto"
-                  />
-               </div>
+            <div>
+              <label className={labelCls} htmlFor="ap-desc">Description</label>
+              <textarea id="ap-desc" rows={4} className={input} value={form.description} onChange={(e) => set({ description: e.target.value })} />
             </div>
           </section>
 
-          {/* Detailed Highlights & Specifications */}
-          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
-            <div className="flex items-center gap-2 mb-2">
-               <Info size={18} className="text-indigo-500" />
-               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-montserrat">Highlights & Specs</h3>
+          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
+            <div>
+              <label className={labelCls} htmlFor="ap-cat">Category *</label>
+              {selectedCategory ? (
+                <div className="flex items-center justify-between gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-900">
+                  <span>{selectedCategory.label}</span>
+                  <button type="button" onClick={() => set({ categoryId: '', tabs: [] })} className="text-xs font-black text-blue-600">Change</button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input id="ap-cat" className={`${input} pl-9`} value={categorySearch} onChange={(e) => setCategorySearch(e.target.value)} placeholder="Type to search, e.g. Kadima" />
+                  {matches.length > 0 && (
+                    <ul className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                      {matches.map((m) => (
+                        <li key={m.id}>
+                          <button type="button" onClick={() => chooseCategory(m)} className="w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50">{m.label}</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               {/* Highlights */}
-               <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Key Highlights</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Pack of</label>
-                      <input type="text" placeholder="e.g. 1" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Fabric</label>
-                      <input type="text" placeholder="e.g. Cotton" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Sleeve</label>
-                      <input type="text" placeholder="e.g. Full Sleeve" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Pattern</label>
-                      <input type="text" placeholder="e.g. Solid" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Collar</label>
-                      <input type="text" placeholder="e.g. Spread" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Color</label>
-                      <input type="text" placeholder="e.g. Navy Blue" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                  </div>
-               </div>
+            <div>
+              <span className={labelCls}>Show in tabs *</span>
+              <div className="flex flex-wrap gap-2">
+                {TABS.map((t) => (
+                  <label key={t.tab} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold cursor-pointer ${form.tabs.includes(t.tab) ? 'border-blue-400 bg-blue-50 text-blue-900' : 'border-slate-200 text-slate-600'}`}>
+                    <input type="checkbox" checked={form.tabs.includes(t.tab)} onChange={() => toggleTab(t.tab)} />
+                    {t.label}
+                  </label>
+                ))}
+              </div>
+              {selectedCategory && <p className="mt-1.5 text-xs text-slate-500">This category is shown in: {selectedCategory.tabs.map((tab) => TABS.find((t) => t.tab === tab)?.label || tab).join(', ') || 'no tab'}.</p>}
+            </div>
+            {anyQuick && (
+              <div className="max-w-xs">
+                <label className={labelCls} htmlFor="ap-promise">Quick delivery promise</label>
+                <select id="ap-promise" className={input} value={form.deliveryPromiseMinutes} onChange={(e) => set({ deliveryPromiseMinutes: e.target.value })}>
+                  {PROMISES.map((m) => <option key={m} value={m}>{m} minutes</option>)}
+                </select>
+              </div>
+            )}
+          </section>
 
-               {/* Technical Specs */}
-               <div className="space-y-4">
-                  <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Technical Specs</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Fit</label>
-                      <input type="text" placeholder="e.g. Regular Fit" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Fabric Care</label>
-                      <input type="text" placeholder="e.g. Machine Wash" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Suitable For</label>
-                      <input type="text" placeholder="e.g. Western Wear" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Hem</label>
-                      <input type="text" placeholder="e.g. Curved" className="w-full bg-slate-50 border border-slate-100 rounded-lg py-2.5 px-4 text-xs font-bold outline-none" />
-                    </div>
-                  </div>
-               </div>
+          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className={labelCls} htmlFor="ap-price">Selling price (₹) *</label>
+              <input id="ap-price" type="number" min="0" className={input} value={form.price} onChange={(e) => set({ price: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="ap-mrp">MRP (₹)</label>
+              <input id="ap-mrp" type="number" min="0" className={input} value={form.mrp} onChange={(e) => set({ mrp: e.target.value })} placeholder="Same as price" />
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="ap-stock">Stock *</label>
+              <input id="ap-stock" type="number" min="0" className={input} value={form.stock} onChange={(e) => set({ stock: e.target.value })} />
             </div>
           </section>
 
-          {/* Variations Section */}
-          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
-            <div className="flex justify-between items-center mb-2">
-               <div className="flex items-center gap-2">
-                  <Layers size={18} className="text-purple-500" />
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-montserrat">Variations (SKUs)</h3>
-               </div>
-               <button className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:underline">+ Add Attribute</button>
-            </div>
-            
-            <div className="p-10 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center text-slate-300 gap-3">
-               <Layers size={32} />
-               <p className="text-[10px] font-black uppercase tracking-widest text-center">No variations defined.<br/>Add Size, Color or Material to create SKUs.</p>
-            </div>
-          </section>
-
-          {/* Shipping & Logistics */}
-          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 space-y-6">
-            <div className="flex items-center gap-2 mb-2">
-               <Truck size={18} className="text-blue-500" />
-               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-montserrat">Shipping & Logistics</h3>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Weight (kg)</label>
-                  <input type="number" placeholder="0.5" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-black outline-none" />
-               </div>
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Length (cm)</label>
-                  <input type="number" placeholder="10" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-black outline-none" />
-               </div>
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Width (cm)</label>
-                  <input type="number" placeholder="10" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-black outline-none" />
-               </div>
-               <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Height (cm)</label>
-                  <input type="number" placeholder="5" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-4 px-6 text-sm font-black outline-none" />
-               </div>
-            </div>
+          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[['weightKg', 'Weight (kg)'], ['length', 'Length (cm)'], ['width', 'Width (cm)'], ['height', 'Height (cm)']].map(([key, label]) => (
+              <div key={key}>
+                <label className={labelCls} htmlFor={`ap-${key}`}>{label}</label>
+                <input id={`ap-${key}`} type="number" min="0" className={input} value={form[key]} onChange={(e) => set({ [key]: e.target.value })} />
+              </div>
+            ))}
           </section>
         </div>
 
-        {/* Sidebar Controls */}
-        <div className="space-y-8">
-           {/* Product Flags */}
-           <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                 <Tag size={18} className="text-blue-500" />
-                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-montserrat">Product Flags</h3>
-              </div>
-              <div className="space-y-3">
-                 {[
-                   { label: 'Featured Product', desc: 'Show on home page' },
-                   { label: 'Trending Now', desc: 'Mark with fire icon' },
-                   { label: 'Flash Sale Eligible', desc: 'Can be added to sales' },
-                 ].map((flag, i) => (
-                   <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <div>
-                         <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{flag.label}</p>
-                         <p className="text-[8px] text-slate-400 font-bold uppercase">{flag.desc}</p>
-                      </div>
-                      <div className="w-10 h-5 bg-slate-200 rounded-full relative cursor-pointer">
-                         <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm" />
-                      </div>
-                   </div>
-                 ))}
-              </div>
-           </section>
-
-           {/* Tax & Compliance */}
-           <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                 <ShieldCheck size={18} className="text-green-500" />
-                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-montserrat">Tax & Compliance</h3>
-              </div>
-              <div className="space-y-4">
-                 <div>
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">GST Category</label>
-                    <select className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 text-xs font-bold outline-none appearance-none">
-                       <option>GST 18% (Standard)</option>
-                       <option>GST 12%</option>
-                       <option>GST 5%</option>
-                       <option>GST 0% (Exempt)</option>
-                    </select>
-                 </div>
-                 <div>
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">HSN Code</label>
-                    <input type="text" placeholder="e.g. 4202" className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 text-xs font-bold outline-none" />
-                 </div>
-              </div>
-           </section>
-
-           {/* Image Gallery */}
-           <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
-              <div className="flex justify-between items-center mb-2">
-                 <div className="flex items-center gap-2">
-                    <ImageIcon size={18} className="text-indigo-500" />
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-montserrat">Visuals</h3>
-                 </div>
-                 <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">{images.length}/5</span>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                 {images.map((img, i) => (
-                    <div key={i} className="relative aspect-square bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden group">
-                       <img src={img} alt="Product" className="w-full h-full object-cover" />
-                       <button 
-                         onClick={() => handleRemoveImage(i)}
-                         className="absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                       >
-                          <X size={14} />
-                       </button>
-                    </div>
-                 ))}
-                 {images.length < 5 && (
-                    <button 
-                      onClick={handleAddImage}
-                      className="aspect-square border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-blue-500 hover:bg-blue-50/20 transition-all text-slate-300"
-                    >
-                       <Upload size={24} />
-                       <span className="text-[8px] font-black uppercase tracking-widest">Add URL</span>
-                    </button>
-                 )}
-              </div>
-              <p className="text-[9px] text-slate-400 font-medium leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
-                 Recommended size: <strong>1080x1080 px</strong>. High quality images increase conversion by up to <strong>40%</strong>.
-              </p>
-           </section>
-
-           {/* Organization */}
-           <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                 <Tag size={18} className="text-amber-500" />
-                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-montserrat">Organization</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Brand Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="Generic"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 text-xs font-bold focus:ring-2 focus:ring-blue-50 transition-all outline-none text-slate-900"
-                  />
+        <div className="space-y-6">
+          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-3">
+            <span className={labelCls}>Images *</span>
+            <div className="grid grid-cols-3 gap-2">
+              {images.map((url, i) => (
+                <div key={url} className="relative aspect-square rounded-xl border border-slate-200 bg-slate-50 p-1">
+                  <img src={getImageUrl(url)} alt={`Product ${i + 1}`} className="h-full w-full object-contain" />
+                  <button type="button" aria-label="Remove image" onClick={() => setImages(images.filter((_, j) => j !== i))} className="absolute -right-1.5 -top-1.5 rounded-full bg-white p-1 text-red-500 shadow"><Trash2 size={12} /></button>
                 </div>
-                <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Tags (Comma Separated)</label>
-                  <input 
-                    type="text" 
-                    placeholder="new, trending, summer"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 text-xs font-bold focus:ring-2 focus:ring-blue-50 transition-all outline-none text-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Manufacturer Info</label>
-                  <textarea 
-                    rows={3}
-                    placeholder="Manufacturer details, origin, etc."
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 text-xs font-bold focus:ring-2 focus:ring-blue-50 transition-all outline-none text-slate-900 resize-none"
-                  />
-                </div>
-              </div>
-           </section>
-
-           {/* Status Card */}
-           <div className="bg-slate-900 rounded-3xl p-6 text-white relative overflow-hidden">
-              <div className="absolute -right-4 -bottom-4 opacity-10">
-                 <Package size={100} />
-              </div>
-              <div className="relative z-10">
-                 <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status</p>
-                 <div className="mt-2 flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-                    <h4 className="text-lg font-black font-montserrat uppercase tracking-tight">Active Ready</h4>
-                 </div>
-                 <p className="text-[10px] opacity-60 mt-4 leading-relaxed font-medium italic">
-                    "This product will be instantly visible across all platform storefronts upon publishing."
-                 </p>
-              </div>
-           </div>
+              ))}
+              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-200 text-[11px] font-bold text-slate-500 hover:border-blue-300">
+                {uploading ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}
+                {uploading ? 'Uploading' : 'Add'}
+                <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleFiles([...e.target.files]); e.target.value = ''; }} />
+              </label>
+            </div>
+          </section>
+          <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <label className={labelCls} htmlFor="ap-tags">Tags (comma separated)</label>
+            <input id="ap-tags" className={input} value={form.tags} onChange={(e) => set({ tags: e.target.value })} placeholder="organic, seasonal" />
+          </section>
         </div>
       </div>
     </div>

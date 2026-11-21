@@ -5,7 +5,7 @@ const { asyncHandler } = require('../../utils/asyncHandler');
 class CouponController extends BaseController {
   constructor(couponService) {
     super(couponService);
-    this.bindMethods(['listMine', 'listPublic', 'validate']);
+    this.bindMethods(['listMine', 'listPublic', 'validate', 'offers']);
   }
 
   listPublic = asyncHandler(async (req, res) => {
@@ -15,6 +15,11 @@ class CouponController extends BaseController {
 
   listMine = asyncHandler(async (req, res) => {
     const data = await this.service.listForUser(req.user.id);
+    return ApiResponse.success(res, data);
+  });
+
+  offers = asyncHandler(async (req, res) => {
+    const data = await this.service.listOffers({ userId: req.user.id, subtotal: Number(req.query.subtotal) || 0 });
     return ApiResponse.success(res, data);
   });
 

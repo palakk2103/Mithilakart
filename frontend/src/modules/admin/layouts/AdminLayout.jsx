@@ -82,6 +82,7 @@ const AdminLayout = () => {
         { name: 'Header Tabs Manager', path: '/admin/storefront/tabs', icon: <LayoutGrid size={18} /> },
         { name: 'You Popup Menu', path: '/admin/storefront/you-popup', icon: <LayoutGrid size={18} /> },
         { name: 'Tab Themes (Colours)', path: '/admin/storefront/themes', icon: <LayoutGrid size={18} /> },
+        { name: 'Cart Pages Design', path: '/admin/storefront/cart-design', icon: <LayoutGrid size={18} /> },
         { name: 'Custom Packages', path: '/admin/storefront/packages', icon: <LayoutGrid size={18} /> },
         { name: 'Purohit & Ritual Services', path: '/admin/storefront/purohit-services', icon: <Flower2 size={18} /> },
         { name: 'Help & Support Page', path: '/admin/storefront/help-center', icon: <LayoutGrid size={18} /> },

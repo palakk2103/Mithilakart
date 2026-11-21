@@ -9,6 +9,8 @@ const RATE_LIMITS = {
   authenticated: { limit: 200, windowSeconds: RATE_LIMIT_WINDOWS.MINUTE, name: 'authenticated' },
   admin: { limit: 300, windowSeconds: RATE_LIMIT_WINDOWS.MINUTE, name: 'admin' },
   authLogin: { limit: 10, windowSeconds: RATE_LIMIT_WINDOWS.FIFTEEN_MINUTES, name: 'auth_login' },
+  // AUTH-5: per-IP cap on OTP checks, on top of the per-number/email lock.
+  authVerify: { limit: 30, windowSeconds: RATE_LIMIT_WINDOWS.FIFTEEN_MINUTES, name: 'auth_verify' },
   // Counts presigns only (one per file). The file POST and confirm each need a
   // fresh single-use presign, so they can't create extra uploads. The old
   // 20 POSTs/hour (3 per file) let a seller bulk upload only ~6 images an hour.
@@ -30,8 +32,13 @@ function resolveRateLimitRule(req) {
     return null;
   }
 
-  if (/\/auth\/login$/.test(path) || /\/auth\/send-phone-otp$/.test(path)) {
+  // Every endpoint that sends an OTP shares one per-IP budget (AUTH-5).
+  if (/\/auth\/login$/.test(path) || /\/auth\/(send-(phone|email)-otp|register\/(start|resend))$/.test(path)) {
     return RATE_LIMITS.authLogin;
+  }
+
+  if (/\/auth\/(verify-(phone|email)-otp|register\/verify-(phone|email))$/.test(path)) {
+    return RATE_LIMITS.authVerify;
   }
 
   if (/\/reports\/export\//.test(path)) {

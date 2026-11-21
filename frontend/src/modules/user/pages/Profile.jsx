@@ -9,7 +9,9 @@ import {
   Store, 
   Bell,
   User,
-  FileText
+  FileText,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -19,8 +21,11 @@ import { getProfile } from '../services/userApi';
 import { logoutCustomer } from '../services/authApi';
 import { useTranslation } from 'react-i18next';
 import { getImageUrl } from '../../../shared/utils/imageUtils';
+import LoginRequiredCard from '../../../shared/components/LoginRequiredCard';
+import toast from 'react-hot-toast';
 
 const mapStoredUser = (stored) => ({
+  customerId: stored?.customerId || '',
   name: stored?.name || '',
   email: stored?.email || '',
   phone: stored?.phone || '',
@@ -45,6 +50,7 @@ const VendorProfile = () => {
   const { userProfile, updateProfile } = useAccountStore();
   const [authed, setAuthed] = useState(() => isAuthenticated('customer'));
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
 
   useEffect(() => {
     const syncAuth = () => setAuthed(isAuthenticated('customer'));
@@ -93,7 +99,7 @@ const VendorProfile = () => {
   const handleLogout = async () => {
     await logoutCustomer();
     clearTokens('customer');
-    updateProfile({ name: '', email: '', phone: '', gender: '', dob: '', avatar: null });
+    updateProfile({ customerId: '', name: '', email: '', phone: '', gender: '', dob: '', avatar: null });
     localStorage.removeItem('userWishlist');
     navigate('/home', { replace: true });
   };
@@ -119,6 +125,36 @@ const VendorProfile = () => {
   const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
   const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
   const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
+
+  const copyCustomerId = async () => {
+    try {
+      await navigator.clipboard.writeText(userProfile.customerId);
+      setIdCopied(true);
+      setTimeout(() => setIdCopied(false), 1800);
+    } catch {
+      toast.error('Could not copy');
+    }
+  };
+
+  // No guest account page: a logged-out visitor sees only a login prompt.
+  if (!authed) {
+    return (
+      <div className="min-h-screen pb-28 md:pb-16 font-sans text-slate-800 bg-bg-cream">
+        <div className="sticky top-0 z-40 border-b px-4 py-4 flex items-center gap-3 bg-[#FCF7EE]/90 border-[#F3E3CD]/60 backdrop-blur-md">
+          <button type="button" onClick={() => navigate('/home')} className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center" aria-label={t('auto.goBack')}>
+            <ChevronRight size={22} className="text-slate-800 rotate-180" />
+          </button>
+          <span className="text-[17px] font-black tracking-tight text-slate-800">{t('profile.title')}</span>
+        </div>
+        <LoginRequiredCard
+          icon={User}
+          title="Login to your account"
+          subtitle="Log in to see your orders, wishlist, addresses and offers."
+          onLogin={handleLogin}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen pb-28 md:pb-16 font-sans text-slate-800 relative transition-colors duration-300 ${
@@ -185,10 +221,13 @@ const VendorProfile = () => {
                 {authed ? (userProfile.name || (loadingProfile ? t('auto.loading2') : t('auto.user'))) : t('auto.welcomeToMithilakart', { defaultValue: 'Welcome to Mithilakart' })}
               </h1>
               <p className="text-[11px] font-medium opacity-90 mt-1 leading-normal">
-                {authed
-                  ? (formatContact(userProfile) || 'Add email in Edit Profile')
-                  : t('auto.pleaseLoginToAccessAll')}
+                {formatContact(userProfile) || 'Add email in Edit Profile'}
               </p>
+              {userProfile.customerId && (
+                <button type="button" onClick={copyCustomerId} className="mt-1.5 inline-flex items-center gap-1.5 min-h-[28px] px-2.5 rounded-full bg-white/15 text-[11px] font-bold tracking-wider" aria-label="Copy customer ID">
+                  ID: {userProfile.customerId} {idCopied ? <Check size={12} /> : <Copy size={12} />}
+                </button>
+              )}
             </div>
           </div>
           

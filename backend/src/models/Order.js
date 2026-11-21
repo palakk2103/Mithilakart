@@ -107,6 +107,12 @@ const orderSchema = new mongoose.Schema(
     platformFee: { type: Number, default: 0, min: 0 },
     packagingFee: { type: Number, default: 0, min: 0 },
     handlingFee: { type: Number, default: 0, min: 0 },
+    // FEE-3 high-demand surge charged on this order.
+    // Snapshot of the customer's permanent id (MK000123) for support and reports.
+    customerId: { type: String, default: null, index: true },
+    surgeCharge: { type: Number, default: 0, min: 0 },
+    // CART-2 tip for the delivery partner (credited in full on delivery).
+    tipAmount: { type: Number, default: 0, min: 0 },
 
     cancelledAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },

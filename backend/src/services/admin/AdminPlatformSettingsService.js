@@ -19,8 +19,12 @@ class AdminPlatformSettingsService extends BaseService {
     for (const s of settings) map[s.key] = s.value;
 
     const defaultCommission = await this.commissionRuleRepository.findDefault();
+    const { DEFAULT_CART_RAILS, DEFAULT_CHECKOUT_CONTENT } = require('../../constants/checkoutContent');
+    const { DEFAULT_CART_DESIGN } = require('../../constants/cartDesign');
     return {
       settings: map,
+      // What the storefront uses until an admin saves their own (single source of truth).
+      defaults: { cartRails: DEFAULT_CART_RAILS, checkoutContent: DEFAULT_CHECKOUT_CONTENT, cartDesign: DEFAULT_CART_DESIGN },
       commission: defaultCommission ? { rate: defaultCommission.rate, name: defaultCommission.name } : null,
     };
   }
@@ -53,6 +57,10 @@ class AdminPlatformSettingsService extends BaseService {
         throw AppError.validation('limitedQuantityMessage must be 1-160 characters without < or >');
       }
     }
+    if (updates.surgeConfig !== undefined) this._validateSurgeConfig(updates.surgeConfig);
+    if (updates.cartRails !== undefined) this._validateCartRails(updates.cartRails);
+    if (updates.checkoutContent !== undefined) this._validateCheckoutContent(updates.checkoutContent);
+    if (updates.cartDesign !== undefined) this._validateCartDesign(updates.cartDesign);
     if (updates.handlingFeeTiers !== undefined) {
       const tiers = updates.handlingFeeTiers;
       if (!Array.isArray(tiers) || tiers.length > 10) throw AppError.validation('handlingFeeTiers must be a list of at most 10 tiers');
@@ -65,6 +73,135 @@ class AdminPlatformSettingsService extends BaseService {
         seen.add(t.minSubtotal);
       });
     }
+  }
+
+  /** Cart page design: colours must be #hex, numbers inside their range, sections known. */
+  _validateCartDesign(d) {
+    const { TABS, PAGE_SECTIONS, COLOR_TOKENS, NUMBER_TOKENS, SECTION_NUMBERS } = require('../../constants/cartDesign');
+    const COLOR_RE = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+    if (!d || typeof d !== 'object' || Array.isArray(d)) throw AppError.validation('cartDesign must be an object');
+    const tokens = (t, where) => {
+      if (t === undefined) return;
+      if (!t || typeof t !== 'object' || Array.isArray(t)) throw AppError.validation(`${where} must be an object`);
+      COLOR_TOKENS.forEach((k) => {
+        if (t[k] !== undefined && t[k] !== '' && t[k] !== null && !(typeof t[k] === 'string' && COLOR_RE.test(t[k]))) {
+          throw AppError.validation(`${where}.${k} must be a colour like #1a7f37 (or empty to follow the tab theme)`);
+        }
+      });
+      Object.entries(NUMBER_TOKENS).forEach(([k, [min, max]]) => {
+        if (t[k] !== undefined && t[k] !== '' && t[k] !== null && (typeof t[k] !== 'number' || !Number.isFinite(t[k]) || t[k] < min || t[k] > max)) {
+          throw AppError.validation(`${where}.${k} must be a number between ${min} and ${max}`);
+        }
+      });
+      if (t.cardShadow !== undefined && typeof t.cardShadow !== 'boolean') throw AppError.validation(`${where}.cardShadow must be true or false`);
+    };
+    tokens(d.global, 'cartDesign.global');
+    if (d.tabs !== undefined) {
+      if (!d.tabs || typeof d.tabs !== 'object' || Array.isArray(d.tabs)) throw AppError.validation('cartDesign.tabs must be an object');
+      Object.keys(d.tabs).forEach((tab) => {
+        if (!TABS.includes(tab)) throw AppError.validation(`cartDesign.tabs has an unknown tab: ${tab}`);
+        tokens(d.tabs[tab], `cartDesign.tabs.${tab}`);
+      });
+    }
+    if (d.pages !== undefined) {
+      if (!d.pages || typeof d.pages !== 'object' || Array.isArray(d.pages)) throw AppError.validation('cartDesign.pages must be an object');
+      Object.entries(d.pages).forEach(([page, def]) => {
+        if (!PAGE_SECTIONS[page]) throw AppError.validation(`cartDesign.pages has an unknown page: ${page}`);
+        if (!def || !Array.isArray(def.sections) || def.sections.length > 20) throw AppError.validation(`cartDesign.pages.${page}.sections must be a list`);
+        def.sections.forEach((s, i) => {
+          const where = `cartDesign.pages.${page}.sections[${i}]`;
+          if (!s || !PAGE_SECTIONS[page].includes(s.key)) throw AppError.validation(`${where}.key is not a section of the ${page} page`);
+          if (s.enabled !== undefined && typeof s.enabled !== 'boolean') throw AppError.validation(`${where}.enabled must be true or false`);
+          const st = s.style || {};
+          ['bg', 'border'].forEach((k) => {
+            if (st[k] !== undefined && st[k] !== '' && !(typeof st[k] === 'string' && COLOR_RE.test(st[k]))) throw AppError.validation(`${where}.style.${k} must be a colour like #ffffff`);
+          });
+          Object.entries(SECTION_NUMBERS).forEach(([k, [min, max]]) => {
+            if (st[k] !== undefined && st[k] !== '' && st[k] !== null && (typeof st[k] !== 'number' || st[k] < min || st[k] > max)) throw AppError.validation(`${where}.style.${k} must be a number between ${min} and ${max}`);
+          });
+          if (st.title !== undefined && (typeof st.title !== 'string' || st.title.length > 60 || /[<>]/.test(st.title))) throw AppError.validation(`${where}.style.title must be up to 60 characters without < or >`);
+        });
+      });
+    }
+  }
+
+  /** CART-1 rails: titles, order, on/off, sources and hand-picked products. */
+  _validateCartRails(c) {
+    const { CART_RAIL_SOURCES } = require('../../constants/checkoutContent');
+    const text = (v) => typeof v === 'string' && v.trim().length > 0 && v.length <= 60 && !/[<>]/.test(v);
+    const rail = (r, where) => {
+      if (!r || typeof r !== 'object') throw AppError.validation(`${where} must be an object`);
+      if (!/^[a-z0-9_]{1,40}$/.test(String(r.key))) throw AppError.validation(`${where}.key must be lowercase letters, digits or _`);
+      if (!text(r.title)) throw AppError.validation(`${where}.title must be 1-60 characters without < or >`);
+      if (r.enabled !== undefined && typeof r.enabled !== 'boolean') throw AppError.validation(`${where}.enabled must be true or false`);
+      if (r.source !== undefined && !CART_RAIL_SOURCES.includes(r.source)) throw AppError.validation(`${where}.source is not a known source`);
+      if (r.fallbackSource !== undefined && r.fallbackSource !== null && !CART_RAIL_SOURCES.includes(r.fallbackSource)) throw AppError.validation(`${where}.fallbackSource is not a known source`);
+      if (r.productIds !== undefined && (!Array.isArray(r.productIds) || r.productIds.length > 50 || r.productIds.some((id) => !/^[a-f0-9]{24}$/i.test(String(id))))) {
+        throw AppError.validation(`${where}.productIds must be up to 50 product ids`);
+      }
+      if (r.maxPrice !== undefined && (typeof r.maxPrice !== 'number' || r.maxPrice < 0 || r.maxPrice > 100000)) throw AppError.validation(`${where}.maxPrice must be a number`);
+    };
+    if (!c || typeof c !== 'object' || !Array.isArray(c.rails) || c.rails.length > 20) throw AppError.validation('cartRails.rails must be a list of at most 20 rails');
+    if (c.itemsPerRail !== undefined && (!Number.isInteger(c.itemsPerRail) || c.itemsPerRail < 3 || c.itemsPerRail > 20)) throw AppError.validation('cartRails.itemsPerRail must be 3-20');
+    c.rails.forEach((r, i) => {
+      rail(r, `cartRails.rails[${i}]`);
+      if (r.subTabs !== undefined) {
+        if (!Array.isArray(r.subTabs) || r.subTabs.length > 10) throw AppError.validation(`cartRails.rails[${i}].subTabs must be at most 10 tabs`);
+        r.subTabs.forEach((t, j) => rail(t, `cartRails.rails[${i}].subTabs[${j}]`));
+      }
+    });
+  }
+
+  /** CART-1/2/3 texts: cashback banner, offers, trust block, tip card, policy. */
+  _validateCheckoutContent(c) {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) throw AppError.validation('checkoutContent must be an object');
+    const strings = [];
+    const walk = (v, path) => {
+      if (typeof v === 'string') strings.push([v, path]);
+      else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${path}[${i}]`));
+      else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => walk(x, `${path}.${k}`));
+    };
+    walk(c, 'checkoutContent');
+    strings.forEach(([s, path]) => {
+      if (s.length > 300 || /[<>]/.test(s)) throw AppError.validation(`${path} must be up to 300 characters without < or >`);
+    });
+    if (c.policyPoints !== undefined && (!Array.isArray(c.policyPoints) || c.policyPoints.length > 10)) {
+      throw AppError.validation('checkoutContent.policyPoints must be a list of at most 10 lines');
+    }
+    const rating = c.trust?.rating;
+    if (rating !== undefined && rating !== null && (typeof rating !== 'number' || rating < 0 || rating > 5)) {
+      throw AppError.validation('checkoutContent.trust.rating must be between 0 and 5');
+    }
+  }
+
+  /** FEE-3 surge settings: amounts, tabs, IST time windows and customer texts. */
+  _validateSurgeConfig(s) {
+    if (!s || typeof s !== 'object' || Array.isArray(s)) throw AppError.validation('surgeConfig must be an object');
+    const TABS = ['mithilakart', 'mithilak', 'quick_shop', 'groceries_fresh'];
+    if (s.enabled !== undefined && typeof s.enabled !== 'boolean') throw AppError.validation('surgeConfig.enabled must be true or false');
+    ['amount', 'threshold'].forEach((k) => {
+      if (s[k] !== undefined && (typeof s[k] !== 'number' || !Number.isFinite(s[k]) || s[k] < 0 || s[k] > 100000)) {
+        throw AppError.validation(`surgeConfig.${k} must be a number between 0 and 100000`);
+      }
+    });
+    if (s.tabs !== undefined && (!Array.isArray(s.tabs) || s.tabs.some((t) => !TABS.includes(t)))) {
+      throw AppError.validation(`surgeConfig.tabs must list tabs from: ${TABS.join(', ')}`);
+    }
+    if (s.windows !== undefined) {
+      const hhmm = /^([01]?\d|2[0-3]):[0-5]\d$/;
+      if (!Array.isArray(s.windows) || s.windows.length > 20) throw AppError.validation('surgeConfig.windows must be a list of at most 20 time windows');
+      s.windows.forEach((w) => {
+        const daysOk = w && (w.days === undefined || (Array.isArray(w.days) && w.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)));
+        if (!daysOk || !hhmm.test(String(w.start)) || !hhmm.test(String(w.end))) {
+          throw AppError.validation('Each surge window needs start and end as HH:MM and days as numbers 0 (Sun) to 6 (Sat)');
+        }
+      });
+    }
+    ['bannerTitle', 'bannerText', 'billLabel', 'billNote'].forEach((k) => {
+      if (s[k] !== undefined && (typeof s[k] !== 'string' || s[k].length > 200 || /[<>]/.test(s[k]))) {
+        throw AppError.validation(`surgeConfig.${k} must be up to 200 characters without < or >`);
+      }
+    });
   }
 
   async updateSettings(updates, adminId) {

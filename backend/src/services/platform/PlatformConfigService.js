@@ -9,6 +9,21 @@ const { YOU_POPUP_SETTING_KEY, YOU_POPUP_ITEMS } = require('../../constants/youP
 const { mergeYouPopupItems } = require('./youPopupMerge');
 const { HELP_CENTER_SETTING_KEY } = require('../../constants/helpCenter');
 const { toPublicHelpCenter } = require('./helpCenterContent');
+const { computeSurge, publicSurgeInfo } = require('../pricing/surge');
+const { DEFAULT_CHECKOUT_CONTENT } = require('../../constants/checkoutContent');
+const { normalizeCartDesign } = require('../../constants/cartDesign');
+
+/** Admin values over the defaults, one level deep, so a partial save keeps the rest. */
+function mergeCheckoutContent(saved) {
+  const s = saved && typeof saved === 'object' ? saved : {};
+  const out = { ...DEFAULT_CHECKOUT_CONTENT };
+  Object.keys(DEFAULT_CHECKOUT_CONTENT).forEach((k) => {
+    const d = DEFAULT_CHECKOUT_CONTENT[k];
+    if (s[k] === undefined) return;
+    out[k] = d && typeof d === 'object' && !Array.isArray(d) ? { ...d, ...s[k] } : s[k];
+  });
+  return out;
+}
 
 class PlatformConfigService extends BaseService {
   constructor({ platformSettingRepository, deliveryChargeRuleRepository, cacheService }) {
@@ -75,6 +90,10 @@ class PlatformConfigService extends BaseService {
       supportEmail: config.supportEmail || null,
       helpline: config.helpline || null,
       tabThemes: config.tabThemes || null,
+      // FEE-3: surge banner on the quick-commerce tab landings.
+      surge: publicSurgeInfo(config),
+      checkoutContent: mergeCheckoutContent(config.checkoutContent),
+      cartDesign: normalizeCartDesign(config.cartDesign),
     };
   }
 
@@ -227,6 +246,11 @@ class PlatformConfigService extends BaseService {
         ? { minSubtotal: next.minSubtotal, discountPercent: Math.min(100, Math.max(0, next.discountPercent)) }
         : null,
     };
+  }
+
+  /** FEE-3 surge charge for one cart. */
+  computeSurge(config, args) {
+    return computeSurge(config, args);
   }
 
   /** Per-customer purchase limits the cart enforces (admin editable). */

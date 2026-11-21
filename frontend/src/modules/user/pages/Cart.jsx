@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ShoppingCart, ArrowLeft, ShieldCheck, Heart, Trash2, X, MapPin, Clock, Plus, ChevronRight } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, ShieldCheck, Heart, Trash2, X, MapPin, Clock, Plus, Home, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
-import { fetchCartItems, updateCartItemQuantity, removeCartItemById, addProductToCart } from '../utils/cartUtils';
+import { fetchCartItems, updateCartItemQuantity, removeCartItemById } from '../utils/cartUtils';
 import useVendorStore from '../../../store/useVendorStore';
 import { isAuthenticated as checkAuth, getUser } from '../../../shared/api/tokenStorage';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
@@ -11,14 +11,20 @@ import { getDisplayAddress, useHydrateAddresses } from '../../../shared/hooks/us
 import toast from 'react-hot-toast';
 import useAccountStore from '../../../store/useAccountStore';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
-import { getWishlist, addToWishlist as addToWishlistApi, removeFromWishlist as removeFromWishlistApi } from '../services/userApi';
+import { getWishlist, addToWishlist as addToWishlistApi } from '../services/userApi';
 import { extractList, mapWishlistItem } from '../utils/mappers';
 import { handleImageError } from '../../../shared/utils/imageUtils';
 import { billFromCart } from '../utils/billing';
 import BillSummary from '../components/checkout/BillSummary';
 import FreeDeliveryBar from '../components/checkout/FreeDeliveryBar';
 import CartLine from '../components/checkout/CartLine';
+import { useCartDesign, CartDesignProvider, DesignSection, OrderedSections } from '../components/checkout/cartDesign';
+import CartRails from '../components/checkout/CartRails';
+import CartBannerCarousel from '../components/checkout/CartBannerCarousel';
 import LoginRequiredCard from '../../../shared/components/LoginRequiredCard';
+
+// Solid slate for a disabled checkout button — a faded accent looked washed-out and unreadable.
+const DISABLED_BTN_BG = '#64748b';
 
 // Each shopping tab keeps its own cart; the switcher below lets the shopper reach the others.
 const CART_TABS = [
@@ -32,7 +38,7 @@ const Cart = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { location: liveLocation } = useLiveLocation();
-  const { savedAddresses, selectedAddressId, deliveryMode, wishlist, addToWishlist: addToWishlistStore, removeFromWishlist: removeFromWishlistStore } = useAccountStore();
+  const { savedAddresses, selectedAddressId, deliveryMode, wishlist, addToWishlist: addToWishlistStore } = useAccountStore();
   useHydrateAddresses();
   const deliverTo = getDisplayAddress({ savedAddresses, selectedAddressId, liveLocation, deliveryMode });
 
@@ -40,7 +46,8 @@ const Cart = () => {
   const isMithilakFlow = theme.activeFlow === 'mithilak';
   const isQuickShopFlow = theme.activeFlow === 'quickshop';
   const isFreshGroceryFlow = theme.activeFlow === 'freshgrocery';
-  const accentHex = theme.primaryHex || '#F5A400';
+  const design = useCartDesign('cart');
+  const accentHex = design.accent;
   const shopNowLink = isMithilakFlow ? '/mithilak' : (isFreshGroceryFlow ? '/fresh-grocery' : (isQuickShopFlow ? '/quick-shop' : '/vendor/home'));
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => checkAuth('customer'));
@@ -51,6 +58,7 @@ const Cart = () => {
   const [itemToRemove, setItemToRemove] = useState(null);
   const [localWishlist, setLocalWishlist] = useState([]);
   const [tabCounts, setTabCounts] = useState({});
+  const [showBill, setShowBill] = useState(false);
 
   const loadTabCounts = async () => {
     const entries = await Promise.all(CART_TABS.map(async ({ tab }) => {
@@ -115,7 +123,7 @@ const Cart = () => {
   }, []);
 
   const bill = useMemo(
-    () => billFromCart(cart, cartItems.reduce((n, i) => n + (Number(i.qty) || 1), 0)),
+    () => billFromCart(cart, cartItems.length),
     [cart, cartItems]
   );
   const limitMessage = cart?.limits?.message;
@@ -169,26 +177,6 @@ const Cart = () => {
     await loadCart();
   };
 
-  const handleAddWishlistItemToCart = async (product) => {
-    try {
-      await addProductToCart(product);
-      try { await removeFromWishlistApi(product.id); } catch { /* wishlist cleanup is best-effort */ }
-      removeFromWishlistStore(product.id);
-      setLocalWishlist((prev) => prev.filter((item) => item.id !== product.id));
-      await loadCart();
-    } catch (e) {
-      if (e?.code !== 'LOGIN_REQUIRED') toast.error(e?.message || 'Could not add to cart');
-    }
-  };
-
-  const themeBg = isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF8EE)]'
-    : isMithilakFlow ? 'bg-[color:var(--ml-light,#F5F9FA)]'
-      : isQuickShopFlow ? 'bg-[color:var(--qs-light,#FFF5EE)]' : 'bg-[#FFF9E8]';
-  const headerBg = isFreshGroceryFlow ? 'bg-[color:var(--fg-primary,#D9A21B)]'
-    : isMithilakFlow ? 'bg-[color:var(--ml-primary,#207C8A)]'
-      : isQuickShopFlow ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF7A00)]'
-        : 'bg-[#F5A400]';
-
   const eta = (() => {
     const mins = cartItems.map((i) => Number(i.deliveryPromiseMinutes)).filter(Boolean);
     return mins.length ? `ETA in ${Math.min(...mins)}–${Math.max(...mins) + 15} min` : null;
@@ -199,195 +187,212 @@ const Cart = () => {
     navigate('/vendor/checkout');
   };
 
-  return (
-    <div className={`min-h-screen pb-36 font-sans text-slate-800 flex flex-col relative ${themeBg}`}>
-      {/* Header */}
-      <header className={`sticky top-0 z-[100] px-4 h-14 flex items-center justify-between ${headerBg}`}>
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-800 active:scale-95 transition-transform"
-        >
-          <ArrowLeft size={19} strokeWidth={2.5} />
-        </button>
-        <h1 className="text-[18px] font-bold text-white">{t('nav.cart')}</h1>
-        <span className="w-10" aria-hidden />
-      </header>
+  const tabSwitcher = isAuthenticated && loaded && CART_TABS.some(({ tab, flow }) => flow !== theme.activeFlow && tabCounts[tab] > 0) ? (
+    <nav aria-label="Your carts" className="flex items-center gap-2">
+      <p className="text-[11.5px] font-semibold flex-shrink-0 cd-text">
+        {cartItems.length === 0 ? 'Items in:' : 'Also in:'}
+      </p>
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+        {CART_TABS.filter(({ tab, flow }) => flow !== theme.activeFlow && tabCounts[tab] > 0).map(({ tab, flow, label }) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => switchCartTab(flow)}
+            className="flex-shrink-0 h-9 px-3 rounded-full bg-white border border-slate-300 text-[12px] font-bold text-slate-800 flex items-center gap-1.5 active:scale-95 transition-transform"
+          >
+            {label}
+            <span className="min-w-[20px] h-5 px-1 rounded-full text-white text-[10.5px] font-extrabold flex items-center justify-center" style={{ background: accentHex }}>{tabCounts[tab]}</span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  ) : null;
 
-      {isAuthenticated && loaded && CART_TABS.some(({ tab, flow }) => flow !== theme.activeFlow && tabCounts[tab] > 0) && (
-        <nav aria-label="Your carts" className="px-4 pt-3">
-          <p className="text-[12px] font-semibold text-slate-600 mb-2">
-            {cartItems.length === 0 ? 'Your items are in another cart:' : 'You also have items in:'}
-          </p>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {CART_TABS.filter(({ tab, flow }) => flow !== theme.activeFlow && tabCounts[tab] > 0).map(({ tab, flow, label }) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => switchCartTab(flow)}
-                className="flex-shrink-0 h-10 px-4 rounded-full bg-white border border-slate-300 text-[13px] font-bold text-slate-800 flex items-center gap-2 active:scale-95 transition-transform shadow-sm"
-              >
-                {label}
-                <span className="min-w-[22px] h-[22px] px-1.5 rounded-full text-white text-[11px] font-extrabold flex items-center justify-center" style={{ background: accentHex }}>{tabCounts[tab]}</span>
-              </button>
+  // Every section of the page, keyed like the admin's "Cart Pages Design" screen.
+  const sectionEls = {
+    tabSwitcher: <DesignSection id="tabSwitcher" plain>{tabSwitcher}</DesignSection>,
+
+    banner: <DesignSection id="banner" plain><CartBannerCarousel flow={theme.activeFlow} /></DesignSection>,
+
+    address: (
+      <DesignSection id="address">
+        <section className="cd-card flex items-start gap-2">
+          <MapPin size={20} className="flex-shrink-0 mt-0.5" style={{ color: accentHex }} fill="currentColor" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px] font-bold cd-heading leading-tight">{hasAddress ? t('cart.deliverToHome') : t('cart.deliveryAddress')}</p>
+            <p className="text-[11.5px] mt-0.5 leading-snug line-clamp-2 cd-text">
+              {hasAddress
+                ? <>{user?.name ? <span className="font-semibold">{user.name} | </span> : null}{deliverTo.label}</>
+                : t('cart.loginAddAddress')}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => navigate('/profile/addresses')}
+              className="px-3 h-8 cd-btn border text-[12px] font-bold active:scale-95 transition-transform bg-white"
+              style={{ borderColor: accentHex, color: accentHex }}
+            >
+              {hasAddress ? t('auto.change') : t('cart.addAddress')}
+            </button>
+            {eta && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10.5px] font-bold whitespace-nowrap">
+                <Clock size={10} /> {eta}
+              </span>
+            )}
+          </div>
+        </section>
+      </DesignSection>
+    ),
+
+    items: (
+      <DesignSection id="items">
+        <section className="cd-card">
+          <h2 className="flex items-center gap-1.5 text-[14.5px] font-bold cd-heading mb-2">
+            <ShoppingCart size={17} /> {design.title('items', 'Your Cart Items')} ({cartItems.length})
+          </h2>
+          <div className="divide-y divide-slate-100">
+            {cartItems.map((item) => (
+              <div key={item.cartId} className="cd-row">
+                <CartLine
+                  item={item}
+                  busy={busyLine === item.cartId}
+                  limitMessage={limitMessage}
+                  onIncrease={() => changeQuantity(item, 1)}
+                  onDecrease={() => changeQuantity(item, -1)}
+                  onRemove={() => setItemToRemove(item)}
+                />
+              </div>
             ))}
           </div>
-        </nav>
-      )}
-
-      {!isAuthenticated ? (
-        <LoginRequiredCard title="Login to see your cart" subtitle="Your cart is empty until you log in. Log in to add items and check out." icon={ShoppingCart} />
-      ) : !loaded ? (
-        <div className="px-4 mt-4 space-y-3 animate-pulse" aria-busy>
-          <div className="h-24 rounded-2xl bg-white" />
-          <div className="h-48 rounded-2xl bg-white" />
-          <div className="h-56 rounded-2xl bg-white" />
-        </div>
-      ) : cartItems.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
-          <div className="w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center mb-5">
-            <ShoppingCart size={40} className="text-slate-400" />
+          <div className="flex items-center justify-between gap-3 pt-2 mt-1 border-t border-slate-100">
+            <Link to={shopNowLink} className="text-[13.5px] font-bold cd-heading min-h-[36px] flex items-center">Continue Shopping</Link>
+            <Link
+              to={shopNowLink}
+              className="inline-flex items-center gap-1.5 px-3.5 h-9 cd-btn text-white text-[13px] font-bold active:scale-95 transition-transform"
+              style={{ background: accentHex }}
+            >
+              <Plus size={15} /> Add More Items
+            </Link>
           </div>
-          <h2 className="text-[18px] font-bold text-slate-900">{t('cart.empty')}</h2>
-          <p className="text-[14px] text-slate-500 mt-1.5 mb-7">{t('cart.emptySubtitle')}</p>
-          <Link to={shopNowLink} className="px-10 h-12 inline-flex items-center rounded-full text-white font-bold text-[14px] active:scale-95 transition-transform" style={{ background: accentHex }}>
-            {t('cart.shopNow')}
-          </Link>
+        </section>
+      </DesignSection>
+    ),
+
+    freeDelivery: <DesignSection id="freeDelivery" plain><FreeDeliveryBar bill={bill} /></DesignSection>,
+
+    // One tappable row on phones; the full bill sits in the right column on desktop.
+    priceDetails: (
+      <DesignSection id="priceDetails" className="md:hidden">
+        <div className="cd-card">
+          <button
+            type="button"
+            aria-expanded={showBill}
+            onClick={() => setShowBill((v) => !v)}
+            className="w-full flex items-center justify-between min-h-[36px] text-left"
+          >
+            <span className="text-[13.5px] font-bold cd-heading">{design.title('priceDetails', 'Price Details')}</span>
+            <span className="flex items-center gap-1.5 text-[13.5px] font-extrabold text-slate-900">
+              {bill ? formatPrice(bill.total, bill.total % 1 !== 0) : '—'}
+              <ChevronDown size={16} className={`text-slate-500 transition-transform ${showBill ? 'rotate-180' : ''}`} />
+            </span>
+          </button>
+          {showBill && <div className="mt-2"><BillSummary bill={bill} bare title="Order Details" /></div>}
         </div>
-      ) : (
-        <div className="px-4 mt-3 space-y-3 md:grid md:grid-cols-3 md:gap-6 md:space-y-0 md:max-w-6xl md:mx-auto md:w-full md:py-4 md:items-start">
-          <div className="md:col-span-2 space-y-3">
-            {/* Delivery address */}
-            <section className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-3.5 flex items-start gap-3">
-              <MapPin size={22} className="text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-bold text-blue-900">{hasAddress ? t('cart.deliverToHome') : t('cart.deliveryAddress')}</p>
-                <p className="text-[12.5px] text-slate-600 mt-0.5 leading-snug">
-                  {hasAddress
-                    ? <>{user?.name ? <span className="font-semibold">{user.name} | </span> : null}{deliverTo.label}</>
-                    : t('cart.loginAddAddress')}
-                </p>
-                {eta && (
-                  <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[11.5px] font-bold">
-                    <Clock size={12} /> {eta}
-                  </span>
-                )}
+      </DesignSection>
+    ),
+
+    rails: (
+      <DesignSection id="rails" plain>
+        <CartRails marketplaceTab={cart?.marketplaceTab} cartProductIds={cartItems.map((i) => String(i.productId || i.id))} accentHex={accentHex} shopLink={shopNowLink} />
+      </DesignSection>
+    ),
+  };
+
+  return (
+    <CartDesignProvider design={design}>
+      <div className={`min-h-screen pb-24 font-sans text-slate-800 flex flex-col relative ${design.rootClass}`} style={design.rootStyle}>
+        {/* Header */}
+        <header className={`sticky top-0 z-[100] px-3 h-[52px] flex items-center justify-between ${design.headerClass}`} style={design.headerStyle}>
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-800 active:scale-95 transition-transform"
+          >
+            <ArrowLeft size={19} strokeWidth={2.5} />
+          </button>
+          <h1 className="text-[17px] font-bold">{t('nav.cart')}</h1>
+          <Link to={shopNowLink} aria-label="Home" className="w-10 h-10 rounded-full flex items-center justify-center"><Home size={20} /></Link>
+        </header>
+
+        {!isAuthenticated ? (
+          <LoginRequiredCard title="Login to see your cart" subtitle="Your cart is empty until you log in. Log in to add items and check out." icon={ShoppingCart} />
+        ) : !loaded ? (
+          <div className="mt-3 flex flex-col animate-pulse" style={{ gap: 'var(--cd-gap)', padding: '0 var(--cd-px)' }} aria-busy>
+            <div className="h-16 rounded-xl bg-white" />
+            <div className="h-36 rounded-xl bg-white" />
+            <div className="h-40 rounded-xl bg-white" />
+          </div>
+        ) : cartItems.length === 0 ? (
+          <>
+            {tabSwitcher && <div style={{ padding: '8px var(--cd-px) 0' }}>{tabSwitcher}</div>}
+            <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
+              <div className="w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center mb-5">
+                <ShoppingCart size={40} className="text-slate-400" />
               </div>
+              <h2 className="text-[18px] font-bold text-slate-900">{t('cart.empty')}</h2>
+              <p className="text-[14px] text-slate-500 mt-1.5 mb-7">{t('cart.emptySubtitle')}</p>
+              <Link to={shopNowLink} className="px-10 h-12 inline-flex items-center cd-btn text-white font-bold text-[14px] active:scale-95 transition-transform" style={{ background: accentHex }}>
+                {t('cart.shopNow')}
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="mt-2 md:grid md:grid-cols-3 md:gap-6 md:max-w-6xl md:mx-auto md:w-full md:py-4 md:items-start" style={{ padding: '0 var(--cd-px)', paddingTop: 8 }}>
+            <div className="md:col-span-2 flex flex-col" style={{ gap: 'var(--cd-gap)' }}>
+              <OrderedSections design={design} elements={sectionEls} />
+
+              {belowMinimum && (
+                <p className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[12.5px] font-semibold px-3 py-2">
+                  Minimum order value is {formatPrice(bill.minOrderAmount)}. Add {formatPrice(bill.minOrderAmount - bill.subtotal)} more to check out.
+                </p>
+              )}
+            </div>
+
+            <div className="hidden md:block md:col-span-1 space-y-3 md:sticky md:top-20">
+              <BillSummary bill={bill} />
               <button
                 type="button"
-                onClick={() => navigate('/profile/addresses')}
-                className="px-3.5 h-9 rounded-full border border-amber-400 text-amber-600 text-[13px] font-bold active:scale-95 transition-transform flex-shrink-0"
+                onClick={proceed}
+                disabled={belowMinimum}
+                className="flex w-full h-12 cd-btn text-white font-bold text-[15px] items-center justify-center active:scale-[0.98] transition-transform disabled:cursor-not-allowed disabled:active:scale-100"
+                style={{ background: belowMinimum ? DISABLED_BTN_BG : accentHex }}
               >
-                {hasAddress ? t('auto.change') : t('cart.addAddress')}
+                {hasAddress ? t('cart.checkout') : t('cart.addAddress')}
               </button>
-            </section>
-
-            <FreeDeliveryBar bill={bill} />
-
-            {/* Items */}
-            <section className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-3.5">
-              <h2 className="flex items-center gap-2 text-[16px] font-bold text-blue-900 mb-3">
-                <ShoppingCart size={19} /> Your Cart Items ({cartItems.length})
-              </h2>
-              <div className="divide-y divide-slate-100">
-                {cartItems.map((item) => (
-                  <div key={item.cartId} className="py-3 first:pt-0">
-                    <CartLine
-                      item={item}
-                      busy={busyLine === item.cartId}
-                      limitMessage={limitMessage}
-                      onIncrease={() => changeQuantity(item, 1)}
-                      onDecrease={() => changeQuantity(item, -1)}
-                      onRemove={() => setItemToRemove(item)}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
-                <Link to={shopNowLink} className="text-[14px] font-bold text-blue-900">Continue Shopping</Link>
-                <Link
-                  to={shopNowLink}
-                  className="inline-flex items-center gap-1.5 px-4 h-10 rounded-full text-white text-[13.5px] font-bold active:scale-95 transition-transform"
-                  style={{ background: accentHex }}
-                >
-                  <Plus size={16} /> Add More Items
-                </Link>
-              </div>
-            </section>
-
-            {/* Wishlist */}
-            {localWishlist.length > 0 && (
-              <section className="bg-white rounded-2xl border border-slate-200/70 shadow-sm p-3.5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="flex items-center gap-2 text-[15px] font-bold text-blue-900">
-                    <Heart size={18} className="text-rose-500 fill-rose-500" /> {t('cart.wishlistItems', { count: localWishlist.length })}
-                  </h3>
-                  <Link to="/wishlist" className="text-[13px] font-bold flex items-center" style={{ color: accentHex }}>
-                    {t('common.viewAll')} <ChevronRight size={15} />
-                  </Link>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {localWishlist.slice(0, 6).map((item) => (
-                    <div key={item.id} className="border border-slate-200/80 rounded-xl p-2.5 flex flex-col items-center">
-                      <div className="w-full aspect-square rounded-lg bg-white border border-slate-100 p-2 flex items-center justify-center mb-2 overflow-hidden">
-                        <img src={item.image} alt={item.name} className="max-w-full max-h-full object-contain" loading="lazy" decoding="async" onError={handleImageError} />
-                      </div>
-                      <h4 className="text-[12.5px] font-semibold text-slate-800 text-center line-clamp-1 w-full">{item.name}</h4>
-                      <p className="text-[13px] font-bold text-slate-900">{formatPrice(item.price)}</p>
-                      <button
-                        type="button"
-                        onClick={() => handleAddWishlistItemToCart(item)}
-                        className="mt-2 w-full h-9 rounded-lg text-white font-bold text-[12px] flex items-center justify-center gap-1 active:scale-95 transition-transform"
-                        style={{ background: accentHex }}
-                      >
-                        <ShoppingCart size={13} /> {t('common.addToCart')}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+            </div>
           </div>
+        )}
 
-          <div className="md:col-span-1 space-y-3 md:sticky md:top-20">
-            <BillSummary bill={bill} />
-            {belowMinimum && (
-              <p className="rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[13px] font-semibold px-3.5 py-2.5">
-                Minimum order value is {formatPrice(bill.minOrderAmount)}. Add {formatPrice(bill.minOrderAmount - bill.subtotal)} more to check out.
-              </p>
-            )}
+        {/* Sticky checkout bar (mobile) */}
+        {isAuthenticated && cartItems.length > 0 && (
+          <div className="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-2xl border-t border-slate-200 px-3 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] flex items-center justify-between gap-3 md:hidden shadow-[0_-6px_20px_rgba(0,0,0,0.07)]">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 leading-none">Total Amount</p>
+              <p className="text-[20px] font-extrabold text-slate-900 leading-none mt-1">{bill ? formatPrice(bill.total, bill.total % 1 !== 0) : '—'}</p>
+            </div>
             <button
               type="button"
               onClick={proceed}
               disabled={belowMinimum}
-              className="hidden md:flex w-full h-12 rounded-full text-white font-bold text-[15px] items-center justify-center active:scale-[0.98] transition-transform disabled:opacity-50"
-              style={{ background: accentHex }}
+              className="flex-1 max-w-[230px] h-11 cd-btn text-white font-bold text-[14.5px] active:scale-95 transition-transform disabled:cursor-not-allowed disabled:active:scale-100"
+              style={{ background: belowMinimum ? DISABLED_BTN_BG : accentHex }}
             >
-              {hasAddress ? t('cart.checkout') : t('cart.addAddress')}
+              {hasAddress ? `${t('cart.checkout')} →` : t('cart.addAddress')}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Sticky checkout bar (mobile) */}
-      {isAuthenticated && cartItems.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] flex items-center justify-between gap-4 md:hidden shadow-[0_-6px_20px_rgba(0,0,0,0.06)]">
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500">Total Amount</p>
-            <p className="text-[21px] font-extrabold text-slate-900 leading-none mt-0.5">{bill ? formatPrice(bill.total, bill.total % 1 !== 0) : '—'}</p>
-          </div>
-          <button
-            type="button"
-            onClick={proceed}
-            disabled={belowMinimum}
-            className="flex-1 max-w-[220px] h-12 rounded-full text-white font-bold text-[15px] active:scale-95 transition-transform disabled:opacity-50"
-            style={{ background: accentHex }}
-          >
-            {hasAddress ? `${t('cart.checkout')} →` : t('cart.addAddress')}
-          </button>
-        </div>
-      )}
+        )}
 
       {/* Remove / move to wishlist */}
       {itemToRemove && (
@@ -415,7 +420,7 @@ const Cart = () => {
       )}
 
       {isAuthenticated && cartItems.length > 0 && (
-        <div className="mt-6 px-6 py-4 flex flex-col items-center gap-2 text-slate-400">
+        <div className="mt-2 px-6 py-2 flex flex-col items-center gap-1 text-slate-400">
           <div className="flex items-center gap-2">
             <ShieldCheck size={17} />
             <span className="text-[12px] font-bold">{t('cart.safePayments')}</span>
@@ -423,7 +428,8 @@ const Cart = () => {
           <p className="text-[11px] text-center leading-relaxed">{t('cart.paymentsSubtitle')}</p>
         </div>
       )}
-    </div>
+      </div>
+    </CartDesignProvider>
   );
 };
 

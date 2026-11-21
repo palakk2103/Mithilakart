@@ -19,6 +19,7 @@ const bannerSchema = Joi.object({
   subtitle: Joi.string().trim().max(160).optional().allow(''),
   ctaText: Joi.string().trim().max(40).optional().allow(''),
   commerceFlow: Joi.string().valid(...COMMERCE_FLOW_VALUES).optional(),
+  placement: Joi.string().valid('home', 'cart').optional(),
   startDate: Joi.date().iso().optional().allow(null),
   endDate: Joi.date().iso().optional().allow(null),
   sortOrder: Joi.number().integer().min(0).optional(),

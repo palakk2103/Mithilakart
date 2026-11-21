@@ -19,6 +19,7 @@ import SearchBar from '../components/common/SearchBar';
 import CategoryNavbar from '../components/common/CategoryNavbar';
 import LanguageSelector from '../components/common/LanguageSelector';
 import YouPopup from '../components/common/YouPopup';
+import { isAuthenticated as isCustomerAuthenticated } from '../../../shared/api/tokenStorage';
 import { getCachedYouPopupItems, fetchYouPopupItems } from '../../../config/youPopup';
 import useAccountStore from '../../../store/useAccountStore';
 import useVendorStore from '../../../store/useVendorStore';
@@ -65,6 +66,16 @@ const VendorLayout = () => {
   const [scrolled, setScrolled] = useState(false);
   const [isFloatingCartDismissed, setIsFloatingCartDismissed] = useState(false);
   const [isYouOpen, setIsYouOpen] = useState(false);
+  const [customerLoggedIn, setCustomerLoggedIn] = useState(() => isCustomerAuthenticated('customer'));
+  useEffect(() => {
+    const sync = () => setCustomerLoggedIn(isCustomerAuthenticated('customer'));
+    window.addEventListener('customer-auth-changed', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('customer-auth-changed', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
   const [youItems, setYouItems] = useState(() => getCachedYouPopupItems());
   const [navHeight, setNavHeight] = useState(56);
   const youBtnRef = useRef(null);
@@ -415,7 +426,7 @@ const VendorLayout = () => {
       </nav>
       )}
       {!hideFooter && isYouOpen && (
-        <YouPopup items={youItems} onClose={closeYou} anchorRef={youBtnRef} bottom={navHeight} />
+        <YouPopup items={youItems} onClose={closeYou} anchorRef={youBtnRef} bottom={navHeight} loggedIn={customerLoggedIn} />
       )}
 
       {/* Floating Cart Pill (Shows on all pages when cart has items, except cart/checkout page) */}

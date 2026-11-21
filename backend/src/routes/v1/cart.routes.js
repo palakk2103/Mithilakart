@@ -1,6 +1,7 @@
 const express = require('express');
 const Joi = require('joi');
-const { validateBody, validateParams } = require('../../middleware/validate');
+const { validateBody, validateParams, validateQuery } = require('../../middleware/validate');
+const { MARKETPLACE_TAB_VALUES } = require('../../constants/marketplace');
 const { addCartItemSchema, updateCartItemSchema } = require('../../validators/cart/cart.validator');
 
 // A cart line is addressed by the itemKey the cart returns ("listing:<id>",
@@ -14,6 +15,11 @@ function createCartRoutes(cartController, middleware) {
   const optionalCustomerAuth = middleware.authenticateCustomer({ optional: true });
 
   router.get('/', optionalCustomerAuth, cartController.getCart);
+  router.get('/recommendations', middleware.authenticateCustomer(), validateQuery(Joi.object({
+    marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).required(),
+    cart: Joi.string().max(2000).allow('').optional(),
+    recent: Joi.string().max(2000).allow('').optional(),
+  })), cartController.recommendations);
   router.post('/items', optionalCustomerAuth, validateBody(addCartItemSchema), cartController.addItem);
   router.patch('/items/:id', optionalCustomerAuth, validateParams(Joi.object({ id: cartLineIdSchema })), validateBody(updateCartItemSchema), cartController.updateItem);
   router.delete('/items/:id', optionalCustomerAuth, validateParams(Joi.object({ id: cartLineIdSchema })), cartController.removeItem);

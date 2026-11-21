@@ -18,6 +18,7 @@ const placeOrderSchema = Joi.object({
   addressId: objectIdSchema.required(),
   paymentMethod: Joi.string().valid(...PAYMENT_METHOD_VALUES).required(),
   couponCode: Joi.string().trim().optional().allow(null, ''),
+  tipAmount: Joi.number().integer().min(0).max(500).optional(),
   commerceFlow: Joi.string().valid(...Array.from(COMMERCE_FLOW_VALUES_SET)).optional(),
   idempotencyKey: Joi.string().trim().min(1).max(128).optional(),
 });

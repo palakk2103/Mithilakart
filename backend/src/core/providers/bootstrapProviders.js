@@ -2,7 +2,8 @@ const config = require('../../config');
 const { registerProvider } = require('../providers.registry');
 const { MockPaymentProvider } = require('./MockPaymentProvider');
 const { RazorpayPaymentProvider } = require('./RazorpayPaymentProvider');
-const { MockPushProvider, MockSmsProvider } = require('./MockNotificationProviders');
+const { MockPushProvider, MockSmsProvider, MockEmailProvider } = require('./MockNotificationProviders');
+const { SmtpEmailProvider } = require('./SmtpEmailProvider');
 const { FcmPushProvider } = require('./FcmPushProvider');
 const { SmsIndiaHubProvider } = require('./SmsIndiaHubProvider');
 const { createShippingProvider } = require('./shipping/createShippingProvider');
@@ -64,6 +65,14 @@ function bootstrapProviders() {
   } else {
     registerProvider('sms', new MockSmsProvider());
     logger.warn('SMS provider: mock (configure SMS_PROVIDER=smsindiahub for live OTP SMS)');
+  }
+
+  if (config.email?.enabled) {
+    registerProvider('email', new SmtpEmailProvider(config.email));
+    logger.info(`Email provider: SMTP (${config.email.host})`);
+  } else {
+    registerProvider('email', new MockEmailProvider());
+    logger.warn('Email provider: mock (set SMTP_HOST, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM to deliver email OTPs)');
   }
 }
 
