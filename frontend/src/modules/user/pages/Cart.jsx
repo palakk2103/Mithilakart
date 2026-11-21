@@ -23,6 +23,9 @@ import CartRails from '../components/checkout/CartRails';
 import CartBannerCarousel from '../components/checkout/CartBannerCarousel';
 import LoginRequiredCard from '../../../shared/components/LoginRequiredCard';
 
+// Solid slate for a disabled checkout button — a faded accent looked washed-out and unreadable.
+const DISABLED_BTN_BG = '#64748b';
+
 // Each shopping tab keeps its own cart; the switcher below lets the shopper reach the others.
 const CART_TABS = [
   { tab: 'mithilakart', flow: 'mithilakart', label: 'Mithilakart' },
@@ -363,8 +366,8 @@ const Cart = () => {
                 type="button"
                 onClick={proceed}
                 disabled={belowMinimum}
-                className="flex w-full h-12 cd-btn text-white font-bold text-[15px] items-center justify-center active:scale-[0.98] transition-transform disabled:opacity-50"
-                style={{ background: accentHex }}
+                className="flex w-full h-12 cd-btn text-white font-bold text-[15px] items-center justify-center active:scale-[0.98] transition-transform disabled:cursor-not-allowed disabled:active:scale-100"
+                style={{ background: belowMinimum ? DISABLED_BTN_BG : accentHex }}
               >
                 {hasAddress ? t('cart.checkout') : t('cart.addAddress')}
               </button>
@@ -383,8 +386,8 @@ const Cart = () => {
               type="button"
               onClick={proceed}
               disabled={belowMinimum}
-              className="flex-1 max-w-[230px] h-11 cd-btn text-white font-bold text-[14.5px] active:scale-95 transition-transform disabled:opacity-50"
-              style={{ background: accentHex }}
+              className="flex-1 max-w-[230px] h-11 cd-btn text-white font-bold text-[14.5px] active:scale-95 transition-transform disabled:cursor-not-allowed disabled:active:scale-100"
+              style={{ background: belowMinimum ? DISABLED_BTN_BG : accentHex }}
             >
               {hasAddress ? `${t('cart.checkout')} →` : t('cart.addAddress')}
             </button>

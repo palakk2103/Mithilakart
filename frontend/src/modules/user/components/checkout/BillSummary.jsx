@@ -25,15 +25,6 @@ const BillSummary = ({ bill, title = 'Order Details', showSavings = true, bare =
     + Math.max(0, bill.handlingFeeOriginal - bill.handlingFee)
     + Math.max(0, bill.deliveryChargeOriginal - bill.deliveryCharge);
 
-  const handlingHint = bill.handlingFeeTier
-    ? `(${bill.handlingFeeTier.discountPercent}% off on orders above ${formatPrice(bill.handlingFeeTier.minSubtotal)})`
-    : bill.handlingFeeNextTier
-      ? `(${bill.handlingFeeNextTier.discountPercent}% off on orders above ${formatPrice(bill.handlingFeeNextTier.minSubtotal)})`
-      : null;
-  const deliveryHint = bill.freeDeliveryThreshold > 0
-    ? `(Free delivery on orders above ${formatPrice(bill.freeDeliveryThreshold)})`
-    : null;
-
   return (
     <section className={`${bare ? '' : 'cd-card'} ${className}`} aria-label={title}>
       {!bare && (
@@ -55,7 +46,7 @@ const BillSummary = ({ bill, title = 'Order Details', showSavings = true, bare =
         )}
 
         {(bill.handlingFeeOriginal > 0 || bill.handlingFee > 0) && (
-          <Row label="Handling Fee" hint={handlingHint}>
+          <Row label="Handling Fee">
             {bill.handlingFee < bill.handlingFeeOriginal && (
               <span className="mr-1.5 text-slate-400 line-through font-medium">{formatPrice(bill.handlingFeeOriginal)}</span>
             )}
@@ -63,7 +54,7 @@ const BillSummary = ({ bill, title = 'Order Details', showSavings = true, bare =
           </Row>
         )}
 
-        <Row label="Delivery Fee" hint={deliveryHint} tone={bill.deliveryCharge === 0 ? 'free' : 'default'}>
+        <Row label="Delivery Fee" tone={bill.deliveryCharge === 0 ? 'free' : 'default'}>
           {bill.deliveryCharge === 0 ? (
             <>
               {bill.deliveryChargeOriginal > 0 && (
@@ -75,7 +66,7 @@ const BillSummary = ({ bill, title = 'Order Details', showSavings = true, bare =
         </Row>
 
         {bill.surgeCharge > 0 && (
-          <Row label={bill.surge?.label || 'Surge charge'} hint={bill.surge?.note || null}>
+          <Row label={bill.surge?.label || 'Surge charge'}>
             <span className="text-orange-700">{formatPrice(bill.surgeCharge)}</span>
           </Row>
         )}
