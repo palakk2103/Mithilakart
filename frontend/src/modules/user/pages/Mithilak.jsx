@@ -25,6 +25,7 @@ import { handleImageError } from '../../../shared/utils/imageUtils';
 import ScrollRow from '../components/vendor/home/ScrollRow';
 import { useTranslation } from 'react-i18next';
 import { tName } from '../../../shared/utils/translateName';
+import PurohitSection from '../components/purohit/PurohitSection';
 
 const getDisplayName = (name) => {
   if (name === 'Mithila Festival & Cultural') return 'Festival & Cultural';
@@ -168,36 +169,86 @@ export const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaL
 // Adapter so shared sections (AlreadyBoughtSection) can render the teal Mithila card
 const MithilaBoughtCard = ({ deal, ...rest }) => <MithilaDealCard prod={deal} {...rest} />;
 
-// Header categories row for the Mithilak tab: equal-width chips, wrapped names,
-// overflow goes into a "More" popup (same behaviour as the Mithilakart tab).
-const CHIP_W = 72;
-const CHIP_GAP = 8;
-const MORE_W = 56;
-const CHIP_MIN_W = 60;
+// Header categories row for the Mithilak tab: same folder-tab design as the
+// Mithilakart tab (thumbnail + name side by side), in Mithilak teal.
+// Colours are mixed from the Mithilak tab theme colour (--ml-primary), so they
+// follow whatever theme admin sets for the tab.
+const ML = 'var(--ml-primary,#207C8A)';
+const TAB_BG = `color-mix(in srgb, ${ML} 10%, white)`;         // bar + selected tab fill (same, so they merge)
+const TAB_LINE = ML;                                            // selected tab outline — theme colour
+const TAB_IDLE_FILL = `color-mix(in srgb, ${ML} 18%, white)`;  // unselected tab fill
+const TAB_IDLE_LINE = `color-mix(in srgb, ${ML} 55%, white)`;  // unselected tab outline
+const TAB_EDGE_W = 20;              // width of each slanted side
+const TAB_W = 140;                  // every tab is the same width
+const TAB_PAD_X = 10;               // inner left/right space of each tab
+const TAB_OVERLAP = 10;             // neighbouring tabs overlap at their feet
 
-const MithilaChip = ({ chip, onClick, width = CHIP_W, active = false }) => {
+// One slanted folder side (left). Right side is the same SVG mirrored.
+const FolderEdge = ({ h, fill, stroke, mirror }) => {
+  const W = TAB_EDGE_W;
+  const b = h - 0.5;
+  const curve = `M0,${b} C5,${b} 6,${h - 3} 7,${h - 10} L11,12 Q13,0.5 ${W},0.5`;
+  return (
+    <svg
+      width={W}
+      height={h}
+      viewBox={`0 0 ${W} ${h}`}
+      className="flex-shrink-0 block"
+      style={mirror ? { transform: 'scaleX(-1)' } : undefined}
+      aria-hidden="true"
+    >
+      {/* style (not attributes) so CSS var()/color-mix() colours work */}
+      <path d={`${curve} L${W + 1},0.5 L${W + 1},${h} L0,${h} Z`} style={{ fill }} />
+      <path d={curve} style={{ fill: 'none', stroke }} strokeWidth="1" />
+    </svg>
+  );
+};
+
+const MithilaChip = ({ chip, onClick, active = false, icon = null, buttonRef, ...rest }) => {
   const DynamicIcon = getHeaderChipIcon(chip.iconKey);
   const label = chip.label ? tName(chip.label) : chip.rawLabel;
+  const h = active ? 66 : 60;
+  const fill = active ? TAB_BG : TAB_IDLE_FILL;
+  const stroke = active ? TAB_LINE : TAB_IDLE_LINE;
   return (
     <button
       type="button"
+      ref={buttonRef}
       onClick={onClick}
-      style={{ width }}
       aria-current={active ? 'page' : undefined}
       data-active={active ? 'true' : undefined}
-      className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform outline-none"
+      {...rest}
+      className={`relative flex-shrink-0 -ml-2.5 first:ml-0 cursor-pointer outline-none transition-[height] duration-200 ${
+        active ? 'z-10' : 'hover:brightness-[0.98]'
+      }`}
+      style={{ height: h, width: TAB_W }}
     >
-      <div className={`w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full flex items-center justify-center border text-[color:var(--ml-primary,#207C8A)] shadow-[0_1.5px_4px_rgba(32,124,138,0.06)] ${active ? 'bg-[#E3F3F5] border-[color:var(--ml-primary,#207C8A)] ring-2 ring-[color:var(--ml-primary,#207C8A)]/40' : 'bg-white border-[color:var(--ml-primary,#207C8A)]/30'}`}>
-        {chip.imageUrl ? (
-          <img src={chip.imageUrl} alt={label} className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
-        ) : DynamicIcon ? (
-          <DynamicIcon size={18} />
-        ) : (
-          <ShoppingBag size={18} />
-        )}
-      </div>
-      <span className={`w-full text-[11px] sm:text-[12px] mt-1.5 leading-[1.15] text-center line-clamp-2 break-words min-h-[2.3em] font-bold ${active ? 'text-[color:var(--ml-primary,#207C8A)]' : 'text-[#3F2A20]'}`}>
-        {label}
+      {/* Folder shape: slanted left side + top edge + slanted right side */}
+      <span className="absolute inset-0 flex pointer-events-none" aria-hidden="true">
+        <FolderEdge h={h} fill={fill} stroke={stroke} />
+        <span className="flex-1 -mx-px" style={{ backgroundColor: fill, borderTop: `1px solid ${stroke}` }} />
+        <FolderEdge h={h} fill={fill} stroke={stroke} mirror />
+      </span>
+
+      <span className="relative h-full w-full flex items-center gap-2" style={{ paddingLeft: TAB_PAD_X, paddingRight: TAB_PAD_X }}>
+        <span className="w-[44px] h-[44px] rounded-[12px] overflow-hidden flex items-center justify-center flex-shrink-0 text-[color:var(--ml-primary,#207C8A)] [&_svg]:w-[24px] [&_svg]:h-[24px]">
+          {icon ? (
+            icon
+          ) : chip.imageUrl ? (
+            <img src={chip.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" onError={handleImageError} />
+          ) : DynamicIcon ? (
+            <DynamicIcon size={24} />
+          ) : (
+            <ShoppingBag size={24} />
+          )}
+        </span>
+        <span
+          className={`text-[13px] leading-[1.15] tracking-tight text-left flex-1 min-w-0 whitespace-normal break-words line-clamp-2 ${
+            active ? 'font-extrabold text-[color:var(--ml-primary,#207C8A)]' : 'font-semibold text-[#3F2A20]'
+          }`}
+        >
+          {label}
+        </span>
       </span>
     </button>
   );
@@ -206,49 +257,28 @@ const MithilaChip = ({ chip, onClick, width = CHIP_W, active = false }) => {
 export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => {
   const { t } = useTranslation();
   const rowRef = useRef(null);
-  const firstPageRef = useRef(null);
   const moreBtnRef = useRef(null);
   const menuRef = useRef(null);
-  // { first, second } — chips on screen 1 (no More) and screen 2 (More at the end).
-  // null = show everything on one screen until measured.
+  // { first, second } — null = show everything until measured.
   const [pageCounts, setPageCounts] = useState(null);
-  const [chipW, setChipW] = useState(CHIP_W);
   const [moreOpen, setMoreOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
 
-  // Same behaviour as the Mithilakart header: screen 1 fills the device width with
-  // chips (no More); scrolling horizontally reveals screen 2 with the next chips
-  // and "More" at the end, which holds whatever is left.
+  // Same logic as the Mithilakart header: all tabs share one width, ~3 screens of
+  // tabs are shown (last one ends with "More"), the rest go in More.
   useLayoutEffect(() => {
     const row = rowRef.current;
     if (!row) return undefined;
     const compute = () => {
-      const page = firstPageRef.current;
-      const cs = page ? window.getComputedStyle(page) : null;
-      const padding = cs ? (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) : 16;
-      const available = row.clientWidth - padding;
-      const fits = (n, w) => n * w + Math.max(n - 1, 0) * CHIP_GAP;
-
-      if (fits(chips.length, CHIP_W) <= available) {
-        setPageCounts({ first: chips.length, second: 0 });
-        setChipW(CHIP_W);
+      const total = chips.length;
+      const available = row.clientWidth - 20; // strip has pl-1 + pr-4
+      const step = TAB_W - TAB_OVERLAP;
+      const perScreen = Math.max(1, Math.floor((available - TAB_W) / step) + 1);
+      if (total <= perScreen * 3) {
+        setPageCounts({ first: Math.min(perScreen, total), second: Math.max(total - perScreen, 0) });
         return;
       }
-
-      // Screen 1: as many chips as fit at min width, stretched evenly to fill the row
-      const first = Math.min(Math.max(Math.floor((available + CHIP_GAP) / (CHIP_MIN_W + CHIP_GAP)), 1), chips.length);
-      const w = Math.min(CHIP_W, Math.floor((available - CHIP_GAP * (first - 1)) / first));
-      setChipW(w);
-
-      const restCount = chips.length - first;
-      if (fits(restCount, w) <= available) {
-        setPageCounts({ first, second: restCount }); // everything else fits on screen 2, no More needed
-        return;
-      }
-
-      // Screen 2: chips + "More" right after them
-      const second = Math.max(Math.floor((available - MORE_W) / (w + CHIP_GAP)), 1);
-      setPageCounts({ first, second });
+      setPageCounts({ first: perScreen, second: Math.max(perScreen * 2 - 1, 1) });
     };
     compute();
     const ro = new ResizeObserver(compute);
@@ -287,54 +317,40 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
   };
 
   if (!chips.length) return null;
-  const firstCount = pageCounts ? pageCounts.first : chips.length;
   const shownCount = pageCounts ? pageCounts.first + pageCounts.second : chips.length;
-  const firstPage = chips.slice(0, firstCount);
-  const secondPage = chips.slice(firstCount, shownCount);
   const hidden = chips.slice(shownCount);
-  const multiPage = secondPage.length > 0;
-  const renderChip = (chip) => (
-    <MithilaChip key={chip.id} chip={chip} width={chipW} active={Boolean(isChipActive && isChipActive(chip))} onClick={() => onSelect(chip)} />
-  );
 
   return (
     <>
-      <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F5F9FA]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(32,124,138,0.06)] border-b border-[color:var(--ml-primary,#207C8A)]/15 py-2">
-        <div ref={rowRef} className="flex items-start overflow-x-auto no-scrollbar snap-x snap-mandatory" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {/* Screen 1 — fits the device width, no More button */}
-          <div
-            ref={firstPageRef}
-            className={`w-full flex-shrink-0 snap-start flex items-start px-2 sm:px-3 ${multiPage ? 'justify-between' : 'justify-start'}`}
-            style={{ gap: CHIP_GAP }}
-          >
-            {firstPage.map(renderChip)}
+      <div
+        className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 pt-3 transition-all duration-200"
+        style={{ backgroundColor: TAB_BG }}
+      >
+        <div ref={rowRef} className="relative overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Folder-tab strip: the bottom line is the "panel" edge the active tab opens into */}
+          <div className="relative flex items-end pl-1 pr-4 pt-1 w-max min-w-full md:justify-center">
+            {chips.slice(0, shownCount).map((chip) => (
+              <MithilaChip
+                key={chip.id}
+                chip={chip}
+                active={Boolean(isChipActive && isChipActive(chip))}
+                onClick={(e) => {
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                  onSelect(chip);
+                }}
+              />
+            ))}
+            {hidden.length > 0 && (
+              <MithilaChip
+                buttonRef={moreBtnRef}
+                chip={{ id: 'more', label: t('common.more') }}
+                icon={<MoreHorizontal size={22} />}
+                onClick={toggleMore}
+                aria-haspopup="true"
+                aria-expanded={moreOpen}
+              />
+            )}
           </div>
-
-          {/* Screen 2 — reached by horizontal scroll; More sits at the end */}
-          {multiPage && (
-          <div
-            className={`w-full flex-shrink-0 snap-start flex items-start px-2 sm:px-3 ${hidden.length > 0 ? 'justify-between' : 'justify-start'}`}
-            style={{ gap: CHIP_GAP }}
-          >
-          {secondPage.map(renderChip)}
-          {hidden.length > 0 && (
-            <button
-              ref={moreBtnRef}
-              type="button"
-              onClick={toggleMore}
-              aria-haspopup="true"
-              aria-expanded={moreOpen}
-              style={{ width: MORE_W }}
-              className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
-            >
-              <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full bg-[color:var(--ml-primary,#207C8A)] border border-[color:var(--ml-primary,#207C8A)] text-white flex items-center justify-center shadow-xs">
-                <MoreHorizontal size={18} />
-              </div>
-              <span className="text-[11px] sm:text-[12px] font-bold text-[#3F2A20] mt-1.5 leading-[1.15]">{t('common.more')}</span>
-            </button>
-          )}
-          </div>
-          )}
         </div>
       </div>
 
@@ -439,6 +455,8 @@ const Mithilak = () => {
       {/* 0. Header Categories (admin-managed for Mithilak tab) */}
       <MithilaHeaderChips
         chips={headerChips}
+        // On the Mithilak home, "You Buy" is the selected tab (same as Mithilakart)
+        isChipActive={(chip) => chip?.id === 'for-you' || String(chip?.rawLabel || chip?.label || '').trim().toLowerCase() === 'you buy'}
         onSelect={(chip) => {
           const target = resolveChipCategory(chip, mithilaCategories);
           if (!target) {
@@ -569,6 +587,9 @@ const Mithilak = () => {
           </ScrollRow>
         </div>
       )}
+
+      {/* 3a. Mithila Purohit & Ritual Services (admin-managed, Mithilak tab only) */}
+      <PurohitSection />
 
       {/* 3b. Already Bought Products (authenticated customers with purchases only) */}
       <div className="mb-6 md:mb-8 empty:hidden">

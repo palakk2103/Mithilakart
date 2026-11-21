@@ -19,6 +19,7 @@ import YouPopupManager from '../catalog/YouPopupManager';
 import PackageManager from '../catalog/PackageManager';
 import TabThemes from '../pages/content/TabThemes';
 import HelpCenterManager from '../catalog/HelpCenterManager';
+import PurohitServicesManager from '../catalog/PurohitServicesManager';
 
 // New Admin Pages
 import Analytics from '../pages/Analytics';
@@ -108,6 +109,7 @@ const AdminRoutes = () => {
         <Route path="storefront/packages" element={<PackageManager />} />
         <Route path="storefront/themes" element={<TabThemes />} />
         <Route path="storefront/help-center" element={<HelpCenterManager />} />
+        <Route path="storefront/purohit-services" element={<PurohitServicesManager />} />
         <Route path="storefront/sections/:section" element={<HomeSectionsManager />} />
         
         {/* Business Ops */}
