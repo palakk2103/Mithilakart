@@ -1,5 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+
+// Query params that only filter content in place (e.g. picking a subcategory chip).
+// Changing just these must keep the shopper's scroll position instead of jumping to top.
+const IN_PLACE_PARAMS = ['subcategory', 'parent'];
+
+const stripInPlaceParams = (search) => {
+  const params = new URLSearchParams(search);
+  IN_PLACE_PARAMS.forEach((key) => params.delete(key));
+  return params.toString();
+};
 
 /**
  * ScrollToTop
@@ -8,8 +18,20 @@ import { useLocation } from 'react-router-dom';
  */
 const ScrollToTop = () => {
   const { pathname, search, hash } = useLocation();
+  const prevRef = useRef(null);
 
   useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = { pathname, search, hash };
+    if (
+      prev &&
+      prev.pathname === pathname &&
+      prev.hash === hash &&
+      stripInPlaceParams(prev.search) === stripInPlaceParams(search)
+    ) {
+      return; // only an in-place filter changed - keep current scroll position
+    }
+
     // If a specific hash anchor exists (e.g., #reviews), scroll to it
     if (hash) {
       const id = hash.replace('#', '');

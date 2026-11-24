@@ -112,7 +112,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
 
         {/* Discount Badge */}
         {product.off && (
-          <div className="absolute top-1.5 left-1.5 bg-[#3E5A44] text-white text-[7.5px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
+          <div className="absolute top-1.5 left-1.5 bg-[#3E5A44] text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-2xs leading-none z-10">
             {product.off}
           </div>
         )}
@@ -120,8 +120,8 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
         {/* Rating Badge */}
         {product.rating > 0 && (
           <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-0.5 bg-white/95 backdrop-blur-xs px-1 py-0.5 rounded-[4px] shadow-xs border border-[#EADCC9]/30">
-            <span className="text-[8px] md:text-[9.5px] font-black text-slate-800">{product.rating}</span>
-            <Star size={7} fill="currentColor" className="text-amber-500 stroke-none" />
+            <span className="text-[11px] md:text-[12px] font-black text-slate-800">{product.rating}</span>
+            <Star size={10} fill="currentColor" className="text-amber-500 stroke-none" />
           </div>
         )}
       </div>
@@ -129,15 +129,15 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
       {/* Details Section */}
       <div className="pt-2 pb-0.5 px-0.5 relative z-10 flex flex-col justify-between flex-1">
         <div>
-          <span className="text-slate-400 text-[8.5px] font-bold block uppercase tracking-wider">{product.brand || 'Mithilakart'}</span>
-          <h3 className="text-[11px] md:text-[12.5px] font-black text-[#3F2A20] line-clamp-1 leading-tight mt-0.5">
+          <span className="text-slate-400 text-[11px] font-bold block uppercase tracking-wider">{product.brand || 'Mithilakart'}</span>
+          <h3 className="text-[14.5px] md:text-[15.5px] font-black text-[#3F2A20] line-clamp-1 leading-tight mt-0.5">
             {product.name}
           </h3>
 
           <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-[12px] md:text-[14px] font-black text-slate-900">₹{product.price}</span>
+            <span className="text-[16px] md:text-[17.5px] font-black text-slate-900">₹{product.price}</span>
             {product.oldPrice && (
-              <span className="text-[9px] md:text-[10px] text-gray-400 line-through font-semibold">₹{product.oldPrice}</span>
+              <span className="text-[12px] md:text-[13px] text-gray-400 line-through font-semibold">₹{product.oldPrice}</span>
             )}
           </div>
         </div>
@@ -411,8 +411,35 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
     }
   }, [selectedSubcategory, activeChildSub, activeParentSub, subcategoriesToDisplay, sortApi]);
 
+  // Keeps the nested child-category strip at the same on-screen position across the
+  // re-render + product reload that follows a click (the grid below can shrink/grow).
+  const childStripRef = useRef(null);
+  const holdChildStripPosition = useCallback(() => {
+    const el = childStripRef.current;
+    if (!el) return;
+    const anchorTop = el.getBoundingClientRect().top;
+    const until = performance.now() + 1200;
+    let stopped = false;
+    const userEvents = ['wheel', 'touchstart', 'keydown'];
+    const stop = () => {
+      stopped = true;
+      userEvents.forEach((ev) => window.removeEventListener(ev, stop));
+    };
+    // The shopper scrolling on their own always wins over the hold.
+    userEvents.forEach((ev) => window.addEventListener(ev, stop, { passive: true }));
+    const correct = () => {
+      const node = childStripRef.current;
+      if (stopped || !node) return stop();
+      const drift = node.getBoundingClientRect().top - anchorTop;
+      if (Math.abs(drift) > 1) window.scrollBy({ top: drift, left: 0, behavior: 'instant' });
+      if (performance.now() < until) requestAnimationFrame(correct);
+      else stop();
+    };
+    requestAnimationFrame(correct);
+  }, []);
+
   // Click handler for top-level subcategory card (e.g. Men's Wear, Women's Wear)
-  const handleSubcategoryClick = useCallback((sub) => {
+  const handleSubcategoryClick = useCallback((sub, { keepPosition = false } = {}) => {
     const isAlreadySelected =
       selectedSubcategory === sub.id ||
       selectedSubcategory === sub.name ||
@@ -437,6 +464,11 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       return next;
     }, { replace: true });
 
+    if (keepPosition) {
+      holdChildStripPosition();
+      return;
+    }
+
     // Smoothly scroll down to products view so user immediately sees results
     setTimeout(() => {
       const el = document.getElementById('category-products-grid');
@@ -444,7 +476,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     }, 50);
-  }, [selectedSubcategory, activeParentSub, setSearchParams]);
+  }, [selectedSubcategory, activeParentSub, setSearchParams, holdChildStripPosition]);
 
   // Click handler for nested / child subcategory (e.g. Casual Shirts, Jeans under Men's Wear)
   const handleChildSubcategoryClick = useCallback((child, parent) => {
@@ -465,13 +497,10 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       return next;
     }, { replace: true });
 
-    setTimeout(() => {
-      const el = document.getElementById('category-products-grid');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }, 50);
-  }, [selectedSubcategory, urlParent, setSearchParams]);
+    // Stay exactly where the shopper is: no auto-scroll to the grid, and hold the strip
+    // steady while the product list below reloads.
+    holdChildStripPosition();
+  }, [selectedSubcategory, urlParent, setSearchParams, holdChildStripPosition]);
 
   const handleClearSubcategory = useCallback(() => {
     setSelectedSubcategory(null);
@@ -803,7 +832,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
 
       {/* ── SECTION 1B: Secondary / Nested Subcategories Strip (e.g. Men's Wear -> Casual Shirts, Jeans, Denim, Festive, etc.) ── */}
       {activeParentSub && Array.isArray(activeParentSub.children) && activeParentSub.children.length > 0 && (
-        <div className="mb-6 bg-[#FAF9F5] border border-[#EADCC9]/80 rounded-2xl p-3 shadow-xs">
+        <div ref={childStripRef} className="mb-6 bg-[#FAF9F5] border border-[#EADCC9]/80 rounded-2xl p-3 shadow-xs">
           <div className="flex items-start justify-between gap-2 mb-2.5 px-0.5">
             <div className="flex items-start gap-2 min-w-0">
               <span className="w-2 h-2 mt-[5px] rounded-full bg-[#3E5A44] flex-shrink-0" />
@@ -820,7 +849,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             {activeChildSub && (
               <button
                 type="button"
-                onClick={() => handleSubcategoryClick(activeParentSub)}
+                onClick={() => handleSubcategoryClick(activeParentSub, { keepPosition: true })}
                 className="text-[10.5px] font-bold text-[#3E5A44] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <X size={11} /> {t('common.viewAll')} {activeParentSub.name}
@@ -832,7 +861,7 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
             {/* "All [Parent]" tile */}
             <button
               type="button"
-              onClick={() => handleSubcategoryClick(activeParentSub)}
+              onClick={() => handleSubcategoryClick(activeParentSub, { keepPosition: true })}
               aria-pressed={!activeChildSub}
               className={`group snap-start flex-shrink-0 w-[84px] sm:w-[96px] md:w-[104px] flex flex-col items-center rounded-2xl p-2 pb-2.5 cursor-pointer transition-all duration-200 active:scale-95 border ${
                 !activeChildSub
@@ -925,13 +954,13 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       <div id="category-products-grid" className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1 pt-2 border-t border-[#EADCC9]/50">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-[15px] font-black text-[#3F2A20] tracking-tight">
+            <h3 className="text-[18.5px] font-black text-[#3F2A20] tracking-tight">
               {currentSubcategoryObj
                 ? `${currentSubcategoryObj.name}`
                 : t('common.allProductsOf', { name: selectedCategory })}
             </h3>
             {currentSubcategoryObj && (
-              <div className="flex items-center gap-1 bg-[#FFF8EE] border border-[#3E5A44]/30 text-[#3E5A44] px-2 py-0.5 rounded-full text-[9.5px] font-bold">
+              <div className="flex items-center gap-1 bg-[#FFF8EE] border border-[#3E5A44]/30 text-[#3E5A44] px-2 py-0.5 rounded-full text-[12px] font-bold">
                 <span>{t('common.filterActive')}</span>
                 <button
                   type="button"
@@ -944,21 +973,21 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
               </div>
             )}
           </div>
-          <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+          <p className="text-[13px] text-slate-500 font-semibold mt-0.5">
             {t('common.showingOf', { shown: displayedProducts.length, total: filteredAndSortedProducts.length })}
           </p>
         </div>
 
         {/* Sort Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <span className="text-[10px] font-bold text-slate-500 flex items-center gap-0.5 flex-shrink-0">
-            <SlidersHorizontal size={11} /> {t('common.sort')}:
+          <span className="text-[13px] font-bold text-slate-500 flex items-center gap-0.5 flex-shrink-0">
+            <SlidersHorizontal size={14} /> {t('common.sort')}:
           </span>
           {['Popularity', 'Price: Low to High', 'Price: High to Low', 'Customer Rating'].map((sortKey) => (
             <button
               key={sortKey}
               onClick={() => setActiveSort(sortKey)}
-              className={`text-[9.5px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 transition-colors cursor-pointer ${
+              className={`text-[12.5px] font-bold px-3 py-1.5 rounded-full flex-shrink-0 transition-colors cursor-pointer ${
                 activeSort === sortKey
                   ? 'bg-[#3E5A44] text-white shadow-xs'
                   : 'bg-white border border-[#EADCC9] text-slate-700 hover:bg-slate-50'

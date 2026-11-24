@@ -40,6 +40,15 @@ const QuickShopSubcategory = lazyWithRetry(() => import('../pages/QuickShopSubca
 const QuickCategoryLanding = lazyWithRetry(() => import('../pages/QuickCategoryLanding'));
 const Mithilak = lazyWithRetry(() => import('../pages/Mithilak'));
 const CategoryLanding = lazyWithRetry(() => import('../pages/CategoryLanding'));
+const PurohitServices = lazyWithRetry(() => import('../pages/PurohitServices'));
+const PurohitRitual = lazyWithRetry(() => import('../pages/PurohitRitual'));
+const PurohitPandits = lazyWithRetry(() => import('../pages/PurohitPandits'));
+const PurohitPanditDetail = lazyWithRetry(() => import('../pages/PurohitPanditDetail'));
+const PurohitBook = lazyWithRetry(() => import('../pages/PurohitBook'));
+const PurohitCart = lazyWithRetry(() => import('../pages/PurohitCart'));
+const PurohitCheckout = lazyWithRetry(() => import('../pages/PurohitCheckout'));
+const PurohitBookings = lazyWithRetry(() => import('../pages/PurohitBookings'));
+const PurohitBookingDetail = lazyWithRetry(() => import('../pages/PurohitBookingDetail'));
 
 // Profile Sub-pages
 const EditProfile = lazyWithRetry(() => import('../pages/profile/EditProfile'));
@@ -142,6 +151,16 @@ const MarketRoutes = () => {
         <Route path="/mithilak/category" element={<QuickShopSubcategory />} />
         <Route path="/mithilak" element={<Mithilak />} />
         <Route path="/mithilak/c/:categoryId" element={<CategoryLanding />} />
+        {/* Purohit & Ritual Services (Mithilak tab only, frontend-only data) */}
+        <Route path="/mithilak/puja" element={<PurohitServices />} />
+        <Route path="/mithilak/puja/:ritualId" element={<PurohitRitual />} />
+        <Route path="/mithilak/pandits" element={<PurohitPandits />} />
+        <Route path="/mithilak/pandit/:serviceId" element={<PurohitPanditDetail />} />
+        <Route path="/mithilak/puja-book/:serviceId" element={<PurohitBook />} />
+        <Route path="/mithilak/puja-cart" element={<PurohitCart />} />
+        <Route path="/mithilak/puja-checkout" element={<PurohitCheckout />} />
+        <Route path="/mithilak/puja-bookings" element={<PurohitBookings />} />
+        <Route path="/mithilak/puja-booking/:bookingId" element={<PurohitBookingDetail />} />
         <Route path="/fresh-grocery" element={<QuickShop />} />
         <Route path="/fresh-grocery/category" element={<QuickShopSubcategory />} />
       </Route>

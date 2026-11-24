@@ -6,7 +6,7 @@ import {
   Truck, Store, Key, Settings, ChevronDown, ChevronRight,
   UserPlus, DollarSign, BarChart3, HelpCircle, FileText, Image, LayoutGrid, Layout,
   Tag, Zap, MessageSquare, RotateCcw, Inbox,
-  Banknote, Percent, AlertCircle, CheckCircle2, Lock, SlidersHorizontal, Upload
+  Banknote, Percent, AlertCircle, CheckCircle2, Lock, SlidersHorizontal, Upload, Flower2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchInput from '../../../shared/components/SearchInput';
@@ -84,6 +84,7 @@ const AdminLayout = () => {
         { name: 'Tab Themes (Colours)', path: '/admin/storefront/themes', icon: <LayoutGrid size={18} /> },
         { name: 'Cart Pages Design', path: '/admin/storefront/cart-design', icon: <LayoutGrid size={18} /> },
         { name: 'Custom Packages', path: '/admin/storefront/packages', icon: <LayoutGrid size={18} /> },
+        { name: 'Purohit & Ritual Services', path: '/admin/storefront/purohit-services', icon: <Flower2 size={18} /> },
         { name: 'Help & Support Page', path: '/admin/storefront/help-center', icon: <LayoutGrid size={18} /> },
         { name: 'Banner Manager', path: '/admin/storefront/banners', icon: <Image size={18} /> },
         { name: 'Category Landing', path: '/admin/storefront/category-landing', icon: <Layout size={18} /> },

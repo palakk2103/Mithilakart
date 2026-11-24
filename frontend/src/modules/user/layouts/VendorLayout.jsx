@@ -30,6 +30,7 @@ import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
 import Footer from '../../../shared/components/Footer';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { useHydrateAddresses, getDisplayAddress, findSelectedAddress } from '../../../shared/hooks/useDeliverToAddress';
+import { isPurohitPagePath } from '../../../features/purohit/navigation';
 
 const getMithilakartHeaderBg = (category) => {
   switch (category) {
@@ -241,7 +242,9 @@ const VendorLayout = () => {
     location.pathname.includes('/category');
 
   const isProfileMainPage = location.pathname === '/profile' || location.pathname === '/vendor/profile';
-  const hideHeader = isImmersivePage;
+  // Purohit & Ritual Services pages have their own back bar, so the site header is hidden there
+  // (bottom navigation stays).
+  const hideHeader = isImmersivePage || isPurohitPagePath(location.pathname);
   const hideFooter = isImmersivePage && !location.pathname.includes('all-offers') && !location.pathname.includes('/section/') && !isProfileMainPage;
 
   const isCartOrCheckoutPage = 

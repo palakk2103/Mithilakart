@@ -37,42 +37,87 @@ import { handleImageError } from '../../../shared/utils/imageUtils';
 
 // Single category chip — extracted so the visible row, the hidden measuring row,
 // and the width calculations all render the exact same markup.
-const CategoryChip = ({ cat, active, onClick }) => {
+// Blinkit-style "folder" tab: thumbnail + name side by side. The active tab is
+// taller, has a border on top/left/right only and curved feet, so it flows into
+// the panel line underneath like a file-folder tab.
+const TAB_BG = '#EEF6E8';           // bar + selected tab fill (same, so they merge) — Mithilakart green tint
+const TAB_LINE = '#8DB27A';         // selected tab outline + strip baseline — brand green
+const TAB_IDLE_FILL = '#E0EED4';    // unselected tab fill (slightly deeper tint, like the reference)
+const TAB_IDLE_LINE = '#C6DDB3';    // unselected tab outline
+const TAB_EDGE_W = 20;              // width of each slanted side
+const TAB_W = 140;                  // every tab is the same width
+const TAB_PAD_X = 10;               // inner left/right space of each tab
+const TAB_OVERLAP = 10;             // neighbouring tabs overlap at their feet
+
+// One slanted folder side (left). Right side is the same SVG mirrored.
+// Foot curves out along the baseline, side slopes up, top corner rounds in.
+const FolderEdge = ({ h, fill, stroke, mirror }) => {
+  const W = TAB_EDGE_W;
+  const b = h - 0.5;
+  const curve = `M0,${b} C5,${b} 6,${h - 3} 7,${h - 10} L11,12 Q13,0.5 ${W},0.5`;
+  return (
+    <svg
+      width={W}
+      height={h}
+      viewBox={`0 0 ${W} ${h}`}
+      className="flex-shrink-0 block"
+      style={mirror ? { transform: 'scaleX(-1)' } : undefined}
+      aria-hidden="true"
+    >
+      <path d={`${curve} L${W + 1},0.5 L${W + 1},${h} L0,${h} Z`} fill={fill} />
+      <path d={curve} fill="none" stroke={stroke} strokeWidth="1" />
+    </svg>
+  );
+};
+
+const CategoryChip = ({ cat, active, onClick, buttonRef, ...rest }) => {
+  const h = active ? 66 : 60;
+  const fill = active ? TAB_BG : TAB_IDLE_FILL;
+  const stroke = active ? TAB_LINE : TAB_IDLE_LINE;
   return (
     <button
       type="button"
+      ref={buttonRef}
       onClick={onClick}
-      className="flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform outline-none"
+      aria-pressed={active}
+      {...rest}
+      className={`relative flex-shrink-0 -ml-2.5 first:ml-0 cursor-pointer outline-none transition-[height] duration-200 ${
+        active ? 'z-10' : 'hover:brightness-[0.98]'
+      }`}
+      style={{ height: h, width: TAB_W }}
     >
-      <div
-        className={`w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full flex items-center justify-center transition-all ${
-          active
-            ? 'bg-[#FFF8EE] border-2 border-[#3E5A44] shadow-xs text-[#3E5A44]'
-            : 'bg-[#EADCC9]/20 border border-[#EADCC9]/55 text-[#3E5A44] shadow-[0_1.5px_4px_rgba(0,0,0,0.015)]'
-        }`}
-      >
+      {/* Folder shape: slanted left side + top edge + slanted right side */}
+      <span className="absolute inset-0 flex pointer-events-none" aria-hidden="true">
+        <FolderEdge h={h} fill={fill} stroke={stroke} />
+        <span className="flex-1 -mx-px" style={{ backgroundColor: fill, borderTop: `1px solid ${stroke}` }} />
+        <FolderEdge h={h} fill={fill} stroke={stroke} mirror />
+        {/* Only unselected tabs get a bottom line — the selected tab stays open at the bottom */}
+        {!active && <span className="absolute left-0 right-0 bottom-0 h-px" style={{ backgroundColor: TAB_LINE }} />}
+      </span>
+
+      <span className="relative h-full w-full flex items-center gap-2" style={{ paddingLeft: TAB_PAD_X, paddingRight: TAB_PAD_X }}>
+      <span className="w-[44px] h-[44px] rounded-[12px] overflow-hidden flex items-center justify-center flex-shrink-0 text-[#3E5A44] [&_svg]:w-[24px] [&_svg]:h-[24px]">
         {cat.isYouBuy ? (
-          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="currentColor">
+          <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2C9.5 2 7.5 4 7.5 6.5H9c0-1.7 1.3-3 3-3s3 1.3 3 3h1.5C16.5 4 14.5 2 12 2z" />
             <path d="M5 6.5h14c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2v-11c0-1.1.9-2 2-2z" />
             <path d="M12 16.8s-2.2-1.8-2.7-2.3c-.7-.7-1-1.3-1-1.8 0-1.2 1-2.2 2.2-2.2.7 0 1.3.4 1.5 1 .2-.6.8-1 1.5-1 1.2 0 2.2 1 2.2 2.2 0 .5-.3 1.1-1 1.8-.5.5-2.7 2.3-2.7 2.3z" fill="white" />
           </svg>
         ) : cat.imageUrl ? (
-          <img src={cat.imageUrl} alt={cat.label} className="w-[22px] h-[22px] sm:w-[24px] sm:h-[24px] object-contain rounded-full" loading="lazy" decoding="async" onError={handleImageError} />
+          <img src={cat.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" onError={handleImageError} />
         ) : (
           cat.icon
         )}
-      </div>
+      </span>
+
       <span
-        className={`text-[13px] mt-1.5 leading-none tracking-tight text-center whitespace-nowrap ${
-          active ? 'font-black text-[#3E5A44]' : 'font-bold text-[#3F2A20]'
+        className={`text-[13px] leading-[1.15] tracking-tight text-left flex-1 min-w-0 whitespace-normal break-words line-clamp-2 ${
+          active ? 'font-extrabold text-[#3E5A44]' : 'font-semibold text-[#3F2A20]'
         }`}
       >
         {cat.label}
       </span>
-      {active && (
-        <div className="w-5 h-[2px] bg-[#3E5A44] rounded-full mt-1" />
-      )}
+      </span>
     </button>
   );
 };
@@ -407,68 +452,34 @@ const Home = () => {
   // Screen 2 (reached by horizontal scroll): the next chips that fit, with "More" at the end.
   // A hidden measuring row renders every chip (and the More button) so we know real widths.
   const chipRowRef = useRef(null);
-  const measureRef = useRef(null);
   const [pageCounts, setPageCounts] = useState(null); // { first, second } — null = show all until measured
 
   useLayoutEffect(() => {
     const row = chipRowRef.current;
-    const measure = measureRef.current;
-    if (!row || !measure) return undefined;
+    if (!row) return undefined;
 
+    // All tabs share one width, so "how many fit on a screen" is simple maths.
+    // Tabs that fit ~3 screens are shown, the last screen ends with "More"; the rest go in More.
     const compute = () => {
-      const kids = Array.from(measure.children);
-      if (kids.length === 0) return;
-      const moreEl = kids[kids.length - 1];
-      const chipEls = kids.slice(0, -1);
-      const cs = window.getComputedStyle(measure);
-      const gap = parseFloat(cs.columnGap) || 8;
-      const available = row.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
-      const moreW = moreEl.getBoundingClientRect().width;
-      const widths = chipEls.map((el) => el.getBoundingClientRect().width);
-      const sumWithGaps = (arr) => arr.reduce((s, w) => s + w, 0) + gap * Math.max(arr.length - 1, 0);
-
-      // Screen 1: fill the width, no More button
-      let used = 0;
-      let first = 0;
-      for (let i = 0; i < widths.length; i += 1) {
-        const next = used + (first > 0 ? gap : 0) + widths[i];
-        if (next > available) break;
-        used = next;
-        first += 1;
-      }
-      first = Math.max(first, 1);
-
-      const rest = widths.slice(first);
-      if (rest.length === 0 || sumWithGaps(rest) <= available) {
-        setPageCounts({ first, second: rest.length }); // everything else fits on screen 2, no More needed
+      const total = mainCategoriesList.length;
+      const available = row.clientWidth - 20; // strip has pl-1 + pr-4
+      const step = TAB_W - TAB_OVERLAP;
+      const perScreen = Math.max(1, Math.floor((available - TAB_W) / step) + 1);
+      // Folder tabs are wide, so allow ~3 screens of scrolling before "More"
+      if (total <= perScreen * 3) {
+        setPageCounts({ first: Math.min(perScreen, total), second: Math.max(total - perScreen, 0) });
         return;
       }
-
-      // Screen 2: same fit logic as before — chips + "More" right after them
-      used = 0;
-      let second = 0;
-      for (let i = 0; i < rest.length; i += 1) {
-        const next = used + rest[i] + gap;
-        if (next + moreW > available) break;
-        used = next;
-        second += 1;
-      }
-      setPageCounts({ first, second: Math.max(second, 1) });
+      setPageCounts({ first: perScreen, second: Math.max(perScreen * 2 - 1, 1) });
     };
 
     compute();
     const ro = new ResizeObserver(compute);
     ro.observe(row);
-    // Re-measure when chip widths change (fonts/translations loading) so More never gets clipped
-    Array.from(measure.children).forEach((el) => ro.observe(el));
-    if (document.fonts?.ready) document.fonts.ready.then(compute).catch(() => {});
     return () => ro.disconnect();
   }, [mainCategoriesList]);
 
-  const firstCount = pageCounts ? pageCounts.first : mainCategoriesList.length;
   const shownCount = pageCounts ? pageCounts.first + pageCounts.second : mainCategoriesList.length;
-  const firstPageChips = mainCategoriesList.slice(0, firstCount);
-  const secondPageChips = mainCategoriesList.slice(firstCount, shownCount);
   const hiddenChipsList = mainCategoriesList.slice(shownCount);
   const showMore = hiddenChipsList.length > 0;
 
@@ -481,52 +492,43 @@ const Home = () => {
       />
     <div className="pb-2 bg-transparent text-primary-dark">
       {/* 1. TOP HORIZONTAL CATEGORY ROW (Sticky Header Categories on Scroll) */}
-      <div className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 bg-[#F6F8F3]/95 backdrop-blur-md shadow-[0_2px_8px_rgba(63,42,32,0.04)] border-b border-[#EADCC9]/40 py-2 mb-3 transition-all duration-200">
-        <div ref={chipRowRef} data-testid="category-chip-row" className="relative flex items-center overflow-x-auto no-scrollbar snap-x snap-mandatory">
-          {/* Hidden measuring row (all chips + More) used to compute how many fit */}
-          <div aria-hidden="true" className="absolute left-0 top-0 w-0 h-0 overflow-hidden invisible pointer-events-none">
-            <div ref={measureRef} className="flex items-center gap-1.5 px-2.5 w-max">
-              {mainCategoriesList.map((cat, idx) => (
-                <CategoryChip key={cat.id ?? idx} cat={cat} active={false} onClick={() => {}} />
-              ))}
-              <div className="min-w-[46px] flex-shrink-0 text-[13px] font-bold">{t('common.more')}</div>
-            </div>
-          </div>
-
-          {/* Screen 1 — fits the device width, no More button */}
-          <div className="w-full flex-shrink-0 snap-start flex items-center justify-between gap-1.5 px-2.5">
-            {firstPageChips.map((cat, idx) => (
-              <CategoryChip key={cat.id ?? idx} cat={cat} active={isCategoryActive(cat)} onClick={() => handleCategoryClick(cat)} />
+      <div
+        className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 pt-3 mb-4 transition-all duration-200"
+        style={{ backgroundColor: TAB_BG }}
+      >
+        <div
+          ref={chipRowRef}
+          data-testid="category-chip-row"
+          className="relative overflow-x-auto no-scrollbar"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {/* Folder-tab strip: the bottom line is the "panel" edge the active tab opens into */}
+          <div
+            className="relative flex items-end pl-1 pr-4 pt-1 w-max min-w-full md:justify-center"
+          >
+            {mainCategoriesList.slice(0, shownCount).map((cat, idx) => (
+              <CategoryChip
+                key={cat.id ?? idx}
+                cat={cat}
+                active={isCategoryActive(cat)}
+                onClick={(e) => {
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                  handleCategoryClick(cat);
+                }}
+              />
             ))}
+            {showMore && (
+              <CategoryChip
+                buttonRef={moreButtonRef}
+                cat={{ id: 'more', label: t('common.more'), icon: <MoreHorizontal size={22} /> }}
+                active={false}
+                onClick={toggleMoreMenu}
+                aria-haspopup="true"
+                aria-expanded={moreOpen}
+                aria-label={t('home.moreCategories')}
+              />
+            )}
           </div>
-
-          {/* Screen 2 — reached by horizontal scroll; More sits at the end */}
-          {secondPageChips.length > 0 && (
-          <div className={`w-full flex-shrink-0 snap-start flex items-center gap-1.5 px-2.5 ${showMore ? 'justify-between' : 'justify-start'}`}>
-          {secondPageChips.map((cat, idx) => (
-            <CategoryChip key={cat.id ?? `p2-${idx}`} cat={cat} active={isCategoryActive(cat)} onClick={() => handleCategoryClick(cat)} />
-          ))}
-
-          {showMore && (
-            <button
-              ref={moreButtonRef}
-              type="button"
-              onClick={toggleMoreMenu}
-              aria-haspopup="true"
-              aria-expanded={moreOpen}
-              aria-label={t('home.moreCategories')}
-              className="min-w-[46px] flex flex-col items-center flex-shrink-0 cursor-pointer active:scale-95 transition-transform"
-            >
-              <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full bg-[#3E5A44] border border-[#3E5A44] text-white flex items-center justify-center shadow-xs">
-                <MoreHorizontal size={18} />
-              </div>
-              <span className="text-[13px] font-bold text-[#3F2A20] mt-1.5 leading-none">
-                {t('common.more')}
-              </span>
-            </button>
-          )}
-          </div>
-          )}
         </div>
       </div>
 
