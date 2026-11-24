@@ -1,8 +1,8 @@
 import { AddButton } from '../components/common/AddToCartButton';
 import SeasonalHero from '../../../shared/components/SeasonalHero';
 import PackagePromo from '../components/vendor/PackagePromo';
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useWishlistToggle from '../hooks/useWishlistToggle';
 import { ChevronRight, Heart, Star, ShoppingBag, MoreHorizontal } from 'lucide-react';
 import useVendorStore from '../../../store/useVendorStore';
@@ -11,6 +11,7 @@ import { getCategories } from '../services/catalogApi';
 import { mapMithilaCategoryCards, mapNavChips } from '../utils/mappers';
 import { openCategoryExplorer, resolveChipCategory } from '../utils/categoryLandingNav';
 import { getHeaderChipIcon } from '../../../shared/constants/headerChipIcons';
+import CategoryProductsSection from '../components/vendor/CategoryProductsSection';
 
 // Shared Home Components for Merchandising Pattern Alignment
 import LazySection from '../components/vendor/home/LazySection';
@@ -394,6 +395,9 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
 const Mithilak = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category');
+  const [selectedCategory, setSelectedCategory] = useState(categoryParam || 'You Buy');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [mithilaCategories, setMithilaCategories] = useState([]);
@@ -410,6 +414,14 @@ const Mithilak = () => {
       title: b.title || '',
       link: b.linkUrl || b.link || '',
     }));
+
+  useEffect(() => {
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    } else {
+      setSelectedCategory('You Buy');
+    }
+  }, [categoryParam]);
 
   useEffect(() => {
     if (adminBanners.length <= 1) return undefined;
@@ -450,235 +462,390 @@ const Mithilak = () => {
     setTimeout(() => setShowToast(false), 2000);
   };
 
+  // Build unified header chips: "You Buy" + "Today's Deals" + All Mithila Categories
+  const allChips = useMemo(() => {
+    const youBuyChip = {
+      id: 'for-you',
+      label: t('categories.for-you', { defaultValue: 'You Buy' }),
+      rawLabel: 'You Buy',
+      iconKey: 'ShoppingBag',
+    };
+    const dealsChip = {
+      id: 'deals',
+      label: t('auto.todaySSpecialDeals', "Today's Deals"),
+      rawLabel: "Today's Deals",
+      iconKey: 'Sparkles',
+    };
+
+    let baseChips = [];
+    if (headerChips && headerChips.length > 0) {
+      baseChips = [...headerChips];
+    } else if (mithilaCategories && mithilaCategories.length > 0) {
+      baseChips = mithilaCategories.map((c) => ({
+        id: c.id,
+        label: c.name,
+        rawLabel: c.name,
+        imageUrl: c.img,
+      }));
+    }
+
+    const hasYouBuy = baseChips.some(
+      (c) => c?.id === 'for-you' || String(c?.rawLabel || c?.label || '').trim().toLowerCase() === 'you buy'
+    );
+    const hasDeals = baseChips.some(
+      (c) => /deal/.test(String(c?.rawLabel || c?.label || '').toLowerCase()) || /deal/.test(String(c?.id || '').toLowerCase())
+    );
+
+    const result = hasYouBuy ? [...baseChips] : [youBuyChip, ...baseChips];
+    if (!hasDeals) {
+      result.splice(1, 0, dealsChip);
+    }
+    return result;
+  }, [headerChips, mithilaCategories, t]);
+
+  const isChipActive = useCallback((chip) => {
+    const key = String(chip?.rawLabel || chip?.label || chip?.name || '').trim().toLowerCase();
+    const id = String(chip?.id || '').trim().toLowerCase();
+    const isYouBuy = id === 'for-you' || key === 'you buy';
+
+    if (selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory) {
+      return isYouBuy;
+    }
+    if (selectedCategory === "Today's Deals" || selectedCategory === 'Today Deals' || selectedCategory === 'deals') {
+      return /deal/.test(key) || /deal/.test(id);
+    }
+    const selKey = String(selectedCategory).trim().toLowerCase();
+    return key === selKey || id === selKey || (chip?.name && String(chip.name).trim().toLowerCase() === selKey);
+  }, [selectedCategory]);
+
+  const handleCategorySelect = useCallback((chipOrCat) => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    const raw = chipOrCat?.rawLabel || chipOrCat?.label || chipOrCat?.name || (typeof chipOrCat === 'string' ? chipOrCat : '');
+    const id = String(chipOrCat?.id || '').trim().toLowerCase();
+    const key = String(raw).trim().toLowerCase();
+
+    if (id === 'for-you' || key === 'you buy' || key === 'home') {
+      setSelectedCategory('You Buy');
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('category');
+        return next;
+      }, { replace: true });
+    } else if (/deal/.test(key) || /deal/.test(id)) {
+      setSelectedCategory("Today's Deals");
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('category', "Today's Deals");
+        return next;
+      }, { replace: true });
+    } else {
+      const target = resolveChipCategory(chipOrCat, mithilaCategories);
+      const targetName = target?.name || chipOrCat?.name || raw;
+      setSelectedCategory(targetName);
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('category', targetName);
+        return next;
+      }, { replace: true });
+    }
+  }, [mithilaCategories, setSearchParams]);
+
+  // Combined list of deals for inline display when "Today's Deals" is selected
+  const allDealsList = useMemo(() => {
+    const deals = homeSections.todaysSpecialDeals || [];
+    const top = homeSections.topSelection || [];
+    const brands = homeSections.brandsSpotlight || [];
+    const combined = [...deals, ...top, ...brands];
+    const seen = new Set();
+    return combined.filter((item) => {
+      const id = item?.id || item?._id || item?.productId;
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [homeSections]);
+
+  const isYouBuy = selectedCategory === 'You Buy' || selectedCategory === 'Home' || !selectedCategory;
+  const isDeals = selectedCategory === "Today's Deals" || selectedCategory === 'Today Deals' || selectedCategory === 'deals';
+
   return (
     <div className="bg-[#F5F9FA] min-h-screen select-none pb-6">
-      {/* 0. Header Categories (admin-managed for Mithilak tab) */}
+      {/* 0. Header Categories (same folder-tab pattern as Mithilakart, with in-page switching) */}
       <MithilaHeaderChips
-        chips={headerChips}
-        // On the Mithilak home, "You Buy" is the selected tab (same as Mithilakart)
-        isChipActive={(chip) => chip?.id === 'for-you' || String(chip?.rawLabel || chip?.label || '').trim().toLowerCase() === 'you buy'}
-        onSelect={(chip) => {
-          const target = resolveChipCategory(chip, mithilaCategories);
-          if (!target) {
-            // Chips that aren't tied to a category used to do nothing on tap.
-            const key = String(chip?.rawLabel || chip?.label || '').trim().toLowerCase();
-            if (chip?.id === 'for-you' || key === 'you buy') {
-              // "You Buy" = this tab's home: just return to the top.
-              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-            } else if (/deal/.test(key) || /deal/.test(String(chip?.id || '').toLowerCase())) {
-              navigate('/deals');
-            } else {
-              navigate('/categories?flow=mithilak', { state: { flow: 'mithilak' } });
-            }
-            return;
-          }
-          openCategoryExplorer(navigate, { flow: 'mithilak', id: target.id, name: target.name });
-        }}
+        chips={allChips}
+        isChipActive={isChipActive}
+        onSelect={handleCategorySelect}
       />
 
-      <SeasonalHero className="mx-4 mt-4" />
-      <PackagePromo marketplaceTab="mithilak" />
-
-      <div className="px-4 py-5">
-      {/* 1. Page Title Header */}
-
-      {/* 2. Hero Promotional Banner */}
-      {adminBanners.length > 0 ? (
-        <div className="mb-6 relative rounded-2xl overflow-hidden shadow-sm h-[165px] md:h-[300px] bg-[#EAF4F6]">
-          {adminBanners.map((banner, idx) => (
-            <div
-              key={banner.id}
-              onClick={() => banner.link && navigate(banner.link)}
-              className={`absolute inset-0 transition-opacity duration-500 ${idx === bannerIndex ? 'opacity-100' : 'opacity-0 pointer-events-none'} ${banner.link ? 'cursor-pointer' : ''}`}
-            >
-              <img src={banner.image} alt={banner.title} className="w-full h-full object-cover" loading="lazy" decoding="async" onError={handleImageError} />
-            </div>
-          ))}
-          {adminBanners.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-              {adminBanners.map((banner, idx) => (
-                <button
-                  key={banner.id}
-                  onClick={() => setBannerIndex(idx)}
-                  aria-label={`Banner ${idx + 1}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${idx === bannerIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`}
-                />
-              ))}
-            </div>
-          )}
+      {/* 1. If Category selected: render CategoryProductsSection inline on the same screen */}
+      {!isYouBuy && !isDeals && (
+        <div className="px-3 pt-3 max-w-[1600px] mx-auto">
+          <button
+            type="button"
+            onClick={() => handleCategorySelect({ id: 'for-you', label: 'You Buy' })}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-3 rounded-full bg-white border border-[color:var(--ml-primary,#207C8A)]/30 text-[12.5px] font-bold text-[color:var(--ml-primary,#207C8A)] shadow-xs hover:bg-[color:var(--ml-primary,#207C8A)]/5 transition-colors cursor-pointer"
+          >
+            ← {t('common.backToHome', 'Back to You Buy')}
+          </button>
+          <CategoryProductsSection
+            selectedCategory={selectedCategory}
+            onResetToAll={() => handleCategorySelect({ id: 'for-you', label: 'You Buy' })}
+          />
         </div>
-      ) : (
-      <div className="mb-6 bg-gradient-to-r from-[color:var(--ml-primary,#207C8A)] to-[#5DB6C3] rounded-2xl p-4 text-white relative overflow-hidden shadow-sm flex items-center justify-between h-[165px]">
-        <div className="z-10 flex-1 max-w-[65%] flex flex-col justify-center h-full">
-          <span className="bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full w-max uppercase tracking-wider">
-            {t('auto.mithilaUtsav')}
-          </span>
-          <h3 className="text-[17px] font-bold mt-2 leading-tight tracking-tight">
-            {t('auto.authenticMithilaArtistry')}
-          </h3>
-          <p className="text-[11.5px] text-white/90 font-medium mt-1">
-            {t('auto.flat20OffOnPaintings')}
-          </p>
-        </div>
-        <div className="absolute right-0 bottom-0 h-full w-[42%] flex items-end justify-end pointer-events-none overflow-hidden">
-          <img
-            src={bannerIllustration}
-            alt="Mithila Artistry Illustration"
-            className="h-[95%] object-contain object-bottom select-none pr-2" loading="lazy" decoding="async" onError={handleImageError} />
-        </div>
-      </div>
       )}
 
-      {/* 3. Shop by Categories (same pattern as Mithilakart, teal theme) */}
-      {mithilaCategories.length > 0 && (
-        <div className="py-4 w-full max-w-[1600px] mx-auto mb-5 md:mb-8">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-[16px] md:text-[18px] font-black text-[#3F2A20] tracking-tight">
-              {t('auto.shopByCategories')}
-            </h2>
-            <span
-              onClick={() => {
-                localStorage.setItem('isMithilakFlow', 'true');
-                localStorage.setItem('isQuickShopFlow', 'false');
-                navigate('/categories?flow=mithilak');
-              }}
-              className="text-[13px] font-bold text-[color:var(--ml-primary,#207C8A)] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
-            >
-              {t('auto.viewAll')}
-            </span>
-          </div>
+      {/* 2. If Today's Deals selected: render full Deals grid inline on the same screen */}
+      {isDeals && (
+        <div className="px-4 py-4 max-w-[1600px] mx-auto">
+          <button
+            type="button"
+            onClick={() => handleCategorySelect({ id: 'for-you', label: 'You Buy' })}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 mb-3 rounded-full bg-white border border-[color:var(--ml-primary,#207C8A)]/30 text-[12.5px] font-bold text-[color:var(--ml-primary,#207C8A)] shadow-xs hover:bg-[color:var(--ml-primary,#207C8A)]/5 transition-colors cursor-pointer"
+          >
+            ← {t('common.backToHome', 'Back to You Buy')}
+          </button>
 
-          <div className="flex items-center gap-2 mb-3.5 overflow-x-auto no-scrollbar pb-0.5">
-            <button
-              type="button"
-              className="px-3.5 py-1.5 rounded-full text-[12px] md:text-[13px] font-black whitespace-nowrap border bg-[color:var(--ml-primary,#207C8A)] text-white border-[color:var(--ml-primary,#207C8A)] shadow-xs"
-            >
-              {t('auto.allCategories')}
-            </button>
-          </div>
+          <h2 className="text-[18px] md:text-[22px] font-black text-[#3F2A20] tracking-tight mb-4">
+            {t('auto.todaySSpecialDeals', "Today's Special Deals")}
+          </h2>
 
-          <ScrollRow className="flex items-center gap-3 md:gap-5 pb-2 pt-1 -mx-1 px-1">
-            {mithilaCategories.map((item, idx) => (
-              <div
-                key={item.id || idx}
-                onClick={() => openCategoryExplorer(navigate, { flow: 'mithilak', id: item.id, name: item.name })}
-                className="flex-shrink-0 w-[104px] sm:w-[120px] md:w-[140px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
-              >
-                <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[color:var(--ml-primary,#207C8A)]/40 transition-all duration-300 transform">
-                  <div className="w-full h-[38px] sm:h-[40px] md:h-[44px] flex items-center justify-center px-0.5">
-                    <span className="text-[13px] sm:text-[14px] md:text-[15px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
-                      {getDisplayName(item.name)}
-                    </span>
-                  </div>
-                  <div className="w-[84%] aspect-square rounded-[14px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/40 flex items-center justify-center p-0.5 mb-0.5 relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
-                    {item.img ? (
-                      <img
-                        src={item.img}
-                        alt={item.name}
-                        onError={handleImageError}
-                        className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500" loading="lazy" decoding="async" />
-                    ) : (
-                      <span className="text-[12px] font-black text-[color:var(--ml-primary,#207C8A)]">{item.name.charAt(0)}</span>
-                    )}
-                  </div>
-                </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+            {allDealsList.map((prod) => (
+              <div key={prod.id || prod._id} className="flex flex-col">
+                <MithilaDealCard
+                  prod={prod}
+                  onNavigate={(p) => {
+                    localStorage.setItem('isMithilakFlow', 'true');
+                    localStorage.setItem('isQuickShopFlow', 'false');
+                    navigate('/vendor/product-detail', { state: { productId: p.id, product: p.product || p } });
+                  }}
+                  onAddToCart={async (p, e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const name = p.title || p.name || p.label || 'Product';
+                    const price = p.product?.price ?? p.price ?? 0;
+                    const image = p.img || p.image;
+                    try {
+                      await addProductToCart({
+                        id: p.productId || p.product?._id || p.product?.id || p.id,
+                        listingId: p.listingId,
+                        marketplaceTab: 'mithilak',
+                        name,
+                        price,
+                        image,
+                      });
+                      triggerToast(`${name} added to cart!`);
+                    } catch (err) {
+                      triggerToast(err?.message || t('auto.couldNotAddToCart'));
+                    }
+                  }}
+                />
               </div>
             ))}
-          </ScrollRow>
+          </div>
         </div>
       )}
 
-      {/* 3a. Mithila Purohit & Ritual Services (admin-managed, Mithilak tab only) */}
-      <PurohitSection />
+      {/* 3. Default "You Buy" Home View: all sections rendered cleanly with horizontal rows */}
+      {isYouBuy && (
+        <>
+          <SeasonalHero className="mx-4 mt-4" />
+          <PackagePromo marketplaceTab="mithilak" />
 
-      {/* 3b. Already Bought Products (authenticated customers with purchases only) */}
-      <div className="mb-6 md:mb-8 empty:hidden">
-        <AlreadyBoughtSection CardComponent={MithilaBoughtCard} />
-      </div>
+          <div className="px-4 py-5">
+            {/* Hero Promotional Banner */}
+            {adminBanners.length > 0 ? (
+              <div className="mb-6 relative rounded-2xl overflow-hidden shadow-sm h-[165px] md:h-[300px] bg-[#EAF4F6]">
+                {adminBanners.map((banner, idx) => (
+                  <div
+                    key={banner.id}
+                    onClick={() => banner.link && navigate(banner.link)}
+                    className={`absolute inset-0 transition-opacity duration-500 ${idx === bannerIndex ? 'opacity-100' : 'opacity-0 pointer-events-none'} ${banner.link ? 'cursor-pointer' : ''}`}
+                  >
+                    <img src={banner.image} alt={banner.title} className="w-full h-full object-cover" loading="lazy" decoding="async" onError={handleImageError} />
+                  </div>
+                ))}
+                {adminBanners.length > 1 && (
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                    {adminBanners.map((banner, idx) => (
+                      <button
+                        key={banner.id}
+                        onClick={() => setBannerIndex(idx)}
+                        aria-label={`Banner ${idx + 1}`}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${idx === bannerIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mb-6 bg-gradient-to-r from-[color:var(--ml-primary,#207C8A)] to-[#5DB6C3] rounded-2xl p-4 text-white relative overflow-hidden shadow-sm flex items-center justify-between h-[165px]">
+                <div className="z-10 flex-1 max-w-[65%] flex flex-col justify-center h-full">
+                  <span className="bg-white/20 text-white text-[9px] font-bold px-2 py-0.5 rounded-full w-max uppercase tracking-wider">
+                    {t('auto.mithilaUtsav')}
+                  </span>
+                  <h3 className="text-[17px] font-bold mt-2 leading-tight tracking-tight">
+                    {t('auto.authenticMithilaArtistry')}
+                  </h3>
+                  <p className="text-[11.5px] text-white/90 font-medium mt-1">
+                    {t('auto.flat20OffOnPaintings')}
+                  </p>
+                </div>
+                <div className="absolute right-0 bottom-0 h-full w-[42%] flex items-end justify-end pointer-events-none overflow-hidden">
+                  <img
+                    src={bannerIllustration}
+                    alt="Mithila Artistry Illustration"
+                    className="h-[95%] object-contain object-bottom select-none pr-2" loading="lazy" decoding="async" onError={handleImageError} />
+                </div>
+              </div>
+            )}
 
-      {/* 4. Trending This Week Section */}
-      <div className="mb-6 md:mb-8 w-full md:max-w-[1600px] md:mx-auto">
-        <TrendingThisWeek theme="mithilak" />
-      </div>
+            {/* Shop by Categories: In-page navigation on click */}
+            {mithilaCategories.length > 0 && (
+              <div className="py-4 w-full max-w-[1600px] mx-auto mb-5 md:mb-8">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-[16px] md:text-[18px] font-black text-[#3F2A20] tracking-tight">
+                    {t('auto.shopByCategories')}
+                  </h2>
+                  <span
+                    onClick={() => handleCategorySelect(mithilaCategories[0] || { id: 'for-you', label: 'You Buy' })}
+                    className="text-[13px] font-bold text-[color:var(--ml-primary,#207C8A)] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
+                  >
+                    {t('auto.viewAll')}
+                  </span>
+                </div>
 
-      {/* 5. Today's Special Deals / Best Sellers Section */}
-      <div className="md:max-w-[1600px] md:mx-auto md:w-full mb-6 md:mb-8">
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h2 className="text-[17px] font-bold text-[#3F2A20] leading-none">{t('auto.todaySSpecialDeals')}</h2>
-          <span 
-            onClick={() => {
-              localStorage.setItem('isMithilakFlow', 'true');
-              localStorage.setItem('isQuickShopFlow', 'false');
-              navigate('/mithilak/category', { state: { category: mithilaCategories[0]?.name || 'Mithila Handcrafted Items', categoryId: mithilaCategories[0]?.id } });
-            }}
-            className="text-[12px] text-[color:var(--ml-primary,#207C8A)] font-bold cursor-pointer hover:underline flex items-center gap-0.5"
-          >
-            {t('common.viewAll')} <ChevronRight size={13} strokeWidth={2.5} className="inline-block" />
-          </span>
-        </div>
+                <div className="flex items-center gap-2 mb-3.5 overflow-x-auto no-scrollbar pb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleCategorySelect({ id: 'for-you', label: 'You Buy' })}
+                    className="px-3.5 py-1.5 rounded-full text-[12px] md:text-[13px] font-black whitespace-nowrap border bg-[color:var(--ml-primary,#207C8A)] text-white border-[color:var(--ml-primary,#207C8A)] shadow-xs"
+                  >
+                    {t('auto.allCategories')}
+                  </button>
+                </div>
 
-        {/* Horizontal Scrolling Single Row */}
-        <ScrollRow className="flex items-stretch gap-3 md:gap-4 snap-x pb-2 pt-1 -mx-1 px-1">
-          {(homeSections.todaysSpecialDeals?.length ? homeSections.todaysSpecialDeals : (homeSections.topSelection?.length ? homeSections.topSelection : homeSections.brandsSpotlight || [])).map((prod) => (
-            <div key={prod.id} className="w-[165px] sm:w-[195px] md:w-[220px] flex-shrink-0 snap-start flex flex-col">
-              <MithilaDealCard
-                prod={prod}
-                onNavigate={(p) => {
-                  localStorage.setItem('isMithilakFlow', 'true');
-                  localStorage.setItem('isQuickShopFlow', 'false');
-                  navigate('/vendor/product-detail', { state: { productId: p.id, product: p.product || p } });
-                }}
-                onAddToCart={async (p, e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  const name = p.title || p.name || p.label || 'Product';
-                  const price = p.product?.price ?? p.price ?? 0;
-                  const image = p.img || p.image;
-                  try {
-                    await addProductToCart({
-                      id: p.productId || p.product?._id || p.product?.id || p.id,
-                      listingId: p.listingId,
-                      marketplaceTab: 'mithilak',
-                      name,
-                      price,
-                      image,
-                    });
-                    triggerToast(`${name} added to cart!`);
-                  } catch (err) {
-                    triggerToast(err?.message || t('auto.couldNotAddToCart'));
-                  }
-                }}
-              />
+                <ScrollRow className="flex items-center gap-3 md:gap-5 pb-2 pt-1 -mx-1 px-1">
+                  {mithilaCategories.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      onClick={() => handleCategorySelect({ id: item.id, name: item.name, label: item.name })}
+                      className="flex-shrink-0 w-[104px] sm:w-[120px] md:w-[140px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
+                    >
+                      <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[color:var(--ml-primary,#207C8A)]/40 transition-all duration-300 transform">
+                        <div className="w-full h-[38px] sm:h-[40px] md:h-[44px] flex items-center justify-center px-0.5">
+                          <span className="text-[13px] sm:text-[14px] md:text-[15px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
+                            {getDisplayName(item.name)}
+                          </span>
+                        </div>
+                        <div className="w-[84%] aspect-square rounded-[14px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/40 flex items-center justify-center p-0.5 mb-0.5 relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
+                          {item.img ? (
+                            <img
+                              src={item.img}
+                              alt={item.name}
+                              onError={handleImageError}
+                              className="w-full h-full object-cover rounded-[11px] group-hover:scale-[1.04] transition-transform duration-500" loading="lazy" decoding="async" />
+                          ) : (
+                            <span className="text-[12px] font-black text-[color:var(--ml-primary,#207C8A)]">{item.name.charAt(0)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </ScrollRow>
+              </div>
+            )}
+
+            {/* Purohit & Ritual Services */}
+            <PurohitSection />
+
+            {/* Already Bought Products (authenticated customers with purchases only) */}
+            <div className="mb-6 md:mb-8 empty:hidden">
+              <AlreadyBoughtSection CardComponent={MithilaBoughtCard} />
             </div>
-          ))}
-        </ScrollRow>
-      </div>
 
-      {/* 6. Top Selection Section */}
-      {homeSections.topSelection?.length > 0 && (
-        <div className="mb-5 md:mb-8">
-          <LazySection height="400px">
-            <TopSelection items={homeSections.topSelection} />
-          </LazySection>
-        </div>
-      )}
+            {/* Trending This Week Section (Horizontal Row) */}
+            <div className="mb-6 md:mb-8 w-full md:max-w-[1600px] md:mx-auto">
+              <TrendingThisWeek theme="mithilak" />
+            </div>
 
-      {/* 7. Brands / Artisans Spotlight Section */}
-      {(homeSections.brandsSpotlight?.length > 0 || homeSections.topSelection?.length > 0) && (
-        <div className="mb-5 md:mb-8">
-          <LazySection height="350px">
-            <BrandsSpotlight items={homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection} />
-          </LazySection>
-        </div>
-      )}
+            {/* Today's Special Deals / Best Sellers Section (Horizontal Row) */}
+            <div className="md:max-w-[1600px] md:mx-auto md:w-full mb-6 md:mb-8">
+              <div className="flex items-center justify-between mb-4 px-1">
+                <h2 className="text-[17px] font-bold text-[#3F2A20] leading-none">{t('auto.todaySSpecialDeals')}</h2>
+                <span
+                  onClick={() => handleCategorySelect({ id: 'deals', label: "Today's Deals" })}
+                  className="text-[12px] text-[color:var(--ml-primary,#207C8A)] font-bold cursor-pointer hover:underline flex items-center gap-0.5"
+                >
+                  {t('common.viewAll')} <ChevronRight size={13} strokeWidth={2.5} className="inline-block" />
+                </span>
+              </div>
 
-      {/* 8. Best Quality Guaranteed Section */}
-      {(homeSections.bestQualityGuaranteed?.length > 0 || homeSections.bestQuality?.length > 0 || homeSections.topSelection?.length > 0) && (
-        <div className="mb-5 md:mb-8">
-          <LazySection height="500px">
-            <BestQuality items={homeSections.bestQualityGuaranteed?.length ? homeSections.bestQualityGuaranteed : (homeSections.bestQuality?.length ? homeSections.bestQuality : homeSections.topSelection)} />
-          </LazySection>
-        </div>
+              {/* Horizontal Scrolling Single Row */}
+              <ScrollRow className="flex items-stretch gap-3 md:gap-4 snap-x pb-2 pt-1 -mx-1 px-1">
+                {(homeSections.todaysSpecialDeals?.length ? homeSections.todaysSpecialDeals : (homeSections.topSelection?.length ? homeSections.topSelection : homeSections.brandsSpotlight || [])).map((prod) => (
+                  <div key={prod.id} className="w-[165px] sm:w-[195px] md:w-[220px] flex-shrink-0 snap-start flex flex-col">
+                    <MithilaDealCard
+                      prod={prod}
+                      onNavigate={(p) => {
+                        localStorage.setItem('isMithilakFlow', 'true');
+                        localStorage.setItem('isQuickShopFlow', 'false');
+                        navigate('/vendor/product-detail', { state: { productId: p.id, product: p.product || p } });
+                      }}
+                      onAddToCart={async (p, e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const name = p.title || p.name || p.label || 'Product';
+                        const price = p.product?.price ?? p.price ?? 0;
+                        const image = p.img || p.image;
+                        try {
+                          await addProductToCart({
+                            id: p.productId || p.product?._id || p.product?.id || p.id,
+                            listingId: p.listingId,
+                            marketplaceTab: 'mithilak',
+                            name,
+                            price,
+                            image,
+                          });
+                          triggerToast(`${name} added to cart!`);
+                        } catch (err) {
+                          triggerToast(err?.message || t('auto.couldNotAddToCart'));
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+              </ScrollRow>
+            </div>
+
+            {/* Top Selection Section (Horizontal Row) */}
+            {homeSections.topSelection?.length > 0 && (
+              <div className="mb-5 md:mb-8">
+                <LazySection height="360px">
+                  <TopSelection items={homeSections.topSelection} horizontal={true} />
+                </LazySection>
+              </div>
+            )}
+
+            {/* Brands / Artisans Spotlight Section (Horizontal Row) */}
+            {(homeSections.brandsSpotlight?.length > 0 || homeSections.topSelection?.length > 0) && (
+              <div className="mb-5 md:mb-8">
+                <LazySection height="320px">
+                  <BrandsSpotlight items={homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection} horizontal={true} />
+                </LazySection>
+              </div>
+            )}
+
+            {/* Best Quality Guaranteed Section (Horizontal Row) */}
+            {(homeSections.bestQualityGuaranteed?.length > 0 || homeSections.bestQuality?.length > 0 || homeSections.topSelection?.length > 0) && (
+              <div className="mb-5 md:mb-8">
+                <LazySection height="360px">
+                  <BestQuality items={homeSections.bestQualityGuaranteed?.length ? homeSections.bestQualityGuaranteed : (homeSections.bestQuality?.length ? homeSections.bestQuality : homeSections.topSelection)} horizontal={true} />
+                </LazySection>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Toast Notification */}
@@ -687,7 +854,6 @@ const Mithilak = () => {
           {toastMessage}
         </div>
       )}
-      </div>
     </div>
   );
 };

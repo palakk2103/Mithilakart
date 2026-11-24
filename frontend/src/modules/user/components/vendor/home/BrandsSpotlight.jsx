@@ -15,7 +15,7 @@ const cartProduct = (card) => ({
   image: card.img,
 });
 
-const BrandsSpotlight = ({ items = [] }) => {
+const BrandsSpotlight = ({ items = [], horizontal = false }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -42,17 +42,23 @@ const BrandsSpotlight = ({ items = [] }) => {
 
   return (
     <>
-      {/* Mobile view (Untouched layout, only hidden on desktop) */}
-      <div className="px-2 mt-2 mb-1 md:hidden">
+      {/* Mobile view or full horizontal layout */}
+      <div className={horizontal ? "px-2 mt-2 mb-1" : "px-2 mt-2 mb-1 md:hidden"}>
         <h2 className="text-slate-900 mb-2 px-0.5 text-[15px] font-black uppercase tracking-tight">
           {t('home.brandsSpotlight')}
         </h2>
-        <div className="grid grid-cols-3 gap-2">
+        <div className={horizontal
+          ? "flex items-stretch gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x pb-2 pt-1 -mx-1 px-1"
+          : "grid grid-cols-3 gap-2"
+        }>
           {items.map((card, idx) => (
             <div
               key={idx}
               onClick={() => handleBrandClick(card)}
-              className="flex flex-col gap-1 cursor-pointer group active:scale-95 transition-transform"
+              className={horizontal
+                ? "w-[130px] sm:w-[150px] md:w-[170px] flex-shrink-0 snap-start flex flex-col gap-1 cursor-pointer group active:scale-95 transition-transform bg-[#FFFDF9] p-2 rounded-2xl border border-[#EADEC9]/70 shadow-xs"
+                : "flex flex-col gap-1 cursor-pointer group active:scale-95 transition-transform"
+              }
             >
               {/* Same square frame for every image: the picture is positioned to fill it edge to edge
                   (object-cover), so padding no longer changes with the image's own size or ratio. */}
@@ -81,47 +87,49 @@ const BrandsSpotlight = ({ items = [] }) => {
       </div>
 
       {/* Desktop view (Purple/Indigo style banner layout mimicking the "People also viewed" container structure) */}
-      <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-2 md:mt-6">
-        {/* Banner Header with background color and rounded-t corners */}
-        <div className="bg-[color:var(--mk-primary,#6FAE4A)] text-white px-6 py-4 rounded-t-3xl flex items-center justify-between shadow-sm">
-          <h2 className="text-[17px] font-black uppercase tracking-wider">
-            {t('home.brandsSpotlight')}
-          </h2>
-          <div className="flex items-center gap-1.5 opacity-80 text-[11px] font-black">
-            <span>⭐ {t('common.sponsored').toUpperCase()}</span>
+      {!horizontal && (
+        <div className="hidden md:block md:max-w-[1600px] md:mx-auto md:px-2 md:mt-6">
+          {/* Banner Header with background color and rounded-t corners */}
+          <div className="bg-[color:var(--mk-primary,#6FAE4A)] text-white px-6 py-4 rounded-t-3xl flex items-center justify-between shadow-sm">
+            <h2 className="text-[17px] font-black uppercase tracking-wider">
+              {t('home.brandsSpotlight')}
+            </h2>
+            <div className="flex items-center gap-1.5 opacity-80 text-[11px] font-black">
+              <span>⭐ {t('common.sponsored').toUpperCase()}</span>
+            </div>
+          </div>
+
+          {/* White container panel with rounded-b corners containing the cards */}
+          <div className="bg-white border-x border-b border-slate-100 rounded-b-3xl p-6 shadow-md">
+            <div className="grid grid-cols-3 gap-6">
+              {items.map((card, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => handleBrandClick(card)}
+                  className="flex flex-col gap-3.5 cursor-pointer group active:scale-95 transition-transform"
+                >
+                  {/* Soft grey rounded image container box */}
+                  <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100/60 transition-colors duration-300">
+                    <img
+                      src={card.img || DEFAULT_PRODUCT_IMAGE}
+                      alt={tName(card.title)}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy" decoding="async" onError={handleImageError} />
+                    <div className="absolute top-3 right-3 bg-black/10 backdrop-blur-sm text-white text-[8px] px-1.5 py-0.5 rounded font-black border border-white/20">{t('common.ad') || 'AD'}</div>
+                  </div>
+
+                  {/* Content placed below the image box */}
+                  <div className="px-1">
+                    <h3 className="text-[13px] font-black text-slate-800 leading-snug group-hover:text-[color:var(--mk-primary,#6FAE4A)] transition-colors">{card.sub}</h3>
+                    <p className="text-[12px] font-black text-rose-600 mt-1 uppercase tracking-wider">{card.title}</p>
+                  </div>
+                  <div className="px-1 max-w-[200px]"><CartQtyControl product={cartProduct(card)} /></div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-
-        {/* White container panel with rounded-b corners containing the cards */}
-        <div className="bg-white border-x border-b border-slate-100 rounded-b-3xl p-6 shadow-md">
-          <div className="grid grid-cols-3 gap-6">
-            {items.map((card, idx) => (
-              <div
-                key={idx}
-                onClick={() => handleBrandClick(card)}
-                className="flex flex-col gap-3.5 cursor-pointer group active:scale-95 transition-transform"
-              >
-                {/* Soft grey rounded image container box */}
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-slate-50 border border-slate-100/60 transition-colors duration-300">
-                  <img
-                    src={card.img || DEFAULT_PRODUCT_IMAGE}
-                    alt={tName(card.title)}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy" decoding="async" onError={handleImageError} />
-                  <div className="absolute top-3 right-3 bg-black/10 backdrop-blur-sm text-white text-[8px] px-1.5 py-0.5 rounded font-black border border-white/20">{t('common.ad') || 'AD'}</div>
-                </div>
-
-                {/* Content placed below the image box */}
-                <div className="px-1">
-                  <h3 className="text-[13px] font-black text-slate-800 leading-snug group-hover:text-[color:var(--mk-primary,#6FAE4A)] transition-colors">{card.sub}</h3>
-                  <p className="text-[12px] font-black text-rose-600 mt-1 uppercase tracking-wider">{card.title}</p>
-                </div>
-                <div className="px-1 max-w-[200px]"><CartQtyControl product={cartProduct(card)} /></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      )}
     </>
   );
 };

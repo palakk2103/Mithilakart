@@ -142,7 +142,7 @@ const ARCH_BACKGROUNDS = [
   '#C5AD9A', // Warm grey/brown
 ];
 
-const TopSelection = ({ items = [] }) => {
+const TopSelection = ({ items = [], horizontal = false }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const handleViewAll = useSectionViewAll('topSelection');
@@ -186,15 +186,21 @@ const TopSelection = ({ items = [] }) => {
         </button>
       </div>
 
-      {/* Grid Layout: 2 columns on mobile/tablet, 4 columns on desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        {items.slice(0, 4).map((product, idx) => {
+      {/* Layout: horizontal scrolling row when horizontal=true, else 2/4 columns grid */}
+      <div className={horizontal
+        ? "flex items-stretch gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x pb-2 pt-1 -mx-1 px-1"
+        : "grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
+      }>
+        {(horizontal ? items.slice(0, 12) : items.slice(0, 4)).map((product, idx) => {
           const archBg = ARCH_BACKGROUNDS[idx % ARCH_BACKGROUNDS.length];
           return (
             <div
               key={idx}
               onClick={() => handleProductClick(product)}
-              className="bg-transparent rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all duration-300 border border-[#EADEC9] group"
+              className={horizontal
+                ? "w-[165px] sm:w-[195px] md:w-[220px] flex-shrink-0 snap-start bg-transparent rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all duration-300 border border-[#EADEC9] group"
+                : "bg-transparent rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all duration-300 border border-[#EADEC9] group"
+              }
             >
               {/* Image Container with Custom Arch Aspect Ratio */}
               <div className="relative w-full aspect-[16/17] flex items-center justify-center">
