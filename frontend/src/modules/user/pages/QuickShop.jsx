@@ -1,4 +1,5 @@
-import { openCategoryExplorer } from '../utils/categoryLandingNav';
+import { openQuickCategory, openQuickListing } from '../utils/categoryLandingNav';
+import WishlistHeart from '../components/common/WishlistHeart';
 import SeasonalHero from '../../../shared/components/SeasonalHero';
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -489,7 +490,7 @@ const QuickShop = () => {
                   key={cat.id}
                   onClick={() => {
                     localStorage.setItem('isFreshGroceryFlow', 'true');
-                    openCategoryExplorer(navigate, { flow: 'freshgrocery', id: cat.id, name: cat.name });
+                    openQuickCategory(navigate, { flow: 'freshgrocery', id: cat.id, name: cat.name });
                   }}
                   className="bg-white border border-[#EADCC9]/55 rounded-2xl p-1 flex flex-col items-center justify-center text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[color:var(--fg-primary,#D9A21B)]"
                 >
@@ -511,7 +512,7 @@ const QuickShop = () => {
           <div className="px-4 mb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{t('auto.todaySBestOffers')}</h2>
-              <span className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline">{t('auto.viewAll')}</span>
+              <button type="button" onClick={() => navigate('/deals')} className="text-[color:var(--fg-primary,#D9A21B)] text-[12.5px] font-black cursor-pointer hover:underline min-h-[36px]">{t('auto.viewAll')}</button>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
@@ -531,6 +532,7 @@ const QuickShop = () => {
                       </div>
                     )}
 
+                    <WishlistHeart product={prod} />
                     <div className="h-20 flex items-center justify-center my-3">
                       <img 
                         src={getImageUrl(prod.image)} 
@@ -626,6 +628,7 @@ const QuickShop = () => {
                       </div>
                     )}
                     
+                    <WishlistHeart product={prod} />
                     <div className="h-20 flex items-center justify-center my-3">
                       <img 
                         src={getImageUrl(prod.image)} 
@@ -669,7 +672,7 @@ const QuickShop = () => {
           <div className="bg-white rounded-[24px] p-4 mx-4 mb-6 border border-[#FFF1EB] shadow-[0_4px_20px_rgba(217,162,27,0.015)]">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-[16px] font-black text-[#3F2A20] tracking-tight">{t('auto.todaySSpecialDeals')}</h2>
-              <span className="text-[#6FAE4A] text-[12.5px] font-black cursor-pointer hover:underline">{t('auto.viewAll')}</span>
+              <button type="button" onClick={() => navigate('/deals')} className="text-[color:var(--fg-primary,#D9A21B)] text-[12.5px] font-black cursor-pointer hover:underline min-h-[36px]">{t('auto.viewAll')}</button>
             </div>
 
             {/* Deals grid */}
@@ -690,6 +693,7 @@ const QuickShop = () => {
                       </div>
                     )}
                     
+                    <WishlistHeart product={prod} />
                     <div className="h-20 flex items-center justify-center my-3">
                       <img 
                         src={getImageUrl(prod.image)} 
@@ -745,7 +749,7 @@ const QuickShop = () => {
                       item={item}
                       onClick={() => {
                         localStorage.setItem('isFreshGroceryFlow', 'true');
-                        openCategoryExplorer(navigate, { flow: 'freshgrocery', id: item.id, name: item.name });
+                        openQuickListing(navigate, { flow: 'freshgrocery', id: item.id, name: item.name });
                       }}
                     />
                   ))}
@@ -781,7 +785,7 @@ const QuickShop = () => {
                         key={itemIdx}
                         onClick={() => {
                           localStorage.setItem('isFreshGroceryFlow', 'true');
-                          openCategoryExplorer(navigate, { flow: 'freshgrocery', id: item.id, name: item.name });
+                          openQuickListing(navigate, { flow: 'freshgrocery', id: item.id, name: item.name });
                         }}
                         className="flex flex-col items-center gap-3.5 cursor-pointer group active:scale-95 transition-transform w-full max-w-[160px]"
                       >
@@ -884,7 +888,7 @@ const QuickShop = () => {
                 key={cat.id}
                 onClick={() => {
                   localStorage.setItem('isQuickShopFlow', 'true');
-                  openCategoryExplorer(navigate, { flow: 'quickshop', id: cat.id, name: cat.name });
+                  openQuickCategory(navigate, { flow: 'quickshop', id: cat.id, name: cat.name });
                 }}
                 className="bg-white border border-[#FFD9C7]/60 rounded-2xl p-1 flex flex-col items-center justify-start text-center cursor-pointer active:scale-95 transition-all shadow-2xs hover:border-[color:var(--qs-primary,#F26522)]"
               >
@@ -915,7 +919,7 @@ const QuickShop = () => {
             <span
               onClick={() => {
                 localStorage.setItem('isQuickShopFlow', 'true');
-                navigate('/categories?flow=quickshop', { state: { flow: 'quickshop' } });
+                navigate('/deals');
               }}
               className="text-[color:var(--qs-primary,#F26522)] text-[12.5px] font-black cursor-pointer hover:underline"
             >
@@ -943,7 +947,8 @@ const QuickShop = () => {
                     </div>
                   )}
 
-                  <div className="h-20 flex items-center justify-center my-3">
+                  <WishlistHeart product={prod} />
+                    <div className="h-20 flex items-center justify-center my-3">
                     <img
                       src={getImageUrl(prod.image)}
                       alt={prod.name}
@@ -1051,6 +1056,7 @@ const QuickShop = () => {
                       </div>
                     )}
 
+                    <WishlistHeart product={prod} />
                     <div className="h-20 flex items-center justify-center my-3">
                       <img
                         src={getImageUrl(prod.image)}
@@ -1102,7 +1108,7 @@ const QuickShop = () => {
             <span
               onClick={() => {
                 localStorage.setItem('isQuickShopFlow', 'true');
-                navigate('/categories?flow=quickshop', { state: { flow: 'quickshop' } });
+                navigate('/deals');
               }}
               className="text-[color:var(--qs-primary,#F26522)] text-[12.5px] font-black cursor-pointer hover:underline"
             >
@@ -1131,7 +1137,8 @@ const QuickShop = () => {
                     </div>
                   )}
 
-                  <div className="h-20 flex items-center justify-center my-3">
+                  <WishlistHeart product={prod} />
+                    <div className="h-20 flex items-center justify-center my-3">
                     <img
                       src={getImageUrl(prod.image)}
                       alt={prod.name}
@@ -1206,7 +1213,7 @@ const QuickShop = () => {
                   item={item}
                   onClick={() => {
                     localStorage.setItem('isQuickShopFlow', 'true');
-                    openCategoryExplorer(navigate, { flow: isFreshGrocery ? 'freshgrocery' : 'quickshop', id: item.id, name: item.name });
+                    openQuickListing(navigate, { flow: isFreshGrocery ? 'freshgrocery' : 'quickshop', id: item.id, name: item.name });
                   }}
                 />
               ))}
@@ -1252,7 +1259,7 @@ const QuickShop = () => {
                     key={itemIdx}
                     onClick={() => {
                       localStorage.setItem('isQuickShopFlow', 'true');
-                      openCategoryExplorer(navigate, { flow: isFreshGrocery ? 'freshgrocery' : 'quickshop', id: item.id, name: item.name });
+                      openQuickListing(navigate, { flow: isFreshGrocery ? 'freshgrocery' : 'quickshop', id: item.id, name: item.name });
                     }}
                     className="flex flex-col items-center gap-3.5 cursor-pointer group active:scale-95 transition-transform w-full max-w-[160px]"
                   >

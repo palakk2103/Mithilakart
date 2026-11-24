@@ -102,7 +102,8 @@ describe('CART-1 recommendation rails', () => {
     expect(byKey.bestsellers.tabs[0].items.map((i) => i.productId)).toEqual([String(P[2]), String(P[3])]);
     expect(byKey.bestsellers.tabs.find((t) => t.key === 'price_drops').items[0].productId).toBe(String(P[5]));
 
-    const all = rails.filter((r) => !r.tabs).flatMap((r) => r.items.map((i) => i.productId));
+    // "My Wishlist" mirrors the wishlist page, so it alone may repeat a product.
+    const all = rails.filter((r) => !r.tabs && r.key !== 'wishlist').flatMap((r) => r.items.map((i) => i.productId));
     expect(new Set(all).size).toBe(all.length);
     expect(all).not.toContain(String(P[0]));
     rails.flatMap((r) => (r.tabs ? r.tabs.flatMap((t) => t.items) : r.items)).forEach((card) => {

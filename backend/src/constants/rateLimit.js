@@ -14,6 +14,8 @@ const RATE_LIMITS = {
   // Counts presigns only (one per file). The file POST and confirm each need a
   // fresh single-use presign, so they can't create extra uploads. The old
   // 20 POSTs/hour (3 per file) let a seller bulk upload only ~6 images an hour.
+  // Coupon guessing: per-IP cap on top of the per-customer lock in CouponService.
+  couponValidate: { limit: 30, windowSeconds: RATE_LIMIT_WINDOWS.FIFTEEN_MINUTES, name: 'coupon_validate' },
   upload: { limit: 300, windowSeconds: RATE_LIMIT_WINDOWS.HOUR, name: 'upload' },
   reportExport: { limit: 5, windowSeconds: RATE_LIMIT_WINDOWS.HOUR, name: 'report_export' },
 };
@@ -39,6 +41,10 @@ function resolveRateLimitRule(req) {
 
   if (/\/auth\/(verify-(phone|email)-otp|register\/verify-(phone|email))$/.test(path)) {
     return RATE_LIMITS.authVerify;
+  }
+
+  if (/\/coupons\/validate$/.test(path)) {
+    return RATE_LIMITS.couponValidate;
   }
 
   if (/\/reports\/export\//.test(path)) {

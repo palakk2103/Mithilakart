@@ -36,6 +36,13 @@ export const authApi = {
   changePassword: (data) => asyncHandler(() => customerApi.put('/admin/auth/password', data)),
 };
 
+// Gift cards
+export const giftCardsApi = {
+  list: () => asyncHandler(() => api.get('/gift-cards', { params: { limit: 100 } })),
+  create: (data) => asyncHandler(() => api.post('/gift-cards', data)),
+  setActive: (id, isActive) => asyncHandler(() => api.patch(`/gift-cards/${id}`, { isActive })),
+};
+
 // Dashboard
 export const dashboardApi = {
   getStats: () => asyncHandler(() => api.get('/dashboard/stats')),

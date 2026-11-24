@@ -26,6 +26,7 @@ const Checkout = lazyWithRetry(() => import('../pages/Checkout'));
 const OrderConfirmation = lazyWithRetry(() => import('../pages/OrderConfirmation'));
 const AllOffers = lazyWithRetry(() => import('../pages/AllOffers'));
 const SectionProducts = lazyWithRetry(() => import('../pages/SectionProducts'));
+const RailProducts = lazyWithRetry(() => import('../pages/RailProducts'));
 const DealsPage = lazyWithRetry(() => import('../pages/DealsPage'));
 const Search = lazyWithRetry(() => import('../pages/Search'));
 const ContinueShopping = lazyWithRetry(() => import('../pages/ContinueShopping'));
@@ -36,6 +37,7 @@ const PackageBuilder = lazyWithRetry(() => import('../pages/PackageBuilder'));
 const ShippingPolicy = lazyWithRetry(() => import('../pages/ShippingPolicy'));
 const QuickShop = lazyWithRetry(() => import('../pages/QuickShop'));
 const QuickShopSubcategory = lazyWithRetry(() => import('../pages/QuickShopSubcategory'));
+const QuickCategoryLanding = lazyWithRetry(() => import('../pages/QuickCategoryLanding'));
 const Mithilak = lazyWithRetry(() => import('../pages/Mithilak'));
 const CategoryLanding = lazyWithRetry(() => import('../pages/CategoryLanding'));
 
@@ -82,6 +84,7 @@ const MarketRoutes = () => {
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/picks/:railKey" element={<RailProducts />} />
       <Route path="/package/:slug" element={<PackageBuilder />} />
       <Route path="/vendor/package/:slug" element={<PackageBuilder />} />
       <Route path="/order-confirmation" element={<OrderConfirmation />} />
@@ -134,6 +137,8 @@ const MarketRoutes = () => {
         <Route path="/section/:slug" element={<SectionProducts />} />
         <Route path="/quick-shop" element={<QuickShop />} />
         <Route path="/quick-shop/category" element={<QuickShopSubcategory />} />
+        <Route path="/quick-shop/c/:categoryId" element={<QuickCategoryLanding />} />
+        <Route path="/fresh-grocery/c/:categoryId" element={<QuickCategoryLanding />} />
         <Route path="/mithilak/category" element={<QuickShopSubcategory />} />
         <Route path="/mithilak" element={<Mithilak />} />
         <Route path="/mithilak/c/:categoryId" element={<CategoryLanding />} />

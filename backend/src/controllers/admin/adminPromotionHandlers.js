@@ -11,6 +11,17 @@ function createAdminPromotionHandlers(services) {
     updateCoupon: asyncHandler(async (req, res) => ApiResponse.success(res, await services.promotions.updateCoupon(req.params.id, req.body))),
     deleteCoupon: asyncHandler(async (req, res) => ApiResponse.success(res, await services.promotions.deleteCoupon(req.params.id))),
 
+    listGiftCards: asyncHandler(async (req, res) => {
+      const result = await services.giftCards.listCards(req.query);
+      return ApiResponse.paginated(res, result.items, { page: result.page, limit: result.limit, total: result.total });
+    }),
+    createGiftCards: asyncHandler(async (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      return ApiResponse.created(res, await services.giftCards.createCards(req.body, req.user?.id || null));
+    }),
+    setGiftCardActive: asyncHandler(async (req, res) => ApiResponse.success(res, await services.giftCards.setCardActive(req.params.id, req.body.isActive))),
+    giftCardUses: asyncHandler(async (req, res) => ApiResponse.success(res, await services.giftCards.cardUses(req.params.id))),
+
     listFlashSales: asyncHandler(async (req, res) => ApiResponse.success(res, await services.promotions.listFlashSales())),
     createFlashSale: asyncHandler(async (req, res) => ApiResponse.created(res, await services.promotions.createFlashSale(req.body))),
     updateFlashSale: asyncHandler(async (req, res) => ApiResponse.success(res, await services.promotions.updateFlashSale(req.params.id, req.body))),

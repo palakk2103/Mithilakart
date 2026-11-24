@@ -7,6 +7,7 @@ class OrderController extends BaseController {
     super(orderService);
     this.bindMethods([
       'placeOrder',
+      'quoteOrder',
       'listOrders',
       'getOrderDetail',
       'getOrderTracking',
@@ -32,11 +33,25 @@ class OrderController extends BaseController {
       items: req.body.items || null,
       idempotencyKey: req.body.idempotencyKey || null,
       tipAmount: Number(req.body.tipAmount) || 0,
+      giftCardCode: req.body.giftCardCode || null,
+      useWallet: req.body.useWallet === true,
+      expectedTotal: req.body.expectedTotal ?? null,
       sessionMeta: {},
     });
 
     return ApiResponse.created(res, result);
   });
+
+  quoteOrder = asyncHandler(async (req, res) => ApiResponse.success(res, await this.service.quoteOrder({
+    userId: req.user.id,
+    items: req.body.items || null,
+    commerceFlow: req.body.commerceFlow || 'standard',
+    couponCode: req.body.couponCode || null,
+    tipAmount: Number(req.body.tipAmount) || 0,
+    paymentMethod: req.body.paymentMethod || null,
+    giftCardCode: req.body.giftCardCode || null,
+    useWallet: req.body.useWallet === true,
+  })));
 
   listOrders = asyncHandler(async (req, res) => {
     const userId = req.user.id;

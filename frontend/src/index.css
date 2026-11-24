@@ -208,6 +208,11 @@
 }
 
 
+/* Toasts sit above the phone's bottom bar and the floating cart, where they can be read. */
+@media (max-width: 767px) {
+  .app-toaster { bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+
 /* ── Cart pages design tokens (Cart, Order Summary, Payment) ────────────────
    Values come from the admin "Cart Pages Design" setting, set as CSS variables
    on the page root by useCartDesign(); the fallbacks are the standard look. */

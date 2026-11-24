@@ -5,10 +5,10 @@ import { formatPrice } from '../../../../shared/utils/priceFormatter';
 const Row = ({ label, hint, children, tone = 'default' }) => (
   <div className="flex items-start justify-between gap-3">
     <div className="min-w-0">
-      <p className="text-[13px] font-medium text-slate-700 leading-tight">{label}</p>
+      <p className="text-[14px] font-medium text-slate-700 leading-tight">{label}</p>
       {hint && <p className="text-[11px] font-medium text-blue-700 leading-tight mt-px">{hint}</p>}
     </div>
-    <div className={`text-[13px] font-semibold text-right whitespace-nowrap leading-tight ${tone === 'save' ? 'text-emerald-600' : tone === 'free' ? 'text-emerald-600 font-bold' : 'text-slate-900'}`}>
+    <div className={`text-[14px] font-semibold text-right whitespace-nowrap leading-tight ${tone === 'save' ? 'text-emerald-600' : tone === 'free' ? 'text-emerald-600 font-bold' : 'text-slate-900'}`}>
       {children}
     </div>
   </div>
@@ -23,18 +23,19 @@ const BillSummary = ({ bill, title = 'Order Details', showSavings = true, bare =
   if (!bill) return null;
   const savings = bill.productDiscount + bill.couponDiscount
     + Math.max(0, bill.handlingFeeOriginal - bill.handlingFee)
-    + Math.max(0, bill.deliveryChargeOriginal - bill.deliveryCharge);
+    + Math.max(0, bill.deliveryChargeOriginal - bill.deliveryCharge)
+    + (bill.cashback?.mode === 'instant' ? bill.cashback.amount : 0);
 
   return (
     <section className={`${bare ? '' : 'cd-card'} ${className}`} aria-label={title}>
       {!bare && (
         <div className="flex items-center gap-2 mb-2">
-          <FileText size={18} className="text-blue-700" />
-          <h2 className="text-[15px] font-bold cd-heading">{title}</h2>
+          <FileText size={19} className="cd-heading" />
+          <h2 className="text-[16px] font-bold cd-heading">{title}</h2>
         </div>
       )}
 
-      <div className="space-y-1.5">
+      <div className="space-y-2.5">
         <Row label={`Total MRP (${bill.itemCount} ${bill.itemCount === 1 ? 'Item' : 'Items'})`}>
           {formatPrice(bill.mrpTotal)}
         </Row>
@@ -76,12 +77,19 @@ const BillSummary = ({ bill, title = 'Order Details', showSavings = true, bare =
         {bill.packagingFee > 0 && <Row label="Packaging Fee">{formatPrice(bill.packagingFee)}</Row>}
         {bill.codHandlingFee > 0 && <Row label="Cash on Delivery Fee">{formatPrice(bill.codHandlingFee)}</Row>}
         {bill.tax > 0 && <Row label="Taxes (GST)">{formatPrice(bill.tax)}</Row>}
+        {bill.cashback?.mode === 'instant' && bill.cashback.amount > 0 && <Row label="Cashback" tone="save">-{formatPrice(bill.cashback.amount)}</Row>}
+        {bill.giftCardAmount > 0 && <Row label="Gift Card" tone="save">-{formatPrice(bill.giftCardAmount, bill.giftCardAmount % 1 !== 0)}</Row>}
+        {bill.walletAmount > 0 && <Row label="Wallet" tone="save">-{formatPrice(bill.walletAmount, bill.walletAmount % 1 !== 0)}</Row>}
       </div>
 
       <div className="border-t border-slate-200 mt-2 pt-2 flex items-center justify-between">
         <span className="text-[15px] font-bold text-slate-900">Total Payable</span>
         <span className="text-[18px] font-extrabold text-slate-900" data-testid="total-payable">{formatPrice(bill.total, bill.total % 1 !== 0)}</span>
       </div>
+
+      {bill.cashback?.mode === 'wallet' && bill.cashback.amount > 0 && (
+        <p className="mt-2 text-[13px] font-semibold text-emerald-700">You will get {formatPrice(bill.cashback.amount)} cashback in your wallet after delivery.</p>
+      )}
 
       {showSavings && savings > 0 && (
         <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 flex items-center justify-center gap-1.5">

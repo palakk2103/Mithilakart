@@ -7,9 +7,11 @@ import { getImageUrl, handleImageError } from '../../../../shared/utils/imageUti
 
 /**
  * Entry cards for admin-managed customisable packages (e.g. Mithila Dwirangman).
- * Renders nothing when the tab has no active package.
+ * Renders nothing when the tab has no active package. Inside a category
+ * (`categoryId` / `categoryName`) only that category's packages show — or all
+ * of them when the category itself is the packages category.
  */
-const PackagePromo = ({ marketplaceTab = 'mithilak' }) => {
+const PackagePromo = ({ marketplaceTab = 'mithilak', categoryId = null, categoryName = '' }) => {
   const navigate = useNavigate();
   const [packages, setPackages] = useState([]);
 
@@ -21,11 +23,16 @@ const PackagePromo = ({ marketplaceTab = 'mithilak' }) => {
     return () => { cancelled = true; };
   }, [marketplaceTab]);
 
-  if (!packages.length) return null;
+  const inCategory = Boolean(categoryId || categoryName);
+  const isPackageCategory = /packag|combo|dwirag|dwirang|पैकेज/i.test(categoryName || '');
+  const shown = !inCategory || isPackageCategory
+    ? packages
+    : packages.filter((p) => (p.categoryIds || []).includes(String(categoryId)));
+  if (!shown.length) return null;
 
   return (
-    <div className="px-4 pt-4 space-y-3">
-      {packages.map((pkg) => (
+    <div className="px-4 pt-4 space-y-3" data-testid="package-promo">
+      {shown.map((pkg) => (
         <button
           key={pkg.id}
           type="button"

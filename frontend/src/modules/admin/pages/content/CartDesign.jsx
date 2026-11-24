@@ -17,9 +17,9 @@ const PAGES = [
 ];
 
 const SECTION_LABELS = {
-  cart: { tabSwitcher: 'Other-carts switcher', banner: 'Promo banner carousel', address: 'Delivery address', items: 'Cart items', freeDelivery: 'Free-delivery bar', priceDetails: 'Price details (phones)', rails: 'Product rails' },
-  summary: { address: 'Delivery address', freeDelivery: 'Free-delivery bar', items: 'Cart items', coupon: 'Apply coupon', actions: 'Tip & Vouchers cards', bill: 'Order details (bill)', policy: 'Return & cancellation box', trust: 'Trust block', terms: 'Terms line' },
-  payment: { coupons: 'Coupons & offers', methods: 'Payment methods', orderSummary: 'Order summary + bill', note: 'Footer note' },
+  cart: { tabSwitcher: 'Other-carts switcher', banner: 'Promo banner carousel', address: 'Delivery address', items: 'Cart items', freeDelivery: 'Free-delivery bar', priceDetails: 'Price details (phones)', rails: 'Product rails', safePayments: '100% Safe Payments strip' },
+  summary: { address: 'Delivery address', freeDelivery: 'Free-delivery bar', items: 'Cart items', coupon: 'Apply coupon', actions: 'Tip & Vouchers cards', bill: 'Order details (bill)', policy: 'Return & cancellation box', trust: 'Trust block', terms: 'Terms line', safePayments: '100% Safe Payments strip' },
+  payment: { coupons: 'Coupons & offers', credits: 'Gift card & wallet', methods: 'Payment methods', orderSummary: 'Order summary + bill', note: 'Footer note', safePayments: '100% Safe Payments strip' },
 };
 // Sections whose heading text can be renamed.
 const TITLED = new Set(['items', 'priceDetails', 'coupon', 'bill', 'coupons', 'methods', 'orderSummary']);

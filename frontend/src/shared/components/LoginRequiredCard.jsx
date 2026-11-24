@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
  * (orders, wishlist, addresses, cart…). Shows "Login to see your …" with a
  * Login button that returns the shopper to the same page afterwards.
  */
-const LoginRequiredCard = ({ title = 'Login to continue', subtitle = 'Please log in to see this page.', icon: Icon = LogIn, onLogin = null }) => {
+const LoginRequiredCard = ({ title = 'Login to continue', subtitle = 'Please log in to see this page.', icon: Icon = LogIn, onLogin = null, message = null }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -19,7 +19,7 @@ const LoginRequiredCard = ({ title = 'Login to continue', subtitle = 'Please log
       <p className="text-[14px] text-slate-500 mt-1.5 max-w-xs">{subtitle}</p>
       <button
         type="button"
-        onClick={onLogin || (() => navigate('/login', { state: { from: `${location.pathname}${location.search}` } }))}
+        onClick={onLogin || (() => navigate('/login', { state: { ...(location.state || {}), from: `${location.pathname}${location.search}`, message: message || title } }))}
         className="mt-6 px-10 h-12 rounded-full bg-slate-900 text-white font-bold text-[14px] active:scale-95 transition-transform"
       >
         Login

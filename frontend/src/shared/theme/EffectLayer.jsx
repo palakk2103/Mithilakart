@@ -147,6 +147,10 @@ const EffectLayer = ({ effects, fixed = true, force = false, height = 520, pause
   }[e.type];
 
   return (
+    <>
+    {/* On the live app the colour wash sits BEHIND the page (content is z-10+). Above it, it bleached
+        buttons and prices near the screen edges, e.g. "Proceed to Checkout" on the cart. */}
+    {ambient && fixed && <div aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 5, pointerEvents: 'none', background: ambient }} />}
     <div className="mk-fx" style={wrap} aria-hidden="true" data-testid="effect-layer" data-effect={e.type} data-paused={paused ? 'true' : 'false'}>
       <style>{keyframes}</style>
       <svg width="0" height="0" style={{ position: 'absolute' }}>
@@ -158,7 +162,7 @@ const EffectLayer = ({ effects, fixed = true, force = false, height = 520, pause
           ))}
         </defs>
       </svg>
-      {ambient && <div style={{ position: 'absolute', inset: 0, background: ambient }} />}
+      {ambient && !fixed && <div style={{ position: 'absolute', inset: 0, background: ambient }} />}
 
       {e.type === 'summer' && (
         <>
@@ -231,6 +235,7 @@ const EffectLayer = ({ effects, fixed = true, force = false, height = 520, pause
         }
       })}
     </div>
+    </>
   );
 };
 

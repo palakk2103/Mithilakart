@@ -82,8 +82,8 @@ const Signup = () => {
 
   const [name, setName] = useState('');
   const [countryCode, setCountryCode] = useState('+91');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState(location.state?.phone || '');
+  const [email, setEmail] = useState(location.state?.email || '');
   const [fieldErrors, setFieldErrors] = useState({});
 
   const [reg, setReg] = useState(null); // { registrationId, step, maskedPhone, maskedEmail }

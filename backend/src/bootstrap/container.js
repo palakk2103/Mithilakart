@@ -319,7 +319,7 @@ function buildContainer() {
   const orderFulfillmentRepository = new OrderFulfillmentRepository();
   const fulfillmentAttemptRepository = new FulfillmentAttemptRepository();
 
-  const couponService = new CouponService({ couponRepository, couponUsageRepository });
+  const couponService = new CouponService({ couponRepository, couponUsageRepository, redisClient });
 
   const passwordService = new PasswordService();
   const permissionService = new PermissionService();
@@ -332,6 +332,7 @@ function buildContainer() {
     platformSettingRepository,
     deliveryChargeRuleRepository,
     cacheService,
+    orderRepository,
   });
   const pricingService = new PricingService({ couponService, platformConfigService });
   const uploadService = new UploadService(config, redisClient);
@@ -673,6 +674,12 @@ function buildContainer() {
     platformConfigService,
   });
   const returnService = new ReturnService({ returnRepository, orderRepository, orderItemRepository });
+  const { OrderCreditsService } = require('../services/pricing/OrderCreditsService');
+  const orderCreditsService = new OrderCreditsService({ walletService, userRepository, orderRepository, platformConfigService, redisClient });
+  orderCreditsService.registerListeners();
+  pricingService.setOrderCreditsService(orderCreditsService);
+  orderService.setOrderCreditsService(orderCreditsService);
+  courierShipmentService.setPlatformConfigService(platformConfigService);
   const refundService = new RefundService({
     refundRepository,
     returnRepository,
@@ -683,6 +690,7 @@ function buildContainer() {
     orderRepository,
     paymentService,
   });
+  refundService.setOrderCreditsService(orderCreditsService);
   const adminReturnService = new AdminReturnService({ returnRepository });
 
   const reviewService = new ReviewService({
@@ -763,6 +771,7 @@ function buildContainer() {
   queueManager.markConnected();
 
   const adminServices = {
+    giftCards: orderCreditsService,
     dashboard: adminDashboardService,
     users: adminUserService,
     vendors: adminVendorService,
@@ -914,6 +923,7 @@ function buildContainer() {
       userNotificationRepository,
     },
     services: {
+      orderCreditsService,
       passwordService,
       permissionService,
       otpService,

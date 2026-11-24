@@ -11,7 +11,9 @@ const DEFAULT_BY_FLOW = {
 export function goAfterAuth(navigate, location, activeFlow, { replace = false } = {}) {
   const redirectTo = location.state?.from || DEFAULT_BY_FLOW[activeFlow] || '/home';
   const state = {};
-  if (location.state?.product) state.product = location.state.product;
+  // Buy Now carries the chosen quantity in checkoutProduct; plain product has none.
+  if (location.state?.checkoutProduct && /checkout/.test(redirectTo)) state.product = location.state.checkoutProduct;
+  else if (location.state?.product) state.product = location.state.product;
   if (location.state?.checkoutProduct) state.checkoutProduct = location.state.checkoutProduct;
   if (location.state?.pendingAction) state.pendingAction = location.state.pendingAction;
   navigate(redirectTo, { replace, state });

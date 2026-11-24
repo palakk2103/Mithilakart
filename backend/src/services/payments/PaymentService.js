@@ -71,6 +71,17 @@ class PaymentService extends BaseService {
 
     const provider = this.paymentProvider?.providerName || 'mock';
 
+    // Gift card / wallet covered everything: nothing to send to the gateway.
+    if (!(Number(amount) > 0) && paymentMethod !== PAYMENT_METHOD.COD) {
+      const free = await this.paymentTransactionRepository.create({
+        orderId, userId, paymentMethod, provider, amount: 0, currency,
+        status: PAYMENT_STATUS.PAID, idempotencyKey: idempotencyKey || null, providerPaymentId: null,
+        rawRequest: { orderNumber, paymentMethod, coveredByCredits: true },
+      }, session);
+      await this.orderRepository.updateById(orderId, { paymentStatus: PAYMENT_STATUS.PAID }, session);
+      return { paymentTransactionId: free._id, providerPaymentId: null, paymentStatus: PAYMENT_STATUS.PAID, provider };
+    }
+
     const tx = await this.paymentTransactionRepository.create(
       {
         orderId,

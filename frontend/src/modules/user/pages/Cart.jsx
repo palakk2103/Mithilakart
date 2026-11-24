@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ShoppingCart, ArrowLeft, ShieldCheck, Heart, Trash2, X, MapPin, Clock, Plus, Home, ChevronDown } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Heart, Trash2, X, MapPin, Clock, Plus, Home, ChevronDown, ReceiptText } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
@@ -20,11 +20,9 @@ import FreeDeliveryBar from '../components/checkout/FreeDeliveryBar';
 import CartLine from '../components/checkout/CartLine';
 import { useCartDesign, CartDesignProvider, DesignSection, OrderedSections } from '../components/checkout/cartDesign';
 import CartRails from '../components/checkout/CartRails';
+import SafePayments from '../components/checkout/SafePayments';
 import CartBannerCarousel from '../components/checkout/CartBannerCarousel';
 import LoginRequiredCard from '../../../shared/components/LoginRequiredCard';
-
-// Solid slate for a disabled checkout button — a faded accent looked washed-out and unreadable.
-const DISABLED_BTN_BG = '#64748b';
 
 // Each shopping tab keeps its own cart; the switcher below lets the shopper reach the others.
 const CART_TABS = [
@@ -182,7 +180,13 @@ const Cart = () => {
     return mins.length ? `ETA in ${Math.min(...mins)}–${Math.max(...mins) + 15} min` : null;
   })();
 
+  const minimumHint = belowMinimum
+    ? `Minimum order value is ${formatPrice(bill.minOrderAmount)}. Add ${formatPrice(bill.minOrderAmount - bill.subtotal)} more to check out.`
+    : '';
+
   const proceed = () => {
+    // The button is never faded out; tapping it explains what is missing instead.
+    if (belowMinimum) { toast.error(minimumHint); return; }
     if (!hasAddress) { navigate('/profile/addresses'); return; }
     navigate('/vendor/checkout');
   };
@@ -190,7 +194,7 @@ const Cart = () => {
   const tabSwitcher = isAuthenticated && loaded && CART_TABS.some(({ tab, flow }) => flow !== theme.activeFlow && tabCounts[tab] > 0) ? (
     <nav aria-label="Your carts" className="flex items-center gap-2">
       <p className="text-[11.5px] font-semibold flex-shrink-0 cd-text">
-        {cartItems.length === 0 ? 'Items in:' : 'Also in:'}
+        {cartItems.length === 0 ? 'You have items in:' : 'Your other carts:'}
       </p>
       <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
         {CART_TABS.filter(({ tab, flow }) => flow !== theme.activeFlow && tabCounts[tab] > 0).map(({ tab, flow, label }) => (
@@ -219,8 +223,8 @@ const Cart = () => {
         <section className="cd-card flex items-start gap-2">
           <MapPin size={20} className="flex-shrink-0 mt-0.5" style={{ color: accentHex }} fill="currentColor" />
           <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-bold cd-heading leading-tight">{hasAddress ? t('cart.deliverToHome') : t('cart.deliveryAddress')}</p>
-            <p className="text-[11.5px] mt-0.5 leading-snug line-clamp-2 cd-text">
+            <p className="text-[15.5px] font-bold cd-heading leading-tight">{hasAddress ? t('cart.deliverToHome') : t('cart.deliveryAddress')}</p>
+            <p className="text-[13px] mt-1 leading-snug line-clamp-2 cd-text">
               {hasAddress
                 ? <>{user?.name ? <span className="font-semibold">{user.name} | </span> : null}{deliverTo.label}</>
                 : t('cart.loginAddAddress')}
@@ -248,8 +252,8 @@ const Cart = () => {
     items: (
       <DesignSection id="items">
         <section className="cd-card">
-          <h2 className="flex items-center gap-1.5 text-[14.5px] font-bold cd-heading mb-2">
-            <ShoppingCart size={17} /> {design.title('items', 'Your Cart Items')} ({cartItems.length})
+          <h2 className="flex items-center gap-2 text-[16px] font-bold cd-heading mb-2.5">
+            <ShoppingCart size={19} /> {design.title('items', 'Your Cart Items')} ({cartItems.length})
           </h2>
           <div className="divide-y divide-slate-100">
             {cartItems.map((item) => (
@@ -266,10 +270,10 @@ const Cart = () => {
             ))}
           </div>
           <div className="flex items-center justify-between gap-3 pt-2 mt-1 border-t border-slate-100">
-            <Link to={shopNowLink} className="text-[13.5px] font-bold cd-heading min-h-[36px] flex items-center">Continue Shopping</Link>
+            <p className="text-[14px] font-bold cd-heading min-h-[36px] flex items-center">Continue Shopping</p>
             <Link
               to={shopNowLink}
-              className="inline-flex items-center gap-1.5 px-3.5 h-9 cd-btn text-white text-[13px] font-bold active:scale-95 transition-transform"
+              className="inline-flex items-center gap-1.5 px-4 h-10 cd-btn text-white text-[13.5px] font-bold active:scale-95 transition-transform"
               style={{ background: accentHex }}
             >
               <Plus size={15} /> Add More Items
@@ -289,24 +293,26 @@ const Cart = () => {
             type="button"
             aria-expanded={showBill}
             onClick={() => setShowBill((v) => !v)}
-            className="w-full flex items-center justify-between min-h-[36px] text-left"
+            className="w-full flex items-center justify-between min-h-[44px] text-left"
           >
-            <span className="text-[13.5px] font-bold cd-heading">{design.title('priceDetails', 'Price Details')}</span>
-            <span className="flex items-center gap-1.5 text-[13.5px] font-extrabold text-slate-900">
+            <span className="flex items-center gap-2 text-[16px] font-bold cd-heading"><ReceiptText size={19} /> {design.title("priceDetails", "Price Details")}</span>
+            <span className="flex items-center gap-1.5 text-[15px] font-extrabold text-slate-900">
               {bill ? formatPrice(bill.total, bill.total % 1 !== 0) : '—'}
               <ChevronDown size={16} className={`text-slate-500 transition-transform ${showBill ? 'rotate-180' : ''}`} />
             </span>
           </button>
-          {showBill && <div className="mt-2"><BillSummary bill={bill} bare title="Order Details" /></div>}
+          {showBill && <div className="mt-2"><BillSummary bill={bill} bare title={design.title('priceDetails', 'Price Details')} /></div>}
         </div>
       </DesignSection>
     ),
 
     rails: (
       <DesignSection id="rails" plain>
-        <CartRails marketplaceTab={cart?.marketplaceTab} cartProductIds={cartItems.map((i) => String(i.productId || i.id))} accentHex={accentHex} shopLink={shopNowLink} />
+        <CartRails marketplaceTab={cart?.marketplaceTab} cartProductIds={cartItems.map((i) => String(i.productId || i.id))} accentHex={accentHex} />
       </DesignSection>
     ),
+
+    safePayments: <DesignSection id="safePayments" plain><SafePayments /></DesignSection>,
   };
 
   return (
@@ -327,7 +333,7 @@ const Cart = () => {
         </header>
 
         {!isAuthenticated ? (
-          <LoginRequiredCard title="Login to see your cart" subtitle="Your cart is empty until you log in. Log in to add items and check out." icon={ShoppingCart} />
+          <LoginRequiredCard message="Please login to continue checkout" title="Login to see your cart" subtitle="Your cart is empty until you log in. Log in to add items and check out." icon={ShoppingCart} />
         ) : !loaded ? (
           <div className="mt-3 flex flex-col animate-pulse" style={{ gap: 'var(--cd-gap)', padding: '0 var(--cd-px)' }} aria-busy>
             <div className="h-16 rounded-xl bg-white" />
@@ -352,22 +358,16 @@ const Cart = () => {
           <div className="mt-2 md:grid md:grid-cols-3 md:gap-6 md:max-w-6xl md:mx-auto md:w-full md:py-4 md:items-start" style={{ padding: '0 var(--cd-px)', paddingTop: 8 }}>
             <div className="md:col-span-2 flex flex-col" style={{ gap: 'var(--cd-gap)' }}>
               <OrderedSections design={design} elements={sectionEls} />
-
-              {belowMinimum && (
-                <p className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[12.5px] font-semibold px-3 py-2">
-                  Minimum order value is {formatPrice(bill.minOrderAmount)}. Add {formatPrice(bill.minOrderAmount - bill.subtotal)} more to check out.
-                </p>
-              )}
             </div>
 
             <div className="hidden md:block md:col-span-1 space-y-3 md:sticky md:top-20">
-              <BillSummary bill={bill} />
+              <BillSummary bill={bill} title={design.title('priceDetails', 'Price Details')} />
+              {belowMinimum && <p className="text-[12.5px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{minimumHint}</p>}
               <button
                 type="button"
                 onClick={proceed}
-                disabled={belowMinimum}
-                className="flex w-full h-12 cd-btn text-white font-bold text-[15px] items-center justify-center active:scale-[0.98] transition-transform disabled:cursor-not-allowed disabled:active:scale-100"
-                style={{ background: belowMinimum ? DISABLED_BTN_BG : accentHex }}
+                className="flex w-full h-12 cd-btn text-white font-bold text-[15px] items-center justify-center active:scale-[0.98] transition-transform"
+                style={{ background: accentHex }}
               >
                 {hasAddress ? t('cart.checkout') : t('cart.addAddress')}
               </button>
@@ -377,7 +377,8 @@ const Cart = () => {
 
         {/* Sticky checkout bar (mobile) */}
         {isAuthenticated && cartItems.length > 0 && (
-          <div className="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-2xl border-t border-slate-200 px-3 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] flex items-center justify-between gap-3 md:hidden shadow-[0_-6px_20px_rgba(0,0,0,0.07)]">
+          <div className="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-2xl border-t border-slate-200 px-3 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 md:hidden shadow-[0_-6px_20px_rgba(0,0,0,0.07)]">
+            {belowMinimum && <p data-testid="min-order-hint" className="w-full text-[12px] font-semibold text-amber-800 leading-snug">{minimumHint}</p>}
             <div>
               <p className="text-[11px] font-semibold text-slate-500 leading-none">Total Amount</p>
               <p className="text-[20px] font-extrabold text-slate-900 leading-none mt-1">{bill ? formatPrice(bill.total, bill.total % 1 !== 0) : '—'}</p>
@@ -385,9 +386,9 @@ const Cart = () => {
             <button
               type="button"
               onClick={proceed}
-              disabled={belowMinimum}
-              className="flex-1 max-w-[230px] h-11 cd-btn text-white font-bold text-[14.5px] active:scale-95 transition-transform disabled:cursor-not-allowed disabled:active:scale-100"
-              style={{ background: belowMinimum ? DISABLED_BTN_BG : accentHex }}
+              data-testid="proceed-checkout"
+              className="flex-1 max-w-[240px] h-12 cd-btn text-white font-bold text-[15px] active:scale-95 transition-transform"
+              style={{ background: accentHex }}
             >
               {hasAddress ? `${t('cart.checkout')} →` : t('cart.addAddress')}
             </button>
@@ -419,15 +420,6 @@ const Cart = () => {
         </div>
       )}
 
-      {isAuthenticated && cartItems.length > 0 && (
-        <div className="mt-2 px-6 py-2 flex flex-col items-center gap-1 text-slate-400">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={17} />
-            <span className="text-[12px] font-bold">{t('cart.safePayments')}</span>
-          </div>
-          <p className="text-[11px] text-center leading-relaxed">{t('cart.paymentsSubtitle')}</p>
-        </div>
-      )}
       </div>
     </CartDesignProvider>
   );

@@ -7,8 +7,8 @@ import EffectLayer from '../theme/EffectLayer';
 import ThemeIcon from '../theme/ThemeIcon';
 import useTabTheme from '../hooks/useTabTheme';
 
-// Admin / seller / delivery portals and the focused auth + payment screens stay calm.
-const QUIET_PREFIXES = ['/admin', '/seller', '/delivery', '/login', '/signup', '/forgot-password', '/checkout', '/vendor/checkout'];
+// Admin / seller / delivery portals and the focused auth + cart + payment screens stay calm.
+const QUIET_PREFIXES = ['/admin', '/seller', '/delivery', '/login', '/signup', '/forgot-password', '/checkout', '/vendor/checkout', '/cart', '/vendor/cart'];
 
 const OFF_KEY = 'mk_fx_off';
 const OFF_FOR_MS = 7 * 24 * 60 * 60 * 1000; // re-test the device after a week

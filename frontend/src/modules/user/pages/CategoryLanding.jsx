@@ -11,6 +11,7 @@ import { MithilaDealCard, MithilaHeaderChips } from './Mithilak';
 import LandingBanner from '../components/vendor/landing/LandingBanner';
 import ScrollRow from '../components/vendor/home/ScrollRow';
 import LazySection from '../components/vendor/home/LazySection';
+import PackagePromo from '../components/vendor/PackagePromo';
 import { getImageUrl, handleImageError } from '../../../shared/utils/imageUtils';
 
 // ───────────────────────── Subcategory slider ─────────────────────────
@@ -208,6 +209,8 @@ const CategoryLanding = () => {
           if (target && String(target.id) !== String(categoryId)) openMithilaCategory(navigate, target);
         }}
       />
+
+      <PackagePromo marketplaceTab="mithilak" categoryId={categoryId} categoryName={landing?.category?.originalName || landing?.category?.name || location.state?.category || ''} />
 
       <div className="px-4 py-5 space-y-6 max-w-[1400px] mx-auto">
         {status === 'loading' && <LandingSkeleton />}

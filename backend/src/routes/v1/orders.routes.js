@@ -2,13 +2,21 @@ const express = require('express');
 const Joi = require('joi');
 const { validateBody, validateParams, validateQuery } = require('../../middleware/validate');
 const { objectIdSchema, idOrOrderNumberSchema } = require('../../validators/common.validator');
-const { placeOrderSchema, cancelOrderSchema, listOrdersQuerySchema } = require('../../validators/orders/orders.validator');
+const { AppError } = require('../../utils/AppError');
+const { placeOrderSchema, quoteOrderSchema, cancelOrderSchema, listOrdersQuerySchema } = require('../../validators/orders/orders.validator');
 
 function createOrdersRoutes({ orderController, returnController, gameController = null }, middleware) {
   const router = express.Router();
   const authCustomer = middleware.authenticateCustomer();
 
-  router.post('/', authCustomer, validateBody(placeOrderSchema), orderController.placeOrder);
+  // Ordering without (or with an expired) login says what to do, not just "unauthorized".
+  const loginToCheckout = (req, res, next) => authCustomer(req, res, (err) => {
+    if (err?.statusCode === 401) return next(new AppError('Please login to continue checkout', 'LOGIN_REQUIRED', 401, { action: 'login' }));
+    return next(err);
+  });
+
+  router.post('/quote', loginToCheckout, validateBody(quoteOrderSchema), orderController.quoteOrder);
+  router.post('/', loginToCheckout, validateBody(placeOrderSchema), orderController.placeOrder);
 
   router.get('/', authCustomer, validateQuery(listOrdersQuerySchema), orderController.listOrders);
   router.get('/:id', authCustomer, validateParams(Joi.object({ id: idOrOrderNumberSchema })), orderController.getOrderDetail);

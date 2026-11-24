@@ -28,6 +28,20 @@ function createAdminPromotionRoutes(services, middleware) {
   router.put('/coupons/:id', authAdmin, requirePermission('coupons.edit'), validateParams(Joi.object({ id: objectIdSchema })), h.updateCoupon);
   router.delete('/coupons/:id', authAdmin, requirePermission('coupons.delete'), validateParams(Joi.object({ id: objectIdSchema })), h.deleteCoupon);
 
+  // Gift cards: the code is returned once, on creation, and never again.
+  router.get('/gift-cards', authAdmin, requirePermission('coupons.view'), h.listGiftCards);
+  router.post('/gift-cards', authAdmin, requirePermission('coupons.edit'), validateBody(Joi.object({
+    amount: Joi.number().integer().min(1).max(50000).required(),
+    quantity: Joi.number().integer().min(1).max(50).default(1),
+    expiresAt: Joi.date().greater('now').optional().allow(null),
+    phone: Joi.string().pattern(/^[6-9]\d{9}$/).optional().allow(null, ''),
+    note: Joi.string().max(200).pattern(/^[^<>]*$/).optional().allow(''),
+  })), h.createGiftCards);
+  router.patch('/gift-cards/:id', authAdmin, requirePermission('coupons.edit'), validateParams(Joi.object({ id: objectIdSchema })), validateBody(Joi.object({
+    isActive: Joi.boolean().required(),
+  })), h.setGiftCardActive);
+  router.get('/gift-cards/:id/uses', authAdmin, requirePermission('coupons.view'), validateParams(Joi.object({ id: objectIdSchema })), h.giftCardUses);
+
   router.get('/flash-sales', authAdmin, requirePermission('coupons.view'), h.listFlashSales);
   router.post('/flash-sales', authAdmin, requirePermission('coupons.edit'), validateBody(Joi.object({
     title: Joi.string().required(),

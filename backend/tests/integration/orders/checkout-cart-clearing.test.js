@@ -110,7 +110,7 @@ describe('checkout — cart clearing (production bug fix)', () => {
       const result = await place(service);
 
       expect(result.orderId).toBe(ORDER_ID);
-      expect(cartService.clearCart).toHaveBeenCalledWith({ userId: USER_ID, sessionId: null });
+      expect(cartService.clearCart).toHaveBeenCalledWith(expect.objectContaining({ userId: USER_ID, sessionId: null }));
     });
 
     it('paid (Razorpay) order clears the cart', async () => {
@@ -123,14 +123,14 @@ describe('checkout — cart clearing (production bug fix)', () => {
       expect(cartService.clearCart).toHaveBeenCalledTimes(1);
     });
 
-    it('pending Razorpay order still clears — the order exists', async () => {
+    it('pending online order keeps cart intact until payment verification', async () => {
       const { service, cartService } = buildService({
         paymentResult: { paymentStatus: PAYMENT_STATUS.PENDING, gatewayOrderId: 'rzp_1' },
       });
 
       await place(service, { paymentMethod: PAYMENT_METHOD.UPI });
 
-      expect(cartService.clearCart).toHaveBeenCalled();
+      expect(cartService.clearCart).not.toHaveBeenCalled();
     });
 
     it('returns the order result (the old code returned an undefined variable)', async () => {

@@ -6,7 +6,7 @@ const { DEFAULT_PLATFORM_SETTINGS } = require('../../../src/constants/platformSe
 describe('normalizeCartDesign', () => {
   it('nothing saved -> the standard look with every section on', () => {
     const d = normalizeCartDesign(undefined);
-    expect(d.global).toMatchObject({ headerBg: '', cardRadius: 12, sectionGap: 8, cardPadding: 10, cardShadow: true });
+    expect(d.global).toMatchObject({ headerBg: '', cardRadius: 12, sectionGap: 14, cardPadding: 14, cardShadow: true });
     Object.entries(PAGE_SECTIONS).forEach(([page, keys]) => {
       expect(d.pages[page].sections.map((s) => s.key)).toEqual(keys);
       expect(d.pages[page].sections.every((s) => s.enabled)).toBe(true);

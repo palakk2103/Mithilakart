@@ -9,7 +9,9 @@ const { YOU_POPUP_SETTING_KEY, YOU_POPUP_ITEMS } = require('../../constants/youP
 const { mergeYouPopupItems } = require('./youPopupMerge');
 const { HELP_CENTER_SETTING_KEY } = require('../../constants/helpCenter');
 const { toPublicHelpCenter } = require('./helpCenterContent');
-const { computeSurge, publicSurgeInfo } = require('../pricing/surge');
+const { computeSurge, publicSurgeInfo, resolveSurgeConfig } = require('../pricing/surge');
+const { publicCashback } = require('../pricing/cashback');
+const { publicShopStatus, assertShopOpen } = require('./shopHours');
 const { DEFAULT_CHECKOUT_CONTENT } = require('../../constants/checkoutContent');
 const { normalizeCartDesign } = require('../../constants/cartDesign');
 
@@ -26,11 +28,25 @@ function mergeCheckoutContent(saved) {
 }
 
 class PlatformConfigService extends BaseService {
-  constructor({ platformSettingRepository, deliveryChargeRuleRepository, cacheService }) {
+  constructor({ platformSettingRepository, deliveryChargeRuleRepository, cacheService, orderRepository = null }) {
     super();
     this.platformSettingRepository = platformSettingRepository;
     this.deliveryChargeRuleRepository = deliveryChargeRuleRepository;
     this.cacheService = cacheService;
+    this.orderRepository = orderRepository;
+  }
+
+  /** Orders placed per tab in the surge demand window; only counted when the admin chose that trigger. */
+  async _recentOrdersByTab(config) {
+    const surge = resolveSurgeConfig(config);
+    if (!this.orderRepository || !surge.enabled || surge.trigger !== 'demand') return {};
+    const minutes = Math.min(240, Math.max(1, Number(surge.demandMinutes) || 15));
+    const since = new Date(Date.now() - minutes * 60000);
+    const tabs = Array.isArray(surge.tabs) ? surge.tabs : [];
+    const counts = await Promise.all(tabs.map((tab) => this.orderRepository.count({
+      marketplaceTab: tab, createdAt: { $gte: since }, status: { $ne: 'cancelled' }, deletedAt: null,
+    })));
+    return Object.fromEntries(tabs.map((tab, i) => [tab, counts[i]]));
   }
 
   async getConfig() {
@@ -57,6 +73,9 @@ class PlatformConfigService extends BaseService {
         isActive: rule.isActive !== false,
       })),
     };
+
+    // Cached with the config, so demand is re-read at most once a minute.
+    config.recentOrdersByTab = await this._recentOrdersByTab(config);
 
     await this.cacheService.set(PLATFORM_CONFIG_CACHE_KEY, config, PLATFORM_CONFIG_CACHE_TTL);
     return config;
@@ -92,6 +111,11 @@ class PlatformConfigService extends BaseService {
       tabThemes: config.tabThemes || null,
       // FEE-3: surge banner on the quick-commerce tab landings.
       surge: publicSurgeInfo(config),
+      // Opening hours per quick tab, decided by the server clock (IST).
+      shopStatus: publicShopStatus(config),
+      // Cashback banner, written from the admin's rules (off when no rule is running).
+      cashback: publicCashback(config),
+      walletCheckoutEnabled: config.walletCheckoutEnabled === true,
       checkoutContent: mergeCheckoutContent(config.checkoutContent),
       cartDesign: normalizeCartDesign(config.cartDesign),
     };
@@ -251,6 +275,11 @@ class PlatformConfigService extends BaseService {
   /** FEE-3 surge charge for one cart. */
   computeSurge(config, args) {
     return computeSurge(config, args);
+  }
+
+  /** Throws when the tab is outside its opening hours (or force-closed by admin). */
+  async assertShopOpen(tab, now = new Date()) {
+    assertShopOpen(await this.getConfig(), tab, now);
   }
 
   /** Per-customer purchase limits the cart enforces (admin editable). */

@@ -32,6 +32,13 @@ export const billFromCart = (cart, itemCount = 0) => {
     tipAmount: Number(cart.tipAmount) || 0,
     tax: Number(cart.tax) || 0,
     total: Number(cart.total) || 0,
+    grossTotal: Number(cart.grossTotal ?? cart.total) || 0,
+    cashback: cart.cashback || null,
+    giftCard: cart.giftCard || null,
+    giftCardAmount: Number(cart.giftCardAmount) || 0,
+    walletEnabled: Boolean(cart.walletEnabled),
+    walletBalance: Number(cart.walletBalance) || 0,
+    walletAmount: Number(cart.walletAmount) || 0,
     minOrderAmount: Number(cart.minOrderAmount) || 0,
   };
 };

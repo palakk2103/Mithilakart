@@ -10,8 +10,10 @@ const alreadyRegistered = (message, details) => new AppError(message, 'ALREADY_R
 const REGISTRATION_TTL_SECONDS = 30 * 60;
 const PURPOSE = { REGISTER: 'register', LOGIN: 'login' };
 
-/** Shown for every login OTP request, whether or not the account exists. */
-const LOGIN_SENT_MESSAGE = 'If this is registered with Mithilakart, an OTP is on its way.';
+const LOGIN_SENT_MESSAGE = 'OTP sent. Please enter the 6-digit code.';
+/** Login is for existing customers only; the app offers "Register" on this code. */
+const notRegistered = (message, field) => new AppError(message, 'NOT_REGISTERED', 404, { field, action: 'register' });
+const blockedAccount = () => AppError.forbidden('This account is not active. Please contact Mithilakart support.');
 /** Verify failures on login never say whether the account exists. */
 const LOGIN_FAILED_MESSAGE = 'Incorrect or expired OTP. New to Mithilakart? Register first.';
 
@@ -51,8 +53,9 @@ const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
  * email OTP is verified too.
  *
  * Login: OTP to a registered mobile number or email. Login never creates
- * accounts any more, and it answers the same way for unknown numbers/emails
- * (a decoy OTP session is stored but nothing is sent).
+ * accounts. An unknown number/email is told to register (client requirement;
+ * sign-up already reveals the same thing). The auth rate limit and the small
+ * random delay keep that answer from being harvested quickly.
  */
 class CustomerAuthService extends BaseService {
   constructor(dependencies) {
@@ -80,15 +83,18 @@ class CustomerAuthService extends BaseService {
     const countryCode = normalizeCountryCode(rawCode);
     const phone = normalizePhone(rawPhone, countryCode);
     const user = await this.userRepository.findByPhoneAnyCode(phone, countryCode);
-    const usable = user && user.status === USER_STATUS.ACTIVE;
     const identifier = this._phoneIdentifier(countryCode, phone);
 
-    if (!usable) await sleep(200 + crypto.randomInt(400));
+    if (!user) {
+      await sleep(200 + crypto.randomInt(400));
+      throw notRegistered('This mobile number is not registered with Mithilakart. Please register to continue.', 'phone');
+    }
+    if (user.status !== USER_STATUS.ACTIVE) throw blockedAccount();
     const result = await this.otpService.createOtpSession(
       PORTALS.CUSTOMER,
       identifier,
       { countryCode, phone },
-      this._otpOptions(PURPOSE.LOGIN, { silent: !usable })
+      this._otpOptions(PURPOSE.LOGIN)
     );
     return { ...result, sentTo: maskPhone(countryCode, phone), message: LOGIN_SENT_MESSAGE };
   }
@@ -96,14 +102,17 @@ class CustomerAuthService extends BaseService {
   async sendEmailOtp({ email: rawEmail }) {
     const email = String(rawEmail).trim().toLowerCase();
     const user = await this.userRepository.findByEmail(email);
-    const usable = user && user.status === USER_STATUS.ACTIVE;
 
-    if (!usable) await sleep(200 + crypto.randomInt(400));
+    if (!user) {
+      await sleep(200 + crypto.randomInt(400));
+      throw notRegistered('This email is not registered with Mithilakart. Please register to continue.', 'email');
+    }
+    if (user.status !== USER_STATUS.ACTIVE) throw blockedAccount();
     const result = await this.otpService.createOtpSession(
       PORTALS.CUSTOMER,
       email,
       { email },
-      this._otpOptions(PURPOSE.LOGIN, { silent: !usable })
+      this._otpOptions(PURPOSE.LOGIN)
     );
     return { ...result, sentTo: maskEmail(email), message: LOGIN_SENT_MESSAGE };
   }
@@ -117,6 +126,7 @@ class CustomerAuthService extends BaseService {
     if (!user || user.status !== USER_STATUS.ACTIVE) throw AppError.unauthorized(LOGIN_FAILED_MESSAGE);
 
     if (!user.phoneVerifiedAt) user.phoneVerifiedAt = new Date();
+    if (!user.authProvider) user.authProvider = 'phone'; // imported/legacy rows
     user.isVerified = true;
     await user.save();
     return this._completeLogin(user, sessionMeta, deviceId, false);
@@ -130,6 +140,7 @@ class CustomerAuthService extends BaseService {
     if (!user || user.status !== USER_STATUS.ACTIVE) throw AppError.unauthorized(LOGIN_FAILED_MESSAGE);
 
     if (!user.emailVerifiedAt) user.emailVerifiedAt = new Date();
+    if (!user.authProvider) user.authProvider = 'email'; // imported/legacy rows
     user.isVerified = true;
     await user.save();
     return this._completeLogin(user, sessionMeta, deviceId, false);

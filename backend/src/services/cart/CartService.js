@@ -125,6 +125,31 @@ class CartService extends BaseService {
     }
   }
 
+  /**
+   * Last check before an order is created, for the cart and for Buy Now alike:
+   * the admin's limits may have been tightened after the items were added, and
+   * Buy Now never passes through the cart at all.
+   */
+  async assertPurchaseLimits(items = []) {
+    const limits = await this._limits();
+    if (limits.maxCartItems > 0 && items.length > limits.maxCartItems) {
+      throw AppError.conflict(`Your cart can hold up to ${limits.maxCartItems} different items.`, [
+        { code: 'CART_LIMIT_EXCEEDED', maxCartItems: limits.maxCartItems },
+      ]);
+    }
+    // The same product on two lines (two listings, a package…) counts together for the per-item cap.
+    const perProduct = new Map();
+    items.forEach((it) => {
+      const key = `${it.productId}:${it.variantId || ''}:${it.packageId || ''}`;
+      perProduct.set(key, (perProduct.get(key) || 0) + (Number(it.quantity) || 0));
+    });
+    for (const it of items) {
+      const key = `${it.productId}:${it.variantId || ''}:${it.packageId || ''}`;
+      this._assertWithinLimit(perProduct.get(key), this._lineMax(limits, null), limits);
+      this._assertWithinLimit(Number(it.quantity) || 0, this._lineMax(limits, it.maxOrderQuantity), limits);
+    }
+  }
+
   _serialize(state) {
     return JSON.stringify(state);
   }
@@ -165,6 +190,7 @@ class CartService extends BaseService {
               image: imageUrl,
               imageUrl,
               availableStock,
+              maxOrderQuantity: listing.maxOrderQuantity || null,
               maxQuantity: this._effectiveMax(limits, listing.maxOrderQuantity, availableStock),
               customization: {
                 packageId: String(pkg._id),
@@ -199,6 +225,7 @@ class CartService extends BaseService {
               image: imageUrl,
               imageUrl,
               availableStock,
+              maxOrderQuantity: listing.maxOrderQuantity || null,
               maxQuantity: this._effectiveMax(limits, listing.maxOrderQuantity, availableStock),
             };
           } catch {
@@ -237,26 +264,43 @@ class CartService extends BaseService {
     return caps.length ? Math.min(...caps) : 0;
   }
 
-  async getCart({ userId, sessionId, commerceFlow = 'standard', marketplaceTab = null, couponCode = null, tipAmount = 0 }) {
+  async getCart({ userId, sessionId, commerceFlow = 'standard', marketplaceTab = null, couponCode = null, tipAmount = 0, lenientCoupon = false, clientKey = null, paymentMethod = null, giftCardCode = null, useWallet = false }) {
     const tab = this._resolveTab({ marketplaceTab, commerceFlow });
     const state = await this._loadState({ userId, sessionId }, tab);
 
     const rawItems = state?.items || [];
     const items = await this._hydrateCartItems(rawItems);
-    const pricing = await this.pricingService.calculateTotals({
+    let appliedCode = couponCode || state?.couponCode || null;
+    let couponError = null;
+    const totals = (code) => this.pricingService.calculateTotals({
       items,
-      couponCode: couponCode || state?.couponCode || null,
+      couponCode: code,
       userId,
       marketplaceTab: tab,
       tipAmount,
+      ...(clientKey ? { clientKey } : {}),
+      ...(paymentMethod ? { paymentMethod } : {}),
+      ...(giftCardCode ? { giftCardCode } : {}),
+      ...(useWallet ? { useWallet } : {}),
+      ...(lenientCoupon ? { lenientCredits: true } : {}),
     });
+    let pricing;
+    try {
+      pricing = await totals(appliedCode);
+    } catch (error) {
+      if (!lenientCoupon || !appliedCode || error?.isCouponError !== true) throw error;
+      couponError = error.message;
+      appliedCode = null;
+      pricing = await totals(null);
+    }
 
     return {
       userId: userId || null,
       sessionId: sessionId || null,
       commerceFlow: toLegacyCommerceFlow(tab) || commerceFlow,
       marketplaceTab: tab,
-      couponCode: couponCode || state?.couponCode || null,
+      couponCode: appliedCode,
+      ...(couponError ? { couponError } : {}),
       items,
       limits: await this._limits(),
       ...pricing,

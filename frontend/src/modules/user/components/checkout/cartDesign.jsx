@@ -13,14 +13,14 @@ import useTabTheme from '../../../../shared/hooks/useTabTheme';
  * exactly as before.
  */
 export const DEFAULT_ORDER = {
-  cart: ['tabSwitcher', 'banner', 'address', 'items', 'freeDelivery', 'priceDetails', 'rails'],
-  summary: ['address', 'freeDelivery', 'items', 'coupon', 'actions', 'bill', 'policy', 'trust', 'terms'],
-  payment: ['coupons', 'methods', 'orderSummary', 'note'],
+  cart: ['tabSwitcher', 'banner', 'address', 'items', 'freeDelivery', 'priceDetails', 'rails', 'safePayments'],
+  summary: ['address', 'freeDelivery', 'items', 'coupon', 'actions', 'bill', 'policy', 'trust', 'terms', 'safePayments'],
+  payment: ['coupons', 'credits', 'methods', 'orderSummary', 'note', 'safePayments'],
 };
 
 const DEFAULT_TOKENS = {
   headerBg: '', headerText: '', pageBg: '', cardBg: '', cardBorder: '', headingColor: '', textColor: '', accent: '',
-  cardRadius: 12, buttonRadius: 999, pagePaddingX: 12, sectionGap: 8, cardPadding: 10, rowPaddingY: 8, cardShadow: true,
+  cardRadius: 12, buttonRadius: 999, pagePaddingX: 12, sectionGap: 14, cardPadding: 14, rowPaddingY: 12, cardShadow: true,
 };
 
 const FLOW_TO_TAB = { mithilakart: 'mithilakart', quickshop: 'quick_shop', mithilak: 'mithilak', freshgrocery: 'groceries_fresh' };

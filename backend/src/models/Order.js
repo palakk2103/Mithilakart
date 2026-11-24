@@ -114,6 +114,19 @@ const orderSchema = new mongoose.Schema(
     // CART-2 tip for the delivery partner (credited in full on delivery).
     tipAmount: { type: Number, default: 0, min: 0 },
 
+    // `total` above is what was left to pay after these; grossTotal is the bill before them.
+    grossTotal: { type: Number, default: null, min: 0 },
+    giftCardAmount: { type: Number, default: 0, min: 0 },
+    walletAmount: { type: Number, default: 0, min: 0 },
+    cashback: {
+      amount: { type: Number, default: 0, min: 0 },
+      mode: { type: String, enum: ['instant', 'wallet', null], default: null },
+      campaign: { type: String, default: null },
+      // applied = already off the bill; pending = wallet credit due after delivery
+      status: { type: String, enum: ['none', 'applied', 'pending', 'credited', 'cancelled'], default: 'none' },
+      creditedAt: { type: Date, default: null },
+    },
+
     cancelledAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
   },

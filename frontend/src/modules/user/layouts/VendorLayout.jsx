@@ -113,6 +113,22 @@ const VendorLayout = () => {
     return activeFlow || 'mithilakart';
   }, [location.pathname, activeFlow]);
 
+  // Active bottom-nav colour: always the current tab's theme (admin Tab Themes).
+  const navActiveText = effectiveFlow === 'mithilak'
+    ? 'text-[color:var(--ml-primary,#207C8A)]'
+    : effectiveFlow === 'freshgrocery'
+      ? 'text-[color:var(--fg-primary,#D9A21B)]'
+      : effectiveFlow === 'quickshop'
+        ? 'text-[color:var(--qs-primary,#F26522)]'
+        : 'text-[color:var(--mk-primary,#65B842)]';
+  const cartPillBg = effectiveFlow === 'mithilak'
+    ? 'bg-gradient-to-r from-[color:var(--ml-primary,#207C8A)] to-[color:var(--ml-dark,#144F58)]'
+    : effectiveFlow === 'freshgrocery'
+      ? 'bg-gradient-to-r from-[color:var(--fg-primary,#D9A21B)] to-[color:var(--fg-dark,#a96f0b)]'
+      : effectiveFlow === 'quickshop'
+        ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-dark,#d45014)]'
+        : 'bg-gradient-to-r from-[color:var(--mk-primary,#65B842)] to-[color:var(--mk-dark,#3E5A44)]';
+
   const cartBadgeBg = effectiveFlow === 'mithilak' 
     ? 'bg-[color:var(--ml-primary,#207C8A)]' 
     : effectiveFlow === 'freshgrocery' 
@@ -360,9 +376,7 @@ const VendorLayout = () => {
           to={effectiveFlow === 'mithilak' ? "/mithilak" : effectiveFlow === 'freshgrocery' ? "/fresh-grocery" : effectiveFlow === 'quickshop' ? "/quick-shop" : "/home"} 
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/home' || location.pathname === '/quick-shop' || location.pathname === '/mithilak' || location.pathname === '/fresh-grocery'
-              ? (effectiveFlow === 'mithilak' 
-                  ? 'text-[color:var(--ml-primary,#207C8A)]' 
-                  : (effectiveFlow === 'freshgrocery' ? 'text-[color:var(--fg-primary,#D9A21B)]' : (effectiveFlow === 'quickshop' ? 'text-[#FF5C00]' : 'text-[color:var(--mk-primary,#65B842)]')))
+              ? navActiveText
               : 'text-[#3F2A20]/80'
           }`}
         >
@@ -373,11 +387,7 @@ const VendorLayout = () => {
           to={`/categories?flow=${effectiveFlow}`}
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/categories' 
-              ? (effectiveFlow === 'mithilak' 
-                  ? 'text-[color:var(--ml-primary,#207C8A)]' 
-                  : (effectiveFlow === 'freshgrocery' 
-                      ? 'text-[color:var(--fg-primary,#D9A21B)]' 
-                      : (effectiveFlow === 'quickshop' ? 'text-[color:var(--qs-primary,#F26522)]' : 'text-[color:var(--mk-primary,#65B842)]'))) 
+              ? navActiveText
               : 'text-[#3F2A20]/80'
           }`}
         >
@@ -388,9 +398,7 @@ const VendorLayout = () => {
           to="/cart" 
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             location.pathname === '/cart' 
-              ? (effectiveFlow === 'mithilak' 
-                  ? 'text-[color:var(--ml-primary,#207C8A)]' 
-                  : (effectiveFlow === 'freshgrocery' ? 'text-[color:var(--fg-primary,#D9A21B)]' : 'text-[color:var(--mk-primary,#65B842)]')) 
+              ? navActiveText
               : 'text-[#3F2A20]/80'
           }`}
         >
@@ -411,9 +419,7 @@ const VendorLayout = () => {
           onClick={toggleYou}
           className={`flex flex-col items-center transition-transform active:scale-90 ${
             isYouOpen || location.pathname === '/profile'
-              ? (activeFlow === 'mithilak'
-                  ? 'text-[color:var(--ml-primary,#207C8A)]'
-                  : (activeFlow === 'freshgrocery' ? 'text-[color:var(--fg-primary,#D9A21B)]' : 'text-[color:var(--mk-primary,#65B842)]'))
+              ? navActiveText
               : 'text-[#3F2A20]/80'
           }`}
         >
@@ -430,15 +436,8 @@ const VendorLayout = () => {
       {!isCartOrCheckoutPage && cartTotalItems > 0 && !isFloatingCartDismissed && (
         <div 
           onClick={() => navigate('/vendor/cart')}
-          className={`fixed bottom-[76px] left-4 right-4 md:bottom-8 md:right-8 md:left-auto md:w-[380px] md:px-6 md:py-4 md:rounded-2xl z-[1000] rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgba(0,0,0,0.15)] text-white cursor-pointer active:scale-[0.98] transition-all duration-300 animate-in slide-in-from-bottom-6 ${
-            localStorage.getItem('isFreshGroceryFlow') === 'true'
-              ? 'bg-gradient-to-r from-[#7A3E17] to-[#b45309] hover:brightness-110'
-              : localStorage.getItem('isMithilakFlow') === 'true'
-                ? 'bg-gradient-to-r from-[color:var(--ml-primary,#207C8A)] to-[color:var(--ml-dark,#144F58)] hover:brightness-110'
-                  : localStorage.getItem('isQuickShopFlow') === 'true'
-                    ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF7A00)] hover:brightness-110'
-                  : 'bg-[color:var(--mk-primary,#65B842)] hover:bg-[#529b34]'
-          }`}
+          className={`fixed bottom-[76px] left-4 right-4 md:bottom-8 md:right-8 md:left-auto md:w-[380px] md:px-6 md:py-4 md:rounded-2xl z-[1000] rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-[0_8px_30px_rgba(0,0,0,0.15)] text-white cursor-pointer active:scale-[0.98] transition-all duration-300 animate-in slide-in-from-bottom-6 hover:brightness-110 ${cartPillBg}`}
+          data-testid="floating-cart"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
@@ -456,11 +455,7 @@ const VendorLayout = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className={`flex items-center gap-1 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors duration-300 ${
-              localStorage.getItem('isQuickShopFlow') === 'true'
-                ? 'bg-white text-[color:var(--qs-primary,#F26522)]'
-                : 'bg-white/20 text-white'
-            }`}>
+            <div className={`flex items-center gap-1 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors duration-300 bg-white ${navActiveText}`}>
               <span>{t('nav.viewCart')}</span>
               <ChevronRight size={13} strokeWidth={3} />
             </div>

@@ -16,6 +16,9 @@ import useInfiniteProducts from '../../../shared/hooks/useInfiniteProducts';
 import useAccountStore from '../../../store/useAccountStore';
 import { useTranslation } from 'react-i18next';
 import { tName } from '../../../shared/utils/translateName';
+import { usePublicConfig } from '../../../shared/config/publicConfig';
+import OpensInTimer from '../components/vendor/OpensInTimer';
+import PackagePromo from '../components/vendor/PackagePromo';
 
 const FALLBACK_IMAGE = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"><rect width="150" height="150" fill="%23fdfbf7" rx="12"/><text x="75" y="80" font-size="12" font-family="sans-serif" font-weight="bold" fill="%23d3a075" text-anchor="middle">Mithilakart</text></svg>`;
 
@@ -153,15 +156,10 @@ const QuickShopSubcategory = () => {
   const requestedId = location.state?.categoryId || null;
   const [categoryName, setCategoryName] = useState(requestedName);
 
-  const isClosed = React.useMemo(() => {
-    const force = localStorage.getItem('forceShopClosed');
-    if (force === 'true') return true;
-    if (force === 'false') return false;
-    
-    const now = new Date();
-    const hours = now.getHours();
-    return hours >= 0 && hours < 6;
-  }, []);
+  // Open/closed comes from the server (admin hours, IST clock); nothing in the browser can change it.
+  const { shopStatus } = usePublicConfig();
+  const tabStatus = shopStatus?.[isFreshGroceryFlow ? 'groceries_fresh' : isMithilakFlow ? 'mithilak' : 'quick_shop'];
+  const isClosed = tabStatus?.open === false;
   
   const primaryText = theme.primaryText;
   const primaryBg = isFreshGroceryFlow ? 'bg-[color:var(--fg-primary,#D9A21B)]' : isMithilakFlow ? 'bg-[color:var(--ml-primary,#207C8A)]' : 'bg-[color:var(--qs-primary,#F26522)]';
@@ -729,11 +727,13 @@ const QuickShopSubcategory = () => {
               {t('auto.closedForTheDay')}
             </h2>
             <p className="text-[12px] font-medium text-slate-200/90 px-3">
-              {t('auto.ourQuickShopIsCurrently')}
+              {tabStatus.message || t('auto.ourQuickShopIsCurrently')}
             </p>
-            <p className="text-[12px] font-medium text-slate-200/90">
-              {t('x.backAt')} <span className="text-yellow-400 font-extrabold text-xs">{t('x.sixAm')}</span>
-            </p>
+            {tabStatus.opensAt && (
+              <p className="text-[12px] font-medium text-slate-200/90">
+                {t('x.backAt')} <span className="text-yellow-400 font-extrabold text-xs">{tabStatus.opensAt}</span>
+              </p>
+            )}
           </div>
 
           {/* Separate Premium Dark Alarm Countdown Card at the bottom */}
@@ -750,54 +750,15 @@ const QuickShopSubcategory = () => {
               {/* Digital countdown timer on the right */}
               <div className="flex flex-col items-start gap-0.5">
                 <div className="text-[10px] font-bold text-slate-400 tracking-wide">{t('auto.weOpenIn')}</div>
-                {(() => {
-                  const [timeLeft, setTimeLeft] = React.useState({ h: '00', m: '00', s: '00' });
-                  React.useEffect(() => {
-                    const calculateTimeLeft = () => {
-                      const now = new Date();
-                      let target = new Date();
-                      target.setHours(6, 0, 0, 0);
-                      if (now.getHours() >= 6) {
-                        target.setDate(target.getDate() + 1);
-                      }
-                      const diff = target.getTime() - now.getTime();
-                      if (diff <= 0) {
-                        return { h: '00', m: '00', s: '00' };
-                      }
-                      const hrs = Math.floor(diff / (1000 * 60 * 60));
-                      const mins = Math.floor((diff / (1000 * 60)) % 60);
-                      const secs = Math.floor((diff / 1000) % 60);
-                      return {
-                        h: String(hrs).padStart(2, '0'),
-                        m: String(mins).padStart(2, '0'),
-                        s: String(secs).padStart(2, '0')
-                      };
-                    };
-                    setTimeLeft(calculateTimeLeft());
-                    const timer = setInterval(() => {
-                      setTimeLeft(calculateTimeLeft());
-                    }, 1000);
-                    return () => clearInterval(timer);
-                  }, []);
-                  return (
-                    <div className="flex flex-col items-start">
-                      <div className="font-mono text-xl font-black text-white tracking-wide">
-                        {timeLeft.h} : {timeLeft.m} : {timeLeft.s}
-                      </div>
-                      <div className="flex items-center gap-2 text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                        <span>{t('auto.hours')}</span>
-                        <span>{t('auto.minutes')}</span>
-                        <span>{t('auto.seconds')}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
+                {tabStatus.opensAt
+                  ? <OpensInTimer opensAt={tabStatus.opensAt} />
+                  : <p className="text-xl font-black text-white">Soon</p>}
               </div>
             </div>
 
             {/* Thanks for your patience tagline */}
             <div className="w-full border-t border-white/5 pt-2 flex items-center justify-center gap-1 text-[10px] font-semibold text-slate-400/90">
-              <span className="text-yellow-400">Γ£ª</span>
+              <span className="text-yellow-400">✦</span>
               <span>{t('auto.thanksForYourPatience')}</span>
             </div>
           </div>
@@ -867,6 +828,12 @@ const QuickShopSubcategory = () => {
           </button>
         )}
       </div>
+
+      {isMithilakFlow && (
+        <div className="flex-shrink-0 max-h-[45vh] overflow-y-auto">
+          <PackagePromo marketplaceTab="mithilak" categoryId={requestedId} categoryName={requestedName} />
+        </div>
+      )}
 
       {/* Main Dual-Column Content with Independent Scrolling */}
       <div className="flex-1 min-h-0 flex overflow-hidden relative">

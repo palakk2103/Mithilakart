@@ -33,6 +33,8 @@ async function startServer() {
   // Failure to start must not prevent the API from serving traffic.
   try {
     await container.services.fulfillmentSweeper.start();
+    // Cashback for deliveries whose event was lost while the server was down.
+    container.services.orderCreditsService.startCatchUp();
   } catch (error) {
     logger.error({ err: error }, 'CR-002 fulfillment sweeper failed to start');
   }

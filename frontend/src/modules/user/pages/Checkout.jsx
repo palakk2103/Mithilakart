@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { formatPrice } from '../../../shared/utils/priceFormatter';
 import useAccountStore from '../../../store/useAccountStore';
-import { createOrder, initiatePayment, verifyPayment, validateCoupon } from '../services/ordersApi';
+import { createOrder, quoteOrder, initiatePayment, verifyPayment } from '../services/ordersApi';
 import { checkShippingServiceability } from '../services/shippingApi';
 import { getAddresses, createAddress, getProfile } from '../services/userApi';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
@@ -24,11 +24,14 @@ import { billFromCart, estimateBill } from '../utils/billing';
 import BillSummary from '../components/checkout/BillSummary';
 import FreeDeliveryBar from '../components/checkout/FreeDeliveryBar';
 import CartLine from '../components/checkout/CartLine';
+import OrderCredits from '../components/checkout/OrderCredits';
+import { requestLogin } from '../../../shared/utils/loginRequired';
+import SafePayments from '../components/checkout/SafePayments';
 import { useCartDesign, CartDesignProvider, DesignSection, OrderedSections } from '../components/checkout/cartDesign';
 import CheckoutStepper from '../components/checkout/CheckoutStepper';
 import LoginRequiredCard from '../../../shared/components/LoginRequiredCard';
 import {
-  Sheet, TipSheet, ActionCards, CouponOffers, AppliedStrip, PolicyBox, TrustBlock, CashbackBanner,
+  Sheet, TipSheet, ActionCards, CouponOffers, AppliedStrip, PolicyBox, TrustBlock, CashbackBanner, BestOffer,
 } from '../components/checkout/CheckoutExtras';
 
 // Items from these tabs ship by courier whatever tab the page is themed for.
@@ -55,6 +58,10 @@ const Checkout = () => {
   const [appliedCoupon, setAppliedCoupon] = useState('');
   const [couponMessage, setCouponMessage] = useState('');
   const [tip, setTip] = useState(0);
+  const [quote, setQuote] = useState(null);
+  const [giftCode, setGiftCode] = useState('');
+  const [useWallet, setUseWallet] = useState(false);
+  const [quoting, setQuoting] = useState(false);
   const [sheet, setSheet] = useState(null); // 'tip' | 'offers' | 'cashback'
   const { addOrder, savedAddresses, selectedAddressId, setSelectedAddress } = useAccountStore();
   const { location: liveLocation } = useLiveLocation();
@@ -84,19 +91,26 @@ const Checkout = () => {
 
   // Server-priced bill for a cart; estimated with the same admin rules for Buy Now.
   const bill = useMemo(() => {
+    if (quote) return billFromCart(quote, checkoutItems.length);
     if (buyNowItem) {
       const tab = checkoutItems.find((it) => it.marketplaceTab)?.marketplaceTab
         || (isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'groceries_fresh' : null);
       return estimateBill(checkoutItems, config || {}, 0, tab, tip);
     }
     return billFromCart(cart, checkoutItems.length);
-  }, [buyNowItem, checkoutItems, config, cart, tip, isQuickShopFlow, isFreshGroceryFlow]);
+  }, [quote, buyNowItem, checkoutItems, config, cart, tip, isQuickShopFlow, isFreshGroceryFlow]);
 
   const loadCart = useCallback(async (coupon, tipAmount = tip) => {
     const { items, cart: fetched } = await fetchCartItems(undefined, coupon || undefined, tipAmount);
     setCheckoutItems(items);
     setCart(fetched);
     setCartTab(fetched?.marketplaceTab || null);
+    // The coupon stopped fitting this cart (items removed, expired…): drop it and say why.
+    if (coupon && fetched?.couponError) {
+      setAppliedCoupon('');
+      setCouponMessage('');
+      toast.error(fetched.couponError);
+    }
     return fetched;
   }, [tip]);
 
@@ -157,8 +171,9 @@ const Checkout = () => {
     (async () => {
       setCheckingServiceability(true);
       try {
-        await checkShippingServiceability({ pincode, cod: selectedPayment === 'COD' });
-        if (!cancelled) setCourierServiceable(true);
+        const res = await checkShippingServiceability({ pincode, cod: selectedPayment === 'COD' });
+        // false only when the admin chose to block pincodes the courier refuses
+        if (!cancelled) setCourierServiceable(res?.serviceable !== false);
       } catch {
         if (!cancelled) setCourierServiceable(true);
       } finally {
@@ -184,22 +199,25 @@ const Checkout = () => {
   const belowMinimum = bill && bill.minOrderAmount > 0 && bill.subtotal < bill.minOrderAmount;
   const etaText = (() => {
     const mins = checkoutItems.map((i) => Number(i.deliveryPromiseMinutes)).filter(Boolean);
-    if (mins.length) return `ETA in ${Math.min(...mins)}–${Math.max(...mins) + 15} min`;
-    return isEcommerceFlow ? 'Standard delivery' : null;
+    if (mins.length) return `Estimated Delivery in ${Math.min(...mins)}–${Math.max(...mins) + 15} min`;
+    return isEcommerceFlow ? 'Estimated Delivery: standard courier' : null;
   })();
 
   const applyCode = async (rawCode) => {
     const code = String(rawCode || '').trim().toUpperCase();
     if (!code) { toast.error(t('checkout.enterCoupon')); return; }
     try {
-      const result = await validateCoupon({ code, subtotal: bill?.subtotal || 0 });
-      const discount = Number(result?.discountAmount ?? result?.discount ?? 0) || 0;
-      if (discount <= 0) throw new Error(result?.message || t('checkout.invalidCoupon'));
+      // Priced by the server on the real cart, so seller coupons and limits are exact.
+      const { cart: priced } = await fetchCartItems(undefined, code, tip);
+      if (!priced) throw new Error(t('checkout.invalidCoupon'));
+      if (priced.couponError) throw new Error(priced.couponError);
+      const discount = Number(priced.couponDiscount) || 0;
+      if (discount <= 0) throw new Error(t('checkout.invalidCoupon'));
       setAppliedCoupon(code);
       setCouponCode('');
       setSheet(null);
       setCouponMessage(`Best Offer Applied! You Save ${formatPrice(discount)}`);
-      toast.success(result?.message || t('checkout.couponApplied'));
+      toast.success(t('checkout.couponApplied'));
     } catch (err) {
       setAppliedCoupon('');
       setCouponMessage('');
@@ -287,7 +305,8 @@ const Checkout = () => {
   };
 
   const placeOrder = async () => {
-    if (processing) return;
+    if (processing || quoting) return;
+    if (!isAuthenticated('customer')) { requestLogin('Please login to continue checkout'); return; }
     if (isEcommerceFlow && courierServiceable === false) { toast.error(t('checkout.courierUnavailable')); return; }
     setProcessing(true);
     try {
@@ -315,6 +334,9 @@ const Checkout = () => {
         ...(buyNowItems ? { items: buyNowItems } : {}),
         ...(appliedCoupon ? { couponCode: appliedCoupon } : {}),
         ...(tip > 0 ? { tipAmount: tip } : {}),
+        ...(giftCode ? { giftCardCode: giftCode } : {}),
+        ...(useWallet ? { useWallet: true } : {}),
+        ...(quote ? { expectedTotal: quote.total } : {}),
       });
 
       let paymentStatus = result.paymentStatus || result.payment?.paymentStatus;
@@ -363,6 +385,7 @@ const Checkout = () => {
       navigate('/order-confirmation', { state: { placedOrder: newOrder, checkoutItems } });
     } catch (err) {
       console.error('Order failed', err);
+      if (err?.status === 401) { requestLogin('Please login to continue checkout'); return; }
       const message = err?.message || t('checkout.couldNotPlace');
       toast.error(message.includes('Insufficient stock')
         ? t('checkout.itemsOutOfStock')
@@ -371,6 +394,45 @@ const Checkout = () => {
       setProcessing(false);
     }
   };
+
+  // The bill is always the server's: same inputs as the order itself.
+  const buyNowLines = useMemo(() => (buyNowItem ? [{
+    productId: buyNowItem.productId || buyNowItem._id || buyNowItem.id,
+    ...(buyNowItem.listingId ? { listingId: buyNowItem.listingId } : {}),
+    variantId: buyNowItem.variantId || null,
+    quantity: Number(buyNowItem.quantity || buyNowItem.qty) || 1,
+  }] : null), [buyNowItem]);
+  const quoteMethod = currentStep === 3 ? (PAYMENT_METHOD_MAP[selectedPayment] || 'upi') : null;
+  const orderFlow = () => {
+    const itemTab = checkoutItems.find((it) => it.marketplaceTab)?.marketplaceTab;
+    const themeTab = isMithilakFlow ? 'mithilak' : isQuickShopFlow ? 'quick_shop' : isFreshGroceryFlow ? 'groceries_fresh' : getMarketplaceTab();
+    return TAB_TO_COMMERCE_FLOW[(!buyNowItem && cartTab) || itemTab || themeTab] || getCommerceFlow();
+  };
+  const quoteSeq = useRef(0);
+  useEffect(() => {
+    if (!loggedIn || loading || !checkoutItems.length) return undefined;
+    const seq = ++quoteSeq.current;
+    setQuoting(true);
+    quoteOrder({
+      commerceFlow: orderFlow(),
+      ...(buyNowLines ? { items: buyNowLines } : {}),
+      ...(quoteMethod ? { paymentMethod: quoteMethod } : {}),
+      ...(appliedCoupon ? { couponCode: appliedCoupon } : {}),
+      ...(tip > 0 ? { tipAmount: tip } : {}),
+      ...(giftCode ? { giftCardCode: giftCode } : {}),
+      ...(useWallet ? { useWallet: true } : {}),
+    }).then((q) => {
+      if (seq !== quoteSeq.current) return;
+      setQuote(q);
+      if (q.giftCardError && giftCode) { setGiftCode(''); toast.error(q.giftCardError); }
+    }).catch((e) => {
+      if (seq !== quoteSeq.current) return;
+      setQuote(null);
+      if (e?.status === 401) requestLogin('Please login to continue checkout');
+    }).finally(() => { if (seq === quoteSeq.current) setQuoting(false); });
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn, loading, checkoutItems, buyNowLines, quoteMethod, appliedCoupon, tip, giftCode, useWallet]);
 
   // Header and page tint follow the active tab's theme (admin Tab Themes), never a fixed colour.
   const headerBg = design.headerClass;
@@ -392,7 +454,7 @@ const Checkout = () => {
     return (
       <div className={`min-h-screen ${pageBg}`} style={design.rootStyle}>
         {renderHeader("Checkout", () => navigate(-1))}
-        <LoginRequiredCard title="Login to checkout" subtitle="Please log in to place your order." />
+        <LoginRequiredCard title="Please login to continue checkout" subtitle="Your items are safe. Log in and you will come right back here." />
       </div>
     );
   }
@@ -431,7 +493,7 @@ const Checkout = () => {
       <DesignSection id="address">
         <section className="cd-card">
           <div className="flex items-start gap-2">
-            <MapPin size={20} className="text-blue-700 flex-shrink-0 mt-0.5" fill="currentColor" />
+            <MapPin size={21} className="flex-shrink-0 mt-0.5" style={{ color: accentHex }} fill="currentColor" />
             <div className="flex-1 min-w-0">
               <p className="text-[14.5px] font-bold cd-heading leading-tight">
                 {address ? `Deliver to ${titleCase(address.type || 'Home')}` : t('checkout.selectAddress')}
@@ -453,7 +515,7 @@ const Checkout = () => {
                 </div>
               )}
               {etaText && address && (
-                <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[11px] font-bold"><Clock size={11} /> {etaText}</span>
+                <p data-testid="estimated-delivery" className="flex items-center gap-1.5 mt-1.5 text-emerald-700 text-[13px] font-bold"><Clock size={14} /> {etaText}</p>
               )}
             </div>
             {address && (
@@ -482,7 +544,7 @@ const Checkout = () => {
     items: (
       <DesignSection id="items">
         <section className="cd-card">
-          <h2 className="flex items-center gap-1.5 text-[14.5px] font-bold cd-heading mb-2"><ShoppingCart size={17} /> {sd.title('items', 'Your Cart Items')} ({checkoutItems.length})</h2>
+          <h2 className="flex items-center gap-2 text-[16px] font-bold cd-heading mb-2.5"><ShoppingCart size={19} /> {sd.title('items', 'Your Cart Items')} ({checkoutItems.length})</h2>
           <div className="divide-y divide-slate-100">
             {checkoutItems.map((item, idx) => (
               <div key={item.cartId || idx} className="cd-row">
@@ -524,11 +586,13 @@ const Checkout = () => {
               </div>
             </div>
           </div>
-          {appliedCoupon && couponMessage && (
-            <div className="mt-1.5 flex items-center gap-2">
+          {appliedCoupon && couponMessage ? (
+            <div className="mt-2 flex items-center gap-2" data-testid="best-offer-applied">
               <div className="flex-1"><AppliedStrip message={couponMessage} /></div>
               <button type="button" onClick={removeCoupon} className="h-9 px-2 text-[12px] font-bold text-slate-600 underline flex-shrink-0">Remove</button>
             </div>
+          ) : (
+            <BestOffer subtotal={bill?.subtotal || 0} accentHex={accentHex} onApply={applyCode} onMore={() => setSheet('offers')} />
           )}
         </section>
       </DesignSection>
@@ -545,6 +609,8 @@ const Checkout = () => {
     policy: <DesignSection id="policy"><PolicyBox content={checkoutContent} to="/cancellation-returns" /></DesignSection>,
 
     trust: <DesignSection id="trust"><TrustBlock content={checkoutContent} /></DesignSection>,
+
+    safePayments: <DesignSection id="safePayments" plain><SafePayments /></DesignSection>,
 
     terms: (
       <DesignSection id="terms" plain>
@@ -568,6 +634,9 @@ const Checkout = () => {
     { id: 'CARD', key: 'card', label: 'Credit / Debit / ATM Card', sub: 'Visa, Mastercard, RuPay', icon: CreditCard, tile: '#2563EB' },
     ...(codAllowed ? [{ id: 'COD', key: 'cod', label: 'Cash on Delivery', sub: 'Pay at your doorstep', icon: Banknote, tile: '#16A34A' }] : []),
   ];
+  const billTab = quote?.marketplaceTab || cartTab;
+  const cashbackCfg = config?.cashback;
+  const cashbackShown = cashbackCfg?.enabled && (!cashbackCfg.tabs?.length || !billTab || cashbackCfg.tabs.includes(billTab)) ? cashbackCfg : null;
   const paymentOffers = checkoutContent?.paymentOffers || {};
   const pd = designPayment;
 
@@ -575,8 +644,26 @@ const Checkout = () => {
     coupons: buyNowItem ? null : (
       <DesignSection id="coupons">
         <section className="cd-card">
-          <h2 className="flex items-center gap-1.5 text-[14.5px] font-bold cd-heading mb-2"><Tag size={17} className="text-blue-600 fill-blue-600" /> {pd.title('coupons', 'Coupons & Offers')}</h2>
+          <h2 className="flex items-center gap-2 text-[16px] font-bold cd-heading mb-2.5"><Tag size={18} style={{ color: accentHex }} /> {pd.title('coupons', 'Coupons & Offers')}</h2>
+          <div className="flex gap-2 mb-3">
+            <input
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              placeholder={t('checkout.enterCode')}
+              aria-label="Coupon code"
+              className="flex-1 min-w-0 h-11 border border-slate-300 rounded-lg px-3 text-[14px] font-semibold uppercase focus:outline-none bg-white"
+            />
+            <button type="button" onClick={handleApplyCoupon} className="px-5 h-11 cd-btn text-white text-[13.5px] font-bold active:scale-95" style={{ background: accentHex }}>{t('auto.apply')}</button>
+          </div>
+          {appliedCoupon && couponMessage && <div className="mb-2"><AppliedStrip message={couponMessage} /></div>}
           <CouponOffers subtotal={bill?.subtotal || 0} appliedCode={appliedCoupon} accentHex={accentHex} onApply={applyCode} onRemove={removeCoupon} />
+          {paymentOptions.filter((o) => paymentOffers[o.key]).map((o) => (
+            <button key={o.id} type="button" onClick={() => setSelectedPayment(o.id)} className="w-full mt-2 pt-2 border-t border-dashed border-slate-200 flex items-center gap-2.5 text-left min-h-[44px]">
+              <Percent size={18} className="text-emerald-600 flex-shrink-0" />
+              <span className="flex-1 text-[13px] font-semibold text-slate-800">{o.label}: {paymentOffers[o.key]}</span>
+              <span className="text-[12px] font-bold" style={{ color: accentHex }}>Use</span>
+            </button>
+          ))}
         </section>
       </DesignSection>
     ),
@@ -584,11 +671,12 @@ const Checkout = () => {
     methods: (
       <DesignSection id="methods">
         <section className="cd-card">
-          <h2 className="flex items-center gap-1.5 text-[14.5px] font-bold cd-heading mb-1"><Landmark size={17} className="text-blue-700" /> {pd.title('methods', 'Select Payment Method')}</h2>
-          <div role="radiogroup" aria-label="Payment method" className="divide-y divide-slate-100">
+          <h2 className="flex items-center gap-2 text-[16px] font-bold cd-heading mb-2.5"><Landmark size={18} style={{ color: accentHex }} /> {pd.title('methods', 'Select Payment Method')}</h2>
+          <div role="radiogroup" aria-label="Payment method" className="space-y-2.5">
             {paymentOptions.map(({ id, key, label, sub, icon: Icon, tile }) => {
               const checked = selectedPayment === id;
-              const offer = paymentOffers[key];
+              const earn = bill?.cashback?.offers?.[PAYMENT_METHOD_MAP[id]] || 0;
+              const offer = earn > 0 ? `${formatPrice(earn)} cashback` : paymentOffers[key];
               return (
                 <button
                   key={id}
@@ -596,25 +684,26 @@ const Checkout = () => {
                   role="radio"
                   aria-checked={checked}
                   onClick={() => setSelectedPayment(id)}
-                  className="w-full flex items-center gap-2.5 py-2 min-h-[52px] text-left"
+                  className="w-full flex items-center gap-3 p-3 min-h-[64px] text-left rounded-xl border-2 transition-colors"
+                  style={checked ? { borderColor: accentHex, background: `${accentHex}12` } : { borderColor: '#E2E8F0', background: '#fff' }}
                 >
-                  <span className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: checked ? accentHex : '#CBD5E1' }}>
-                    {checked && <span className="w-2.5 h-2.5 rounded-full" style={{ background: accentHex }} />}
-                  </span>
-                  <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: tile }}>
-                    <Icon size={17} className="text-white" />
+                  <span className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: tile }}>
+                    <Icon size={21} className="text-white" />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[14px] font-semibold text-slate-900 leading-tight">{label}</span>
-                    <span className="block text-[11.5px] text-slate-500 leading-tight">{id === 'COD' && config?.codHandlingFee > 0 ? `Pay at your doorstep · +${formatPrice(config.codHandlingFee)} fee` : sub}</span>
-                    {offer && <span className="block text-[11.5px] font-semibold text-emerald-700 leading-tight mt-0.5">{offer}</span>}
+                    <span className="block text-[15px] font-bold text-slate-900 leading-tight">{label}</span>
+                    <span className="block text-[12.5px] text-slate-500 leading-tight mt-0.5">{id === 'COD' && config?.codHandlingFee > 0 ? `Pay at your doorstep · +${formatPrice(config.codHandlingFee)} fee` : sub}</span>
+                    {offer && <span className="block text-[12px] font-semibold text-emerald-700 leading-tight mt-0.5">{offer}</span>}
+                  </span>
+                  <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: checked ? accentHex : '#CBD5E1' }}>
+                    {checked && <span className="w-3 h-3 rounded-full" style={{ background: accentHex }} />}
                   </span>
                 </button>
               );
             })}
           </div>
           <div className="mt-1.5">
-            <CashbackBanner content={checkoutContent} accentHex={accentHex} onMore={() => setSheet('cashback')} />
+            <CashbackBanner cashback={cashbackShown} accentHex={accentHex} onMore={() => setSheet('cashback')} />
           </div>
           {import.meta.env.DEV && (
             <p className="mt-1.5 rounded-lg bg-blue-50 text-blue-900 text-[11px] px-2.5 py-1.5">
@@ -628,7 +717,7 @@ const Checkout = () => {
     orderSummary: (
       <DesignSection id="orderSummary">
         <section className="cd-card">
-          <h2 className="flex items-center gap-1.5 text-[14.5px] font-bold cd-heading mb-2"><FileText size={17} className="text-blue-700" /> {pd.title('orderSummary', 'Order Summary')} ({checkoutItems.length} {checkoutItems.length === 1 ? 'Item' : 'Items'})</h2>
+          <h2 className="flex items-center gap-2 text-[16px] font-bold cd-heading mb-2.5"><FileText size={18} style={{ color: accentHex }} /> {pd.title('orderSummary', 'Order Summary')} ({checkoutItems.length} {checkoutItems.length === 1 ? 'Item' : 'Items'})</h2>
           <div className="divide-y divide-slate-100">
             {checkoutItems.map((item, idx) => (
               <div key={item.cartId || idx} className="cd-row">
@@ -642,6 +731,16 @@ const Checkout = () => {
         </section>
       </DesignSection>
     ),
+
+    credits: (
+      <DesignSection id="credits">
+        <section className="cd-card">
+          <OrderCredits bill={bill} accentHex={accentHex} giftCode={giftCode} onApplyGift={setGiftCode} onRemoveGift={() => setGiftCode('')} useWallet={useWallet} onWallet={setUseWallet} busy={quoting} />
+        </section>
+      </DesignSection>
+    ),
+
+    safePayments: <DesignSection id="safePayments" plain><SafePayments /></DesignSection>,
 
     note: (
       <DesignSection id="note" plain>
@@ -679,25 +778,25 @@ const Checkout = () => {
         </Sheet>
       )}
       {sheet === 'cashback' && (
-        <Sheet title={checkoutContent?.cashbackBanner?.title || 'Cashback'} onClose={() => setSheet(null)}>
-          <p className="text-[14px] text-slate-700 leading-relaxed whitespace-pre-line">{checkoutContent?.cashbackBanner?.details}</p>
+        <Sheet title={cashbackShown?.title || 'Cashback'} onClose={() => setSheet(null)}>
+          <ul className="list-disc pl-5 space-y-1.5 text-[14px] text-slate-700 leading-relaxed">{(cashbackShown?.rules || []).map((r) => <li key={r}>{r}</li>)}</ul>
+          {cashbackShown?.terms && <p className="mt-3 text-[13px] text-slate-600 leading-relaxed whitespace-pre-line">{cashbackShown.terms}</p>}
         </Sheet>
       )}
 
       {/* Sticky action bar */}
       {!loading && (
         <div className="fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-2xl border-t border-slate-200 px-3 pt-2 pb-[max(8px,env(safe-area-inset-bottom))] shadow-[0_-6px_20px_rgba(0,0,0,0.07)]">
-          <div className="max-w-xl mx-auto flex items-center gap-2.5">
+          <div className="max-w-xl mx-auto flex items-center justify-between gap-2.5">
             {currentStep === 2 ? (
               <>
-                <Link to={shopNowLink} className="flex-1 h-11 px-2 cd-btn border-2 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap bg-white" style={{ borderColor: accentHex, color: '#1E3A8A' }}>
+                <Link to={shopNowLink} className="flex-1 h-12 px-2 cd-btn border-2 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap bg-white" style={{ borderColor: accentHex, color: '#1E3A8A' }}>
                   <ArrowLeft size={16} /> Continue Shopping
                 </Link>
                 <button
                   type="button"
                   onClick={goToPayment}
-                  disabled={checkingServiceability || courierServiceable === false || belowMinimum}
-                  className="flex-1 h-11 px-2 cd-btn text-white text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform disabled:opacity-50 whitespace-nowrap"
+                  className="flex-1 h-12 px-2 cd-btn text-white text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform whitespace-nowrap"
                   style={{ background: accentHex }}
                 >
                   Proceed to Payment <ArrowRight size={16} />
@@ -705,18 +804,18 @@ const Checkout = () => {
               </>
             ) : (
               <>
-                <div className="flex-shrink-0 pr-2.5 border-r border-slate-300">
+                <div className="flex-shrink-0">
                   <p className="text-[11px] font-semibold text-slate-500 leading-none">Total Amount</p>
                   <p className="text-[19px] font-extrabold text-slate-900 leading-none mt-1">{payLabel}</p>
                 </div>
                 <button
                   type="button"
                   onClick={placeOrder}
-                  disabled={!selectedPayment || checkingServiceability || courierServiceable === false}
-                  className="flex-1 h-11 cd-btn text-white text-[14px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-transform disabled:opacity-50 whitespace-nowrap"
+                  data-testid="pay-button"
+                  className="ml-auto h-12 px-5 cd-btn text-white text-[14.5px] font-bold inline-flex items-center justify-center gap-1.5 active:scale-95 transition-transform whitespace-nowrap"
                   style={{ background: accentHex }}
                 >
-                  <Lock size={15} /> {selectedPayment === 'COD' ? 'Place Order' : `Pay ${payLabel} Securely`} <ArrowRight size={16} />
+                  <Lock size={15} /> {selectedPayment === 'COD' || bill?.total === 0 ? 'Place Order' : `Pay ${payLabel} Securely`} <ArrowRight size={16} />
                 </button>
               </>
             )}

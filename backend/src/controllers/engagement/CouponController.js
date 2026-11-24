@@ -28,6 +28,7 @@ class CouponController extends BaseController {
       code: req.body.code,
       subtotal: req.body.subtotal,
       userId: req.user?.id || null,
+      clientKey: req.ip,
     });
     return ApiResponse.success(res, data);
   });

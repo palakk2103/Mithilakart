@@ -20,6 +20,14 @@ function createCartRoutes(cartController, middleware) {
     cart: Joi.string().max(2000).allow('').optional(),
     recent: Joi.string().max(2000).allow('').optional(),
   })), cartController.recommendations);
+  router.get('/recommendations/:railKey', middleware.authenticateCustomer(),
+    validateParams(Joi.object({ railKey: Joi.string().pattern(/^[a-z0-9_-]{1,40}$/i).required() })),
+    validateQuery(Joi.object({
+      marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).required(),
+      sub: Joi.string().pattern(/^[a-z0-9_-]{1,40}$/i).optional(),
+      cart: Joi.string().max(2000).allow('').optional(),
+      recent: Joi.string().max(2000).allow('').optional(),
+    })), cartController.recommendationRail);
   router.post('/items', optionalCustomerAuth, validateBody(addCartItemSchema), cartController.addItem);
   router.patch('/items/:id', optionalCustomerAuth, validateParams(Joi.object({ id: cartLineIdSchema })), validateBody(updateCartItemSchema), cartController.updateItem);
   router.delete('/items/:id', optionalCustomerAuth, validateParams(Joi.object({ id: cartLineIdSchema })), cartController.removeItem);

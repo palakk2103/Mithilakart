@@ -28,6 +28,10 @@ class RefundService extends BaseService {
     this.inventoryHistoryRepository = inventoryHistoryRepository;
   }
 
+  setOrderCreditsService(service) {
+    this.orderCreditsService = service;
+  }
+
   async processRefund({ returnId, adminId, method = REFUND_METHOD.WALLET, idempotencyKey = null }) {
     if (idempotencyKey) {
       const existing = await this.refundRepository.findByIdempotencyKey(idempotencyKey);
@@ -48,7 +52,11 @@ class RefundService extends BaseService {
       }
 
       const orderItem = await this.orderItemRepository.findById(ret.orderItemId, { session });
-      const amount = orderItem ? (orderItem.unitPrice * ret.quantity) : 0;
+      const goods = orderItem ? (orderItem.unitPrice * ret.quantity) : 0;
+      // Cashback given for these goods is not refunded as money.
+      const paidOrder = this.orderCreditsService ? await this.orderRepository?.findById(ret.orderId, { session }) : null;
+      const share = paidOrder ? this.orderCreditsService.cashbackShare(paidOrder, goods) : 0;
+      const amount = Math.max(0, Math.round((goods - share) * 100) / 100);
 
       let refund = existingRefund;
       if (!refund) {

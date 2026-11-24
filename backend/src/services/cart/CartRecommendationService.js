@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { BaseService } = require('../../core/BaseService');
+const { AppError } = require('../../utils/AppError');
 const { DEFAULT_CART_RAILS } = require('../../constants/checkoutContent');
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -84,13 +85,45 @@ class CartRecommendationService extends BaseService {
     return { marketplaceTab, rails: out };
   }
 
+  /** "View All" page of one rail (or one of its sub-tabs): the same source, a longer list. */
+  async getRail({ userId, marketplaceTab, railKey, subKey = null, cartProductIds = [], recentProductIds = [], limit = 60 }) {
+    const { rails } = await this._config();
+    const rail = rails.find((r) => r && r.key === railKey && r.enabled !== false);
+    if (!rail) throw AppError.notFound('This section is not available');
+    const tabs = Array.isArray(rail.subTabs) ? rail.subTabs.filter((s) => s && s.enabled !== false) : [];
+    const source = tabs.length ? (tabs.find((s) => s.key === subKey) || tabs[0]) : rail;
+    const ctx = {
+      userId,
+      tab: marketplaceTab,
+      limit: Math.min(100, Math.max(1, Number(limit) || 60)),
+      cart: new Set(), // browsing the full list: what is in the cart stays visible
+      recent: toIds(recentProductIds).slice(0, 30),
+      used: new Set(),
+      memo: new Map(),
+    };
+    // "Recommended" is computed from the cart, so it still needs to know it.
+    if (source.source === 'recommended') ctx.cart = new Set(toIds(cartProductIds));
+    const items = await this._railItems(source, ctx, { dedupe: false });
+    return {
+      key: rail.key,
+      title: source === rail ? rail.title : source.title,
+      subKey: source === rail ? null : source.key,
+      tabs: tabs.map((s) => ({ key: s.key, title: s.title })),
+      marketplaceTab,
+      items,
+    };
+  }
+
   async _railItems(rail, ctx, { dedupe }) {
     let productIds = await this._source(rail.source, rail, ctx);
     if (!productIds.length && rail.fallbackSource) productIds = await this._source(rail.fallbackSource, rail, ctx);
-    const wanted = productIds.filter((id) => !ctx.cart.has(id) && (!dedupe || !ctx.used.has(id)));
-    const cards = await this._cards(wanted, ctx, rail);
+    // "My Wishlist" is the customer's own list: it must match the wishlist page, so nothing
+    // is dropped for being in another rail, the cart, another tab or out of stock.
+    const own = rail.source === 'wishlist';
+    const wanted = own ? productIds : productIds.filter((id) => !ctx.cart.has(id) && (!dedupe || !ctx.used.has(id)));
+    const cards = await this._cards(wanted, ctx, { anyTab: own, keepOutOfStock: own });
     const picked = cards.slice(0, ctx.limit);
-    if (dedupe) picked.forEach((c) => ctx.used.add(c.productId));
+    if (dedupe && !own) picked.forEach((c) => ctx.used.add(c.productId));
     return picked;
   }
 
@@ -196,20 +229,25 @@ class CartRecommendationService extends BaseService {
   }
 
   /** Product cards (with the tab's listing price) in the order given. */
-  async _cards(productIds, ctx) {
+  async _cards(productIds, ctx, { anyTab = false, keepOutOfStock = false } = {}) {
     const ids = toIds(productIds).slice(0, ctx.limit * 3);
     if (!ids.length) return [];
     const [products, listings] = await Promise.all([
       this.products.findPublic({ _id: { $in: ids } }, { limit: ids.length }),
-      this.listings.findPublic({ productId: { $in: ids }, marketplaceTab: ctx.tab }, { limit: ids.length * 3, sort: { price: 1 } }),
+      this.listings.findPublic(
+        { productId: { $in: ids }, ...(anyTab ? {} : { marketplaceTab: ctx.tab }) },
+        { limit: ids.length * (anyTab ? 12 : 3), sort: { price: 1 } }
+      ),
     ]);
+    // With every tab allowed, the shopper's current tab still wins.
+    if (anyTab) listings.sort((a, b) => Number(b.marketplaceTab === ctx.tab) - Number(a.marketplaceTab === ctx.tab));
     const productOf = new Map(products.map((p) => [String(p._id), p]));
     const listingOf = new Map();
     listings.forEach((l) => { if (!listingOf.has(String(l.productId))) listingOf.set(String(l.productId), l); });
 
     return ids
       .filter((id) => productOf.has(id) && listingOf.has(id))
-      .filter((id) => (Number(productOf.get(id).stock) || 0) > 0)
+      .filter((id) => keepOutOfStock || (Number(productOf.get(id).stock) || 0) > 0)
       .map((id) => {
         const p = productOf.get(id);
         const l = listingOf.get(id);

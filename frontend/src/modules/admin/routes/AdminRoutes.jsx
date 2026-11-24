@@ -40,6 +40,7 @@ import SubAdmins from '../pages/system/SubAdmins';
 
 // Promotions
 import Coupons from '../pages/promotions/Coupons';
+import GiftCards from '../pages/promotions/GiftCards';
 import FlashSale from '../pages/promotions/FlashSale';
 import FeaturedProducts from '../pages/promotions/FeaturedProducts';
 
@@ -131,6 +132,7 @@ const AdminRoutes = () => {
 
         {/* Promotions */}
         <Route path="promotions/coupons" element={<Coupons />} />
+        <Route path="promotions/gift-cards" element={<GiftCards />} />
         <Route path="promotions/flash-sale" element={<FlashSale />} />
         <Route path="promotions/featured" element={<FeaturedProducts />} />
 

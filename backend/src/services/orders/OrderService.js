@@ -2,7 +2,7 @@ const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const { withTransaction } = require('../../database');
 const { parsePagination, buildPaginationMeta } = require('../../utils/pagination');
-const { CART, ORDER_STATUS, PAYMENT_STATUS } = require('../../constants/commerce');
+const { CART, ORDER_STATUS, PAYMENT_STATUS, PAYMENT_METHOD } = require('../../constants/commerce');
 const { randomUuid } = require('../../utils/cryptoHelper');
 const { eventBus } = require('../../events/EventBus');
 const { getProvider } = require('../../core/providers.registry');
@@ -95,8 +95,18 @@ class OrderService extends BaseService {
     idempotencyKey = null,
     sessionMeta = {},
     tipAmount = 0,
+    giftCardCode = null,
+    useWallet = false,
+    expectedTotal = null,
   }) {
     if (!userId) throw AppError.unauthorized('User required');
+
+    // The customer agreed to a price; a higher one (cashback ended, surge started…) needs their OK first.
+    const assertExpected = (total) => {
+      if (expectedTotal != null && total - expectedTotal > 0.009) {
+        throw AppError.conflict(`The amount to pay is now ₹${total}. Please check your bill and try again.`, [{ code: 'TOTAL_CHANGED', total }]);
+      }
+    };
 
     if (idempotencyKey) {
       const existing = await this.orderRepository.findByIdempotencyKey(idempotencyKey, userId);
@@ -118,8 +128,8 @@ class OrderService extends BaseService {
       await this._releaseStalePendingOrders(userId, session);
 
       const cart = items
-        ? await this._buildCartFromItems({ items, commerceFlow, couponCode, userId, tipAmount })
-        : await this.cartService.getCart({ userId, sessionId: null, commerceFlow, marketplaceTab: orderTab, couponCode, tipAmount });
+        ? await this._buildCartFromItems({ items, commerceFlow, couponCode, userId, tipAmount, paymentMethod, giftCardCode, useWallet })
+        : await this.cartService.getCart({ userId, sessionId: null, commerceFlow, marketplaceTab: orderTab, couponCode, tipAmount, paymentMethod, giftCardCode, useWallet });
 
       if (!cart.items || cart.items.length === 0) {
         throw AppError.validation('Cart is empty');
@@ -130,6 +140,10 @@ class OrderService extends BaseService {
           { field: 'subtotal', message: `Minimum order is ₹${cart.minOrderAmount}` },
         ]);
       }
+
+      assertExpected(cart.total);
+
+      if (this.cartService?.assertPurchaseLimits) await this.cartService.assertPurchaseLimits(cart.items);
 
       // The tab the customer shopped in decides the delivery mode. A product
       // listed in several tabs (Quick Shop AND Mithilakart) used to turn every
@@ -142,6 +156,9 @@ class OrderService extends BaseService {
           [{ code: 'CART_TAB_MISMATCH' }]
         );
       }
+
+      const platformConfig = this.pricingService?.platformConfigService;
+      if (platformConfig?.assertShopOpen) await platformConfig.assertShopOpen(marketplaceTab);
 
       const addressSnapshot = await this._buildAddressSnapshot(userId, addressId);
       if (isQuickCommerceTab(marketplaceTab) && this.quickServiceAreaService) {
@@ -190,6 +207,12 @@ class OrderService extends BaseService {
           platformFee: cart.platformFee || 0,
           packagingFee: cart.packagingFee || 0,
           total: cart.total,
+          grossTotal: cart.grossTotal ?? cart.total,
+          giftCardAmount: cart.giftCardAmount || 0,
+          walletAmount: cart.walletAmount || 0,
+          cashback: cart.cashback?.amount > 0
+            ? { amount: cart.cashback.amount, mode: cart.cashback.mode, campaign: cart.cashback.campaign, status: cart.cashback.mode === 'wallet' ? 'pending' : 'applied' }
+            : { amount: 0, mode: null, campaign: null, status: 'none' },
           paymentMethod,
           paymentStatus: PAYMENT_STATUS.PENDING,
           addressSnapshot,
@@ -202,6 +225,10 @@ class OrderService extends BaseService {
         },
         session
       );
+
+      if (this.orderCreditsService && cart.credits) {
+        await this.orderCreditsService.commit({ order, userId, credits: cart.credits }, session);
+      }
 
       const orderItems = cart.items.map((it) => ({
         orderId: order._id,
@@ -263,14 +290,13 @@ class OrderService extends BaseService {
       }
 
       if (couponCode && cart.couponDiscount > 0 && this.couponService) {
-        const { coupon } = await this.couponService.validateForCheckout({
+        await this.couponService.redeem({
           code: couponCode,
           subtotal: cart.subtotal,
+          items: cart.items,
           userId,
-        });
-        if (coupon) {
-          await this.couponService.incrementUsage(coupon._id, session);
-        }
+          orderId: order._id,
+        }, session);
       }
 
       const updatedOrder = await this.orderRepository.findById(order._id, { session });
@@ -299,20 +325,26 @@ class OrderService extends BaseService {
     // An online payment still pending (Razorpay sheet open) keeps the cart:
     // if the customer closes the sheet they can retry without re-adding
     // everything. The app clears the cart once the payment is verified.
-    if (placedFromCart && result?.orderId && result.paymentStatus === PAYMENT_STATUS.PAID) {
-      try {
-        await this.cartService.clearCart({ userId, sessionId: null, marketplaceTab: orderTab });
-      } catch (err) {
-        // The order is already committed — a cart-clearing failure must never
-        // fail the request. Logged via the module logger; `this.logger` does
-        // not exist on BaseService and silently swallowed this before.
-        logger.error({ err, userId, orderId: result.orderId },
-          'Failed to clear cart after order placement');
-      }
-    }
+      // COD is confirmed on placement, so it clears the cart immediately.
+      const shouldClearCart = placedFromCart && result?.orderId && (
+        result.paymentStatus === PAYMENT_STATUS.PAID ||
+        paymentMethod === PAYMENT_METHOD.COD
+      );
 
-    return result;
-  }
+      if (shouldClearCart) {
+        try {
+          await this.cartService.clearCart({ userId, sessionId: null, marketplaceTab: orderTab });
+        } catch (err) {
+          // The order is already committed — a cart-clearing failure must never
+          // fail the request. Logged via the module logger; `this.logger` does
+          // not exist on BaseService and silently swallowed this before.
+          logger.error({ err, userId, orderId: result.orderId },
+            'Failed to clear cart after order placement');
+        }
+      }
+
+      return result;
+    }
 
   /**
    * CR-002 — customer-safe fulfillment state.
@@ -322,43 +354,43 @@ class OrderService extends BaseService {
    * or internal failure codes.
    */
   async getFulfillmentStatus(orderId, userId) {
-    const order = await this.orderRepository.findActiveById(orderId, userId);
-    if (!order) throw AppError.notFound('Order not found');
+      const order = await this.orderRepository.findActiveById(orderId, userId);
+      if (!order) throw AppError.notFound('Order not found');
 
-    const fulfillment = order.fulfillment || {};
-    let state = null;
+      const fulfillment = order.fulfillment || {};
+      let state = null;
 
-    if (this.orderFulfillmentRepository) {
-      try {
-        const record = await this.orderFulfillmentRepository.findByOrderId(order._id);
-        state = record?.state || null;
-      } catch (err) {
-        logger.warn({ err, orderId: String(order._id) }, 'CR-002 fulfillment status lookup failed');
+      if (this.orderFulfillmentRepository) {
+        try {
+          const record = await this.orderFulfillmentRepository.findByOrderId(order._id);
+          state = record?.state || null;
+        } catch (err) {
+          logger.warn({ err, orderId: String(order._id) }, 'CR-002 fulfillment status lookup failed');
+        }
       }
-    }
 
-    return {
-      orderId: String(order._id),
-      status: order.status,
-      state,
-      deliveryMode: fulfillment.deliveryMode ?? null,
-      estimatedDeliveryMinutes: fulfillment.estimatedDeliveryMinutes ?? null,
-      estimatedDeliveryAt: fulfillment.estimatedDeliveryAt ?? order.estimatedDeliveryAt ?? null,
-      fulfillmentType: fulfillment.type ?? order.fulfilmentType ?? null,
-      fallbackLevel: fulfillment.fallbackLevel ?? 0,
-      updatedAt: order.updatedAt,
-    };
-  }
+      return {
+        orderId: String(order._id),
+        status: order.status,
+        state,
+        deliveryMode: fulfillment.deliveryMode ?? null,
+        estimatedDeliveryMinutes: fulfillment.estimatedDeliveryMinutes ?? null,
+        estimatedDeliveryAt: fulfillment.estimatedDeliveryAt ?? order.estimatedDeliveryAt ?? null,
+        fulfillmentType: fulfillment.type ?? order.fulfilmentType ?? null,
+        fallbackLevel: fulfillment.fallbackLevel ?? 0,
+        updatedAt: order.updatedAt,
+      };
+    }
 
   async releaseOrderReservations(orderId, session = null) {
-    const order = await this.orderRepository.findById(orderId, { session });
-    if (!order || order.inventoryDeducted) return;
+      const order = await this.orderRepository.findById(orderId, { session });
+      if (!order || order.inventoryDeducted) return;
 
-    const orderItems = await this.orderItemRepository.listByOrderId(orderId, { session });
-    for (const it of orderItems) {
-      await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
+      const orderItems = await this.orderItemRepository.listByOrderId(orderId, { session });
+      for (const it of orderItems) {
+        await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
+      }
     }
-  }
 
   /**
    * Online orders whose payment was never completed (sheet closed, app
@@ -366,625 +398,669 @@ class OrderService extends BaseService {
    * customer happened to order again. Run by the fulfillment sweeper.
    */
   async expireAbandonedPayments({ olderThanMinutes = ABANDONED_PAYMENT_MINUTES, limit = 100 } = {}) {
-    const cutoff = new Date(Date.now() - olderThanMinutes * 60 * 1000);
-    const stale = await this.orderRepository.find({
-      status: ORDER_STATUS.PENDING,
-      paymentStatus: PAYMENT_STATUS.PENDING,
-      inventoryDeducted: false,
-      deletedAt: null,
-      createdAt: { $lt: cutoff },
-    }, { limit });
+      const cutoff = new Date(Date.now() - olderThanMinutes * 60 * 1000);
+      const stale = await this.orderRepository.find({
+        status: ORDER_STATUS.PENDING,
+        paymentStatus: PAYMENT_STATUS.PENDING,
+        inventoryDeducted: false,
+        deletedAt: null,
+        createdAt: { $lt: cutoff },
+      }, { limit });
 
-    let expired = 0;
-    for (const order of stale) {
-      try {
-        await withTransaction(async (session) => {
-          const moved = await this.orderRepository.updateStatusOptimistic(
-            order._id, ORDER_STATUS.PENDING, ORDER_STATUS.CANCELLED, session
-          );
-          if (!moved) return; // paid or cancelled meanwhile
-          await this.releaseOrderReservations(order._id, session);
-          await this.orderRepository.updateById(order._id, {
-            paymentStatus: PAYMENT_STATUS.FAILED,
-            cancelledAt: new Date(),
-          }, session);
-          await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED,
-            'Payment was not completed — order cancelled', { source: 'system' }, session);
-          await this.orderStatusHistoryRepository.addTransition({
-            orderId: order._id,
-            fromStatus: ORDER_STATUS.PENDING,
-            toStatus: ORDER_STATUS.CANCELLED,
-            changedBy: 'system',
-            changedById: null,
-            note: 'Payment not completed',
-          }, session);
-          expired += 1;
-        });
-      } catch (err) {
-        logger.error({ err, orderId: String(order._id) }, 'Expiring abandoned payment failed');
+      let expired = 0;
+      for (const order of stale) {
+        try {
+          await withTransaction(async (session) => {
+            const moved = await this.orderRepository.updateStatusOptimistic(
+              order._id, ORDER_STATUS.PENDING, ORDER_STATUS.CANCELLED, session
+            );
+            if (!moved) return; // paid or cancelled meanwhile
+            await this.releaseOrderReservations(order._id, session);
+            await this._releaseCoupon(order._id, session);
+            await this.orderRepository.updateById(order._id, {
+              paymentStatus: PAYMENT_STATUS.FAILED,
+              cancelledAt: new Date(),
+            }, session);
+            await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED,
+              'Payment was not completed — order cancelled', { source: 'system' }, session);
+            await this.orderStatusHistoryRepository.addTransition({
+              orderId: order._id,
+              fromStatus: ORDER_STATUS.PENDING,
+              toStatus: ORDER_STATUS.CANCELLED,
+              changedBy: 'system',
+              changedById: null,
+              note: 'Payment not completed',
+            }, session);
+            expired += 1;
+          });
+        } catch (err) {
+          logger.error({ err, orderId: String(order._id) }, 'Expiring abandoned payment failed');
+        }
       }
+      return { expired };
     }
-    return { expired };
-  }
+
+  /** A cancelled / never-paid order gives its coupon use back to the customer. */
+  async _releaseCoupon(orderId, session = null) {
+      if (this.couponService?.releaseForOrder) await this.couponService.releaseForOrder(orderId, session);
+      // Gift card and wallet money go back too, and the cashback use is freed.
+      if (this.orderCreditsService) await this.orderCreditsService.releaseForOrder(orderId, session);
+    }
+
+    setOrderCreditsService(service) {
+      this.orderCreditsService = service;
+    }
+
+  /**
+   * The bill for the checkout screens: the customer's cart, or Buy Now lines,
+   * priced exactly as the order will be. Problems with a coupon or gift card
+   * come back as couponError / giftCardError instead of hiding the bill.
+   */
+  async quoteOrder({ userId, items = null, commerceFlow = 'standard', couponCode = null, tipAmount = 0, paymentMethod = null, giftCardCode = null, useWallet = false }) {
+      const quote = items
+        ? await this._buildCartFromItems({ items, commerceFlow, couponCode, userId, tipAmount, paymentMethod, giftCardCode, useWallet, lenient: true })
+        : await this.cartService.getCart({
+          userId, sessionId: null, commerceFlow, marketplaceTab: resolveTabFromQuery({ commerceFlow }) || 'mithilakart',
+          couponCode, tipAmount, paymentMethod, giftCardCode, useWallet, lenientCoupon: true,
+        });
+      const { credits, ...safe } = quote; // internal ids stay on the server
+      return safe;
+    }
 
   async _releaseStalePendingOrders(userId, session = null) {
-    const staleOrders = await this.orderRepository.findUnpaidPendingByUser(userId, { session });
+      const staleOrders = await this.orderRepository.findUnpaidPendingByUser(userId, { session });
 
-    for (const order of staleOrders) {
-      await this.releaseOrderReservations(order._id, session);
+      for (const order of staleOrders) {
+        await this.releaseOrderReservations(order._id, session);
+        await this._releaseCoupon(order._id, session);
+        await this.orderRepository.updateById(
+          order._id,
+          {
+            status: ORDER_STATUS.CANCELLED,
+            paymentStatus: PAYMENT_STATUS.FAILED,
+            cancelledAt: new Date(),
+          },
+          session
+        );
+      }
+    }
+
+  async confirmOrder(orderId, changedById, session = null) {
+      const order = await this.orderRepository.findById(orderId, { session });
+      if (!order) throw AppError.notFound('Order not found');
+
+      if (order.status === ORDER_STATUS.PLACED || order.status === ORDER_STATUS.CONFIRMED || order.inventoryDeducted) {
+        return order;
+      }
+
+      // Read inside the session: for COD this runs in the checkout transaction,
+      // and an unsessioned read saw no items, so stock was never deducted while
+      // the order was still flagged inventoryDeducted.
+      const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
+      for (const it of orderItems) {
+        await this.productRepository.decrementStock(it.productId, it.quantity, session);
+      }
+
       await this.orderRepository.updateById(
-        order._id,
+        orderId,
         {
-          status: ORDER_STATUS.CANCELLED,
-          paymentStatus: PAYMENT_STATUS.FAILED,
-          cancelledAt: new Date(),
+          status: ORDER_STATUS.PLACED,
+          inventoryDeducted: true,
+          sellerSubOrders: (order.sellerSubOrders || []).map((sub) => ({
+            sellerId: sub.sellerId,
+            items: sub.items,
+            subtotal: sub.subtotal,
+            status: ORDER_STATUS.PLACED,
+          })),
         },
         session
       );
-    }
-  }
 
-  async confirmOrder(orderId, changedById, session = null) {
-    const order = await this.orderRepository.findById(orderId, { session });
-    if (!order) throw AppError.notFound('Order not found');
-
-    if (order.status === ORDER_STATUS.PLACED || order.status === ORDER_STATUS.CONFIRMED || order.inventoryDeducted) {
-      return order;
-    }
-
-    // Read inside the session: for COD this runs in the checkout transaction,
-    // and an unsessioned read saw no items, so stock was never deducted while
-    // the order was still flagged inventoryDeducted.
-    const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
-    for (const it of orderItems) {
-      await this.productRepository.decrementStock(it.productId, it.quantity, session);
-    }
-
-    await this.orderRepository.updateById(
-      orderId,
-      {
-        status: ORDER_STATUS.PLACED,
-        inventoryDeducted: true,
-        sellerSubOrders: (order.sellerSubOrders || []).map((sub) => ({
-          sellerId: sub.sellerId,
-          items: sub.items,
-          subtotal: sub.subtotal,
-          status: ORDER_STATUS.PLACED,
-        })),
-      },
-      session
-    );
-
-    await this.orderTrackingRepository.createInitial(orderId, ORDER_STATUS.PLACED, 'Order placed — awaiting seller acceptance', {}, session);
-    await this.orderStatusHistoryRepository.addTransition(
-      {
-        orderId,
-        fromStatus: order.status,
-        toStatus: ORDER_STATUS.PLACED,
-        changedBy: 'system',
-        changedById: changedById,
-        note: 'Payment completed',
-      },
-      session
-    );
-
-    const updated = await this.orderRepository.findById(orderId, { session });
-    if (updated) {
-      this._emitStatusChange(updated, ORDER_STATUS.PLACED);
-      await this._afterOrderConfirmed(updated, session);
-    }
-
-    return updated;
-  }
-
-  async _buildAddressSnapshot(userId, addressId) {
-    if (!addressId || !this.userAddressRepository) {
-      return { addressId: addressId || null };
-    }
-
-    const address = await this.userAddressRepository.findOne({
-      _id: addressId,
-      userId,
-      deletedAt: null,
-    });
-
-    if (!address) {
-      return { addressId };
-    }
-
-    let latitude = address.location?.coordinates?.[1] ?? address.latitude;
-    let longitude = address.location?.coordinates?.[0] ?? address.longitude;
-    let placeId = address.placeId;
-
-    if ((latitude == null || longitude == null) && this.geocodingService?.isEnabled()) {
-      const geo = await this.geocodingService.geocodeAddress({
-        addressLine: address.addressLine,
-        city: address.city,
-        state: address.state,
-        pincode: address.pincode,
-      });
-
-      if (geo) {
-        latitude = geo.latitude;
-        longitude = geo.longitude;
-        placeId = geo.placeId;
-        await this.userAddressRepository.updateById(address._id, {
-          latitude,
-          longitude,
-          placeId,
-        });
-      }
-    }
-
-    return {
-      addressId: address._id,
-      name: address.name,
-      phone: address.phone,
-      line1: address.addressLine,
-      city: address.city,
-      state: address.state,
-      pincode: address.pincode,
-      lat: latitude,
-      lng: longitude,
-      placeId,
-    };
-  }
-
-  async _afterOrderConfirmed(order, session = null) {
-    let tab = order.marketplaceTab || null;
-    let flow = tab ? toLegacyCommerceFlow(tab) : (order.commerceFlow || 'standard');
-
-    // Only legacy orders without a tab are inferred from product flows; a
-    // Mithilakart order for a product also sold in Quick Shop stays courier.
-    if (!tab) {
-      try {
-        const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
-        for (const it of orderItems) {
-          const prod = await this.productRepository.findById(it.productId);
-          if (prod?.commerceFlows?.includes('quick_shop')) {
-            tab = 'quick_shop';
-            flow = 'quick_shop';
-            break;
-          } else if (prod?.commerceFlows?.includes('fresh_grocery')) {
-            tab = 'groceries_fresh';
-            flow = 'fresh_grocery';
-            break;
-          }
-        }
-      } catch (err) {
-        // Continue safely
-      }
-    }
-
-    const useLocalDelivery = tab
-      ? isQuickCommerceTab(tab)
-      : LOCAL_DELIVERY_FLOWS.has(flow);
-
-    if (useLocalDelivery && this.deliveryOrderService) {
-      await this.orderRepository.updateById(
-        order._id,
-        { fulfilmentType: 'local_delivery' },
+      await this.orderTrackingRepository.createInitial(orderId, ORDER_STATUS.PLACED, 'Order placed — awaiting seller acceptance', {}, session);
+      await this.orderStatusHistoryRepository.addTransition(
+        {
+          orderId,
+          fromStatus: order.status,
+          toStatus: ORDER_STATUS.PLACED,
+          changedBy: 'system',
+          changedById: changedById,
+          note: 'Payment completed',
+        },
         session
       );
 
-      // CR-002 — intelligent fulfillment for quick-commerce tabs.
-      //
-      // Started AFTER THE TRANSACTION COMMITS, never inside it. The engine
-      // reads the order on its own connection, so starting it here while the
-      // checkout transaction was still open meant it could not see the order
-      // at all — it logged "start called for a missing order" and the order was
-      // silently never fulfilled. That race is why fulfillment "sometimes"
-      // failed to progress in the browser while every unit test passed.
-      //
-      // Still fire-and-forget once committed: the engine runs after payment
-      // authorisation so the discovery window is a backend budget, never
-      // customer-facing latency, and an engine fault can never roll back a paid
-      // order. If the transaction aborts, the hook never runs — a rolled-back
-      // order must not trigger fulfillment.
-      //
-      // Both guards matter: without the service injected, or with the tab
-      // disabled, behaviour is byte-identical to before CR-002.
-      if (this.fulfillmentEngineService) {
-        const startEngine = async () => {
-          try {
-            if (await this.fulfillmentEngineService.isEnabledForTab(tab)) {
-              await this.fulfillmentEngineService.start(order._id);
-            }
-          } catch (err) {
-            logger.error({ err, orderId: order._id }, 'CR-002 fulfillment engine start failed');
-          }
-        };
+      const updated = await this.orderRepository.findById(orderId, { session });
+      if (updated) {
+        this._emitStatusChange(updated, ORDER_STATUS.PLACED);
+        await this._afterOrderConfirmed(updated, session);
+      }
 
-        if (session && typeof session.afterCommit === 'function') {
-          session.afterCommit(startEngine);
-        } else {
-          // No transaction in play (direct call, tests): safe to start at once.
-          Promise.resolve(startEngine()).catch(() => {});
+      return updated;
+    }
+
+  async _buildAddressSnapshot(userId, addressId) {
+      if (!addressId || !this.userAddressRepository) {
+        return { addressId: addressId || null };
+      }
+
+      const address = await this.userAddressRepository.findOne({
+        _id: addressId,
+        userId,
+        deletedAt: null,
+      });
+
+      if (!address) {
+        return { addressId };
+      }
+
+      let latitude = address.location?.coordinates?.[1] ?? address.latitude;
+      let longitude = address.location?.coordinates?.[0] ?? address.longitude;
+      let placeId = address.placeId;
+
+      if ((latitude == null || longitude == null) && this.geocodingService?.isEnabled()) {
+        const geo = await this.geocodingService.geocodeAddress({
+          addressLine: address.addressLine,
+          city: address.city,
+          state: address.state,
+          pincode: address.pincode,
+        });
+
+        if (geo) {
+          latitude = geo.latitude;
+          longitude = geo.longitude;
+          placeId = geo.placeId;
+          await this.userAddressRepository.updateById(address._id, {
+            latitude,
+            longitude,
+            placeId,
+          });
         }
       }
-    } else {
-      let shipment = null;
-      try {
-        shipment = this.courierShipmentService
-          ? await this.courierShipmentService.createForOrder(order, session)
-          : await getProvider('shipping').createShipment({
+
+      return {
+        addressId: address._id,
+        name: address.name,
+        phone: address.phone,
+        line1: address.addressLine,
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode,
+        lat: latitude,
+        lng: longitude,
+        placeId,
+      };
+    }
+
+  async _afterOrderConfirmed(order, session = null) {
+      let tab = order.marketplaceTab || null;
+      let flow = tab ? toLegacyCommerceFlow(tab) : (order.commerceFlow || 'standard');
+
+      // Only legacy orders without a tab are inferred from product flows; a
+      // Mithilakart order for a product also sold in Quick Shop stays courier.
+      if (!tab) {
+        try {
+          const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
+          for (const it of orderItems) {
+            const prod = await this.productRepository.findById(it.productId);
+            if (prod?.commerceFlows?.includes('quick_shop')) {
+              tab = 'quick_shop';
+              flow = 'quick_shop';
+              break;
+            } else if (prod?.commerceFlows?.includes('fresh_grocery')) {
+              tab = 'groceries_fresh';
+              flow = 'fresh_grocery';
+              break;
+            }
+          }
+        } catch (err) {
+          // Continue safely
+        }
+      }
+
+      const useLocalDelivery = tab
+        ? isQuickCommerceTab(tab)
+        : LOCAL_DELIVERY_FLOWS.has(flow);
+
+      if (useLocalDelivery && this.deliveryOrderService) {
+        await this.orderRepository.updateById(
+          order._id,
+          { fulfilmentType: 'local_delivery' },
+          session
+        );
+
+        // CR-002 — intelligent fulfillment for quick-commerce tabs.
+        //
+        // Started AFTER THE TRANSACTION COMMITS, never inside it. The engine
+        // reads the order on its own connection, so starting it here while the
+        // checkout transaction was still open meant it could not see the order
+        // at all — it logged "start called for a missing order" and the order was
+        // silently never fulfilled. That race is why fulfillment "sometimes"
+        // failed to progress in the browser while every unit test passed.
+        //
+        // Still fire-and-forget once committed: the engine runs after payment
+        // authorisation so the discovery window is a backend budget, never
+        // customer-facing latency, and an engine fault can never roll back a paid
+        // order. If the transaction aborts, the hook never runs — a rolled-back
+        // order must not trigger fulfillment.
+        //
+        // Both guards matter: without the service injected, or with the tab
+        // disabled, behaviour is byte-identical to before CR-002.
+        if (this.fulfillmentEngineService) {
+          const startEngine = async () => {
+            try {
+              if (await this.fulfillmentEngineService.isEnabledForTab(tab)) {
+                await this.fulfillmentEngineService.start(order._id);
+              }
+            } catch (err) {
+              logger.error({ err, orderId: order._id }, 'CR-002 fulfillment engine start failed');
+            }
+          };
+
+          if (session && typeof session.afterCommit === 'function') {
+            session.afterCommit(startEngine);
+          } else {
+            // No transaction in play (direct call, tests): safe to start at once.
+            Promise.resolve(startEngine()).catch(() => { });
+          }
+        }
+      } else {
+        let shipment = null;
+        try {
+          shipment = this.courierShipmentService
+            ? await this.courierShipmentService.createForOrder(order, session)
+            : await getProvider('shipping').createShipment({
               orderId: order._id,
               orderNumber: order.orderNumber,
               address: order.addressSnapshot || {},
             });
-      } catch (error) {
-        logger.error({ err: error, orderId: order._id }, 'Courier shipment failed, generating fallback courier shipment');
-        const { MockCourierShippingProvider } = require('../../core/providers/MockCourierShippingProvider');
-        const fallback = new MockCourierShippingProvider();
-        shipment = await fallback.createShipment({
+        } catch (error) {
+          logger.error({ err: error, orderId: order._id }, 'Courier shipment failed, generating fallback courier shipment');
+          const { MockCourierShippingProvider } = require('../../core/providers/MockCourierShippingProvider');
+          const fallback = new MockCourierShippingProvider();
+          shipment = await fallback.createShipment({
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            address: order.addressSnapshot || {},
+          });
+          shipment.warning = error.message;
+        }
+
+        await this.orderRepository.updateById(
+          order._id,
+          { fulfilmentType: 'courier', shipment },
+          session
+        );
+        logger.info({ orderId: order._id, awb: shipment?.awb }, 'Courier shipment configured for e-commerce order');
+        eventBus.publish('order.shipment_created', {
           orderId: order._id,
           orderNumber: order.orderNumber,
-          address: order.addressSnapshot || {},
+          userId: order.userId,
+          shipment,
         });
-        shipment.warning = error.message;
       }
 
-      await this.orderRepository.updateById(
-        order._id,
-        { fulfilmentType: 'courier', shipment },
-        session
-      );
-      logger.info({ orderId: order._id, awb: shipment?.awb }, 'Courier shipment configured for e-commerce order');
-      eventBus.publish('order.shipment_created', {
+      const sellerIds = [...new Set((order.sellerSubOrders || []).map((sub) => String(sub.sellerId)))];
+      for (const sellerId of sellerIds) {
+        eventBus.publish('order.placed', {
+          sellerId,
+          orderId: order._id,
+          orderNumber: order.orderNumber,
+        });
+      }
+    }
+
+  async _buildCartFromItems({ items, commerceFlow, couponCode, userId, tipAmount = 0, paymentMethod = null, giftCardCode = null, useWallet = false, lenient = false }) {
+      if (!Array.isArray(items) || items.length === 0) {
+        return { items: [], subtotal: 0, shippingFee: 0, total: 0 };
+      }
+
+      const lineItems = [];
+      const requestedTab = resolveTabFromQuery({ commerceFlow });
+      const listingService = this.cartService?.marketplaceListingService || null;
+
+      for (const line of items) {
+        // Buy Now carries the listing the customer was looking at: it fixes the
+        // tab, price and delivery promise exactly as the cart would.
+        const resolved = line.listingId && listingService
+          ? await listingService.resolveListingForCart(line.listingId, requestedTab)
+          : null;
+        const listing = resolved?.listing || null;
+        const product = resolved?.product || await this.productRepository.findPublicById(line.productId);
+        if (!product) throw AppError.notFound('Product not found');
+        if (listing && line.productId && String(product._id) !== String(line.productId)) {
+          throw AppError.validation('Listing does not match product');
+        }
+
+        const availableStock = this.productRepository.getAvailableStock(product);
+
+        if (availableStock < line.quantity) {
+          throw AppError.conflict('Requested quantity exceeds available stock', [
+            { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
+          ]);
+        }
+
+        const flows = product.commerceFlows || [];
+        const requestedFlow = requestedTab ? toLegacyCommerceFlow(requestedTab) : null;
+        const itemTab = listing?.marketplaceTab
+          || (requestedFlow && flows.includes(requestedFlow) ? requestedTab : null)
+          || (flows.includes('quick_shop') ? 'quick_shop'
+            : flows.includes('fresh_grocery') ? 'groceries_fresh'
+              : flows.includes('mithilak') ? 'mithilak' : 'mithilakart');
+
+        lineItems.push({
+          productId: String(product._id),
+          listingId: listing ? String(listing._id) : null,
+          variantId: line.variantId || null,
+          sellerId: product.sellerId,
+          title: product.title,
+          quantity: line.quantity,
+          unitPrice: listing ? listing.price : product.price,
+          deliveryPromiseMinutes: listing?.deliveryPromiseMinutes || null,
+          maxOrderQuantity: listing?.maxOrderQuantity || null,
+          commerceFlow: toLegacyCommerceFlow(itemTab),
+          commerceFlows: flows,
+          marketplaceTab: itemTab,
+        });
+      }
+
+      const resolvedTab = lineItems[0].marketplaceTab;
+      if (lineItems.some((it) => it.marketplaceTab !== resolvedTab)) {
+        throw AppError.conflict('Buy Now items must come from one section', [{ code: 'CART_TAB_MISMATCH' }]);
+      }
+
+      const totals = (code) => this.pricingService.calculateTotals({
+        items: lineItems,
+        couponCode: code,
+        userId,
+        marketplaceTab: resolvedTab,
+        tipAmount,
+        paymentMethod,
+        giftCardCode,
+        useWallet,
+        lenientCredits: lenient,
+      });
+      let couponError = null;
+      let pricing;
+      try {
+        pricing = await totals(couponCode);
+      } catch (error) {
+        if (!lenient || !couponCode || error?.isCouponError !== true) throw error;
+        couponError = error.message;
+        pricing = await totals(null);
+      }
+
+      return {
+        items: lineItems,
+        commerceFlow: toLegacyCommerceFlow(resolvedTab) || commerceFlow,
+        marketplaceTab: resolvedTab,
+        couponCode: couponError ? null : couponCode,
+        ...(couponError ? { couponError } : {}),
+        ...pricing,
+      };
+    }
+
+    _emitStatusChange(order, toStatus) {
+      eventBus.publish('order.status_changed', {
         orderId: order._id,
-        orderNumber: order.orderNumber,
         userId: order.userId,
-        shipment,
-      });
-    }
-
-    const sellerIds = [...new Set((order.sellerSubOrders || []).map((sub) => String(sub.sellerId)))];
-    for (const sellerId of sellerIds) {
-      eventBus.publish('order.placed', {
-        sellerId,
-        orderId: order._id,
         orderNumber: order.orderNumber,
+        status: toStatus,
       });
     }
-  }
-
-  async _buildCartFromItems({ items, commerceFlow, couponCode, userId, tipAmount = 0 }) {
-    if (!Array.isArray(items) || items.length === 0) {
-      return { items: [], subtotal: 0, shippingFee: 0, total: 0 };
-    }
-
-    const lineItems = [];
-    const requestedTab = resolveTabFromQuery({ commerceFlow });
-    const listingService = this.cartService?.marketplaceListingService || null;
-
-    for (const line of items) {
-      // Buy Now carries the listing the customer was looking at: it fixes the
-      // tab, price and delivery promise exactly as the cart would.
-      const resolved = line.listingId && listingService
-        ? await listingService.resolveListingForCart(line.listingId, requestedTab)
-        : null;
-      const listing = resolved?.listing || null;
-      const product = resolved?.product || await this.productRepository.findPublicById(line.productId);
-      if (!product) throw AppError.notFound('Product not found');
-      if (listing && line.productId && String(product._id) !== String(line.productId)) {
-        throw AppError.validation('Listing does not match product');
-      }
-
-      const availableStock = this.productRepository.getAvailableStock(product);
-
-      if (availableStock < line.quantity) {
-        throw AppError.conflict('Requested quantity exceeds available stock', [
-          { field: 'quantity', message: 'Insufficient stock', availableQuantity: availableStock },
-        ]);
-      }
-
-      const flows = product.commerceFlows || [];
-      const requestedFlow = requestedTab ? toLegacyCommerceFlow(requestedTab) : null;
-      const itemTab = listing?.marketplaceTab
-        || (requestedFlow && flows.includes(requestedFlow) ? requestedTab : null)
-        || (flows.includes('quick_shop') ? 'quick_shop'
-          : flows.includes('fresh_grocery') ? 'groceries_fresh'
-            : flows.includes('mithilak') ? 'mithilak' : 'mithilakart');
-
-      lineItems.push({
-        productId: String(product._id),
-        listingId: listing ? String(listing._id) : null,
-        variantId: line.variantId || null,
-        sellerId: product.sellerId,
-        title: product.title,
-        quantity: line.quantity,
-        unitPrice: listing ? listing.price : product.price,
-        deliveryPromiseMinutes: listing?.deliveryPromiseMinutes || null,
-        commerceFlow: toLegacyCommerceFlow(itemTab),
-        commerceFlows: flows,
-        marketplaceTab: itemTab,
-      });
-    }
-
-    const resolvedTab = lineItems[0].marketplaceTab;
-    if (lineItems.some((it) => it.marketplaceTab !== resolvedTab)) {
-      throw AppError.conflict('Buy Now items must come from one section', [{ code: 'CART_TAB_MISMATCH' }]);
-    }
-
-    const pricing = await this.pricingService.calculateTotals({
-      items: lineItems,
-      couponCode,
-      userId,
-      marketplaceTab: resolvedTab,
-      tipAmount,
-    });
-
-    return {
-      items: lineItems,
-      commerceFlow: toLegacyCommerceFlow(resolvedTab) || commerceFlow,
-      marketplaceTab: resolvedTab,
-      couponCode,
-      ...pricing,
-    };
-  }
-
-  _emitStatusChange(order, toStatus) {
-    eventBus.publish('order.status_changed', {
-      orderId: order._id,
-      userId: order.userId,
-      orderNumber: order.orderNumber,
-      status: toStatus,
-    });
-  }
 
   async listOrdersForAdmin(query = {}) {
-    const pagination = parsePagination(query);
-    const filter = {};
-    if (query.status) filter.status = query.status;
-    if (query.userId) filter.userId = query.userId;
+      const pagination = parsePagination(query);
+      const filter = {};
+      if (query.status) filter.status = query.status;
+      if (query.userId) filter.userId = query.userId;
 
-    const [items, total] = await Promise.all([
-      this.orderRepository.find(filter, { sort: '-createdAt', skip: pagination.skip, limit: pagination.limit }),
-      this.orderRepository.count(filter),
-    ]);
+      const [items, total] = await Promise.all([
+        this.orderRepository.find(filter, { sort: '-createdAt', skip: pagination.skip, limit: pagination.limit }),
+        this.orderRepository.count(filter),
+      ]);
 
-    return {
-      items: items.map((o) => this._serializeOrder(o)),
-      meta: buildPaginationMeta(pagination.page, pagination.limit, total),
-    };
-  }
+      return {
+        items: items.map((o) => this._serializeOrder(o)),
+        meta: buildPaginationMeta(pagination.page, pagination.limit, total),
+      };
+    }
 
   async getOrderDetailForAdmin(orderId) {
-    const order = await this.orderRepository.findActiveById(orderId);
-    if (!order) throw AppError.notFound('Order not found');
-    return this._buildOrderDetail(order);
-  }
+      const order = await this.orderRepository.findActiveById(orderId);
+      if (!order) throw AppError.notFound('Order not found');
+      return this._buildOrderDetail(order);
+    }
 
   async listOrders(userId, query = {}) {
-    const pagination = parsePagination(query);
-    const statusFilter = query.status ? String(query.status) : null;
-    const sort = query.sort ? String(query.sort) : '-createdAt';
+      const pagination = parsePagination(query);
+      const statusFilter = query.status ? String(query.status) : null;
+      const sort = query.sort ? String(query.sort) : '-createdAt';
 
-    const filters = { userId, ...(statusFilter ? { status: statusFilter } : {}) };
-    const [items, total] = await Promise.all([
-      this.orderRepository.find(filters, { sort, skip: pagination.skip, limit: pagination.limit }),
-      this.orderRepository.count(filters),
-    ]);
+      const filters = { userId, ...(statusFilter ? { status: statusFilter } : {}) };
+      const [items, total] = await Promise.all([
+        this.orderRepository.find(filters, { sort, skip: pagination.skip, limit: pagination.limit }),
+        this.orderRepository.count(filters),
+      ]);
 
-    return {
-      items: await this._withLineDetails(items.map((o) => this._serializeOrder(o))),
-      meta: buildPaginationMeta(pagination.page, pagination.limit, total),
-    };
-  }
+      return {
+        items: await this._withLineDetails(items.map((o) => this._serializeOrder(o))),
+        meta: buildPaginationMeta(pagination.page, pagination.limit, total),
+      };
+    }
 
   /**
    * Sub-order lines store only ids and prices; the order list needs the
    * product name and picture, or every card reads "Product".
    */
   async _withLineDetails(orders) {
-    const productIds = [...new Set(orders.flatMap((o) => (o.sellerSubOrders || [])
-      .flatMap((sub) => (sub.items || []).map((it) => String(it.productId)))))];
-    if (!productIds.length) return orders;
+      const productIds = [...new Set(orders.flatMap((o) => (o.sellerSubOrders || [])
+        .flatMap((sub) => (sub.items || []).map((it) => String(it.productId)))))];
+      if (!productIds.length) return orders;
 
-    const products = await this.productRepository.find({ _id: { $in: productIds } });
-    const productById = new Map(products.map((p) => [String(p._id), p]));
+      const products = await this.productRepository.find({ _id: { $in: productIds } });
+      const productById = new Map(products.map((p) => [String(p._id), p]));
 
-    return orders.map((order) => ({
-      ...order,
-      sellerSubOrders: (order.sellerSubOrders || []).map((sub) => {
-        const plain = sub.toObject ? sub.toObject() : sub;
-        return {
-          ...plain,
-          items: (plain.items || []).map((it) => {
-            const product = productById.get(String(it.productId));
-            return {
-              ...it,
-              name: it.name || product?.title || 'Product',
-              image: it.image || product?.images?.[0]?.url || null,
-            };
-          }),
-        };
-      }),
-    }));
-  }
+      return orders.map((order) => ({
+        ...order,
+        sellerSubOrders: (order.sellerSubOrders || []).map((sub) => {
+          const plain = sub.toObject ? sub.toObject() : sub;
+          return {
+            ...plain,
+            items: (plain.items || []).map((it) => {
+              const product = productById.get(String(it.productId));
+              return {
+                ...it,
+                name: it.name || product?.title || 'Product',
+                image: it.image || product?.images?.[0]?.url || null,
+              };
+            }),
+          };
+        }),
+      }));
+    }
 
   async listOrdersForSeller(sellerId, query = {}) {
-    const pagination = parsePagination(query);
-    const [orderIds, total] = await Promise.all([
-      this.orderItemRepository.listDistinctOrderIdsBySeller(sellerId, {
-        skip: pagination.skip,
-        limit: pagination.limit,
-      }),
-      this.orderItemRepository.countDistinctOrdersBySeller(sellerId),
-    ]);
+      const pagination = parsePagination(query);
+      const [orderIds, total] = await Promise.all([
+        this.orderItemRepository.listDistinctOrderIdsBySeller(sellerId, {
+          skip: pagination.skip,
+          limit: pagination.limit,
+        }),
+        this.orderItemRepository.countDistinctOrdersBySeller(sellerId),
+      ]);
 
-    const orders = orderIds.length
-      ? await this.orderRepository.find({ _id: { $in: orderIds } }, { sort: '-createdAt' })
-      : [];
+      const orders = orderIds.length
+        ? await this.orderRepository.find({ _id: { $in: orderIds } }, { sort: '-createdAt' })
+        : [];
 
-    const items = await Promise.all(
-      orders.map(async (order) => {
-        const sellerItems = (await this.orderItemRepository.listByOrderId(order._id)).filter(
-          (it) => String(it.sellerId) === String(sellerId)
-        );
-        const productIds = sellerItems.map((it) => it.productId);
-        const products = productIds.length
-          ? await this.productRepository.find({ _id: { $in: productIds } })
-          : [];
-        const productMap = new Map(products.map((product) => [String(product._id), product]));
-        return this._serializeSellerOrder(order, sellerItems, productMap);
-      })
-    );
+      const items = await Promise.all(
+        orders.map(async (order) => {
+          const sellerItems = (await this.orderItemRepository.listByOrderId(order._id)).filter(
+            (it) => String(it.sellerId) === String(sellerId)
+          );
+          const productIds = sellerItems.map((it) => it.productId);
+          const products = productIds.length
+            ? await this.productRepository.find({ _id: { $in: productIds } })
+            : [];
+          const productMap = new Map(products.map((product) => [String(product._id), product]));
+          return this._serializeSellerOrder(order, sellerItems, productMap);
+        })
+      );
 
-    return {
-      items,
-      meta: buildPaginationMeta(pagination.page, pagination.limit, total),
-    };
-  }
+      return {
+        items,
+        meta: buildPaginationMeta(pagination.page, pagination.limit, total),
+      };
+    }
 
   async getOrderDetail(orderId, userId) {
-    const order = await this.orderRepository.findActiveById(orderId, userId);
-    if (!order) throw AppError.notFound('Order not found');
-    return this._buildOrderDetail(order);
-  }
+      const order = await this.orderRepository.findActiveById(orderId, userId);
+      if (!order) throw AppError.notFound('Order not found');
+      return this._buildOrderDetail(order);
+    }
 
   async getOrderDetailForSeller(orderId, sellerId) {
-    const order = await this.orderRepository.findActiveById(orderId);
-    if (!order) throw AppError.notFound('Order not found');
+      const order = await this.orderRepository.findActiveById(orderId);
+      if (!order) throw AppError.notFound('Order not found');
 
-    const items = await this.orderItemRepository.listByOrderId(order._id);
-    // A substitute seller or the central warehouse fulfils items that another seller listed.
-    const sellerItems = this._isAssignedFulfiller(order, sellerId)
-      ? items
-      : items.filter((it) => String(it.sellerId) === String(sellerId));
-    if (!sellerItems.length) throw AppError.forbidden('Seller cannot access this order');
+      const items = await this.orderItemRepository.listByOrderId(order._id);
+      // A substitute seller or the central warehouse fulfils items that another seller listed.
+      const sellerItems = this._isAssignedFulfiller(order, sellerId)
+        ? items
+        : items.filter((it) => String(it.sellerId) === String(sellerId));
+      if (!sellerItems.length) throw AppError.forbidden('Seller cannot access this order');
 
-    const productIds = sellerItems.map((it) => it.productId);
-    const products = productIds.length
-      ? await this.productRepository.find({ _id: { $in: productIds } })
-      : [];
-    const productMap = new Map(products.map((product) => [String(product._id), product]));
+      const productIds = sellerItems.map((it) => it.productId);
+      const products = productIds.length
+        ? await this.productRepository.find({ _id: { $in: productIds } })
+        : [];
+      const productMap = new Map(products.map((product) => [String(product._id), product]));
 
-    const tracking = await this.orderTrackingRepository.find(
-      { orderId: order._id },
-      { sort: { createdAt: 1 } }
-    );
+      const tracking = await this.orderTrackingRepository.find(
+        { orderId: order._id },
+        { sort: { createdAt: 1 } }
+      );
 
-    const pickup = this.deliveryOrderService && order.fulfilmentType === 'local_delivery'
-      ? await this.deliveryOrderService.getPickupInfo(order._id)
-      : null;
+      const pickup = this.deliveryOrderService && order.fulfilmentType === 'local_delivery'
+        ? await this.deliveryOrderService.getPickupInfo(order._id)
+        : null;
 
-    return {
-      ...this._serializeSellerOrder(order, sellerItems, productMap),
-      pickup,
-      tracking: tracking.map((entry) => ({
-        id: entry._id,
-        status: entry.status,
-        note: entry.note,
-        createdAt: entry.createdAt,
-      })),
-    };
-  }
+      return {
+        ...this._serializeSellerOrder(order, sellerItems, productMap),
+        pickup,
+        tracking: tracking.map((entry) => ({
+          id: entry._id,
+          status: entry.status,
+          note: entry.note,
+          createdAt: entry.createdAt,
+        })),
+      };
+    }
 
   async _buildOrderDetail(order, sellerId = null) {
-    let orderItems = await this.orderItemRepository.listByOrderId(order._id);
-    if (sellerId) {
-      orderItems = orderItems.filter((it) => String(it.sellerId) === String(sellerId));
+      let orderItems = await this.orderItemRepository.listByOrderId(order._id);
+      if (sellerId) {
+        orderItems = orderItems.filter((it) => String(it.sellerId) === String(sellerId));
+      }
+
+      const productIds = [...new Set(orderItems.map((it) => it.productId).filter(Boolean))];
+      const products = productIds.length
+        ? await this.productRepository.find({ _id: { $in: productIds } })
+        : [];
+      const productMap = new Map(products.map((p) => [String(p._id), p]));
+
+      const tracking = await this.orderTrackingRepository.find({ orderId: order._id }, { sort: { createdAt: 1 } });
+
+      return {
+        order: this._serializeOrder(order),
+        items: orderItems.map((it) => {
+          const product = productMap.get(String(it.productId));
+          return {
+            id: it._id,
+            productId: it.productId,
+            sellerId: it.sellerId,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            lineTotal: it.lineTotal,
+            name: product?.name || product?.title || it.name || 'Product',
+            image: product?.images?.[0]?.url || product?.imageUrl || product?.image || null,
+          };
+        }),
+        tracking: tracking.map((t) => ({ id: t._id, status: t.status, note: t.note, createdAt: t.createdAt })),
+      };
     }
-
-    const productIds = [...new Set(orderItems.map((it) => it.productId).filter(Boolean))];
-    const products = productIds.length
-      ? await this.productRepository.find({ _id: { $in: productIds } })
-      : [];
-    const productMap = new Map(products.map((p) => [String(p._id), p]));
-
-    const tracking = await this.orderTrackingRepository.find({ orderId: order._id }, { sort: { createdAt: 1 } });
-
-    return {
-      order: this._serializeOrder(order),
-      items: orderItems.map((it) => {
-        const product = productMap.get(String(it.productId));
-        return {
-          id: it._id,
-          productId: it.productId,
-          sellerId: it.sellerId,
-          quantity: it.quantity,
-          unitPrice: it.unitPrice,
-          lineTotal: it.lineTotal,
-          name: product?.name || product?.title || it.name || 'Product',
-          image: product?.images?.[0]?.url || product?.imageUrl || product?.image || null,
-        };
-      }),
-      tracking: tracking.map((t) => ({ id: t._id, status: t.status, note: t.note, createdAt: t.createdAt })),
-    };
-  }
 
   async getTracking(orderId, userId) {
-    let order = await this.orderRepository.findActiveById(orderId, userId);
-    if (!order) throw AppError.notFound('Order not found');
+      let order = await this.orderRepository.findActiveById(orderId, userId);
+      if (!order) throw AppError.notFound('Order not found');
 
-    if (order.fulfilmentType === 'courier' && order.shipment && this.courierShipmentService) {
-      try {
-        const synced = await this.courierShipmentService.syncTrackingForOrder(order);
-        order = synced.order || order;
-      } catch (error) {
-        logger.warn({ err: error, orderId }, 'Courier tracking sync failed');
+      if (order.fulfilmentType === 'courier' && order.shipment && this.courierShipmentService) {
+        try {
+          const synced = await this.courierShipmentService.syncTrackingForOrder(order);
+          order = synced.order || order;
+        } catch (error) {
+          logger.warn({ err: error, orderId }, 'Courier tracking sync failed');
+        }
       }
+
+      const tracking = await this.orderTrackingRepository.listByOrderId(order._id);
+      const history = await this.orderStatusHistoryRepository.listByOrderId(order._id);
+
+      let assignment = null;
+      let partnerLocation = null;
+      let deliveryOtp = null;
+      if (this.deliveryOrderService) {
+        const trackingMeta = await this.deliveryOrderService.getTrackingMeta(order._id);
+        assignment = trackingMeta.assignment;
+        partnerLocation = trackingMeta.partnerLocation;
+        deliveryOtp = trackingMeta.deliveryOtp || assignment?.deliveryOtp || null;
+      }
+
+      const addr = order.addressSnapshot || {};
+
+      const deliveryMode = order.fulfillment?.deliveryMode
+        || (order.fulfilmentType === 'courier' ? 'standard' : (order.deliveryType === 'quick' ? 'quick' : 'standard'));
+
+      return {
+        orderId: order._id,
+        status: order.status,
+        orderNumber: order.orderNumber,
+        commerceFlow: order.commerceFlow,
+        marketplaceTab: order.marketplaceTab || null,
+        fulfilmentType: order.fulfilmentType,
+        fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+        fulfillment: order.fulfillment || null,
+        deliveryMode,
+        deliveryPromiseMinutes: deliveryMode === 'standard' ? null : (order.deliveryPromiseMinutes || null),
+        estimatedDeliveryAt: deliveryMode === 'standard' ? null : (order.estimatedDeliveryAt || order.fulfillment?.estimatedDeliveryAt || null),
+        fallbackReason: order.fulfillment?.fallbackReason || null,
+        shipment: order.shipment || null,
+        destination: {
+          lat: addr.lat ?? addr.latitude ?? null,
+          lng: addr.lng ?? addr.longitude ?? null,
+          line1: addr.line1 || addr.addressLine || '',
+          city: addr.city || '',
+          pincode: addr.pincode || '',
+        },
+        assignment,
+        partnerLocation,
+        deliveryOtp,
+        tracking: tracking.map((t) => ({
+          id: t._id,
+          status: t.status,
+          note: t.note,
+          createdAt: t.createdAt,
+        })),
+        history: history.map((h) => ({
+          id: h._id,
+          fromStatus: h.fromStatus,
+          toStatus: h.toStatus,
+          changedBy: h.changedBy,
+          note: h.note,
+          createdAt: h.createdAt,
+        })),
+      };
     }
-
-    const tracking = await this.orderTrackingRepository.listByOrderId(order._id);
-    const history = await this.orderStatusHistoryRepository.listByOrderId(order._id);
-
-    let assignment = null;
-    let partnerLocation = null;
-    let deliveryOtp = null;
-    if (this.deliveryOrderService) {
-      const trackingMeta = await this.deliveryOrderService.getTrackingMeta(order._id);
-      assignment = trackingMeta.assignment;
-      partnerLocation = trackingMeta.partnerLocation;
-      deliveryOtp = trackingMeta.deliveryOtp || assignment?.deliveryOtp || null;
-    }
-
-    const addr = order.addressSnapshot || {};
-
-    const deliveryMode = order.fulfillment?.deliveryMode
-      || (order.fulfilmentType === 'courier' ? 'standard' : (order.deliveryType === 'quick' ? 'quick' : 'standard'));
-
-    return {
-      orderId: order._id,
-      status: order.status,
-      orderNumber: order.orderNumber,
-      commerceFlow: order.commerceFlow,
-      marketplaceTab: order.marketplaceTab || null,
-      fulfilmentType: order.fulfilmentType,
-      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
-      fulfillment: order.fulfillment || null,
-      deliveryMode,
-      deliveryPromiseMinutes: deliveryMode === 'standard' ? null : (order.deliveryPromiseMinutes || null),
-      estimatedDeliveryAt: deliveryMode === 'standard' ? null : (order.estimatedDeliveryAt || order.fulfillment?.estimatedDeliveryAt || null),
-      fallbackReason: order.fulfillment?.fallbackReason || null,
-      shipment: order.shipment || null,
-      destination: {
-        lat: addr.lat ?? addr.latitude ?? null,
-        lng: addr.lng ?? addr.longitude ?? null,
-        line1: addr.line1 || addr.addressLine || '',
-        city: addr.city || '',
-        pincode: addr.pincode || '',
-      },
-      assignment,
-      partnerLocation,
-      deliveryOtp,
-      tracking: tracking.map((t) => ({
-        id: t._id,
-        status: t.status,
-        note: t.note,
-        createdAt: t.createdAt,
-      })),
-      history: history.map((h) => ({
-        id: h._id,
-        fromStatus: h.fromStatus,
-        toStatus: h.toStatus,
-        changedBy: h.changedBy,
-        note: h.note,
-        createdAt: h.createdAt,
-      })),
-    };
-  }
 
   /**
    * Gives back the stock an order holds. Confirmed orders were deducted (and a
@@ -992,22 +1068,22 @@ class OrderService extends BaseService {
    * unconfirmed ones only hold a reservation.
    */
   async _restoreInventory(order, session = null) {
-    const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
-    if (!order.inventoryDeducted) {
-      for (const it of orderItems) {
-        await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
+      const orderItems = await this.orderItemRepository.listByOrderId(order._id, { session });
+      if (!order.inventoryDeducted) {
+        for (const it of orderItems) {
+          await this.productRepository.releaseReservedStock(it.productId, it.quantity, session);
+        }
+        return;
       }
-      return;
-    }
 
-    const substitutions = this.fulfillmentEngineService
-      ? await this.fulfillmentEngineService.listSettledSubstitutions(order._id)
-      : [];
-    for (const it of orderItems) {
-      const substitute = substitutions.find((s) => String(s.originProductId) === String(it.productId));
-      await this.productRepository.incrementStock(substitute ? substitute.productId : it.productId, it.quantity, session);
+      const substitutions = this.fulfillmentEngineService
+        ? await this.fulfillmentEngineService.listSettledSubstitutions(order._id)
+        : [];
+      for (const it of orderItems) {
+        const substitute = substitutions.find((s) => String(s.originProductId) === String(it.productId));
+        await this.productRepository.incrementStock(substitute ? substitute.productId : it.productId, it.quantity, session);
+      }
     }
-  }
 
   /**
    * Everything a cancellation must undo besides the status: stock, the
@@ -1015,103 +1091,104 @@ class OrderService extends BaseService {
    * Whoever cancels (customer, seller, admin) goes through here.
    */
   async _applyCancellation({ order, session, source, actorId, note }) {
-    await this._restoreInventory(order, session);
+      await this._restoreInventory(order, session);
 
-    if (order.fulfilmentType === 'courier' && order.shipment && this.courierShipmentService) {
-      try {
-        await this.courierShipmentService.cancelCourierShipment(order);
-      } catch (error) {
-        logger.warn({ err: error, orderId: order._id }, 'Courier shipment cancellation failed');
+      if (order.fulfilmentType === 'courier' && order.shipment && this.courierShipmentService) {
+        try {
+          await this.courierShipmentService.cancelCourierShipment(order);
+        } catch (error) {
+          logger.warn({ err: error, orderId: order._id }, 'Courier shipment cancellation failed');
+        }
       }
-    }
 
-    if (order.fulfilmentType === 'local_delivery' && this.deliveryOrderService) {
-      await this.deliveryOrderService.cancelAssignmentForOrder(order._id, session);
-    }
+      if (order.fulfilmentType === 'local_delivery' && this.deliveryOrderService) {
+        await this.deliveryOrderService.cancelAssignmentForOrder(order._id, session);
+      }
 
-    await this.orderRepository.updateById(
-      order._id,
-      { status: ORDER_STATUS.CANCELLED, cancelledAt: new Date(), inventoryDeducted: false },
-      session
-    );
+      await this.orderRepository.updateById(
+        order._id,
+        { status: ORDER_STATUS.CANCELLED, cancelledAt: new Date(), inventoryDeducted: false },
+        session
+      );
+      await this._releaseCoupon(order._id, session);
 
-    await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED, note || 'Order cancelled', { source }, session);
-    await this.orderStatusHistoryRepository.addTransition(
-      {
-        orderId: order._id,
-        fromStatus: order.status,
-        toStatus: ORDER_STATUS.CANCELLED,
-        changedBy: source,
-        changedById: actorId,
-        note: note || null,
-      },
-      session
-    );
+      await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED, note || 'Order cancelled', { source }, session);
+      await this.orderStatusHistoryRepository.addTransition(
+        {
+          orderId: order._id,
+          fromStatus: order.status,
+          toStatus: ORDER_STATUS.CANCELLED,
+          changedBy: source,
+          changedById: actorId,
+          note: note || null,
+        },
+        session
+      );
 
-    // A prepaid order gets its money back to the original payment method once
-    // the cancellation has committed. COD orders have nothing to refund.
-    if (order.paymentStatus === PAYMENT_STATUS.PAID && order.paymentMethod !== 'cod' && this.paymentService?.refundOrderPayment) {
-      const refund = () => this.paymentService.refundOrderPayment(order._id, { reason: `cancelled_by_${source}` })
-        .catch(async (err) => {
-          logger.error({ err, orderId: order._id }, 'Refund on cancellation failed — needs manual refund');
-          await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED,
-            'Refund could not be sent automatically — our team will process it', { source: 'system' }).catch(() => {});
+      // A prepaid order gets its money back to the original payment method once
+      // the cancellation has committed. COD orders have nothing to refund.
+      if (order.paymentStatus === PAYMENT_STATUS.PAID && order.paymentMethod !== 'cod' && this.paymentService?.refundOrderPayment) {
+        const refund = () => this.paymentService.refundOrderPayment(order._id, { reason: `cancelled_by_${source}` })
+          .catch(async (err) => {
+            logger.error({ err, orderId: order._id }, 'Refund on cancellation failed — needs manual refund');
+            await this.orderTrackingRepository.createInitial(order._id, ORDER_STATUS.CANCELLED,
+              'Refund could not be sent automatically — our team will process it', { source: 'system' }).catch(() => { });
+          });
+        if (session && typeof session.afterCommit === 'function') session.afterCommit(refund);
+        else await refund();
+      }
+
+      // The engine works on its own connection, so it is told only once the
+      // cancellation has committed.
+      if (this.fulfillmentEngineService && order.fulfilmentType === 'local_delivery') {
+        const cancelFulfillment = () => this.fulfillmentEngineService.cancelForOrder(order._id).catch((err) => {
+          logger.error({ err, orderId: order._id }, 'Cancelling quick fulfillment failed');
         });
-      if (session && typeof session.afterCommit === 'function') session.afterCommit(refund);
-      else await refund();
-    }
+        if (session && typeof session.afterCommit === 'function') session.afterCommit(cancelFulfillment);
+        else await cancelFulfillment();
+      }
 
-    // The engine works on its own connection, so it is told only once the
-    // cancellation has committed.
-    if (this.fulfillmentEngineService && order.fulfilmentType === 'local_delivery') {
-      const cancelFulfillment = () => this.fulfillmentEngineService.cancelForOrder(order._id).catch((err) => {
-        logger.error({ err, orderId: order._id }, 'Cancelling quick fulfillment failed');
-      });
-      if (session && typeof session.afterCommit === 'function') session.afterCommit(cancelFulfillment);
-      else await cancelFulfillment();
+      this._emitStatusChange(order, ORDER_STATUS.CANCELLED);
     }
-
-    this._emitStatusChange(order, ORDER_STATUS.CANCELLED);
-  }
 
   async cancelOrder(orderId, userId) {
-    return withTransaction(async (session) => {
-      const order = await this.orderRepository.findActiveById(orderId, userId);
-      if (!order) throw AppError.notFound('Order not found');
+      return withTransaction(async (session) => {
+        const order = await this.orderRepository.findActiveById(orderId, userId);
+        if (!order) throw AppError.notFound('Order not found');
 
-      if (order.status === ORDER_STATUS.CANCELLED) {
-        return { orderId: order._id, status: order.status };
-      }
+        if (order.status === ORDER_STATUS.CANCELLED) {
+          return { orderId: order._id, status: order.status };
+        }
 
-      if ([ORDER_STATUS.SHIPPED, ORDER_STATUS.OUT_FOR_DELIVERY, ORDER_STATUS.DELIVERED].includes(order.status)) {
-        throw AppError.conflict('Cannot cancel this order at the current status');
-      }
+        if ([ORDER_STATUS.SHIPPED, ORDER_STATUS.OUT_FOR_DELIVERY, ORDER_STATUS.DELIVERED].includes(order.status)) {
+          throw AppError.conflict('Cannot cancel this order at the current status');
+        }
 
-      await this._applyCancellation({
-        order, session, source: 'customer', actorId: userId, note: 'Cancellation request',
+        await this._applyCancellation({
+          order, session, source: 'customer', actorId: userId, note: 'Cancellation request',
+        });
+
+        return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
       });
+    }
 
-      return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
-    });
-  }
-
-  _isValidStatusTransition(fromStatus, toStatus) {
-    if (toStatus === ORDER_STATUS.CANCELLED) return fromStatus !== ORDER_STATUS.DELIVERED;
-    if (fromStatus === ORDER_STATUS.SHIPPED && toStatus === ORDER_STATUS.DELIVERED) return true;
-    const chain = [
-      ORDER_STATUS.PENDING,
-      ORDER_STATUS.PLACED,
-      ORDER_STATUS.CONFIRMED,
-      ORDER_STATUS.PACKED,
-      ORDER_STATUS.SHIPPED,
-      ORDER_STATUS.OUT_FOR_DELIVERY,
-      ORDER_STATUS.DELIVERED,
-    ];
-    const fromIdx = chain.indexOf(fromStatus);
-    const toIdx = chain.indexOf(toStatus);
-    if (fromIdx < 0 || toIdx < 0) return false;
-    return toIdx === fromIdx + 1;
-  }
+    _isValidStatusTransition(fromStatus, toStatus) {
+      if (toStatus === ORDER_STATUS.CANCELLED) return fromStatus !== ORDER_STATUS.DELIVERED;
+      if (fromStatus === ORDER_STATUS.SHIPPED && toStatus === ORDER_STATUS.DELIVERED) return true;
+      const chain = [
+        ORDER_STATUS.PENDING,
+        ORDER_STATUS.PLACED,
+        ORDER_STATUS.CONFIRMED,
+        ORDER_STATUS.PACKED,
+        ORDER_STATUS.SHIPPED,
+        ORDER_STATUS.OUT_FOR_DELIVERY,
+        ORDER_STATUS.DELIVERED,
+      ];
+      const fromIdx = chain.indexOf(fromStatus);
+      const toIdx = chain.indexOf(toStatus);
+      if (fromIdx < 0 || toIdx < 0) return false;
+      return toIdx === fromIdx + 1;
+    }
 
   /**
    * A quick-commerce order is accepted or declined through the fulfillment
@@ -1123,268 +1200,272 @@ class OrderService extends BaseService {
    * Returns null when the request is not an offer response.
    */
   async _respondToQuickOffer({ orderId, sellerId, toStatus, note }) {
-    if (!this.fulfillmentEngineService
-      || ![ORDER_STATUS.CONFIRMED, ORDER_STATUS.CANCELLED].includes(toStatus)) {
-      return null;
-    }
-
-    const view = await this.fulfillmentEngineService.sellerView(orderId, sellerId);
-    if (!view?.fulfillment) return null;
-
-    if (!view.offer) {
-      const searching = ['searching', 'seller_assigned', 'warehouse_pending'].includes(view.fulfillment.state);
-      if (toStatus === ORDER_STATUS.CONFIRMED && searching) {
-        throw AppError.conflict('This quick order is being offered to another store');
+      if (!this.fulfillmentEngineService
+        || ![ORDER_STATUS.CONFIRMED, ORDER_STATUS.CANCELLED].includes(toStatus)) {
+        return null;
       }
-      return null;
+
+      const view = await this.fulfillmentEngineService.sellerView(orderId, sellerId);
+      if (!view?.fulfillment) return null;
+
+      if (!view.offer) {
+        const searching = ['searching', 'seller_assigned', 'warehouse_pending'].includes(view.fulfillment.state);
+        if (toStatus === ORDER_STATUS.CONFIRMED && searching) {
+          throw AppError.conflict('This quick order is being offered to another store');
+        }
+        return null;
+      }
+
+      if (toStatus === ORDER_STATUS.CONFIRMED) {
+        const accepted = await this.fulfillmentEngineService.handleSellerAccept({ attemptId: view.offer._id, sellerId });
+        if (!accepted.ok) throw AppError.offerExpired('This order is no longer available');
+        return { orderId: view.fulfillment.orderId, status: ORDER_STATUS.CONFIRMED };
+      }
+
+      const rejected = await this.fulfillmentEngineService.handleSellerReject({
+        attemptId: view.offer._id, sellerId, reason: note || 'seller_declined',
+      });
+      if (!rejected.ok) throw AppError.offerExpired('This order is no longer available');
+      return { orderId: view.fulfillment.orderId, status: 'declined', offerDeclined: true };
     }
 
-    if (toStatus === ORDER_STATUS.CONFIRMED) {
-      const accepted = await this.fulfillmentEngineService.handleSellerAccept({ attemptId: view.offer._id, sellerId });
-      if (!accepted.ok) throw AppError.offerExpired('This order is no longer available');
-      return { orderId: view.fulfillment.orderId, status: ORDER_STATUS.CONFIRMED };
+    /**
+     * True when the fulfilment engine assigned this order to the seller or
+     * warehouse (cascade / cross-seller substitution / warehouse fallback). Order
+     * items keep their original seller, so item ownership alone is not enough.
+     */
+    _isAssignedFulfiller(order, sellerId) {
+      const id = String(sellerId);
+      return [order.fulfillment?.sellerId, order.fulfillment?.warehouseId]
+        .filter(Boolean)
+        .some((x) => String(x) === id);
     }
-
-    const rejected = await this.fulfillmentEngineService.handleSellerReject({
-      attemptId: view.offer._id, sellerId, reason: note || 'seller_declined',
-    });
-    if (!rejected.ok) throw AppError.offerExpired('This order is no longer available');
-    return { orderId: view.fulfillment.orderId, status: 'declined', offerDeclined: true };
-  }
-
-  /**
-   * True when the fulfilment engine assigned this order to the seller or
-   * warehouse (cascade / cross-seller substitution / warehouse fallback). Order
-   * items keep their original seller, so item ownership alone is not enough.
-   */
-  _isAssignedFulfiller(order, sellerId) {
-    const id = String(sellerId);
-    return [order.fulfillment?.sellerId, order.fulfillment?.warehouseId]
-      .filter(Boolean)
-      .some((x) => String(x) === id);
-  }
 
   async updateStatusAsSeller({ orderId, sellerId, toStatus, note = null }) {
-    const offerResponse = await this._respondToQuickOffer({ orderId, sellerId, toStatus, note });
-    if (offerResponse) return offerResponse;
+      const offerResponse = await this._respondToQuickOffer({ orderId, sellerId, toStatus, note });
+      if (offerResponse) return offerResponse;
 
-    return withTransaction(async (session) => {
-      const order = await this.orderRepository.findActiveById(orderId);
-      if (!order) throw AppError.notFound('Order not found');
+      return withTransaction(async (session) => {
+        const order = await this.orderRepository.findActiveById(orderId);
+        if (!order) throw AppError.notFound('Order not found');
 
-      const items = await this.orderItemRepository.listByOrderId(order._id);
-      const hasSellerItem = items.some((it) => String(it.sellerId) === String(sellerId))
-        || this._isAssignedFulfiller(order, sellerId);
-      if (!hasSellerItem) throw AppError.forbidden('Seller cannot update this order');
+        const items = await this.orderItemRepository.listByOrderId(order._id);
+        const hasSellerItem = items.some((it) => String(it.sellerId) === String(sellerId))
+          || this._isAssignedFulfiller(order, sellerId);
+        if (!hasSellerItem) throw AppError.forbidden('Seller cannot update this order');
 
-      if (!this._isValidStatusTransition(order.status, toStatus)) {
-        throw AppError.validation('Invalid status transition');
-      }
+        if (!this._isValidStatusTransition(order.status, toStatus)) {
+          throw AppError.validation('Invalid status transition');
+        }
 
-      if (toStatus === ORDER_STATUS.CANCELLED) {
-        await this._applyCancellation({
-          order, session, source: 'seller', actorId: sellerId, note: note || 'Cancelled by seller',
-        });
-        return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
-      }
+        if (toStatus === ORDER_STATUS.CANCELLED) {
+          await this._applyCancellation({
+            order, session, source: 'seller', actorId: sellerId, note: note || 'Cancelled by seller',
+          });
+          return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
+        }
 
-      const previousStatus = order.status;
-      const updated = await this.orderRepository.updateStatusOptimistic(order._id, previousStatus, toStatus, session);
-      if (!updated) {
-        throw AppError.conflict('Order status was changed by another actor — please retry');
-      }
+        const previousStatus = order.status;
+        const updated = await this.orderRepository.updateStatusOptimistic(order._id, previousStatus, toStatus, session);
+        if (!updated) {
+          throw AppError.conflict('Order status was changed by another actor — please retry');
+        }
 
-      // The return window counts from here.
-      if (toStatus === ORDER_STATUS.DELIVERED) {
-        await this.orderRepository.updateById(order._id, { deliveredAt: new Date() }, session);
-      }
+        // The return window counts from here.
+        if (toStatus === ORDER_STATUS.DELIVERED) {
+          await this.orderRepository.updateById(order._id, { deliveredAt: new Date() }, session);
+        }
 
-      await this.orderTrackingRepository.createInitial(order._id, toStatus, note, { source: 'seller', sellerId }, session);
-      await this.orderStatusHistoryRepository.addTransition(
-        {
-          orderId: order._id,
-          fromStatus: previousStatus,
-          toStatus,
-          changedBy: 'seller',
-          changedById: sellerId,
-          note,
-        },
-        session
-      );
+        await this.orderTrackingRepository.createInitial(order._id, toStatus, note, { source: 'seller', sellerId }, session);
+        await this.orderStatusHistoryRepository.addTransition(
+          {
+            orderId: order._id,
+            fromStatus: previousStatus,
+            toStatus,
+            changedBy: 'seller',
+            changedById: sellerId,
+            note,
+          },
+          session
+        );
 
-      this._emitStatusChange(order, toStatus);
+        this._emitStatusChange(order, toStatus);
 
-      if (
-        toStatus === ORDER_STATUS.PACKED
-        && this.deliveryOrderService
-        && order.fulfilmentType === 'local_delivery'
-        && order.fulfillment?.type !== 'courier'
-        && order.fulfillment?.deliveryMode !== 'standard'
-      ) {
-        await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
-      }
+        if (
+          toStatus === ORDER_STATUS.PACKED
+          && this.deliveryOrderService
+          && order.fulfilmentType === 'local_delivery'
+          && order.fulfillment?.type !== 'courier'
+          && order.fulfillment?.deliveryMode !== 'standard'
+        ) {
+          await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
+        }
 
-      return { orderId: order._id, status: toStatus };
-    });
-  }
+        return { orderId: order._id, status: toStatus };
+      });
+    }
 
   async updateStatusAsAdmin({ orderId, adminId, toStatus, note = null }) {
-    return withTransaction(async (session) => {
-      const order = await this.orderRepository.findActiveById(orderId);
-      if (!order) throw AppError.notFound('Order not found');
+      return withTransaction(async (session) => {
+        const order = await this.orderRepository.findActiveById(orderId);
+        if (!order) throw AppError.notFound('Order not found');
 
-      if (!this._isValidStatusTransition(order.status, toStatus)) {
-        throw AppError.validation('Invalid status transition');
-      }
+        if (!this._isValidStatusTransition(order.status, toStatus)) {
+          throw AppError.validation('Invalid status transition');
+        }
 
-      if (toStatus === ORDER_STATUS.CANCELLED) {
-        await this._applyCancellation({
-          order, session, source: 'admin', actorId: adminId, note: note || 'Cancelled by admin',
-        });
-        return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
-      }
+        if (toStatus === ORDER_STATUS.CANCELLED) {
+          await this._applyCancellation({
+            order, session, source: 'admin', actorId: adminId, note: note || 'Cancelled by admin',
+          });
+          return { orderId: order._id, status: ORDER_STATUS.CANCELLED };
+        }
 
-      const previousStatus = order.status;
-      const updated = await this.orderRepository.updateStatusOptimistic(order._id, previousStatus, toStatus, session);
-      if (!updated) {
-        throw AppError.conflict('Order status was changed by another actor — please retry');
-      }
+        const previousStatus = order.status;
+        const updated = await this.orderRepository.updateStatusOptimistic(order._id, previousStatus, toStatus, session);
+        if (!updated) {
+          throw AppError.conflict('Order status was changed by another actor — please retry');
+        }
 
-      if (toStatus === ORDER_STATUS.DELIVERED) {
-        await this.orderRepository.updateById(order._id, { deliveredAt: new Date() }, session);
-      }
+        if (toStatus === ORDER_STATUS.DELIVERED) {
+          await this.orderRepository.updateById(order._id, { deliveredAt: new Date() }, session);
+        }
 
-      await this.orderTrackingRepository.createInitial(order._id, toStatus, note, { source: 'admin', adminId }, session);
-      await this.orderStatusHistoryRepository.addTransition(
-        {
-          orderId: order._id,
-          fromStatus: previousStatus,
-          toStatus,
-          changedBy: 'admin',
-          changedById: adminId,
-          note,
+        await this.orderTrackingRepository.createInitial(order._id, toStatus, note, { source: 'admin', adminId }, session);
+        await this.orderStatusHistoryRepository.addTransition(
+          {
+            orderId: order._id,
+            fromStatus: previousStatus,
+            toStatus,
+            changedBy: 'admin',
+            changedById: adminId,
+            note,
+          },
+          session
+        );
+
+        this._emitStatusChange(order, toStatus);
+
+        if (
+          toStatus === ORDER_STATUS.PACKED
+          && this.deliveryOrderService
+          && order.fulfilmentType === 'local_delivery'
+          && order.fulfillment?.type !== 'courier'
+          && order.fulfillment?.deliveryMode !== 'standard'
+        ) {
+          await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
+        }
+
+        return { orderId: order._id, status: toStatus };
+      });
+    }
+
+    _serializeSellerOrder(order, sellerItems = [], productMap = new Map()) {
+      const addr = order.addressSnapshot || {};
+      const trackingDates = (status) =>
+        order[`${status}At`] || null;
+
+      return {
+        id: String(order._id),
+        orderNumber: order.orderNumber,
+        status: order.status,
+        placedAt: order.createdAt,
+        confirmedAt: trackingDates('confirmed'),
+        packedAt: trackingDates('packed'),
+        shippedAt: trackingDates('shipped'),
+        deliveredAt: order.deliveredAt,
+        customer: {
+          name: addr.name || 'Customer',
+          email: addr.email || '',
+          phone: addr.phone || '',
         },
-        session
-      );
+        address: {
+          line1: addr.line1 || addr.addressLine || '',
+          city: addr.city || '',
+          state: addr.state || '',
+          pincode: addr.pincode || '',
+        },
+        products: sellerItems.map((item) => ({
+          id: String(item._id),
+          productId: item.productId,
+          title: productMap.get(String(item.productId))?.title || 'Product',
+          price: item.unitPrice,
+          qty: item.quantity,
+          quantity: item.quantity,
+        })),
+        payment: {
+          method: order.paymentMethod,
+          status: order.paymentStatus,
+        },
+        totalAmount: order.subtotal,
+        finalAmount: order.total,
+        shippingCharge: order.deliveryCharge,
+        discount: order.discount || order.couponDiscount || 0,
+        commerceFlow: order.commerceFlow,
+        marketplaceTab: order.marketplaceTab || null,
+        fulfilmentType: order.fulfilmentType,
+        fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+        fulfillment: order.fulfillment || null,
+        deliveryMode: order.fulfillment?.deliveryMode || (order.fulfilmentType === 'courier' ? 'standard' : 'quick'),
+        shipment: order.shipment || null,
+      };
+    }
 
-      this._emitStatusChange(order, toStatus);
-
-      if (
-        toStatus === ORDER_STATUS.PACKED
-        && this.deliveryOrderService
-        && order.fulfilmentType === 'local_delivery'
-        && order.fulfillment?.type !== 'courier'
-        && order.fulfillment?.deliveryMode !== 'standard'
-      ) {
-        await this.deliveryOrderService.notifyNearbyPartnersForOrder(order._id, session);
-      }
-
-      return { orderId: order._id, status: toStatus };
-    });
+    _serializeOrder(order) {
+      const addr = order.addressSnapshot || {};
+      const deliveryMode = order.fulfillment?.deliveryMode
+        || (order.fulfilmentType === 'courier' ? 'standard' : (order.deliveryType === 'quick' ? 'quick' : null));
+      return {
+        id: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        commerceFlow: order.commerceFlow,
+        marketplaceTab: order.marketplaceTab || null,
+        fulfilmentType: order.fulfilmentType,
+        fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
+        fulfillment: order.fulfillment || null,
+        fulfillmentStatus: order.fulfillmentStatus || order.fulfillment?.status || null,
+        deliveryMode,
+        deliveryPromiseMinutes: deliveryMode === 'standard' ? null : (order.deliveryPromiseMinutes || null),
+        estimatedDeliveryAt: deliveryMode === 'standard' ? null : (order.estimatedDeliveryAt || order.fulfillment?.estimatedDeliveryAt || null),
+        fallbackReason: order.fulfillment?.fallbackReason || null,
+        shipment: order.shipment || null,
+        subtotal: order.subtotal,
+        couponDiscount: order.couponDiscount,
+        discount: order.discount,
+        tax: order.tax,
+        deliveryCharge: order.deliveryCharge,
+        shippingCharge: order.deliveryCharge,
+        platformFee: order.platformFee || 0,
+        packagingFee: order.packagingFee || 0,
+        handlingFee: order.handlingFee || 0,
+        surgeCharge: order.surgeCharge || 0,
+        tipAmount: order.tipAmount || 0,
+        cashback: order.cashback?.amount > 0 ? { amount: order.cashback.amount, mode: order.cashback.mode, status: order.cashback.status } : null,
+        giftCardAmount: order.giftCardAmount || 0,
+        walletAmount: order.walletAmount || 0,
+        grossTotal: order.grossTotal ?? order.total,
+        total: order.total,
+        sellerSubOrders: order.sellerSubOrders,
+        addressSnapshot: order.addressSnapshot,
+        address: {
+          name: addr.name || '',
+          phone: addr.phone || '',
+          line1: addr.line1 || addr.addressLine || '',
+          city: addr.city || '',
+          state: addr.state || '',
+          pincode: addr.pincode || '',
+          lat: addr.lat ?? addr.latitude ?? null,
+          lng: addr.lng ?? addr.longitude ?? null,
+        },
+        createdAt: order.createdAt,
+        cancelledAt: order.cancelledAt,
+        deliveredAt: order.deliveredAt,
+      };
+    }
   }
-
-  _serializeSellerOrder(order, sellerItems = [], productMap = new Map()) {
-    const addr = order.addressSnapshot || {};
-    const trackingDates = (status) =>
-      order[`${status}At`] || null;
-
-    return {
-      id: String(order._id),
-      orderNumber: order.orderNumber,
-      status: order.status,
-      placedAt: order.createdAt,
-      confirmedAt: trackingDates('confirmed'),
-      packedAt: trackingDates('packed'),
-      shippedAt: trackingDates('shipped'),
-      deliveredAt: order.deliveredAt,
-      customer: {
-        name: addr.name || 'Customer',
-        email: addr.email || '',
-        phone: addr.phone || '',
-      },
-      address: {
-        line1: addr.line1 || addr.addressLine || '',
-        city: addr.city || '',
-        state: addr.state || '',
-        pincode: addr.pincode || '',
-      },
-      products: sellerItems.map((item) => ({
-        id: String(item._id),
-        productId: item.productId,
-        title: productMap.get(String(item.productId))?.title || 'Product',
-        price: item.unitPrice,
-        qty: item.quantity,
-        quantity: item.quantity,
-      })),
-      payment: {
-        method: order.paymentMethod,
-        status: order.paymentStatus,
-      },
-      totalAmount: order.subtotal,
-      finalAmount: order.total,
-      shippingCharge: order.deliveryCharge,
-      discount: order.discount || order.couponDiscount || 0,
-      commerceFlow: order.commerceFlow,
-      marketplaceTab: order.marketplaceTab || null,
-      fulfilmentType: order.fulfilmentType,
-      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
-      fulfillment: order.fulfillment || null,
-      deliveryMode: order.fulfillment?.deliveryMode || (order.fulfilmentType === 'courier' ? 'standard' : 'quick'),
-      shipment: order.shipment || null,
-    };
-  }
-
-  _serializeOrder(order) {
-    const addr = order.addressSnapshot || {};
-    const deliveryMode = order.fulfillment?.deliveryMode
-      || (order.fulfilmentType === 'courier' ? 'standard' : (order.deliveryType === 'quick' ? 'quick' : null));
-    return {
-      id: order._id,
-      orderNumber: order.orderNumber,
-      status: order.status,
-      paymentMethod: order.paymentMethod,
-      paymentStatus: order.paymentStatus,
-      commerceFlow: order.commerceFlow,
-      marketplaceTab: order.marketplaceTab || null,
-      fulfilmentType: order.fulfilmentType,
-      fulfillmentType: order.fulfillment?.type || order.fulfilmentType,
-      fulfillment: order.fulfillment || null,
-      fulfillmentStatus: order.fulfillmentStatus || order.fulfillment?.status || null,
-      deliveryMode,
-      deliveryPromiseMinutes: deliveryMode === 'standard' ? null : (order.deliveryPromiseMinutes || null),
-      estimatedDeliveryAt: deliveryMode === 'standard' ? null : (order.estimatedDeliveryAt || order.fulfillment?.estimatedDeliveryAt || null),
-      fallbackReason: order.fulfillment?.fallbackReason || null,
-      shipment: order.shipment || null,
-      subtotal: order.subtotal,
-      couponDiscount: order.couponDiscount,
-      discount: order.discount,
-      tax: order.tax,
-      deliveryCharge: order.deliveryCharge,
-      shippingCharge: order.deliveryCharge,
-      platformFee: order.platformFee || 0,
-      packagingFee: order.packagingFee || 0,
-      handlingFee: order.handlingFee || 0,
-      surgeCharge: order.surgeCharge || 0,
-      tipAmount: order.tipAmount || 0,
-      total: order.total,
-      sellerSubOrders: order.sellerSubOrders,
-      addressSnapshot: order.addressSnapshot,
-      address: {
-        name: addr.name || '',
-        phone: addr.phone || '',
-        line1: addr.line1 || addr.addressLine || '',
-        city: addr.city || '',
-        state: addr.state || '',
-        pincode: addr.pincode || '',
-        lat: addr.lat ?? addr.latitude ?? null,
-        lng: addr.lng ?? addr.longitude ?? null,
-      },
-      createdAt: order.createdAt,
-      cancelledAt: order.cancelledAt,
-      deliveredAt: order.deliveredAt,
-    };
-  }
-}
 
 module.exports = {
   OrderService,

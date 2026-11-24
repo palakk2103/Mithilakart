@@ -21,6 +21,7 @@ import { getOrders } from '../services/ordersApi';
 import { addToWishlist, removeFromWishlist as removeWishlistItem } from '../services/userApi';
 import { mapProductForDetail, mapProductForCard, extractList, mapReview, mapQuestion } from '../utils/mappers';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import ProductNotFound from '../components/common/ProductNotFound';
 import useWishlistToggle from '../hooks/useWishlistToggle';
 import { customerApi } from '../../../shared/api/client';
 import { toast } from 'react-hot-toast';
@@ -173,7 +174,7 @@ const ProductDetail = () => {
 
   const handleSubmitReview = async () => {
     if (!isAuthenticated('customer')) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname, product, message: 'Please login to continue' } });
       return;
     }
     if (!reviewForm.body.trim()) {
@@ -221,7 +222,7 @@ const ProductDetail = () => {
 
   const handleAskQuestion = async () => {
     if (!isAuthenticated('customer')) {
-      navigate('/login');
+      navigate('/login', { state: { from: location.pathname, product, message: 'Please login to continue' } });
       return;
     }
     if (!questionText.trim()) {
@@ -422,7 +423,7 @@ const ProductDetail = () => {
   const toggleWishlist = useCallback(async () => {
     if (!product) return;
     if (!isAuthenticated('customer')) {
-      navigate('/login', { state: { from: location.pathname, flow: theme.activeFlow, product } });
+      navigate('/login', { state: { message: 'Please login to save items to your wishlist', from: location.pathname, flow: theme.activeFlow, product } });
       return;
     }
     try {
@@ -454,7 +455,7 @@ const ProductDetail = () => {
   const handleAddToCart = useCallback(async () => {
     if (!product) return;
     if (!isAuthenticated('customer')) {
-      navigate('/login', { state: { from: location.pathname, flow: theme.activeFlow, product } });
+      navigate('/login', { state: { message: 'Please log in to add items to your bag', from: location.pathname, flow: theme.activeFlow, product } });
       return;
     }
     try {
@@ -473,7 +474,7 @@ const ProductDetail = () => {
   const handleBuyNow = useCallback(() => {
     if (!product) return;
     if (!isAuthenticated('customer')) {
-      navigate('/login', { state: { from: '/checkout', flow: theme.activeFlow, checkoutProduct: { ...product, quantity }, product } });
+      navigate('/login', { state: { from: '/checkout', message: 'Please login to continue checkout', flow: theme.activeFlow, checkoutProduct: { ...product, quantity }, product } });
     } else {
       navigate('/vendor/checkout', { state: { product: { ...product, quantity } } });
     }
@@ -634,8 +635,17 @@ const ProductDetail = () => {
     return (
       <>
         {!loading && <SEO title={t('auto.productNotFound2')} noindex />}
-        <div className="min-h-screen flex items-center justify-center bg-bg-cream">
-          <p className="text-sm text-slate-655">{loading ? 'Loading product...' : error || 'Product not found'}</p>
+        <div className="min-h-screen bg-bg-cream">
+          {loading ? (
+            <div className="animate-pulse p-4 space-y-4" aria-busy data-testid="product-skeleton">
+              <div className="h-72 rounded-2xl bg-slate-200" />
+              <div className="h-6 w-3/4 rounded bg-slate-200" />
+              <div className="h-5 w-1/3 rounded bg-slate-200" />
+              <div className="h-24 rounded-2xl bg-slate-200" />
+            </div>
+          ) : (
+            <ProductNotFound message={error} />
+          )}
         </div>
       </>
     );

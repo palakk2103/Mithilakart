@@ -32,12 +32,23 @@ export const getInitialFlow = () => {
   return 'mithilakart';
 };
 
-const useVendorStore = create((set, get) => ({
-  activeFlow: getInitialFlow(),
-  setActiveFlow: (flow) => {
+const rememberFlow = (flow) => {
+  try {
     localStorage.setItem('isMithilakFlow', flow === 'mithilak' ? 'true' : 'false');
     localStorage.setItem('isQuickShopFlow', flow === 'quickshop' ? 'true' : 'false');
     localStorage.setItem('isFreshGroceryFlow', flow === 'freshgrocery' ? 'true' : 'false');
+  } catch { /* storage may be unavailable */ }
+};
+
+// A tab opened by URL or refreshed must be remembered too: otherwise refreshing the cart
+// afterwards showed the previously visited tab's (often empty) cart and colours.
+const initialFlow = getInitialFlow();
+if (typeof window !== 'undefined') rememberFlow(initialFlow);
+
+const useVendorStore = create((set, get) => ({
+  activeFlow: initialFlow,
+  setActiveFlow: (flow) => {
+    rememberFlow(flow);
     set({ activeFlow: flow });
   },
   selectedCategory: 'You Buy',

@@ -144,14 +144,16 @@ describe('AUTH-3/5 login', () => {
     await expect(service.verifyEmailOtp({ email: 'a@example.com', otp: lastEmail() }, {})).resolves.toMatchObject({ isNewUser: false });
   });
 
-  it('answers the same for an unknown number, sends nothing and never creates an account', async () => {
+  it('tells an unknown number or email to register, sends nothing and never creates an account', async () => {
     const { service, userRepository, outbox } = setup();
-    const sent = await service.sendPhoneOtp({ countryCode: '+91', phone: '9333333333' });
-    expect(sent).toMatchObject({ smsSent: true, message: expect.any(String), expiresAt: expect.any(String) });
+    await expect(service.sendPhoneOtp({ countryCode: '+91', phone: '9333333333' }))
+      .rejects.toMatchObject({ statusCode: 404, code: 'NOT_REGISTERED', details: { field: 'phone', action: 'register' } });
+    await expect(service.sendEmailOtp({ email: 'Nobody@Example.com' }))
+      .rejects.toMatchObject({ statusCode: 404, code: 'NOT_REGISTERED', details: { field: 'email', action: 'register' } });
     expect(outbox.sms).toHaveLength(0);
 
     await expect(service.verifyPhoneOtp({ countryCode: '+91', phone: '9333333333', otp: '111111' }, {}))
-      .rejects.toMatchObject({ statusCode: 401, message: 'Incorrect OTP. 4 attempts remaining' });
+      .rejects.toMatchObject({ statusCode: 401 });
     expect(userRepository.users).toHaveLength(0);
   });
 });

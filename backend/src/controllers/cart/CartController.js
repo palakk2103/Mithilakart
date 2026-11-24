@@ -8,7 +8,7 @@ const { AppError } = require('../../utils/AppError');
 class CartController extends BaseController {
   constructor(cartService) {
     super(cartService);
-    this.bindMethods(['getCart', 'addItem', 'updateItem', 'removeItem', 'clearCart', 'recommendations']);
+    this.bindMethods(['getCart', 'addItem', 'updateItem', 'removeItem', 'clearCart', 'recommendations', 'recommendationRail']);
   }
 
   _resolveCartContext(req, res) {
@@ -74,6 +74,20 @@ class CartController extends BaseController {
     return ApiResponse.success(res, data);
   });
 
+  /** One rail in full, for its "View All" page. */
+  recommendationRail = asyncHandler(async (req, res) => {
+    const split = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 50);
+    const data = await this.recommendationService.getRail({
+      userId: req.user.id,
+      marketplaceTab: req.query.marketplaceTab,
+      railKey: req.params.railKey,
+      subKey: req.query.sub || null,
+      cartProductIds: split(req.query.cart),
+      recentProductIds: split(req.query.recent),
+    });
+    return ApiResponse.success(res, data);
+  });
+
   getCart = asyncHandler(async (req, res) => {
     if (await this._guestGate(req, req.user?.id || null)) {
       return ApiResponse.success(res, await this.service.getEmptyCart({
@@ -82,6 +96,8 @@ class CartController extends BaseController {
       }));
     }
     const { userId, sessionId } = this._resolveCartContext(req, res);
+    // A coupon that stopped working (expired, cart below its minimum…) must not
+    // hide the customer's cart: the cart comes back without it, plus the reason.
     const data = await this.service.getCart({
       userId,
       sessionId,
@@ -89,6 +105,8 @@ class CartController extends BaseController {
       marketplaceTab: req.query.marketplaceTab || null,
       couponCode: req.query.couponCode ? String(req.query.couponCode).trim().toUpperCase() : null,
       tipAmount: Number(req.query.tip) || 0,
+      lenientCoupon: true,
+      clientKey: userId ? null : req.ip,
     });
 
     return ApiResponse.success(res, data);
@@ -104,6 +122,9 @@ class CartController extends BaseController {
       marketplaceTab: req.body.marketplaceTab || null,
       productId: req.body.productId,
       listingId: req.body.listingId || null,
+      // A customised package is its id + the ticked items; the service prices it.
+      packageId: req.body.packageId || null,
+      selectedItemIds: req.body.selectedItemIds || [],
       variantId: req.body.variantId || null,
       quantity: req.body.quantity,
     });

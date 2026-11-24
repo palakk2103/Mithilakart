@@ -58,6 +58,11 @@ class AdminPlatformSettingsService extends BaseService {
       }
     }
     if (updates.surgeConfig !== undefined) this._validateSurgeConfig(updates.surgeConfig);
+    if (updates.shopHours !== undefined) this._validateShopHours(updates.shopHours);
+    if (updates.cashbackConfig !== undefined) this._validateCashback(updates.cashbackConfig);
+    ['walletCheckoutEnabled', 'blockUnserviceablePincodes'].forEach((k) => {
+      if (updates[k] !== undefined && typeof updates[k] !== 'boolean') throw AppError.validation(`${k} must be true or false`);
+    });
     if (updates.cartRails !== undefined) this._validateCartRails(updates.cartRails);
     if (updates.checkoutContent !== undefined) this._validateCheckoutContent(updates.checkoutContent);
     if (updates.cartDesign !== undefined) this._validateCartDesign(updates.cartDesign);
@@ -197,11 +202,70 @@ class AdminPlatformSettingsService extends BaseService {
         }
       });
     }
+    if (s.trigger !== undefined && !['always', 'demand'].includes(s.trigger)) {
+      throw AppError.validation("surgeConfig.trigger must be 'always' or 'demand'");
+    }
+    [['demandOrders', 1, 100000], ['demandMinutes', 1, 240]].forEach(([k, min, max]) => {
+      if (s[k] !== undefined && (!Number.isInteger(s[k]) || s[k] < min || s[k] > max)) {
+        throw AppError.validation(`surgeConfig.${k} must be a whole number between ${min} and ${max}`);
+      }
+    });
     ['bannerTitle', 'bannerText', 'billLabel', 'billNote'].forEach((k) => {
       if (s[k] !== undefined && (typeof s[k] !== 'string' || s[k].length > 200 || /[<>]/.test(s[k]))) {
         throw AppError.validation(`surgeConfig.${k} must be up to 200 characters without < or >`);
       }
     });
+  }
+
+  /** Cashback rules: what it is worth, for whom, and how it is paid. */
+  _validateCashback(c) {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) throw AppError.validation('cashbackConfig must be an object');
+    if (c.enabled !== undefined && typeof c.enabled !== 'boolean') throw AppError.validation('cashbackConfig.enabled must be true or false');
+    if (c.mode !== undefined && !['instant', 'wallet'].includes(c.mode)) throw AppError.validation("cashbackConfig.mode must be 'instant' or 'wallet'");
+    if (c.type !== undefined && !['percent', 'flat'].includes(c.type)) throw AppError.validation("cashbackConfig.type must be 'percent' or 'flat'");
+    [['value', 0, 100000], ['maxAmount', 0, 100000], ['minOrder', 0, 1000000], ['perCustomer', 0, 1000]].forEach(([k, min, max]) => {
+      if (c[k] !== undefined && (typeof c[k] !== 'number' || !Number.isFinite(c[k]) || c[k] < min || c[k] > max)) {
+        throw AppError.validation(`cashbackConfig.${k} must be a number between ${min} and ${max}`);
+      }
+    });
+    if (c.perCustomer !== undefined && !Number.isInteger(c.perCustomer)) throw AppError.validation('cashbackConfig.perCustomer must be a whole number');
+    if (c.type === 'percent' && c.value > 100) throw AppError.validation('cashbackConfig.value cannot be more than 100%');
+    if (c.enabled && !(c.value > 0)) throw AppError.validation('Enter what the cashback is worth before switching it on');
+    const lists = { methods: ['upi', 'card', 'cod'], tabs: ['mithilakart', 'mithilak', 'quick_shop', 'groceries_fresh'] };
+    Object.entries(lists).forEach(([k, allowed]) => {
+      if (c[k] !== undefined && (!Array.isArray(c[k]) || c[k].some((x) => !allowed.includes(x)))) {
+        throw AppError.validation(`cashbackConfig.${k} must list: ${allowed.join(', ')}`);
+      }
+    });
+    if (c.enabled && Array.isArray(c.methods) && !c.methods.length) throw AppError.validation('Choose at least one payment method for the cashback');
+    ['startsAt', 'endsAt'].forEach((k) => {
+      if (c[k] && Number.isNaN(new Date(c[k]).getTime())) throw AppError.validation(`cashbackConfig.${k} must be a date`);
+    });
+    if (c.startsAt && c.endsAt && new Date(c.endsAt) <= new Date(c.startsAt)) throw AppError.validation('The cashback must end after it starts');
+    [['title', 120], ['linkText', 40], ['terms', 1000], ['campaign', 40]].forEach(([k, max]) => {
+      if (c[k] !== undefined && (typeof c[k] !== 'string' || c[k].length > max || /[<>]/.test(c[k]))) {
+        throw AppError.validation(`cashbackConfig.${k} must be up to ${max} characters without < or >`);
+      }
+    });
+    if (c.campaign !== undefined && !/^[\w-]{1,40}$/.test(c.campaign)) throw AppError.validation('cashbackConfig.campaign must use letters, numbers, - or _');
+  }
+
+  /** Opening hours of the quick-commerce tabs (IST). */
+  _validateShopHours(s) {
+    if (!s || typeof s !== 'object' || Array.isArray(s)) throw AppError.validation('shopHours must be an object');
+    ['enabled', 'forceClosed'].forEach((k) => {
+      if (s[k] !== undefined && typeof s[k] !== 'boolean') throw AppError.validation(`shopHours.${k} must be true or false`);
+    });
+    ['open', 'close'].forEach((k) => {
+      if (s[k] !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(s[k]))) throw AppError.validation(`shopHours.${k} must be a time as HH:MM`);
+    });
+    const TABS = ['mithilakart', 'mithilak', 'quick_shop', 'groceries_fresh'];
+    if (s.tabs !== undefined && (!Array.isArray(s.tabs) || s.tabs.some((t) => !TABS.includes(t)))) {
+      throw AppError.validation(`shopHours.tabs must list tabs from: ${TABS.join(', ')}`);
+    }
+    if (s.message !== undefined && (typeof s.message !== 'string' || s.message.length > 200 || /[<>]/.test(s.message))) {
+      throw AppError.validation('shopHours.message must be up to 200 characters without < or >');
+    }
   }
 
   async updateSettings(updates, adminId) {

@@ -53,7 +53,7 @@ const useWishlistToggle = () => {
       const id = idOf(product);
       if (!id) return;
       if (!isAuthenticated('customer')) {
-        navigate('/login', { state: { from: location.pathname } });
+        navigate('/login', { state: { from: location.pathname, message: 'Please login to save items to your wishlist' } });
         return;
       }
       const { wishlist: current, setWishlist: set } = useAccountStore.getState();

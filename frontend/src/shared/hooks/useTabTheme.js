@@ -68,7 +68,7 @@ export const useTabTheme = () => {
         primaryBorderLight: 'border-[color:var(--qs-primary,#F26522)]/25',
         primaryLightBg: 'bg-[color:var(--qs-light,#FFF5EE)]',
         primaryBadgeBg: 'bg-[color:var(--qs-primary,#F26522)]',
-        headerBg: 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF7A00)]',
+        headerBg: 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-dark,#d45014)]',
         accentBg: 'bg-[color:var(--qs-primary,#F26522)]',
         accentText: 'text-[color:var(--qs-primary,#F26522)]',
         accentBorder: 'border-[color:var(--qs-primary,#F26522)]',

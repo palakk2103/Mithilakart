@@ -241,6 +241,10 @@ class CourierShipmentService extends BaseService {
     return { reconciledCount: results.length, results };
   }
 
+  setPlatformConfigService(service) {
+    this.platformConfigService = service;
+  }
+
   async checkPincodeServiceability({ pincode, weightKg = 0.5, cod = false, pickupPincode = null }) {
     try {
       const shipping = getProvider('shipping');
@@ -255,7 +259,19 @@ class CourierShipmentService extends BaseService {
         weightKg,
         cod,
         paymentMethod: cod ? PAYMENT_METHOD.COD : PAYMENT_METHOD.UPI,
-      }).catch(() => null);
+      }).catch((err) => {
+        // 409 = the courier answered "we do not go there". Anything else is the
+        // courier being down, which must not stop customers from ordering.
+        if (err?.statusCode === 409) return { unserviceable: true };
+        return null;
+      });
+
+      if (res?.unserviceable && this.platformConfigService) {
+        const config = await this.platformConfigService.getConfig();
+        if (config.blockUnserviceablePincodes === true) {
+          return { serviceable: false, provider: shipping.providerName || 'mock', couriers: [], weightKg, cod };
+        }
+      }
 
       return {
         serviceable: true,

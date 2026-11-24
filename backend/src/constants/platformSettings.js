@@ -68,6 +68,12 @@ const PLATFORM_SETTING_KEYS = {
   LOGIN_REQUIRED: 'loginRequired',
   // FEE-3 — high-demand surge charge on quick-commerce tabs.
   SURGE_CONFIG: 'surgeConfig',
+  // Opening hours / force-close of the quick-commerce tabs.
+  SHOP_HOURS: 'shopHours',
+  // Cashback rules, wallet at checkout, and pincode blocking.
+  CASHBACK_CONFIG: 'cashbackConfig',
+  WALLET_CHECKOUT_ENABLED: 'walletCheckoutEnabled',
+  BLOCK_UNSERVICEABLE_PINCODES: 'blockUnserviceablePincodes',
   // CART-1/2/3 — cart recommendation rails and checkout page content.
   CART_RAILS: 'cartRails',
   CHECKOUT_CONTENT: 'checkoutContent',
@@ -124,10 +130,49 @@ const DEFAULT_SURGE_CONFIG = {
   threshold: 499,
   tabs: ['quick_shop', 'groceries_fresh'],
   windows: [],
+  // 'always'  – applies whenever a window matches (no windows = all day)
+  // 'demand'  – applies only while the tab really is busy: at least
+  //             demandOrders orders placed in the last demandMinutes
+  trigger: 'always',
+  demandOrders: 20,
+  demandMinutes: 15,
   bannerTitle: 'Place an order above ₹{threshold} to avoid surge charge',
   bannerText: 'Surge applicable due to high demand',
   billLabel: 'Surge charge',
   billNote: 'High demand right now. Add ₹{remaining} more to remove it.',
+};
+
+/**
+ * Cashback rules. Ships off: it is a promise to customers, so it starts only
+ * when the admin sets it up. mode 'instant' takes it off the bill, 'wallet'
+ * credits it after delivery. Changing `campaign` restarts perCustomer counts.
+ */
+const DEFAULT_CASHBACK_CONFIG = {
+  enabled: false,
+  campaign: 'default',
+  mode: 'instant',
+  type: 'percent',
+  value: 10,
+  maxAmount: 100,
+  minOrder: 199,
+  methods: ['upi'],
+  tabs: [],
+  perCustomer: 1,
+  startsAt: null,
+  endsAt: null,
+  title: '',
+  linkText: 'Know More',
+  terms: '',
+};
+
+/** Quick-commerce opening hours in IST; close '00:00' = midnight. */
+const DEFAULT_SHOP_HOURS = {
+  enabled: true,
+  forceClosed: false,
+  tabs: ['quick_shop', 'groceries_fresh'],
+  open: '06:00',
+  close: '00:00',
+  message: 'We are closed right now. Orders open again at 6:00 AM.',
 };
 
 const DEFAULT_PLATFORM_SETTINGS = {
@@ -160,6 +205,10 @@ const DEFAULT_PLATFORM_SETTINGS = {
   [PLATFORM_SETTING_KEYS.LIMITED_QUANTITY_MESSAGE]: 'Limited quantity due to high demand',
   [PLATFORM_SETTING_KEYS.LOGIN_REQUIRED]: true,
   [PLATFORM_SETTING_KEYS.SURGE_CONFIG]: DEFAULT_SURGE_CONFIG,
+  [PLATFORM_SETTING_KEYS.SHOP_HOURS]: DEFAULT_SHOP_HOURS,
+  [PLATFORM_SETTING_KEYS.CASHBACK_CONFIG]: DEFAULT_CASHBACK_CONFIG,
+  [PLATFORM_SETTING_KEYS.WALLET_CHECKOUT_ENABLED]: false,
+  [PLATFORM_SETTING_KEYS.BLOCK_UNSERVICEABLE_PINCODES]: false,
   [PLATFORM_SETTING_KEYS.CART_RAILS]: DEFAULT_CART_RAILS,
   [PLATFORM_SETTING_KEYS.CHECKOUT_CONTENT]: DEFAULT_CHECKOUT_CONTENT,
   [PLATFORM_SETTING_KEYS.CART_DESIGN]: DEFAULT_CART_DESIGN,
@@ -233,6 +282,8 @@ module.exports = {
   DEFAULT_SELLER_RANKING_WEIGHTS,
   DEFAULT_PARTNER_RANKING_WEIGHTS,
   DEFAULT_SURGE_CONFIG,
+  DEFAULT_SHOP_HOURS,
+  DEFAULT_CASHBACK_CONFIG,
   FULFILLMENT_SETTING_RANGES,
   PLATFORM_CONFIG_CACHE_KEY,
   PLATFORM_CONFIG_CACHE_TTL,

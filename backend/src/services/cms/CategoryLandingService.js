@@ -8,13 +8,22 @@ const assertObjectId = (id, label = 'id') => {
   }
 };
 
-const LANDING_TABS = ['mithilakart', 'mithilak'];
+const LANDING_TABS = ['mithilakart', 'mithilak', 'quick_shop', 'groceries_fresh'];
 const DEFAULT_TAB = 'mithilak';
 const LANDING_CACHE_TTL = 120; // short: scheduled banners/sections must flip on time
 const landingCacheKey = (categoryId, lang, tab) => `cache:storefront:landing:${categoryId}:${tab}:${lang}`;
 const LANDING_CACHE_PATTERN = 'cache:storefront:landing:*';
 const FIXED_BLOCKS = ['banner', 'subcategories'];
 const BLOCK_KEY_PATTERN = /^(banner|subcategories|section:[a-f0-9]{24})$/;
+
+// Quick-commerce categories get these sections until the admin configures their own,
+// so a category always opens a real landing page (subcategories + sections).
+const AUTO_SECTION_TABS = new Set(['quick_shop', 'groceries_fresh']);
+const AUTO_SECTIONS = [
+  { _id: 'auto-top_deals', sectionType: 'top_deals', title: 'Top Deals', subtitle: '', productLimit: 8 },
+  { _id: 'auto-best_sellers', sectionType: 'best_sellers', title: 'Best Sellers', subtitle: '', productLimit: 8 },
+  { _id: 'auto-new_arrivals', sectionType: 'new_arrivals', title: 'New Arrivals', subtitle: '', productLimit: 8 },
+];
 
 const DYNAMIC_QUERY = {
   best_sellers: { sort: '-popularity' },
@@ -65,10 +74,11 @@ class CategoryLandingService extends BaseService {
       return disabled;
     }
 
-    const [banners, sections] = await Promise.all([
+    const [banners, saved] = await Promise.all([
       this.bannerRepository.findActive({ categoryId }, { sort: { sortOrder: 1 } }),
       this.sectionRepository.findForCategory(categoryId, { activeOnly: true }),
     ]);
+    const sections = !saved.length && AUTO_SECTION_TABS.has(tab) ? AUTO_SECTIONS : saved;
 
     const subcategories = (node.children || []).map((child) => ({
       id: child.id,

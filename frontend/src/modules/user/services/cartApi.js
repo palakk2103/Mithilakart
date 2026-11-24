@@ -15,6 +15,12 @@ export const getCartRecommendations = (marketplaceTab, { cart = [], recent = [] 
     params: { marketplaceTab, ...(cart.length ? { cart: cart.join(',') } : {}), ...(recent.length ? { recent: recent.join(',') } : {}) },
   });
 
+/** One rail in full ("View All"); `sub` picks one of its tabs. */
+export const getCartRecommendationRail = (railKey, marketplaceTab, { sub, cart = [], recent = [] } = {}) =>
+  customerApi.get(`/cart/recommendations/${railKey}`, {
+    params: { marketplaceTab, ...(sub ? { sub } : {}), ...(cart.length ? { cart: cart.join(',') } : {}), ...(recent.length ? { recent: recent.join(',') } : {}) },
+  });
+
 /** CART-3: coupons with Apply / Locked state for this cart value. */
 export const getCouponOffers = (subtotal) => customerApi.get('/coupons/offers', { params: { subtotal } });
 

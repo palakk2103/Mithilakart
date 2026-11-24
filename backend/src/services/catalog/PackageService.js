@@ -107,7 +107,21 @@ class PackageService extends BaseService {
   async listPublic({ marketplaceTab = null } = {}) {
     const filter = { isActive: true, deletedAt: null, ...(marketplaceTab ? { marketplaceTab } : {}) };
     const rows = await CustomPackage.find(filter).sort({ sortOrder: 1, createdAt: -1 }).lean();
-    return Promise.all(rows.map(async (p) => this._serializePublic(p, await this.minimumPrice(p))));
+    const categories = await this._categoriesOf(rows);
+    return Promise.all(rows.map(async (p) => ({
+      ...this._serializePublic(p, await this.minimumPrice(p)),
+      categoryIds: categories.get(String(p.productId)) || [],
+    })));
+  }
+
+  /** productId -> its category ids, so a package also shows inside its own category. */
+  async _categoriesOf(rows) {
+    if (!this.productRepository?.findPublic || !rows.length) return new Map();
+    const products = await this.productRepository.findPublic({ _id: { $in: rows.map((r) => r.productId) } }, { limit: rows.length });
+    return new Map(products.map((p) => [
+      String(p._id),
+      [...new Set([p.categoryId, p.subcategoryId, ...(p.categoryIds || [])].filter(Boolean).map(String))],
+    ]));
   }
 
   async _findActive(idOrSlug) {

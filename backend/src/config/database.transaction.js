@@ -46,6 +46,11 @@ async function withTransaction(callback) {
       throw error;
     }
 
+    // Two requests touched the same record at once (last coupon use, same wallet…).
+    if (error?.code === 112 || error?.errorLabels?.includes?.('TransientTransactionError') || error?.hasErrorLabel?.('TransientTransactionError')) {
+      throw AppError.conflict('This is already being processed. Please try again in a moment.');
+    }
+
     throw AppError.database('Transaction failed');
   } finally {
     session.endSession();

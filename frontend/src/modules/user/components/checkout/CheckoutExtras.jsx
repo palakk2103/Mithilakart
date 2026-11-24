@@ -151,6 +151,32 @@ export const AppliedStrip = ({ message }) => (message ? (
   </p>
 ) : null);
 
+/** Best coupon for this cart, one tap to apply (shown under "Apply Coupon" until one is applied). */
+export const BestOffer = ({ subtotal, accentHex, onApply, onMore }) => {
+  const [offers, setOffers] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    getCouponOffers(Math.round(subtotal || 0))
+      .then((list) => { if (!cancelled) setOffers(Array.isArray(list) ? list : []); })
+      .catch(() => { if (!cancelled) setOffers([]); });
+    return () => { cancelled = true; };
+  }, [subtotal]);
+  const best = offers[0];
+  if (!best) return null;
+  return (
+    <div data-testid="best-offer" className="mt-2.5 rounded-lg border border-dashed px-3 py-2 flex items-center gap-2.5" style={{ borderColor: `${accentHex}88`, background: `${accentHex}0f` }}>
+      <BadgePercent size={20} className="text-emerald-600 flex-shrink-0" />
+      <p className="flex-1 min-w-0 text-[13px] font-bold text-slate-900 leading-tight">
+        Best offer: {best.title}
+        {!best.eligible && <span className="block text-[12px] font-medium text-orange-600 mt-0.5">{best.lockedReason}</span>}
+      </p>
+      {best.eligible
+        ? <button type="button" onClick={() => onApply(best.code)} className="h-9 px-3 text-[13px] font-bold flex-shrink-0" style={{ color: accentHex }}>Apply</button>
+        : <button type="button" onClick={onMore} className="h-9 px-3 text-[13px] font-bold flex-shrink-0" style={{ color: accentHex }}>All offers</button>}
+    </div>
+  );
+};
+
 /** Return & Exchange / Cancellation box; the lines are edited in admin. */
 export const PolicyBox = ({ content, to }) => {
   const points = (content?.policyPoints || []).filter(Boolean);
@@ -170,34 +196,33 @@ export const PolicyBox = ({ content, to }) => {
   );
 };
 
-/** Shown only when the admin has entered the real rating — never an invented one. */
+/** Trust line; the star rating is added only when the admin has entered the real figure. */
 export const TrustBlock = ({ content }) => {
   const trust = content?.trust;
   const rating = Number(trust?.rating);
-  if (!trust || trust.enabled === false || !(rating > 0)) return null;
+  if (!trust || trust.enabled === false) return null;
   return (
-    <section className="cd-card flex items-center gap-2.5">
+    <section className="cd-card flex items-center gap-2.5" data-testid="trust-block">
       <ShieldCheck size={26} className="text-emerald-600 flex-shrink-0" />
-      <p className="flex-1 text-[13px] font-bold cd-heading leading-tight">{trust.title}</p>
-      <div className="text-right flex-shrink-0">
+      <p className="flex-1 text-[14px] font-bold cd-heading leading-tight">{trust.title}</p>
+      {rating > 0 && <div className="text-right flex-shrink-0">
         <div className="flex justify-end gap-px" aria-hidden>
           {[1, 2, 3, 4, 5].map((n) => <Star key={n} size={13} className={n <= Math.round(rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-300'} />)}
         </div>
         <p className="text-[12px] font-bold text-slate-800">{rating}/5{trust.reviewsLabel ? ` (${trust.reviewsLabel})` : ''}</p>
-      </div>
+      </div>}
     </section>
   );
 };
 
-/** Cashback strip (gift icon + text + Know More); hidden until an admin turns it on. */
-export const CashbackBanner = ({ content, accentHex, onMore }) => {
-  const b = content?.cashbackBanner;
+/** Cashback strip, written by the server from the admin's live cashback rules; nothing shows when none is running. */
+export const CashbackBanner = ({ cashback: b, accentHex, onMore }) => {
   if (!b?.enabled || !b.title) return null;
   return (
     <div className="rounded-lg px-2.5 py-2 flex items-center gap-2.5" style={{ background: `${accentHex}22` }}>
       <Gift size={24} style={{ color: accentHex }} className="flex-shrink-0" />
       <p className="flex-1 text-[12.5px] font-bold text-slate-900 leading-tight">{b.title}</p>
-      {b.details && (
+      {b.rules?.length > 0 && (
         <button type="button" onClick={onMore} className="text-[12px] font-bold flex items-center min-h-[36px] flex-shrink-0" style={{ color: accentHex }}>
           {b.linkText || 'Know More'} <ChevronRight size={13} />
         </button>

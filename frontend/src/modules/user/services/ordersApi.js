@@ -6,6 +6,9 @@ export const getOrderById = (id) => customerApi.get(`/orders/${id}`);
 
 export const createOrder = (data) => customerApi.post('/orders', data);
 
+/** The exact bill (cart or Buy Now lines) for a payment method, gift card and wallet choice. */
+export const quoteOrder = (data) => customerApi.post('/orders/quote', data);
+
 export const cancelOrder = (id, data) => customerApi.post(`/orders/${id}/cancel`, data);
 
 export const getOrderTracking = (id) => customerApi.get(`/orders/${id}/tracking`);

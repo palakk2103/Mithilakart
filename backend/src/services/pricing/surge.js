@@ -38,6 +38,12 @@ function inSurgeWindow(windows, now = new Date()) {
 
 const fill = (text, values) => String(text || '').replace(/\{(\w+)\}/g, (_, k) => (values[k] ?? ''));
 
+/** Real demand: recent orders in this tab (counted by PlatformConfigService) reached the admin's number. */
+function isBusy(config, s, tab) {
+  const recent = Number(config?.recentOrdersByTab?.[tab]) || 0;
+  return recent >= Math.max(1, Number(s.demandOrders) || DEFAULT_SURGE_CONFIG.demandOrders);
+}
+
 /** Is surge switched on for this tab right now (ignoring the cart value)? */
 function surgeActiveForTab(config, marketplaceTab, now = new Date()) {
   const s = resolveSurgeConfig(config);
@@ -48,6 +54,7 @@ function surgeActiveForTab(config, marketplaceTab, now = new Date()) {
     && marketplaceTab
     && Array.isArray(s.tabs) && s.tabs.includes(marketplaceTab)
     && inSurgeWindow(s.windows, now)
+    && (s.trigger !== 'demand' || isBusy(config, s, marketplaceTab))
   );
 }
 

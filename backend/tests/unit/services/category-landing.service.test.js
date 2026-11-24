@@ -166,6 +166,6 @@ describe('CategoryLandingService (tabs)', () => {
 
   it('rejects unknown tabs', async () => {
     const { service } = build();
-    await expect(service.getPublicLanding(CAT, 'en', 'quick_shop')).rejects.toMatchObject({ statusCode: 422 });
+    await expect(service.getPublicLanding(CAT, 'en', 'not_a_tab')).rejects.toMatchObject({ statusCode: 422 });
   });
 });

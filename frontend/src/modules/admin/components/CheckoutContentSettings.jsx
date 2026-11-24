@@ -142,7 +142,7 @@ const CheckoutContentSettings = ({ rails, content, onRails, onContent }) => {
 
       <div>
         <h3 className={h3}>Trust block</h3>
-        <p className="text-xs text-slate-500 mb-3">Shown only when you enter a rating — enter the real figure from your reviews.</p>
+        <p className="text-xs text-slate-500 mb-3">The stars appear only when you enter a rating — enter the real figure from your reviews.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div><span className={label}>Heading</span><input value={content.trust.title} onChange={(e) => setContent('trust', { title: e.target.value })} className={input} /></div>
           <div><span className={label}>Average rating (0–5)</span><input type="number" min="0" max="5" step="0.1" value={content.trust.rating ?? ''} onChange={(e) => setContent('trust', { rating: e.target.value })} className={input} /></div>
@@ -151,14 +151,8 @@ const CheckoutContentSettings = ({ rails, content, onRails, onContent }) => {
       </div>
 
       <div>
-        <h3 className={h3}>Payment page — cashback banner &amp; method offers</h3>
-        <p className="text-xs text-slate-500 mb-3">Nothing is shown until you turn it on and write the offer. Only enter offers that are actually running.</p>
-        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5 space-y-2 mb-4">
-          <Check checked={content.cashbackBanner.enabled} onChange={(v) => setContent('cashbackBanner', { enabled: v })}>Show cashback banner</Check>
-          <input aria-label="Banner text" value={content.cashbackBanner.title} onChange={(e) => setContent('cashbackBanner', { title: e.target.value })} className={input} />
-          <input aria-label="Link text" value={content.cashbackBanner.linkText} onChange={(e) => setContent('cashbackBanner', { linkText: e.target.value })} className={input} placeholder="Link text, e.g. Know More" />
-          <textarea aria-label="Banner details" rows={3} value={content.cashbackBanner.details} onChange={(e) => setContent('cashbackBanner', { details: e.target.value })} className={input} placeholder="Terms shown when the customer taps Know More" />
-        </div>
+        <h3 className={h3}>Payment page — bank / app offers</h3>
+        <p className="text-xs text-slate-500 mb-3">Text only, for offers run by a bank or app. Your own cashback is set in the Cashback section.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[['upi', 'UPI'], ['phonepe', 'PhonePe'], ['card', 'Card'], ['cod', 'Cash on Delivery']].map(([key, name]) => (
             <div key={key}>

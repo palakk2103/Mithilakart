@@ -8,6 +8,9 @@ export const DEFAULT_SURGE = {
   threshold: 499,
   tabs: ['quick_shop', 'groceries_fresh'],
   windows: [],
+  trigger: 'always',
+  demandOrders: 20,
+  demandMinutes: 15,
   bannerTitle: 'Place an order above ₹{threshold} to avoid surge charge',
   bannerText: 'Surge applicable due to high demand',
   billLabel: 'Surge charge',
@@ -35,6 +38,9 @@ export const surgeForSave = (s) => ({
   threshold: num(s.threshold, 499),
   tabs: s.tabs,
   windows: (s.windows || []).map((w) => ({ days: w.days, start: w.start, end: w.end })),
+  trigger: s.trigger === 'demand' ? 'demand' : 'always',
+  demandOrders: Math.max(1, Math.round(num(s.demandOrders, 20))),
+  demandMinutes: Math.min(240, Math.max(1, Math.round(num(s.demandMinutes, 15)))),
   bannerTitle: String(s.bannerTitle || '').trim() || DEFAULT_SURGE.bannerTitle,
   bannerText: String(s.bannerText || '').trim(),
   billLabel: String(s.billLabel || '').trim() || DEFAULT_SURGE.billLabel,
@@ -110,6 +116,34 @@ const SurgeSettings = ({ value, onChange, fees }) => {
             );
           })}
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className={label}>When to charge</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+          {[
+            ['always', 'Always (or in the time windows below)', 'Charged on every cart under the threshold.'],
+            ['demand', 'Only when demand is really high', 'Charged only while many orders are coming in on that tab.'],
+          ].map(([id, title, help]) => (
+            <button key={id} type="button" aria-pressed={s.trigger === id} onClick={() => set({ trigger: id })}
+              className={`text-left p-4 rounded-2xl border ${s.trigger === id ? 'border-blue-600 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+              <span className="block text-xs font-black text-slate-900">{title}</span>
+              <span className="block text-[11px] text-slate-500 mt-1">{help}</span>
+            </button>
+          ))}
+        </div>
+        {s.trigger === 'demand' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div className="space-y-2">
+              <span className={label}>High demand = at least this many orders</span>
+              <input type="number" min="1" aria-label="Demand orders" value={s.demandOrders} onChange={(e) => set({ demandOrders: e.target.value })} className={input} />
+            </div>
+            <div className="space-y-2">
+              <span className={label}>…in the last (minutes)</span>
+              <input type="number" min="1" max="240" aria-label="Demand minutes" value={s.demandMinutes} onChange={(e) => set({ demandMinutes: e.target.value })} className={input} />
+            </div>
+          </div>
+        )}
       </fieldset>
 
       <div>

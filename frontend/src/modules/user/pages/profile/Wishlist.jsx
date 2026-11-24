@@ -1,220 +1,181 @@
-import React, { useEffect, useState } from 'react';
-import LoginGate from '../../../../shared/components/LoginGate';
-import { Heart as HeartGate } from 'lucide-react';
-import { ArrowLeft, ShoppingCart, Lock, Share2, Edit2, MoreVertical, Star, ShoppingBag } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Heart, ShoppingCart, Share2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import LoginGate from '../../../../shared/components/LoginGate';
+import useTabTheme from '../../../../shared/hooks/useTabTheme';
 import useAccountStore from '../../../../store/useAccountStore';
 import { getWishlist, removeFromWishlist as removeWishlistApi } from '../../services/userApi';
+import { getCartRecommendationRail } from '../../services/cartApi';
 import { extractList, mapWishlistItem } from '../../utils/mappers';
-import { addProductToCart, fetchCartCount } from '../../utils/cartUtils';
+import { fetchCartCount } from '../../utils/cartUtils';
+import RailCard from '../../components/checkout/RailCard';
+import CartRails from '../../components/checkout/CartRails';
+import SafePayments from '../../components/checkout/SafePayments';
 
+const FLOW_TO_TAB = { mithilakart: 'mithilakart', quickshop: 'quick_shop', mithilak: 'mithilak', freshgrocery: 'groceries_fresh' };
+const HOME = { mithilakart: '/home', quickshop: '/quick-shop', mithilak: '/mithilak', freshgrocery: '/fresh-grocery' };
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'mithilakart', label: 'Mithilakart' },
+  { key: 'quick_shop', label: 'Quick Shop' },
+  { key: 'mithilak', label: 'Mithilak' },
+  { key: 'groceries_fresh', label: 'Fresh & Groceries' },
+];
+
+/**
+ * One wishlist per account, whatever tab an item was saved from; the chips only
+ * filter it. Prices, stock and the tab an item sells in come from the live listing.
+ */
 const WishlistPage = () => {
   const navigate = useNavigate();
-  const { wishlist, setWishlist, removeFromWishlist } = useAccountStore();
+  const theme = useTabTheme();
+  const tab = FLOW_TO_TAB[theme.activeFlow] || 'mithilakart';
+  const wishlist = useAccountStore((s) => s.wishlist);
+  const setWishlist = useAccountStore((s) => s.setWishlist);
+  const removeFromWishlist = useAccountStore((s) => s.removeFromWishlist);
+  const [live, setLive] = useState({}); // productId -> live listing card
+  const [status, setStatus] = useState('loading'); // loading | ready | error
+  const [filter, setFilter] = useState('all');
   const [cartCount, setCartCount] = useState(0);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
+    (async () => {
       try {
         const data = await getWishlist();
-        if (!cancelled) {
-          setWishlist(extractList(data).map((p) => mapWishlistItem(p)));
-        }
+        if (cancelled) return;
+        setWishlist(extractList(data).map((p) => mapWishlistItem(p)));
+        const rail = await getCartRecommendationRail('wishlist', tab).catch(() => null);
+        if (cancelled) return;
+        setLive(Object.fromEntries((rail?.items || []).map((i) => [String(i.productId), i])));
+        setStatus('ready');
       } catch {
-        // Keep existing client store wishlist items on API error / 401
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setStatus('error');
       }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [setWishlist]);
+    })();
+    return () => { cancelled = true; };
+  }, [setWishlist, tab]);
 
   useEffect(() => {
-    const updateCount = async () => setCartCount(await fetchCartCount());
-    updateCount();
-    window.addEventListener('cartUpdated', updateCount);
-    return () => window.removeEventListener('cartUpdated', updateCount);
+    const update = async () => setCartCount(await fetchCartCount());
+    update();
+    window.addEventListener('cartUpdated', update);
+    return () => window.removeEventListener('cartUpdated', update);
   }, []);
 
-  const addToCart = async (product, e) => {
-    e.stopPropagation();
+  const items = useMemo(() => (Array.isArray(wishlist) ? wishlist : []).map((w) => {
+    const id = String(w.productId || w.id);
+    return live[id] ? { ...live[id], image: live[id].image || w.image } : { ...w, productId: id, unavailable: status === 'ready' };
+  }), [wishlist, live, status]);
+
+  const counts = useMemo(() => {
+    const out = { all: items.length };
+    items.forEach((i) => { if (i.marketplaceTab) out[i.marketplaceTab] = (out[i.marketplaceTab] || 0) + 1; });
+    return out;
+  }, [items]);
+  const shown = filter === 'all' ? items : items.filter((i) => i.marketplaceTab === filter);
+
+  const remove = async (item) => {
+    const before = useAccountStore.getState().wishlist;
+    removeFromWishlist(item.productId);
     try {
-      await addProductToCart(product);
-      try {
-        await removeWishlistApi(product.id);
-      } catch {
-        // ignore backend failure in offline/demo mode
-      }
-      removeFromWishlist(product.id);
-      navigate('/vendor/cart');
-    } catch {
-      // keep UI unchanged
+      await removeWishlistApi(item.productId);
+      toast.success('Removed from wishlist');
+    } catch (err) {
+      setWishlist(before);
+      toast.error(err?.message || 'Could not remove this item');
     }
   };
 
-  const isQuickShopFlow = localStorage.getItem('isQuickShopFlow') === 'true';
-  const isMithilakFlow = localStorage.getItem('isMithilakFlow') === 'true';
-  const isFreshGroceryFlow = localStorage.getItem('isFreshGroceryFlow') === 'true';
+  const open = (item) => navigate('/product-detail', { state: { productId: item.productId, listingId: item.listingId, product: item } });
 
-  const pageBg = isMithilakFlow ? 'bg-gradient-to-b from-[#f3e8ff]/60 via-[#faf5ff] to-[#f5f3ff]' : isFreshGroceryFlow ? 'bg-gradient-to-b from-[color:var(--fg-light,#FFF0A0)]/25 via-[#FFFDF3] to-[#FFF]' : (isQuickShopFlow ? 'bg-[color:var(--qs-light,#fff5f7)]' : 'bg-bg-cream');
-  const headerBg = isMithilakFlow ? 'bg-gradient-to-r from-[#8b5cf6] to-[#6366f1]' : isFreshGroceryFlow ? 'bg-[color:var(--fg-light,#FFF0A0)]' : (isQuickShopFlow ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-accent,#FF7A00)]' : 'bg-[#FCF7EE] border-b border-[#F3E3CD]/60');
-  const headerTextColor = (isMithilakFlow || isQuickShopFlow) ? 'text-white' : (isFreshGroceryFlow ? 'text-black' : 'text-[#3C2415]');
+  const share = async () => {
+    const text = items.map((i) => `${i.name} — ₹${i.price}`).join('\n');
+    try {
+      if (navigator.share) await navigator.share({ title: 'My Mithilakart wishlist', text });
+      else { await navigator.clipboard.writeText(text); toast.success('Wishlist copied'); }
+    } catch { /* share sheet closed */ }
+  };
 
   return (
-    <div className={`min-h-screen pb-24 relative transition-colors duration-300 ${pageBg}`}>
-      {/* Global Repeating Mithila Art Page Background Texture */}
-      {!(isMithilakFlow || isQuickShopFlow || isFreshGroceryFlow) && (
-        <div 
-          className="fixed inset-0 pointer-events-none z-0 bg-repeat opacity-[0.03] select-none"
-          style={{
-            backgroundImage: "url('/Screenshot 2026-07-17 130906.png')",
-            backgroundSize: '360px',
-          }}
-        />
-      )}
-
-      {/* Header */}
-      <div className={`sticky top-0 z-50 p-4 flex items-center justify-between shadow-sm relative z-10 transition-colors duration-300 border-b ${headerBg}`}>
-        <button onClick={() => navigate(-1)} className={`active:scale-95 transition-transform ${headerTextColor}`}>
-          <ArrowLeft size={24} />
+    <div className={`min-h-screen pb-10 ${theme.primaryLightBg}`} data-testid="wishlist-page">
+      <header data-testid="wishlist-header" className={`sticky top-0 z-50 px-3 h-14 flex items-center gap-3 text-white shadow-sm ${theme.headerBg}`}>
+        <button type="button" aria-label="Back" onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-800 active:scale-95">
+          <ArrowLeft size={19} strokeWidth={2.5} />
         </button>
-        <button onClick={() => navigate('/vendor/cart')} className="relative active:scale-95 transition-transform" aria-label="Cart">
-          <ShoppingCart size={24} className={headerTextColor} />
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-[#FCF7EE]">
-            {cartCount}
-          </span>
+        <h1 className="flex-1 text-[17px] font-bold">My Wishlist{items.length ? ` (${items.length})` : ''}</h1>
+        {items.length > 0 && <button type="button" aria-label="Share wishlist" onClick={share} className="w-10 h-10 rounded-full flex items-center justify-center"><Share2 size={20} /></button>}
+        <button type="button" aria-label="Cart" onClick={() => navigate('/cart')} className="relative w-10 h-10 rounded-full flex items-center justify-center">
+          <ShoppingCart size={21} />
+          {cartCount > 0 && <span className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[10.5px] font-bold flex items-center justify-center" style={{ color: theme.primaryHex }}>{cartCount}</span>}
         </button>
-      </div>
+      </header>
 
-      {/* Title Section */}
-      <div className="px-4 py-5 bg-transparent relative z-10">
-        <h1 className="text-[22px] font-bold text-slate-900 tracking-tight">Wishlist</h1>
-        <div className="flex items-center gap-1.5 mt-1 text-gray-500">
-          <Lock size={14} />
-          <span className="text-[13px] font-medium">Private • {wishlist.length} items</span>
-        </div>
-
-        {/* Share & Edit Buttons */}
-        <div className="flex gap-3 mt-5">
-          <button className="flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 rounded-sm text-[14px] font-bold text-[color:var(--mk-dark,#3E5A44)] active:bg-gray-50 transition-colors">
-            <Share2 size={16} /> Share
-          </button>
-          <button className="flex-1 flex items-center justify-center gap-2 py-2 border border-gray-200 rounded-sm text-[14px] font-bold text-[color:var(--mk-dark,#3E5A44)] active:bg-gray-50 transition-colors">
-            <Edit2 size={16} /> Edit
-          </button>
-          <button className="w-10 flex items-center justify-center text-gray-400">
-            <MoreVertical size={20} />
-          </button>
-        </div>
-      </div>
-
-      <div className="border-t border-[#F3E3CD]/60 relative z-10">
-        <div className="grid grid-cols-2">
-          <AnimatePresence mode="popLayout">
-            {loading ? (
-              <p className="col-span-2 p-8 text-center text-sm text-gray-500">Loading wishlist...</p>
-            ) : wishlist.map((item, idx) => (
-              <motion.div 
-                layout
-                key={item.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={`flex flex-col border-b border-gray-100 ${idx % 2 === 0 ? 'border-r' : ''}`}
-                onClick={() => navigate('/vendor/product-detail', { state: { product: item } })}
-              >
-                {/* Product Image Area */}
-                <div className="relative aspect-square p-4 bg-white group">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
-                  <button 
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        await removeWishlistApi(item.id);
-                        removeFromWishlist(item.id);
-                      } catch {
-                        // keep UI unchanged
-                      }
-                    }}
-                    className="absolute top-2 right-2 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center text-gray-400 shadow-sm"
-                  >
-                    <MoreVertical size={18} />
-                  </button>
-                </div>
-
-                {/* Product Info */}
-                <div className="px-3 pb-3 flex-1 flex flex-col">
-                  <p className="text-[12px] text-gray-400 font-medium truncate uppercase">{item.brand || 'Premium'}</p>
-                  <h4 className="text-[13px] text-gray-600 line-clamp-1 mt-0.5">{item.name}</h4>
-                  
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className="text-[13px] font-bold text-green-600 flex items-center gap-0.5">
-                      <span className="text-[10px]">↓</span>{item.discount || '10%'}
-                    </span>
-                    <span className="text-[13px] text-gray-400 line-through">
-                      ₹{item.oldPrice || (item.price ? (parseFloat(String(item.price).replace(/[^0-9.]/g, '')) + 200) : '0')}
-                    </span>
-                    <span className="text-[15px] font-bold text-slate-900">₹{item.price || '0'}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4].map(s => <Star key={s} size={12} fill="#16a34a" className="text-green-600" />)}
-                      <Star size={12} className="text-gray-200" />
-                    </div>
-                    <div className="bg-[color:var(--mk-dark,#3E5A44)] px-1 rounded-sm flex items-center gap-0.5">
-                      <span className="text-[9px] text-white font-black italic">f</span>
-                      <span className="text-[8px] text-white font-bold">Assured</span>
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={(e) => addToCart(item, e)}
-                    className="w-full mt-4 py-2 border border-gray-200 text-[color:var(--mk-dark,#3E5A44)] text-[14px] font-bold rounded-sm active:bg-primary-light transition-colors"
-                  >
-                    Add to Cart
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {wishlist.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-24 text-center px-6">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mb-4">
-              <ShoppingBag size={40} />
-            </div>
-            <h3 className="text-[18px] font-bold text-slate-800">Your Wishlist is Empty</h3>
-            <p className="text-[14px] text-gray-400 mt-1">Add items that you like to your wishlist.</p>
-            <button 
-              onClick={() => navigate('/vendor/home')}
-              className="mt-6 bg-[color:var(--mk-dark,#3E5A44)] text-white px-8 py-2.5 rounded-sm font-bold text-[14px] shadow-lg active:scale-95 transition-all"
-            >
-              Continue Shopping
-            </button>
+      <main className="max-w-6xl mx-auto px-3 pt-3 flex flex-col gap-4">
+        {items.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar" role="tablist" aria-label="Filter wishlist">
+            {FILTERS.filter((f) => f.key === 'all' || counts[f.key]).map((f) => {
+              const on = filter === f.key;
+              return (
+                <button key={f.key} type="button" role="tab" aria-selected={on} onClick={() => setFilter(f.key)}
+                  className="flex-shrink-0 h-10 px-4 rounded-full border text-[13px] font-bold bg-white"
+                  style={on ? { background: theme.primaryHex, borderColor: theme.primaryHex, color: '#fff' } : { color: '#475569', borderColor: '#e2e8f0' }}>
+                  {f.label} ({counts[f.key] || 0})
+                </button>
+              );
+            })}
           </div>
         )}
-      </div>
+
+        {status === 'loading' && !items.length && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 animate-pulse" aria-busy>
+            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-64 rounded-xl bg-white" />)}
+          </div>
+        )}
+
+        {status === 'error' && !items.length && <p className="text-center py-16 text-[14px] font-semibold text-slate-600">We could not load your wishlist. Please check your connection and try again.</p>}
+
+        {items.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" data-testid="wishlist-grid">
+            {shown.map((item) => (
+              <RailCard key={item.productId} item={item.unavailable ? { ...item, stock: 0 } : item} onOpen={open} currentTab={tab} className="w-full">
+                <button type="button" aria-label={`Remove ${item.name} from wishlist`} onClick={() => remove(item)}
+                  className="absolute right-3 top-3 z-10 w-9 h-9 rounded-full bg-white shadow flex items-center justify-center text-rose-600 active:scale-90">
+                  <Trash2 size={16} />
+                </button>
+              </RailCard>
+            ))}
+          </div>
+        )}
+
+        {status === 'ready' && !items.length && (
+          <section className="rounded-2xl bg-white border border-slate-200/70 flex flex-col items-center text-center px-6 py-12">
+            <span className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: `${theme.primaryHex}1a`, color: theme.primaryHex }}><Heart size={38} /></span>
+            <h2 className="mt-4 text-[18px] font-bold text-slate-900">Your wishlist is empty</h2>
+            <p className="text-[14px] text-slate-500 mt-1">Tap the heart on any product to save it here.</p>
+            <button type="button" onClick={() => navigate(HOME[theme.activeFlow] || '/home')} className="mt-6 h-12 px-9 rounded-full text-white text-[14px] font-bold active:scale-95" style={{ background: theme.primaryHex }}>Start shopping</button>
+          </section>
+        )}
+
+        {status === 'ready' && (
+          <CartRails
+            marketplaceTab={tab}
+            cartProductIds={items.map((i) => String(i.productId)).slice(0, 40)}
+            accentHex={theme.primaryHex}
+            only={['recommended', 'bestsellers', 'recently_viewed']}
+          />
+        )}
+        {status === 'ready' && <SafePayments />}
+      </main>
     </div>
   );
 };
 
 const Wishlist = () => (
-  <LoginGate title="Wishlist" cardTitle="Login to see your wishlist" subtitle="Log in to view and manage the items you have saved." icon={HeartGate}>
+  <LoginGate title="Wishlist" cardTitle="Login to see your wishlist" subtitle="Log in to view and manage the items you have saved." icon={Heart}>
     <WishlistPage />
   </LoginGate>
 );
 
 export default Wishlist;
-
-

@@ -19,6 +19,19 @@ export const openMithilaListing = (navigate, { id, name }, options = {}) => {
   navigate('/mithilak/category', { state: { category: name, categoryId: id }, ...options });
 };
 
+const QUICK_BASE = { quickshop: '/quick-shop', freshgrocery: '/fresh-grocery' };
+
+/** Quick Shop / Fresh & Groceries: a main category opens its own landing page. */
+export const openQuickCategory = (navigate, { flow, id, name }) => {
+  if (!id) return;
+  navigate(`${QUICK_BASE[flow] || '/quick-shop'}/c/${id}`, { state: { category: name, categoryId: String(id) } });
+};
+
+/** A subcategory opens the scrollable child-category listing. */
+export const openQuickListing = (navigate, { flow, id, name }) => {
+  navigate(`${QUICK_BASE[flow] || '/quick-shop'}/category`, { state: { category: name, categoryId: id ? String(id) : null } });
+};
+
 const norm = (v) => String(v || '').trim().toLowerCase();
 
 /** A header chip links to a category by id when admin set one, otherwise by matching its label. */

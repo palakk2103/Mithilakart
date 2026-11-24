@@ -82,7 +82,7 @@ function App() {
           <LocationPrompt />
           <PublicConfigLoader />
           <InstallAppPrompt />
-          <Toaster position="bottom-center" toastOptions={{
+          <Toaster position="bottom-center" containerClassName="app-toaster" toastOptions={{
             style: {
               background: '#121212',
               color: '#e2a750',

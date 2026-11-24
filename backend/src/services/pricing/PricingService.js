@@ -7,10 +7,15 @@ const { AppError } = require('../../utils/AppError');
 const MAX_TIP = 500;
 
 class PricingService extends BaseService {
-  constructor({ couponService = null, platformConfigService = null } = {}) {
+  constructor({ couponService = null, platformConfigService = null, orderCreditsService = null } = {}) {
     super();
+    this.orderCreditsService = orderCreditsService;
     this.couponService = couponService;
     this.platformConfigService = platformConfigService;
+  }
+
+  setOrderCreditsService(service) {
+    this.orderCreditsService = service;
   }
 
   async computeDeliveryCharge(subtotal, { pincode = null } = {}) {
@@ -24,7 +29,7 @@ class PricingService extends BaseService {
     return Math.round(subtotal * taxRate * 100) / 100;
   }
 
-  async computeCouponDiscount({ couponCode, subtotal, userId = null, sellerId = null }) {
+  async computeCouponDiscount({ couponCode, subtotal, userId = null, sellerId = null, items = null, clientKey = null }) {
     if (!couponCode || !this.couponService) {
       return { couponDiscount: 0, coupon: null };
     }
@@ -34,6 +39,8 @@ class PricingService extends BaseService {
       subtotal,
       userId,
       sellerId,
+      items,
+      clientKey,
     });
 
     return {
@@ -53,6 +60,10 @@ class PricingService extends BaseService {
     marketplaceTab = null,
     now = new Date(),
     tipAmount = 0,
+    clientKey = null,
+    giftCardCode = null,
+    useWallet = false,
+    lenientCredits = false,
   }) {
     // CART-2 delivery tip: whole rupees, 0–500, passed in full to the delivery partner.
     const tip = Math.round(Number(tipAmount) || 0);
@@ -77,6 +88,8 @@ class PricingService extends BaseService {
       couponCode,
       subtotal,
       userId,
+      items,
+      clientKey,
     });
 
     const discountedSubtotal = Math.max(0, subtotal - couponDiscount);
@@ -119,7 +132,7 @@ class PricingService extends BaseService {
       : (Number(config.taxRate) || (Number(config.gst) ? Number(config.gst) / 100 : 0));
 
     const tax = this.computeTax(discountedSubtotal, resolvedTaxRate);
-    const total = Math.round(
+    const grossTotal = Math.round(
       (discountedSubtotal + (hasItems ? deliveryCharge : 0) + platformFee + packagingFee + handlingFee + surgeCharge + (hasItems ? tip : 0) + codHandlingFee + tax) * 100
     ) / 100;
 
@@ -128,6 +141,14 @@ class PricingService extends BaseService {
       0
     );
     const productDiscount = Math.max(0, mrpTotal - subtotal);
+
+    // Cashback, gift card and wallet come off last; `total` is what is left to pay.
+    const credits = this.orderCreditsService && hasItems
+      ? await this.orderCreditsService.apply({
+        config, userId, marketplaceTab, paymentMethod, goodsValue: discountedSubtotal, total: grossTotal, giftCardCode, useWallet, lenient: lenientCredits,
+      })
+      : null;
+    const total = credits ? credits.total : grossTotal;
 
     return {
       subtotal,
@@ -161,6 +182,17 @@ class PricingService extends BaseService {
       codHandlingFee,
       tax,
       taxRate: resolvedTaxRate,
+      grossTotal,
+      ...(credits ? {
+        credits,
+        cashback: credits.cashback,
+        giftCardAmount: credits.giftCardAmount,
+        giftCard: credits.giftCard ? { last4: credits.giftCard.last4, balance: credits.giftCard.balance, amount: credits.giftCard.amount } : null,
+        ...(credits.giftCardError ? { giftCardError: credits.giftCardError } : {}),
+        walletEnabled: credits.walletEnabled,
+        walletBalance: credits.walletBalance,
+        walletAmount: credits.walletAmount,
+      } : {}),
       total,
       minOrderAmount,
     };

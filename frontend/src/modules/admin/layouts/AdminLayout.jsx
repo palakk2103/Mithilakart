@@ -150,6 +150,7 @@ const AdminLayout = () => {
       title: 'PROMOTIONS',
       items: [
         { name: 'Coupon Manager', path: '/admin/promotions/coupons', icon: <Tag size={18} /> },
+        { name: 'Gift Cards', path: '/admin/promotions/gift-cards', icon: <Tag size={18} /> },
         { name: 'Flash Sales', path: '/admin/promotions/flash-sale', icon: <Zap size={18} /> },
         { name: 'Featured Selection', path: '/admin/promotions/featured', icon: <Star size={18} /> },
       ]

@@ -14,9 +14,9 @@
 const TABS = ['mithilakart', 'quick_shop', 'mithilak', 'groceries_fresh'];
 
 const PAGE_SECTIONS = {
-  cart: ['tabSwitcher', 'banner', 'address', 'items', 'freeDelivery', 'priceDetails', 'rails'],
-  summary: ['address', 'freeDelivery', 'items', 'coupon', 'actions', 'bill', 'policy', 'trust', 'terms'],
-  payment: ['coupons', 'methods', 'orderSummary', 'note'],
+  cart: ['tabSwitcher', 'banner', 'address', 'items', 'freeDelivery', 'priceDetails', 'rails', 'safePayments'],
+  summary: ['address', 'freeDelivery', 'items', 'coupon', 'actions', 'bill', 'policy', 'trust', 'terms', 'safePayments'],
+  payment: ['coupons', 'credits', 'methods', 'orderSummary', 'note', 'safePayments'],
 };
 
 const COLOR_TOKENS = ['headerBg', 'headerText', 'pageBg', 'cardBg', 'cardBorder', 'headingColor', 'textColor', 'accent'];
@@ -46,9 +46,9 @@ const DEFAULT_TOKENS = {
   cardRadius: 12,
   buttonRadius: 999,
   pagePaddingX: 12,
-  sectionGap: 8,
-  cardPadding: 10,
-  rowPaddingY: 8,
+  sectionGap: 14,
+  cardPadding: 14,
+  rowPaddingY: 12,
   cardShadow: true,
 };
 

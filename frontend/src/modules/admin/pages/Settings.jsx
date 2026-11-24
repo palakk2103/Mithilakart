@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import CashbackSettings, { DEFAULT_CASHBACK, cashbackForSave } from '../components/CashbackSettings';
+import ShopHoursSettings, { DEFAULT_SHOP_HOURS, shopHoursForSave } from '../components/ShopHoursSettings';
 import SurgeSettings, { DEFAULT_SURGE, surgeForSave } from '../components/SurgeSettings';
 import CheckoutContentSettings, { railsForSave, contentForSave } from '../components/CheckoutContentSettings';
 
@@ -58,6 +60,10 @@ const Settings = () => {
     limitedQuantityMessage: 'Limited quantity due to high demand',
     loginRequired: true,
     surgeConfig: DEFAULT_SURGE,
+    shopHours: DEFAULT_SHOP_HOURS,
+    cashbackConfig: DEFAULT_CASHBACK,
+    walletCheckoutEnabled: false,
+    blockUnserviceablePincodes: false,
     // Filled from the server's defaults + saved values once settings load.
     cartRails: null,
     checkoutContent: null,
@@ -100,6 +106,10 @@ const Settings = () => {
           limitedQuantityMessage: s.limitedQuantityMessage ?? prev.limitedQuantityMessage,
           loginRequired: s.loginRequired ?? prev.loginRequired,
           surgeConfig: s.surgeConfig && typeof s.surgeConfig === 'object' ? { ...DEFAULT_SURGE, ...s.surgeConfig } : prev.surgeConfig,
+          shopHours: s.shopHours && typeof s.shopHours === 'object' ? { ...DEFAULT_SHOP_HOURS, ...s.shopHours } : prev.shopHours,
+          cashbackConfig: s.cashbackConfig && typeof s.cashbackConfig === 'object' ? { ...DEFAULT_CASHBACK, ...s.cashbackConfig } : prev.cashbackConfig,
+          walletCheckoutEnabled: s.walletCheckoutEnabled === true,
+          blockUnserviceablePincodes: s.blockUnserviceablePincodes === true,
           cartRails: s.cartRails || data.defaults?.cartRails || prev.cartRails,
           checkoutContent: mergeContent(data.defaults?.checkoutContent, s.checkoutContent) || prev.checkoutContent,
           packageMinPricePercent: s.packageMinPricePercent ?? prev.packageMinPricePercent,
@@ -151,6 +161,10 @@ const Settings = () => {
       limitedQuantityMessage: String(formValues.limitedQuantityMessage || '').trim() || 'Limited quantity due to high demand',
       loginRequired: formValues.loginRequired,
       surgeConfig: surgeForSave(formValues.surgeConfig),
+      shopHours: shopHoursForSave(formValues.shopHours),
+      cashbackConfig: cashbackForSave(formValues.cashbackConfig),
+      walletCheckoutEnabled: formValues.walletCheckoutEnabled,
+      blockUnserviceablePincodes: formValues.blockUnserviceablePincodes,
       ...(formValues.cartRails ? { cartRails: railsForSave(formValues.cartRails) } : {}),
       ...(formValues.checkoutContent ? { checkoutContent: contentForSave(formValues.checkoutContent) } : {}),
       packageMinPricePercent: num(formValues.packageMinPricePercent, 40),
@@ -344,6 +358,17 @@ const Settings = () => {
                       <NumberField label="Free delivery on orders above" field="freeShippingThreshold" suffix="₹" />
                     </div>
                   </div>
+
+                  <CashbackSettings
+                    value={formValues.cashbackConfig}
+                    onChange={(v) => updateField('cashbackConfig', v)}
+                    walletEnabled={formValues.walletCheckoutEnabled}
+                    onWallet={(v) => updateField('walletCheckoutEnabled', v)}
+                    blockPincodes={formValues.blockUnserviceablePincodes}
+                    onBlockPincodes={(v) => updateField('blockUnserviceablePincodes', v)}
+                  />
+
+                  <ShopHoursSettings value={formValues.shopHours} onChange={(v) => updateField('shopHours', v)} />
 
                   <SurgeSettings
                     value={formValues.surgeConfig}

@@ -38,6 +38,8 @@ const Login = () => {
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  // Set when the server says this number/email has no account yet.
+  const [needsRegister, setNeedsRegister] = useState('');
 
   useEffect(() => {
     if (location.state?.flow) setActiveFlow(location.state.flow);
@@ -55,6 +57,7 @@ const Login = () => {
     setOtp('');
     setError('');
     setInfo('');
+    setNeedsRegister('');
   };
 
   const validate = () => {
@@ -71,6 +74,7 @@ const Login = () => {
   const send = async () => {
     setError('');
     setInfo('');
+    setNeedsRegister('');
     const problem = validate();
     if (problem) { setError(problem); return; }
 
@@ -81,6 +85,7 @@ const Login = () => {
       setOtp(result?.devOtp || '');
       setInfo(result?.devOtp ? `Test mode: OTP ${result.devOtp}` : (result?.message || 'OTP sent'));
     } catch (err) {
+      if (err.code === 'NOT_REGISTERED') { setNeedsRegister(err.message); return; }
       setSession((s) => sessionFromRetry(s, err));
       setError(err.message || t('auto.failedToSendOtp', 'Could not send the OTP'));
     } finally {
@@ -114,15 +119,17 @@ const Login = () => {
 
   return (
     <AuthShell
+      classic
       title={t('auto.welcomeBack', 'Welcome back')}
+      subtitle={t('auto.freshFoodHandcraftedItemsDelivered', 'Fresh Food & Handcrafted Items Delivered')}
       onBack={session ? () => resetTo(useEmail) : undefined}
       social
     >
       {!session && (
         <div className={`flex gap-1.5 border p-1 rounded-2xl mb-5 ${theme.primaryLightBg}`} style={{ borderColor: `${hex}40` }} role="tablist">
           {[
-            { email: false, icon: Phone, label: 'Phone' },
-            { email: true, icon: Mail, label: 'Email' },
+            { email: false, icon: Phone, label: t('auto.continueWithPhone', 'Continue With Phone') },
+            { email: true, icon: Mail, label: t('auto.continueWithEmail', 'Continue With Email') },
           ].map(({ email: isEmail, icon: Icon, label }) => {
             const active = useEmail === isEmail;
             return (
@@ -133,10 +140,11 @@ const Login = () => {
                 aria-selected={active}
                 disabled={sending}
                 onClick={() => resetTo(isEmail)}
-                className={`flex-1 h-11 flex items-center justify-center gap-1.5 text-[13px] font-bold rounded-xl transition-all ${active ? 'text-white shadow-md' : 'hover:bg-black/5'}`}
+                className={`flex-1 py-3 px-2 flex items-center justify-center gap-1.5 text-[11px] font-bold rounded-xl transition-all whitespace-nowrap relative ${active ? 'text-white shadow-md' : 'hover:bg-black/5'}`}
                 style={active ? { backgroundColor: hex } : { color: hex }}
               >
-                <Icon size={15} />
+                {active && <span className="absolute inset-0.5 border border-dashed border-white/40 rounded-lg pointer-events-none" />}
+                <Icon size={14} />
                 <span>{label}</span>
               </button>
             );
@@ -145,7 +153,21 @@ const Login = () => {
       )}
 
       <div className="space-y-4">
+        {!session && !error && !needsRegister && <Notice kind="info">{location.state?.message}</Notice>}
         <Notice kind="error">{error}</Notice>
+        {needsRegister && (
+          <div role="alert" data-testid="not-registered" className="bg-amber-50 border border-amber-200 text-amber-900 text-[13px] font-semibold p-3 rounded-2xl text-center">
+            <p>{needsRegister}</p>
+            <Link
+              to="/signup"
+              state={{ ...(location.state || {}), ...(useEmail ? { email: email.trim() } : { phone: phoneNumber }) }}
+              className="mt-2 inline-flex items-center justify-center h-10 px-6 rounded-full text-white font-bold"
+              style={{ backgroundColor: hex }}
+            >
+              Register now
+            </Link>
+          </div>
+        )}
         <Notice kind="success">{info}</Notice>
 
         {!session ? (
@@ -163,7 +185,7 @@ const Login = () => {
                     inputMode="email"
                     autoComplete="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); setNeedsRegister(''); }}
                     placeholder="example@gmail.com"
                     className={fieldClass}
                     style={{ borderColor: `${hex}40` }}
@@ -198,7 +220,7 @@ const Login = () => {
                       inputMode="numeric"
                       autoComplete="tel-national"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                      onChange={(e) => { setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11)); setNeedsRegister(''); }}
                       placeholder="98765 43210"
                       className={fieldClass}
                       style={{ borderColor: `${hex}40` }}
@@ -213,9 +235,10 @@ const Login = () => {
               type="submit"
               whileTap={{ scale: 0.97 }}
               disabled={sending}
-              className="w-full h-12 text-white rounded-[16px] text-[15px] font-bold shadow-lg transition-all disabled:opacity-60"
+              className="w-full py-4 text-white rounded-[16px] text-[15px] font-bold uppercase tracking-wider font-serif shadow-lg transition-all relative overflow-hidden disabled:opacity-60"
               style={{ backgroundColor: hex }}
             >
+              <span className="absolute inset-1 border border-dashed border-white/50 rounded-xl pointer-events-none" />
               {sending ? 'Sending OTP…' : t('auto.sendOtp', 'Send OTP')}
             </motion.button>
             <p className="text-center text-[12px] text-[#705c53] -mt-2">
