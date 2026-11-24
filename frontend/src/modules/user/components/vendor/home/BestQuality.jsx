@@ -131,13 +131,13 @@ const ARCH_BACKGROUNDS = [
   '#C5AD9A', // Warm grey/brown
 ];
 
-const BestQuality = ({ items = [] }) => {
+const BestQuality = ({ items = [], horizontal = false }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const handleViewAll = useSectionViewAll('bestQualityGuaranteed');
 
   const products = (Array.isArray(items) && items.length)
-    ? items.slice(0, 4).map((item, idx) => {
+    ? (horizontal ? items.slice(0, 12) : items.slice(0, 4)).map((item, idx) => {
         const prod = item.product || {};
         return {
           id: item.id || item._id || item.productId || prod._id || prod.id,
@@ -194,15 +194,21 @@ const BestQuality = ({ items = [] }) => {
         </button>
       </div>
 
-      {/* Grid Layout matching TopSelection */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      {/* Layout: horizontal scrolling row when horizontal=true, else 2/4 columns grid */}
+      <div className={horizontal
+        ? "flex items-stretch gap-3 md:gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x pb-2 pt-1 -mx-1 px-1"
+        : "grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
+      }>
         {products.map((product, idx) => {
           const archBg = ARCH_BACKGROUNDS[idx % ARCH_BACKGROUNDS.length];
           return (
             <div
               key={product.id || idx}
               onClick={() => handleProductClick(product)}
-              className="bg-transparent rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all duration-300 border border-[#EADEC9] group"
+              className={horizontal
+                ? "w-[165px] sm:w-[195px] md:w-[220px] flex-shrink-0 snap-start bg-transparent rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all duration-300 border border-[#EADEC9] group"
+                : "bg-transparent rounded-[20px] p-2.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all duration-300 border border-[#EADEC9] group"
+              }
             >
               {/* Image Container with Custom Arch Aspect Ratio */}
               <div className="relative w-full aspect-[16/17] flex items-center justify-center">
