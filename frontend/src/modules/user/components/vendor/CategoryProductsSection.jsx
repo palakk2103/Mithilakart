@@ -1,6 +1,7 @@
 import { AddButton } from '../common/AddToCartButton';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Heart, Star, ShoppingBag, Tag, X, SlidersHorizontal, Layers, Check } from 'lucide-react';
+import ShareButton from '../common/ShareButton';
 import useWishlistToggle from '../../hooks/useWishlistToggle';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import ScrollRow from './home/ScrollRow';
@@ -96,6 +97,7 @@ const ProductCard = React.memo(({ product, onProductClick, onAddToCart }) => {
           loading="lazy"
         />
 
+        <ShareButton product={product} size={11} className="absolute top-9 right-1.5 md:top-11 md:right-2 z-10 !w-6 !h-6 md:!w-7 md:!h-7" />
         {/* Wishlist Heart Button */}
         <button
           onClick={(e) => {
@@ -733,19 +735,20 @@ const CategoryProductsSection = ({ selectedCategory, onResetToAll }) => {
       {/* ── SECTION 1: Subcategories Horizontal Row (100% Dynamic & Clickable) ── */}
       {subcategoriesToDisplay.length > 0 && (
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <div className="flex items-center gap-2">
-              <h3 className="text-[15px] font-black text-[#3F2A20] tracking-tight flex items-center gap-1.5">
-                <span>{t('common.subcategoriesOf', { name: selectedCategory })}</span>
+          <div className="flex items-center justify-between gap-3 mb-3 px-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+              <h3 className="text-[15px] font-black text-[#3F2A20] tracking-tight leading-snug">
+                {t('common.subcategoriesOf', { name: selectedCategory })}
               </h3>
-              <span className="text-[10.5px] font-semibold text-slate-500 bg-[#EADCC9]/40 px-2 py-0.5 rounded-md">
+              <span className="text-[10.5px] font-semibold text-slate-500 bg-[#EADCC9]/40 px-2 py-0.5 rounded-md whitespace-nowrap">
                 {t('common.clickToFilter')}
               </span>
             </div>
             {selectedSubcategory && (
               <button
+                type="button"
                 onClick={handleClearSubcategory}
-                className="text-[11px] font-bold text-[#3E5A44] hover:underline flex items-center gap-1 cursor-pointer bg-[#FFF8EE] px-2.5 py-1 rounded-full border border-[#3E5A44]/20 active:scale-95 transition-transform"
+                className="flex-shrink-0 whitespace-nowrap text-[11px] font-bold text-[#3E5A44] hover:underline flex items-center gap-1 cursor-pointer bg-[#FFF8EE] px-3 py-1.5 rounded-full border border-[#3E5A44]/25 shadow-2xs active:scale-95 transition-transform"
               >
                 <X size={12} /> {t('x.clearFilter')}
               </button>
