@@ -41,10 +41,10 @@ const TAB_BG = '#EEF6E8';           // bar + selected tab fill (same, so they me
 const TAB_LINE = '#8DB27A';         // selected tab outline + strip baseline — brand green
 const TAB_IDLE_FILL = '#E0EED4';    // unselected tab fill (slightly deeper tint, like the reference)
 const TAB_IDLE_LINE = '#C6DDB3';    // unselected tab outline
-const TAB_EDGE_W = 20;              // width of each slanted side
-const TAB_W = 140;                  // every tab is the same width
-const TAB_PAD_X = 10;               // inner left/right space of each tab
-const TAB_OVERLAP = 10;             // neighbouring tabs overlap at their feet
+const TAB_EDGE_W = 16;              // width of each slanted side
+const TAB_W = 116;                  // every tab is the same width
+const TAB_PAD_X = 8;                // inner left/right space of each tab
+const TAB_OVERLAP = 8;              // neighbouring tabs overlap at their feet
 
 // One slanted folder side (left). Right side is the same SVG mirrored.
 // Foot curves out along the baseline, side slopes up, top corner rounds in.
@@ -68,7 +68,7 @@ const FolderEdge = ({ h, fill, stroke, mirror }) => {
 };
 
 const CategoryChip = ({ cat, active, onClick, buttonRef, ...rest }) => {
-  const h = active ? 66 : 60;
+  const h = active ? 50 : 44;
   const fill = active ? TAB_BG : TAB_IDLE_FILL;
   const stroke = active ? TAB_LINE : TAB_IDLE_LINE;
   return (
@@ -92,8 +92,8 @@ const CategoryChip = ({ cat, active, onClick, buttonRef, ...rest }) => {
         {!active && <span className="absolute left-0 right-0 bottom-0 h-px" style={{ backgroundColor: TAB_LINE }} />}
       </span>
 
-      <span className="relative h-full w-full flex items-center gap-2" style={{ paddingLeft: TAB_PAD_X, paddingRight: TAB_PAD_X }}>
-      <span className="w-[44px] h-[44px] rounded-[12px] overflow-hidden flex items-center justify-center flex-shrink-0 text-[#3E5A44] [&_svg]:w-[24px] [&_svg]:h-[24px]">
+      <span className="relative h-full w-full flex items-center gap-1.5" style={{ paddingLeft: TAB_PAD_X, paddingRight: TAB_PAD_X }}>
+      <span className="w-[30px] h-[30px] rounded-[9px] overflow-hidden flex items-center justify-center flex-shrink-0 text-[#3E5A44] [&_svg]:w-[18px] [&_svg]:h-[18px]">
         {cat.isYouBuy ? (
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2C9.5 2 7.5 4 7.5 6.5H9c0-1.7 1.3-3 3-3s3 1.3 3 3h1.5C16.5 4 14.5 2 12 2z" />
@@ -108,7 +108,7 @@ const CategoryChip = ({ cat, active, onClick, buttonRef, ...rest }) => {
       </span>
 
       <span
-        className={`text-[13px] leading-[1.15] tracking-tight text-left flex-1 min-w-0 whitespace-normal break-words line-clamp-2 ${
+        className={`text-[11.5px] leading-[1.15] tracking-tight text-left flex-1 min-w-0 whitespace-normal break-words line-clamp-2 ${
           active ? 'font-extrabold text-[#3E5A44]' : 'font-semibold text-[#3F2A20]'
         }`}
       >

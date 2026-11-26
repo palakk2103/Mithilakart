@@ -182,10 +182,10 @@ const TAB_BG = `color-mix(in srgb, ${ML} 10%, white)`;         // bar + selected
 const TAB_LINE = ML;                                            // selected tab outline — theme colour
 const TAB_IDLE_FILL = `color-mix(in srgb, ${ML} 18%, white)`;  // unselected tab fill
 const TAB_IDLE_LINE = `color-mix(in srgb, ${ML} 55%, white)`;  // unselected tab outline
-const TAB_EDGE_W = 20;              // width of each slanted side
-const TAB_W = 140;                  // every tab is the same width
-const TAB_PAD_X = 10;               // inner left/right space of each tab
-const TAB_OVERLAP = 10;             // neighbouring tabs overlap at their feet
+const TAB_EDGE_W = 16;              // width of each slanted side
+const TAB_W = 116;                  // every tab is the same width
+const TAB_PAD_X = 8;                // inner left/right space of each tab
+const TAB_OVERLAP = 8;              // neighbouring tabs overlap at their feet
 
 // One slanted folder side (left). Right side is the same SVG mirrored.
 const FolderEdge = ({ h, fill, stroke, mirror }) => {
@@ -211,7 +211,7 @@ const FolderEdge = ({ h, fill, stroke, mirror }) => {
 const MithilaChip = ({ chip, onClick, active = false, icon = null, buttonRef, ...rest }) => {
   const DynamicIcon = getHeaderChipIcon(chip.iconKey);
   const label = chip.label ? tName(chip.label) : chip.rawLabel;
-  const h = active ? 66 : 60;
+  const h = active ? 50 : 44;
   const fill = active ? TAB_BG : TAB_IDLE_FILL;
   const stroke = active ? TAB_LINE : TAB_IDLE_LINE;
   return (
@@ -234,20 +234,20 @@ const MithilaChip = ({ chip, onClick, active = false, icon = null, buttonRef, ..
         <FolderEdge h={h} fill={fill} stroke={stroke} mirror />
       </span>
 
-      <span className="relative h-full w-full flex items-center gap-2" style={{ paddingLeft: TAB_PAD_X, paddingRight: TAB_PAD_X }}>
-        <span className="w-[44px] h-[44px] rounded-[12px] overflow-hidden flex items-center justify-center flex-shrink-0 text-[color:var(--ml-primary,#207C8A)] [&_svg]:w-[24px] [&_svg]:h-[24px]">
+      <span className="relative h-full w-full flex items-center gap-1.5" style={{ paddingLeft: TAB_PAD_X, paddingRight: TAB_PAD_X }}>
+        <span className="w-[30px] h-[30px] rounded-[9px] overflow-hidden flex items-center justify-center flex-shrink-0 text-[color:var(--ml-primary,#207C8A)] [&_svg]:w-[18px] [&_svg]:h-[18px]">
           {icon ? (
             icon
           ) : chip.imageUrl ? (
             <img src={chip.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" onError={handleImageError} />
           ) : DynamicIcon ? (
-            <DynamicIcon size={24} />
+            <DynamicIcon size={18} />
           ) : (
-            <ShoppingBag size={24} />
+            <ShoppingBag size={18} />
           )}
         </span>
         <span
-          className={`text-[13px] leading-[1.15] tracking-tight text-left flex-1 min-w-0 whitespace-normal break-words line-clamp-2 ${
+          className={`text-[11.5px] leading-[1.15] tracking-tight text-left flex-1 min-w-0 whitespace-normal break-words line-clamp-2 ${
             active ? 'font-extrabold text-[color:var(--ml-primary,#207C8A)]' : 'font-semibold text-[#3F2A20]'
           }`}
         >
@@ -712,43 +712,43 @@ const Mithilak = () => {
 
             {/* Shop by Categories: In-page navigation on click */}
             {mithilaCategories.length > 0 && (
-              <div className="py-4 w-full max-w-[1600px] mx-auto mb-5 md:mb-8">
-                <div className="flex justify-between items-center mb-3">
+              <div className="py-2 w-full max-w-[1600px] mx-auto mb-3 md:mb-6">
+                <div className="flex justify-between items-center mb-2">
                   <h2 className="text-[16px] md:text-[18px] font-black text-[#3F2A20] tracking-tight">
                     {t('auto.shopByCategories')}
                   </h2>
                   <span
                     onClick={() => navigate('/categories?flow=mithilak', { state: { flow: 'mithilak' } })}
-                    className="text-[13px] font-bold text-[color:var(--ml-primary,#207C8A)] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
+                    className="text-[12.5px] font-bold text-[color:var(--ml-primary,#207C8A)] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
                   >
                     {t('auto.viewAll')}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 mb-3.5 overflow-x-auto no-scrollbar pb-0.5">
+                <div className="flex items-center gap-1.5 mb-2.5 overflow-x-auto no-scrollbar pb-0.5">
                   <button
                     type="button"
                     onClick={() => handleCategorySelect({ id: 'for-you', label: 'You Buy' })}
-                    className="px-3.5 py-1.5 rounded-full text-[12px] md:text-[13px] font-black whitespace-nowrap border bg-[color:var(--ml-primary,#207C8A)] text-white border-[color:var(--ml-primary,#207C8A)] shadow-xs"
+                    className="px-3 py-1 rounded-full text-[11.5px] md:text-[12.5px] font-black whitespace-nowrap border bg-[color:var(--ml-primary,#207C8A)] text-white border-[color:var(--ml-primary,#207C8A)] shadow-xs"
                   >
                     {t('auto.allCategories')}
                   </button>
                 </div>
 
-                <ScrollRow className="flex items-center gap-3 md:gap-5 pb-2 pt-1 -mx-1 px-1">
+                <ScrollRow className="flex items-center gap-2.5 md:gap-4 pb-1.5 pt-0.5 -mx-1 px-1">
                   {mithilaCategories.map((item, idx) => (
                     <div
                       key={item.id || idx}
                       onClick={() => handleCategorySelect({ id: item.id, name: item.name, label: item.name })}
-                      className="flex-shrink-0 w-[104px] sm:w-[120px] md:w-[140px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
+                      className="flex-shrink-0 w-[86px] sm:w-[98px] md:w-[116px] flex flex-col items-center cursor-pointer group active:scale-95 transition-transform"
                     >
-                      <div className="w-full aspect-[1/1.25] bg-white border border-[#EADCC9]/60 rounded-[20px] overflow-hidden flex flex-col items-center justify-between p-2 md:p-2.5 shadow-[0_3px_8px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[color:var(--ml-primary,#207C8A)]/40 transition-all duration-300 transform">
-                        <div className="w-full h-[38px] sm:h-[40px] md:h-[44px] flex items-center justify-center px-0.5">
-                          <span className="text-[13px] sm:text-[14px] md:text-[15px] font-bold text-[#3F2A20] text-center leading-[1.2] line-clamp-2 break-words">
+                      <div className="w-full aspect-[1/1.22] bg-white border border-[#EADCC9]/60 rounded-[14px] overflow-hidden flex flex-col items-center justify-between p-1.5 md:p-2 shadow-[0_2px_6px_rgba(61,35,20,0.015)] group-hover:shadow-[0_6px_15px_rgba(32,124,138,0.08)] group-hover:border-[color:var(--ml-primary,#207C8A)]/40 transition-all duration-300 transform">
+                        <div className="w-full h-[28px] sm:h-[32px] md:h-[36px] flex items-center justify-center px-0.5">
+                          <span className="text-[11px] sm:text-[12px] md:text-[13px] font-bold text-[#3F2A20] text-center leading-[1.15] line-clamp-2 break-words">
                             {getDisplayName(item.name)}
                           </span>
                         </div>
-                        <div className="w-[84%] aspect-square rounded-[14px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/40 flex items-center justify-center p-0.5 mb-0.5 relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
+                        <div className="w-[86%] aspect-square rounded-[10px] overflow-hidden bg-[#FAF9F5] border border-[#EADCC9]/40 flex items-center justify-center p-0.5 mb-0.5 relative shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]">
                           {item.img ? (
                             <img
                               src={item.img}
