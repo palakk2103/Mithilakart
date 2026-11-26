@@ -327,12 +327,12 @@ export const MithilaHeaderChips = ({ chips, onSelect, isChipActive = null }) => 
   return (
     <>
       <div
-        className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 pt-3 transition-all duration-200"
+        className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 pt-1 transition-all duration-200"
         style={{ backgroundColor: TAB_BG }}
       >
         <div ref={rowRef} className="relative overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Folder-tab strip: the bottom line is the "panel" edge the active tab opens into */}
-          <div className="relative flex items-end pl-1 pr-4 pt-1 w-max min-w-full md:justify-center">
+          <div className="relative flex items-end pl-1 pr-4 pt-0 w-max min-w-full md:justify-center">
             {chips.slice(0, shownCount).map((chip) => (
               <MithilaChip
                 key={chip.id}

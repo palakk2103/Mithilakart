@@ -491,7 +491,7 @@ const Home = () => {
     <div className="pb-2 bg-transparent text-primary-dark">
       {/* 1. TOP HORIZONTAL CATEGORY ROW (Sticky Header Categories on Scroll) */}
       <div
-        className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 pt-3 mb-4 transition-all duration-200"
+        className="sticky top-[var(--mobile-header-height,170px)] md:top-[var(--desktop-header-height,57px)] z-40 pt-1 mb-2 transition-all duration-200"
         style={{ backgroundColor: TAB_BG }}
       >
         <div
@@ -502,7 +502,7 @@ const Home = () => {
         >
           {/* Folder-tab strip: the bottom line is the "panel" edge the active tab opens into */}
           <div
-            className="relative flex items-end pl-1 pr-4 pt-1 w-max min-w-full md:justify-center"
+            className="relative flex items-end pl-1 pr-4 pt-0 w-max min-w-full md:justify-center"
           >
             {mainCategoriesList.slice(0, shownCount).map((cat, idx) => (
               <CategoryChip
