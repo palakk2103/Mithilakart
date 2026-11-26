@@ -3,7 +3,37 @@ import { ChevronRight, Clock, Star, Flame, Moon, Heart, Zap, Bell, ThumbsUp, Sho
 import { useNavigate } from 'react-router-dom';
 import { getCartRecommendations } from '../../services/cartApi';
 import { getRecentlyViewed } from '../../utils/recentlyViewed';
+import toast from 'react-hot-toast';
 import RailCard from './RailCard';
+import { addProductToCart } from '../../utils/cartUtils';
+import { removeFromWishlist } from '../../services/userApi';
+import useAccountStore from '../../../../store/useAccountStore';
+
+/** Wishlist rail: the item moves to the cart and leaves the wishlist. */
+export const MoveToCart = ({ item, accentHex, onMoved = () => {} }) => {
+  const [busy, setBusy] = useState(false);
+  const move = async (e) => {
+    e.stopPropagation();
+    if (busy) return;
+    setBusy(true);
+    try {
+      await addProductToCart(item);
+      await removeFromWishlist(item.productId).catch(() => {});
+      useAccountStore.getState().removeFromWishlist?.(item.productId);
+      onMoved(item.productId);
+      toast.success('Moved to cart');
+    } catch (err) {
+      if (err?.code !== 'LOGIN_REQUIRED') toast.error(err?.message || 'Could not move to cart');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button type="button" onClick={move} disabled={busy} data-testid="move-to-cart" className="w-full h-8 rounded-lg text-white text-[12px] font-bold disabled:opacity-70" style={{ background: accentHex }}>
+      {busy ? 'Moving…' : 'Move to cart'}
+    </button>
+  );
+};
 
 /** Small coloured badge in front of each rail title, like the reference. */
 const RAIL_ICONS = {
@@ -28,8 +58,11 @@ const RailIcon = ({ railKey }) => {
 
 const Rail = ({ railKey, title, tabs, items, accentHex, marketplaceTab, onOpen, onViewAll }) => {
   const [active, setActive] = useState(0);
+  const [moved, setMoved] = useState(() => new Set());
   const tab = tabs ? tabs[Math.min(active, tabs.length - 1)] : null;
-  const list = tab ? tab.items : items;
+  const list = (tab ? tab.items : items).filter((i) => !moved.has(i.productId));
+  const isWishlist = railKey === 'wishlist';
+  if (!list.length) return null;
   const viewAll = () => onViewAll(railKey, tab?.key);
   return (
     <section className="rounded-2xl bg-white/70 border border-slate-200/60 p-3" data-rail={railKey}>
@@ -58,7 +91,13 @@ const Rail = ({ railKey, title, tabs, items, accentHex, marketplaceTab, onOpen, 
       )}
       <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-0.5">
         {list.map((item) => (
-          <RailCard key={item.productId} item={item} onOpen={onOpen} currentTab={marketplaceTab} />
+          <RailCard
+            key={item.productId}
+            item={item}
+            onOpen={onOpen}
+            currentTab={marketplaceTab}
+            action={isWishlist ? <MoveToCart item={item} accentHex={accentHex} onMoved={(id) => setMoved((s) => new Set(s).add(id))} /> : null}
+          />
         ))}
       </div>
       {tabs && (

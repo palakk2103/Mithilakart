@@ -23,6 +23,7 @@ export const openRazorpayCheckout = async ({
   name = 'Mithilakart',
   description = 'Order payment',
   prefill = {},
+  preferredMethod = null,
 }) => {
   if (!keyId) {
     throw new Error('Razorpay is not configured. Missing key ID.');
@@ -58,12 +59,21 @@ export const openRazorpayCheckout = async ({
                     instruments: [{ method: 'upi' }],
                   },
                 },
-                sequence: ['block.card', 'block.upi'],
+                sequence: preferredMethod === 'upi' ? ['block.upi', 'block.card'] : ['block.card', 'block.upi'],
                 preferences: { show_default_blocks: false },
               },
             },
           }
-        : {}),
+        : preferredMethod === 'upi'
+          ? {
+              config: {
+                display: {
+                  sequence: ['block.upi'],
+                  preferences: { show_default_blocks: true },
+                },
+              },
+            }
+          : {}),
       handler: (response) => {
         resolve({
           providerPaymentId: response.razorpay_payment_id,

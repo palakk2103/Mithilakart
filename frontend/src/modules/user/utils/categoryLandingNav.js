@@ -16,7 +16,8 @@ export const openMithilaListing = (navigate, { id, name }, options = {}) => {
     localStorage.setItem('isMithilakFlow', 'true');
     localStorage.setItem('isQuickShopFlow', 'false');
   } catch { /* storage may be unavailable */ }
-  navigate('/mithilak/category', { state: { category: name, categoryId: id }, ...options });
+  const { state: extraState, ...rest } = options;
+  navigate('/mithilak/category', { ...rest, state: { category: name, categoryId: id, ...(extraState || {}) } });
 };
 
 const QUICK_BASE = { quickshop: '/quick-shop', freshgrocery: '/fresh-grocery' };
@@ -29,7 +30,8 @@ export const openQuickCategory = (navigate, { flow, id, name }) => {
 
 /** A subcategory opens the scrollable child-category listing. */
 export const openQuickListing = (navigate, { flow, id, name }) => {
-  navigate(`${QUICK_BASE[flow] || '/quick-shop'}/category`, { state: { category: name, categoryId: id ? String(id) : null } });
+  // isSubcategory: the sidebar shows the main category's sub-categories with this one selected.
+  navigate(`${QUICK_BASE[flow] || '/quick-shop'}/category`, { state: { category: name, categoryId: id ? String(id) : null, isSubcategory: true } });
 };
 
 const norm = (v) => String(v || '').trim().toLowerCase();

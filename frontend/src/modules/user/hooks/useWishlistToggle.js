@@ -5,6 +5,9 @@ import useAccountStore from '../../../store/useAccountStore';
 import { getWishlist, addToWishlist, removeFromWishlist } from '../services/userApi';
 import { extractList, mapWishlistItem } from '../utils/mappers';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import useTabTheme from '../../../shared/hooks/useTabTheme';
+
+const FLOW_TO_TAB = { mithilakart: 'mithilakart', quickshop: 'quick_shop', mithilak: 'mithilak', freshgrocery: 'groceries_fresh' };
 
 let loadPromise = null;
 
@@ -35,6 +38,8 @@ const useWishlistToggle = () => {
   const location = useLocation();
   const wishlist = useAccountStore((s) => s.wishlist);
   const setWishlist = useAccountStore((s) => s.setWishlist);
+  const { activeFlow } = useTabTheme();
+  const savedFromTab = FLOW_TO_TAB[activeFlow] || null;
 
   useEffect(() => {
     loadWishlistOnce(setWishlist);
@@ -63,7 +68,7 @@ const useWishlistToggle = () => {
       set(exists ? list.filter((i) => idOf(i) !== id) : [...list, { ...mapWishlistItem(product), id, productId: id }]);
       try {
         if (exists) await removeFromWishlist(id);
-        else await addToWishlist(id);
+        else await addToWishlist(id, savedFromTab || product?.marketplaceTab);
         toast.success(exists ? 'Removed from wishlist' : 'Added to wishlist');
       } catch (err) {
         set(list); // rollback
@@ -71,7 +76,7 @@ const useWishlistToggle = () => {
         toast.error(err?.message || 'Could not update wishlist');
       }
     },
-    [navigate, location.pathname]
+    [navigate, location.pathname, savedFromTab]
   );
 
   return { isWishlisted, toggle };

@@ -7,6 +7,8 @@ import { getCartRecommendationRail } from '../services/cartApi';
 import { fetchCartItems } from '../utils/cartUtils';
 import { getRecentlyViewed } from '../utils/recentlyViewed';
 import RailCard from '../components/checkout/RailCard';
+import InfiniteScrollSentinel from '../../../shared/components/InfiniteScrollSentinel';
+import useIncremental from '../../../shared/hooks/useIncremental';
 
 const TABS = ['mithilakart', 'mithilak', 'quick_shop', 'groceries_fresh'];
 const FLOW_TO_TAB = { mithilakart: 'mithilakart', quickshop: 'quick_shop', mithilak: 'mithilak', freshgrocery: 'groceries_fresh' };
@@ -43,6 +45,7 @@ const RailProductsPage = () => {
     return () => { cancelled = true; };
   }, [railKey, tab, sub, attempt]);
 
+  const { visible, hasMore, more } = useIncremental(data?.items, 20, `${railKey}|${sub}`);
   const open = (item) => navigate('/product-detail', { state: { productId: item.productId, listingId: item.listingId, product: item } });
   const switchSub = (key) => setParams({ tab, sub: key }, { replace: true });
 
@@ -85,7 +88,8 @@ const RailProductsPage = () => {
         )}
         {status === 'ready' && (data.items.length ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            {data.items.map((item) => <RailCard key={item.productId} item={item} onOpen={open} currentTab={tab} className="w-full" />)}
+            {visible.map((item) => <RailCard key={item.productId} item={item} onOpen={open} currentTab={tab} className="w-full" />)}
+            {hasMore && <div className="col-span-full"><InfiniteScrollSentinel onVisible={more} watch={visible.length} /></div>}
           </div>
         ) : (
           <div className="flex flex-col items-center text-center py-20 text-slate-500">

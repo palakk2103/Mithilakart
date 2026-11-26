@@ -14,7 +14,7 @@ class WishlistController extends BaseController {
   });
 
   add = asyncHandler(async (req, res) => {
-    const data = await this.service.add(req.user.id, req.body.productId);
+    const data = await this.service.add(req.user.id, req.body.productId, req.body.marketplaceTab || null);
     return ApiResponse.created(res, data);
   });
 

@@ -72,9 +72,10 @@ const ErrorPage = lazyWithRetry(() => import('../pages/ErrorPage'));
 // Warm the other tabs' code while the shopper is idle, so tapping a tab is instant instead of
 // waiting for that page's chunk to download and compile.
 const prefetchTabPages = () => {
+  if (typeof navigator !== 'undefined' && navigator.connection?.saveData) return;
   [() => import('../pages/QuickShop'), () => import('../pages/Mithilak'), () => import('../pages/Categories'),
     () => import('../pages/Cart'), () => import('../pages/ProductDetail'), () => import('../pages/QuickShopSubcategory')]
-    .forEach((load, i) => setTimeout(() => load().catch(() => {}), 400 * i));
+    .forEach((load, i) => setTimeout(() => load().catch(() => {}), 1200 * (i + 1)));
 };
 
 const MarketRoutes = () => {

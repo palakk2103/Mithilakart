@@ -2,6 +2,7 @@ import React from 'react';
 import { formatPrice } from '../../../../shared/utils/priceFormatter';
 import { handleImageError } from '../../../../shared/utils/imageUtils';
 import CartQtyControl from '../common/CartQtyControl';
+import ShareButton from '../common/ShareButton';
 
 const TAB_LABEL = { mithilakart: 'Mithilakart', mithilak: 'Mithilak', quick_shop: 'Quick Shop', groceries_fresh: 'Fresh & Groceries' };
 
@@ -10,7 +11,7 @@ const TAB_LABEL = { mithilakart: 'Mithilakart', mithilak: 'Mithilak', quick_shop
  * image, name, price, and "Add" that turns into − qty + once it is in the cart.
  * `currentTab` shows a small note when the product sells in another tab's cart.
  */
-const RailCard = ({ item, onOpen, currentTab, className = 'w-[132px]', children }) => {
+const RailCard = ({ item, onOpen, currentTab, className = 'w-[132px]', children, action = null }) => {
   const mrp = Number(item.mrp || item.oldPrice) || 0;
   const price = Number(item.price) || 0;
   const off = mrp > price && price > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
@@ -19,6 +20,7 @@ const RailCard = ({ item, onOpen, currentTab, className = 'w-[132px]', children 
 
   return (
     <article data-testid="rail-card" className={`flex-shrink-0 bg-white rounded-xl border border-slate-200/80 p-2 relative flex flex-col ${className}`}>
+      <ShareButton product={item} className="absolute top-3 right-3 z-10" />
       {children}
       <button type="button" onClick={() => onOpen(item)} className="block w-full text-left flex-1" aria-label={item.name}>
         <div className="aspect-square w-full flex items-center justify-center overflow-hidden rounded-lg bg-slate-50 relative">
@@ -35,7 +37,7 @@ const RailCard = ({ item, onOpen, currentTab, className = 'w-[132px]', children 
       <div className="mt-2">
         {out
           ? <span className="block text-center text-[12px] font-bold text-rose-600 bg-rose-50 rounded-lg py-2">Out of stock</span>
-          : <CartQtyControl product={item} />}
+          : action || <CartQtyControl product={item} />}
       </div>
     </article>
   );

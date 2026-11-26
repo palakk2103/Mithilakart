@@ -20,10 +20,10 @@ class WishlistRepository extends BaseRepository {
 
   // The unique (userId, productId) index also covers soft-deleted rows, so
   // re-adding must revive the old row instead of inserting a duplicate.
-  async upsertActive(userId, productId) {
+  async upsertActive(userId, productId, marketplaceTab = null) {
     return this.model.findOneAndUpdate(
       { userId, productId },
-      { $set: { deletedAt: null }, $setOnInsert: { userId, productId } },
+      { $set: { deletedAt: null, ...(marketplaceTab ? { marketplaceTab } : {}) }, $setOnInsert: { userId, productId } },
       { new: true, upsert: true }
     );
   }

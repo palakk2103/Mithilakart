@@ -8,7 +8,6 @@ const AdminRoutes = lazyWithRetry(() => import('./modules/admin/routes/AdminRout
 const DeliveryRoutes = lazyWithRetry(() => import('./modules/delivery/routes/DeliveryRoutes'));
 import SplashScreen from './shared/components/SplashScreen';
 import ErrorBoundary from './shared/components/ErrorBoundary';
-import { initPushNotifications } from './shared/services/pushNotifications';
 import { isAuthenticated } from './shared/api/tokenStorage';
 import { LocationProvider } from './shared/context/LocationContext';
 import { LanguageProvider, useLanguage } from './shared/context/LanguageContext';
@@ -36,26 +35,25 @@ function App() {
   });
 
   useEffect(() => {
-    if (isAuthenticated('customer')) {
-      initPushNotifications('customer', (payload) => {
-        const title = payload.notification?.title || 'Mithilakart';
-        const body = payload.notification?.body || '';
-        toast(`${title}: ${body}`);
-      });
-    }
-
-    const onAuthChange = () => {
-      if (isAuthenticated('customer')) {
-        initPushNotifications('customer', (payload) => {
-          const title = payload.notification?.title || 'Mithilakart';
-          const body = payload.notification?.body || '';
-          toast(`${title}: ${body}`);
-        });
-      }
+    const startPush = () => {
+      if (!isAuthenticated('customer')) return;
+      import('./shared/services/pushNotifications')
+        .then(({ initPushNotifications }) => {
+          initPushNotifications('customer', (payload) => {
+            const title = payload.notification?.title || 'Mithilakart';
+            const body = payload.notification?.body || '';
+            toast(`${title}: ${body}`);
+          });
+        })
+        .catch(() => {});
     };
 
-    window.addEventListener('customer-auth-changed', onAuthChange);
-    return () => window.removeEventListener('customer-auth-changed', onAuthChange);
+    const timer = setTimeout(startPush, 1500);
+    window.addEventListener('customer-auth-changed', startPush);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('customer-auth-changed', startPush);
+    };
   }, []);
 
   return (
@@ -84,13 +82,13 @@ function App() {
           <InstallAppPrompt />
           <Toaster position="bottom-center" containerClassName="app-toaster" toastOptions={{
             style: {
-              background: '#121212',
-              color: '#e2a750',
-              border: '1px solid rgba(226, 167, 80, 0.2)',
-              fontSize: '12px',
-              fontWeight: 'black',
-              textTransform: 'uppercase',
-              letterSpacing: '1px'
+              background: '#fff',
+              color: '#0f172a',
+              border: '1px solid #e2e8f0',
+              borderLeft: '5px solid var(--active-primary, #65B842)',
+              fontSize: '14px',
+              fontWeight: 600,
+              boxShadow: '0 10px 30px -10px rgba(15,23,42,.35)',
             }
           }} />
           <Suspense fallback={<PageLoader />}>

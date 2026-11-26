@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Search, Share2, ChevronDown, Heart, Check, X, Sparkles, Clock, Star, Zap } from 'lucide-react';
 import useWishlistToggle from '../hooks/useWishlistToggle';
+import ShareButton from '../components/common/ShareButton';
 import { formatPrice, parsePrice } from '../../../shared/utils/priceFormatter';
 import closedShutter from '../../../assets/closed_shutter.png';
 import { getCategories, getCategoryProducts, getNearbyProducts } from '../services/catalogApi';
@@ -472,6 +473,18 @@ const QuickShopSubcategory = () => {
     return descendantIds.has(String(activeSub));
   };
 
+  // Opening a sub-category lower in the list: bring it into view in the sidebar.
+  const sidebarListRef = useRef(null);
+  useEffect(() => {
+    const list = sidebarListRef.current;
+    const el = list?.querySelector('[data-active="true"]');
+    if (!el) return;
+    const top = el.offsetTop - list.offsetTop;
+    if (top < list.scrollTop || top + el.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = Math.max(0, top - (list.clientHeight - el.offsetHeight) / 2);
+    }
+  }, [activeSub, subCategories.length]);
+
   const isAllItems = Boolean(
     activeSub === 'all' ||
     (siblingPills && String(activeSub) === String(siblingPills.parent.id))
@@ -829,7 +842,7 @@ const QuickShopSubcategory = () => {
         )}
       </div>
 
-      {isMithilakFlow && (
+      {isMithilakFlow && location.state?.showPackages && (
         <div className="flex-shrink-0 max-h-[45vh] overflow-y-auto">
           <PackagePromo marketplaceTab="mithilak" categoryId={requestedId} categoryName={requestedName} />
         </div>
@@ -839,32 +852,34 @@ const QuickShopSubcategory = () => {
       <div className="flex-1 min-h-0 flex overflow-hidden relative">
         
         {/* Left Subcategories Sidebar - Scrolls Separately */}
-        <div className={`w-[24%] min-w-[85px] max-w-[110px] md:w-[160px] md:max-w-[190px] flex-shrink-0 border-r border-gray-100 overflow-y-auto overscroll-contain no-scrollbar h-full transition-colors duration-300 pb-24 ${
-          isFreshGroceryFlow ? 'bg-[#FFFDF3]' : 'bg-gray-50/60'
-        }`}>
+        {/* Same look as the Categories screen sidebar (P22): wide column, big image, readable label. */}
+        <div ref={sidebarListRef} data-testid="listing-sidebar" className="w-[100px] md:w-[170px] flex-shrink-0 bg-slate-50 border-r border-slate-200/80 overflow-y-auto overscroll-contain no-scrollbar h-full pb-24">
           {subCategories.map((sub) => {
             const isActive = isSidebarActive(sub);
             return (
-              <div
+              <button
+                type="button"
                 key={sub.id}
+                data-active={isActive ? 'true' : 'false'}
                 onClick={() => selectCategory(sub.id)}
-                className={`py-3.5 px-1 flex flex-col items-center gap-1.5 cursor-pointer relative transition-all ${
-                  isActive ? (isFreshGroceryFlow ? 'bg-[#FFF0A0]/20' : 'bg-white') : 'bg-transparent'
+                className={`w-full py-4 px-1.5 flex flex-col items-center gap-1.5 border-b border-slate-100 relative transition-all duration-200 ${
+                  isActive ? 'bg-white' : 'hover:bg-white/60'
                 }`}
               >
                 {isActive && (
-                  <div className={`absolute left-0 top-0 bottom-0 w-[4px] ${primarySidebarAccent} rounded-r-full`} />
+                  <div className={`absolute left-0 top-0 bottom-0 w-[4px] ${primarySidebarAccent} rounded-r`} />
                 )}
-                <div className={`w-11 h-11 rounded-full overflow-hidden flex items-center justify-center border transition-all ${
-                  isActive ? `${primaryBorderLight} ${primaryLightBg}` : 'border-gray-200/50 bg-white'
-                }`}>                  <img src={sub.icon} alt={sub.name} className="w-8 h-8 object-contain mix-blend-multiply" onError={handleImageError} loading="lazy" decoding="async" />
+                <div className={`w-12 h-12 rounded-full overflow-hidden flex items-center justify-center border p-0.5 shadow-sm ${
+                  isActive ? `${primaryBorderLight} ${primaryLightBg}` : 'border-slate-200/50 bg-white'
+                }`}>
+                  <img src={sub.icon} alt={sub.name} className="w-full h-full object-cover rounded-full" onError={handleImageError} loading="lazy" decoding="async" />
                 </div>
-                <span className={`text-[9.5px] text-center leading-tight font-semibold tracking-tight ${
-                  isActive ? `${primaryText} font-bold` : 'text-gray-500'
+                <span className={`text-[12.5px] text-center leading-[1.25] break-words w-full ${
+                  isActive ? `${primaryText} font-bold` : 'text-slate-900 font-medium'
                 }`}>
                   {tName(sub.name)}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -1033,6 +1048,7 @@ const QuickShopSubcategory = () => {
                                 </div>
                               )}
 
+                              <ShareButton product={product} size={11} className="absolute top-8 right-1.5 z-10 !w-6 !h-6" />
                               {/* Heart Favorite Button */}
                               <button 
                                 onClick={(e) => {

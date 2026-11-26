@@ -1,28 +1,25 @@
 import { AddButton } from '../components/common/AddToCartButton';
 import SeasonalHero from '../../../shared/components/SeasonalHero';
-import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import ShareButton from '../components/common/ShareButton';
 import useWishlistToggle from '../hooks/useWishlistToggle';
 import { ShoppingBag, Sparkles, Gift, Monitor, Gem, Shirt, Gamepad2, BookOpen, Zap, ChevronRight, MoreHorizontal, Heart, Star } from 'lucide-react';
 import SEO from '../../../shared/components/SEO';
 import { getHeaderChipIcon } from '../../../shared/constants/headerChipIcons';
+import lazyWithRetry from '../../../shared/utils/lazyWithRetry';
 
-// Import Home Components
+// Import Home Components (above-the-fold eager, below-the-fold/on-demand lazy)
 import LazySection from '../components/vendor/home/LazySection';
-import StillLookingSection from '../components/vendor/home/StillLookingSection';
-import TopSelection from '../components/vendor/home/TopSelection';
-import BrandsSpotlight from '../components/vendor/home/BrandsSpotlight';
-import BestQuality from '../components/vendor/home/BestQuality';
-import KeepShopping from '../components/vendor/home/KeepShopping';
-import RatingSection from '../components/vendor/home/RatingSection';
 import SubCategoryGrid from '../components/vendor/home/SubCategoryGrid';
 import TrendingThisWeek from '../components/vendor/home/TrendingThisWeek';
 import AlreadyBoughtSection from '../components/vendor/home/AlreadyBoughtSection';
-
-// Import Existing Shared Components
-import CategoryProductsSection from '../components/vendor/CategoryProductsSection';
-import SaleBanner from '../components/vendor/SaleBanner';
 import BannerCarousel from '../components/vendor/BannerCarousel';
+
+const TopSelection = lazyWithRetry(() => import('../components/vendor/home/TopSelection'));
+const BrandsSpotlight = lazyWithRetry(() => import('../components/vendor/home/BrandsSpotlight'));
+const BestQuality = lazyWithRetry(() => import('../components/vendor/home/BestQuality'));
+const CategoryProductsSection = lazyWithRetry(() => import('../components/vendor/CategoryProductsSection'));
 
 // Banner Assets
 
@@ -192,6 +189,7 @@ const TodaysDealCard = React.memo(({ deal, onNavigate, onAddToCart, ctaLabel, ct
           className="w-full h-full object-cover rounded-[11px] md:rounded-[15px] group-hover:scale-[1.04] transition-transform duration-500"
           loading="lazy" onError={handleImageError} />
 
+        <ShareButton product={wishlistTarget} size={11} className="absolute top-9 right-1.5 md:top-11 md:right-2 z-10 !w-6 !h-6 md:!w-7 md:!h-7" />
         {/* Wishlist Heart Button */}
         <button
           onClick={(e) => {
@@ -662,19 +660,25 @@ const Home = () => {
 
           <div className="mb-5 md:mb-8">
             <LazySection height="400px">
-              <TopSelection items={homeSections.topSelection} />
+              <Suspense fallback={null}>
+                <TopSelection items={homeSections.topSelection} />
+              </Suspense>
             </LazySection>
           </div>
 
           <div className="mb-5 md:mb-8">
             <LazySection height="350px">
-              <BrandsSpotlight items={(homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection || []).slice(0, MAX_SECTION_PRODUCTS)} />
+              <Suspense fallback={null}>
+                <BrandsSpotlight items={(homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection || []).slice(0, MAX_SECTION_PRODUCTS)} />
+              </Suspense>
             </LazySection>
           </div>
 
           <div className="mb-5 md:mb-8">
             <LazySection height="500px">
-              <BestQuality items={homeSections.bestQualityGuaranteed?.length ? homeSections.bestQualityGuaranteed : (homeSections.bestQuality?.length ? homeSections.bestQuality : homeSections.topSelection)} />
+              <Suspense fallback={null}>
+                <BestQuality items={homeSections.bestQualityGuaranteed?.length ? homeSections.bestQualityGuaranteed : (homeSections.bestQuality?.length ? homeSections.bestQuality : homeSections.topSelection)} />
+              </Suspense>
             </LazySection>
           </div>
 
@@ -683,7 +687,9 @@ const Home = () => {
       )}
 
       {selectedCategory !== 'You Buy' && selectedCategory !== 'Home' && (
-        <CategoryProductsSection selectedCategory={selectedCategory} />
+        <Suspense fallback={<div className="py-16 flex justify-center"><div className="w-7 h-7 border-2 border-[#3E5A44] border-t-transparent rounded-full animate-spin" /></div>}>
+          <CategoryProductsSection selectedCategory={selectedCategory} />
+        </Suspense>
       )}
       </div>
     </>

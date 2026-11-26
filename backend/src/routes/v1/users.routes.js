@@ -2,6 +2,7 @@ const express = require('express');
 const Joi = require('joi');
 const { validateBody, validateParams, validateQuery } = require('../../middleware/validate');
 const { objectIdSchema } = require('../../validators/common.validator');
+const { MARKETPLACE_TAB_VALUES } = require('../../constants/marketplace');
 const { profileUpdateSchema, addressSchema, paymentMethodSchema } = require('../../validators/user/user.validator');
 
 const alreadyBoughtQuerySchema = Joi.object({
@@ -47,7 +48,7 @@ function createUsersRoutes(controllers, middleware) {
   router.get('/me/returns', authCustomer, returnController.listReturns);
 
   router.get('/me/wishlist', authCustomer, wishlistController.list);
-  router.post('/me/wishlist', authCustomer, validateBody(Joi.object({ productId: objectIdSchema.required() })), wishlistController.add);
+  router.post('/me/wishlist', authCustomer, validateBody(Joi.object({ productId: objectIdSchema.required(), marketplaceTab: Joi.string().valid(...MARKETPLACE_TAB_VALUES).allow(null, '') })), wishlistController.add);
   router.delete('/me/wishlist/:productId', authCustomer, validateParams(Joi.object({ productId: objectIdSchema })), wishlistController.remove);
 
   router.get('/me/reviews', authCustomer, reviewController.listMine);

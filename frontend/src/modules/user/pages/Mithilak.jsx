@@ -1,32 +1,34 @@
 import { AddButton } from '../components/common/AddToCartButton';
 import SeasonalHero from '../../../shared/components/SeasonalHero';
-import PackagePromo from '../components/vendor/PackagePromo';
-import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import ShareButton from '../components/common/ShareButton';
 import useWishlistToggle from '../hooks/useWishlistToggle';
 import { ChevronRight, Heart, Star, ShoppingBag, MoreHorizontal } from 'lucide-react';
 import useVendorStore from '../../../store/useVendorStore';
 import { addProductToCart } from '../utils/cartUtils';
 import { getCategories } from '../services/catalogApi';
 import { mapMithilaCategoryCards, mapNavChips } from '../utils/mappers';
-import { openCategoryExplorer, resolveChipCategory } from '../utils/categoryLandingNav';
+import { openMithilaCategory, resolveChipCategory } from '../utils/categoryLandingNav';
 import { getHeaderChipIcon } from '../../../shared/constants/headerChipIcons';
-import CategoryProductsSection from '../components/vendor/CategoryProductsSection';
+import lazyWithRetry from '../../../shared/utils/lazyWithRetry';
 
 // Shared Home Components for Merchandising Pattern Alignment
 import LazySection from '../components/vendor/home/LazySection';
-import TopSelection from '../components/vendor/home/TopSelection';
-import BrandsSpotlight from '../components/vendor/home/BrandsSpotlight';
-import BestQuality from '../components/vendor/home/BestQuality';
 import TrendingThisWeek from '../components/vendor/home/TrendingThisWeek';
 import AlreadyBoughtSection from '../components/vendor/home/AlreadyBoughtSection';
+
+const TopSelection = lazyWithRetry(() => import('../components/vendor/home/TopSelection'));
+const BrandsSpotlight = lazyWithRetry(() => import('../components/vendor/home/BrandsSpotlight'));
+const BestQuality = lazyWithRetry(() => import('../components/vendor/home/BestQuality'));
+const CategoryProductsSection = lazyWithRetry(() => import('../components/vendor/CategoryProductsSection'));
+const PurohitSection = lazyWithRetry(() => import('../components/purohit/PurohitSection'));
 
 import bannerIllustration from '../../../assets/banner_illustration.png';
 import { handleImageError } from '../../../shared/utils/imageUtils';
 import ScrollRow from '../components/vendor/home/ScrollRow';
 import { useTranslation } from 'react-i18next';
 import { tName } from '../../../shared/utils/translateName';
-import PurohitSection from '../components/purohit/PurohitSection';
 
 const getDisplayName = (name) => {
   if (name === 'Mithila Festival & Cultural') return 'Festival & Cultural';
@@ -110,6 +112,7 @@ export const MithilaDealCard = React.memo(({ prod, onNavigate, onAddToCart, ctaL
           className="w-full h-full object-cover rounded-[11px] md:rounded-[15px] group-hover:scale-[1.04] transition-transform duration-500"
           loading="lazy" onError={handleImageError} />
 
+        <ShareButton product={wishlistTarget} size={11} className="absolute top-9 right-1.5 md:top-11 md:right-2 z-10 !w-6 !h-6 md:!w-7 md:!h-7" />
         {/* Wishlist Heart Button */}
         <button
           onClick={(e) => {
@@ -540,6 +543,11 @@ const Mithilak = () => {
       }, { replace: true });
     } else {
       const target = resolveChipCategory(chipOrCat, mithilaCategories);
+      // P34: a category opens its own page, exactly like Quick Shop and Fresh & Groceries.
+      if (target?.id) {
+        openMithilaCategory(navigate, target);
+        return;
+      }
       const targetName = target?.name || chipOrCat?.name || raw;
       setSelectedCategory(targetName);
       setSearchParams((prev) => {
@@ -548,7 +556,7 @@ const Mithilak = () => {
         return next;
       }, { replace: true });
     }
-  }, [mithilaCategories, setSearchParams]);
+  }, [mithilaCategories, setSearchParams, navigate]);
 
   // Combined list of deals for inline display when "Today's Deals" is selected
   const allDealsList = useMemo(() => {
@@ -587,10 +595,12 @@ const Mithilak = () => {
           >
             ← {t('common.backToHome', 'Back to You Buy')}
           </button>
-          <CategoryProductsSection
-            selectedCategory={selectedCategory}
-            onResetToAll={() => handleCategorySelect({ id: 'for-you', label: 'You Buy' })}
-          />
+          <Suspense fallback={<div className="py-16 flex justify-center"><div className="w-7 h-7 border-2 border-[color:var(--ml-primary,#207C8A)] border-t-transparent rounded-full animate-spin" /></div>}>
+            <CategoryProductsSection
+              selectedCategory={selectedCategory}
+              onResetToAll={() => handleCategorySelect({ id: 'for-you', label: 'You Buy' })}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -650,7 +660,7 @@ const Mithilak = () => {
       {isYouBuy && (
         <>
           <SeasonalHero className="mx-4 mt-4" />
-          <PackagePromo marketplaceTab="mithilak" />
+          {/* P36: packages live inside their own category's landing page, not on the tab home. */}
 
           <div className="px-4 py-5">
             {/* Hero Promotional Banner */}
@@ -708,7 +718,7 @@ const Mithilak = () => {
                     {t('auto.shopByCategories')}
                   </h2>
                   <span
-                    onClick={() => handleCategorySelect(mithilaCategories[0] || { id: 'for-you', label: 'You Buy' })}
+                    onClick={() => navigate('/categories?flow=mithilak', { state: { flow: 'mithilak' } })}
                     className="text-[13px] font-bold text-[color:var(--ml-primary,#207C8A)] hover:text-[#17606B] cursor-pointer hover:underline transition-colors"
                   >
                     {t('auto.viewAll')}
@@ -757,7 +767,11 @@ const Mithilak = () => {
             )}
 
             {/* Purohit & Ritual Services */}
-            <PurohitSection />
+            <LazySection height="240px">
+              <Suspense fallback={null}>
+                <PurohitSection />
+              </Suspense>
+            </LazySection>
 
             {/* Already Bought Products (authenticated customers with purchases only) */}
             <div className="mb-6 md:mb-8 empty:hidden">
@@ -822,7 +836,9 @@ const Mithilak = () => {
             {homeSections.topSelection?.length > 0 && (
               <div className="mb-5 md:mb-8">
                 <LazySection height="360px">
-                  <TopSelection items={homeSections.topSelection} horizontal={true} />
+                  <Suspense fallback={null}>
+                    <TopSelection items={homeSections.topSelection} horizontal={true} />
+                  </Suspense>
                 </LazySection>
               </div>
             )}
@@ -831,7 +847,9 @@ const Mithilak = () => {
             {(homeSections.brandsSpotlight?.length > 0 || homeSections.topSelection?.length > 0) && (
               <div className="mb-5 md:mb-8">
                 <LazySection height="320px">
-                  <BrandsSpotlight items={homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection} horizontal={true} />
+                  <Suspense fallback={null}>
+                    <BrandsSpotlight items={homeSections.brandsSpotlight?.length ? homeSections.brandsSpotlight : homeSections.topSelection} horizontal={true} />
+                  </Suspense>
                 </LazySection>
               </div>
             )}
@@ -840,7 +858,9 @@ const Mithilak = () => {
             {(homeSections.bestQualityGuaranteed?.length > 0 || homeSections.bestQuality?.length > 0 || homeSections.topSelection?.length > 0) && (
               <div className="mb-5 md:mb-8">
                 <LazySection height="360px">
-                  <BestQuality items={homeSections.bestQualityGuaranteed?.length ? homeSections.bestQualityGuaranteed : (homeSections.bestQuality?.length ? homeSections.bestQuality : homeSections.topSelection)} horizontal={true} />
+                  <Suspense fallback={null}>
+                    <BestQuality items={homeSections.bestQualityGuaranteed?.length ? homeSections.bestQualityGuaranteed : (homeSections.bestQuality?.length ? homeSections.bestQuality : homeSections.topSelection)} horizontal={true} />
+                  </Suspense>
                 </LazySection>
               </div>
             )}

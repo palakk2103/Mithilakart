@@ -55,7 +55,7 @@ const DEFAULT_CHECKOUT_CONTENT = {
     details: '',
   },
   // One line under each payment method, e.g. phonepe: 'Flat ₹25 cashback on PhonePe UPI'.
-  paymentOffers: { upi: '', phonepe: '', card: '', cod: '' },
+  paymentOffers: { upi: '', phonepe: '', gpay: '', paytm: '', card: '', cod: '' },
   trust: {
     enabled: true,
     title: 'Trusted & Happy Customers With Us',

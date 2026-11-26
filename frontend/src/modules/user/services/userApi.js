@@ -31,10 +31,11 @@ export const getWalletTransactions = (params) =>
 
 export const getMyReturns = (params) => customerApi.get('/users/me/returns', { params });
 
-export const getWishlist = () => customerApi.get('/users/me/wishlist');
+export const getWishlist = () => customerApi.get('/users/me/wishlist', { params: { limit: 200 } });
 
-export const addToWishlist = (productId) =>
-  customerApi.post('/users/me/wishlist', { productId });
+/** marketplaceTab: the tab the shopper saved it from, so the wishlist files it under that tab. */
+export const addToWishlist = (productId, marketplaceTab) =>
+  customerApi.post('/users/me/wishlist', { productId, ...(marketplaceTab ? { marketplaceTab } : {}) });
 
 export const removeFromWishlist = (productId) =>
   customerApi.delete(`/users/me/wishlist/${productId}`);

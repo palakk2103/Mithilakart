@@ -9,6 +9,7 @@ import LandingBanner from '../components/vendor/landing/LandingBanner';
 import SurgeBanner from '../components/vendor/SurgeBanner';
 import RailCard from '../components/checkout/RailCard';
 import WishlistHeart from '../components/common/WishlistHeart';
+import LazySection from '../components/vendor/home/LazySection';
 
 /**
  * Category landing of the quick-commerce tabs:
@@ -31,8 +32,8 @@ const QuickCategoryLanding = () => {
   const [attempt, setAttempt] = useState(0);
   const name = landing?.category?.name || location.state?.category || '';
 
-  const openListing = useCallback((cat, options) => {
-    navigate(`${base}/category`, { state: { category: cat.name, categoryId: String(cat.id) }, ...options });
+  const openListing = useCallback((cat, options, isSubcategory = false) => {
+    navigate(`${base}/category`, { state: { category: cat.name, categoryId: String(cat.id), isSubcategory }, ...options });
   }, [navigate, base]);
 
   useEffect(() => {
@@ -87,7 +88,7 @@ const QuickCategoryLanding = () => {
           </div>
         )}
 
-        {status === 'ready' && landing.blocks.map((block) => {
+        {status === 'ready' && landing.blocks.map((block, index) => {
           if (block.type === 'banner') return <LandingBanner key="banner" banners={block.banners} onOpen={openLink} accent={theme.primaryHex} />;
 
           if (block.type === 'subcategories') {
@@ -96,7 +97,7 @@ const QuickCategoryLanding = () => {
                 <h2 className="text-[16px] font-bold text-slate-900 mb-2.5">Shop by sub category</h2>
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-x-2.5 gap-y-3.5">
                   {block.items.map((sub) => (
-                    <button key={sub.id} type="button" data-testid="landing-subcategory" onClick={() => openListing({ id: sub.id, name: sub.originalName || sub.name })} className="min-w-0 flex flex-col items-center active:scale-95 transition-transform">
+                    <button key={sub.id} type="button" data-testid="landing-subcategory" onClick={() => openListing({ id: sub.id, name: sub.originalName || sub.name }, undefined, true)} className="min-w-0 flex flex-col items-center active:scale-95 transition-transform">
                       <span className="w-full aspect-square rounded-2xl overflow-hidden bg-white border border-slate-200/70 p-1">
                         <img src={getImageUrl(sub.imageUrl || sub.iconUrl)} alt="" loading="lazy" decoding="async" onError={handleImageError} className="w-full h-full object-cover rounded-xl" />
                       </span>
@@ -108,7 +109,7 @@ const QuickCategoryLanding = () => {
             );
           }
 
-          return (
+          const section = (
             <section key={block.id} data-testid="landing-section" data-section-title={block.title}>
               <div className="flex items-end justify-between gap-3 mb-2.5">
                 <div className="min-w-0">
@@ -125,13 +126,15 @@ const QuickCategoryLanding = () => {
                   const item = mapProductForCard(p);
                   return (
                     <RailCard key={item.listingId || item.id} item={{ ...item, price: p.price ?? item.price, mrp: p.mrp ?? item.mrp, marketplaceTab: tab }} onOpen={openProduct} className="w-[140px]">
-                      <WishlistHeart product={item} className="absolute top-3 right-3 z-10" />
+                      <WishlistHeart product={item} className="absolute top-12 right-3 z-10" />
                     </RailCard>
                   );
                 })}
               </div>
             </section>
           );
+          // Sections further down load when the shopper scrolls near them.
+          return index < 3 ? section : <LazySection key={block.id} height="300px">{section}</LazySection>;
         })}
       </div>
     </div>

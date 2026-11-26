@@ -154,7 +154,7 @@ const CheckoutContentSettings = ({ rails, content, onRails, onContent }) => {
         <h3 className={h3}>Payment page — bank / app offers</h3>
         <p className="text-xs text-slate-500 mb-3">Text only, for offers run by a bank or app. Your own cashback is set in the Cashback section.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[['upi', 'UPI'], ['phonepe', 'PhonePe'], ['card', 'Card'], ['cod', 'Cash on Delivery']].map(([key, name]) => (
+          {[['phonepe', 'PhonePe'], ['gpay', 'Google Pay'], ['paytm', 'Paytm'], ['upi', 'Other UPI Apps'], ['card', 'Card'], ['cod', 'Cash on Delivery']].map(([key, name]) => (
             <div key={key}>
               <span className={label}>{name} offer line</span>
               <input value={content.paymentOffers[key] || ''} onChange={(e) => setContent('paymentOffers', { [key]: e.target.value })} className={input} placeholder="Leave empty for none" />

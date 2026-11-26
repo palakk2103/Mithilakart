@@ -463,7 +463,8 @@ class OrderService extends BaseService {
           userId, sessionId: null, commerceFlow, marketplaceTab: resolveTabFromQuery({ commerceFlow }) || 'mithilakart',
           couponCode, tipAmount, paymentMethod, giftCardCode, useWallet, lenientCoupon: true,
         });
-      const { credits, ...safe } = quote; // internal ids stay on the server
+      const safe = { ...quote };
+    delete safe.credits; // internal ids stay on the server
       return safe;
     }
 

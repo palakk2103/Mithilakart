@@ -17,6 +17,8 @@ const toIds = (list) => [...new Set((list || []).map(String).filter(isId))];
  * listings, never something already in the cart, no product repeated in two
  * rails, and a rail with nothing to show is left out rather than padded.
  */
+const WISHLIST_TAB_ORDER = ['mithilakart', 'quick_shop', 'mithilak', 'groceries_fresh'];
+
 class CartRecommendationService extends BaseService {
   constructor({
     marketplaceListingRepository,
@@ -103,6 +105,8 @@ class CartRecommendationService extends BaseService {
     };
     // "Recommended" is computed from the cart, so it still needs to know it.
     if (source.source === 'recommended') ctx.cart = new Set(toIds(cartProductIds));
+    // The wishlist page lists the whole wishlist, not a sample of it.
+    if (source.source === 'wishlist') ctx.limit = 200;
     const items = await this._railItems(source, ctx, { dedupe: false });
     return {
       key: rail.key,
@@ -142,7 +146,7 @@ class CartRecommendationService extends BaseService {
       case 'missed': ids = (await this._pastOrders(ctx.userId)).filter((id) => !ctx.cart.has(id)); break;
       case 'brands_in_trend': ids = await this._trendingBrands(ctx.tab); break;
       case 'recommended': ids = await this._sameCategories(ctx); break;
-      case 'wishlist': ids = await this._wishlist(ctx.userId); break;
+      case 'wishlist': ids = await this._wishlist(ctx.userId, ctx); break;
       case 'budget': ids = await this._budget(ctx.tab, Number(rail.maxPrice) || 99); break;
       case 'manual': ids = toIds(rail.productIds); break;
       default: ids = [];
@@ -194,9 +198,11 @@ class CartRecommendationService extends BaseService {
     return toIds(rows.map((r) => r.productId));
   }
 
-  async _wishlist(userId) {
+  async _wishlist(userId, ctx = null) {
     if (!this.wishlist || !userId || !isId(userId)) return [];
-    const rows = await this.wishlist.findByUser(userId, { limit: 60, sort: { createdAt: -1 } });
+    const rows = await this.wishlist.findByUser(userId, { limit: 200, sort: { createdAt: -1 } });
+    // The tab each item was saved from decides which listing (and tab) it shows under.
+    if (ctx) ctx.savedTab = new Map(rows.filter((r) => r.marketplaceTab).map((r) => [String(r.productId), r.marketplaceTab]));
     return toIds(rows.map((r) => r.productId));
   }
 
@@ -239,8 +245,15 @@ class CartRecommendationService extends BaseService {
         { limit: ids.length * (anyTab ? 12 : 3), sort: { price: 1 } }
       ),
     ]);
-    // With every tab allowed, the shopper's current tab still wins.
-    if (anyTab) listings.sort((a, b) => Number(b.marketplaceTab === ctx.tab) - Number(a.marketplaceTab === ctx.tab));
+    // Across tabs (the wishlist): the tab the item was saved from wins, then a fixed tab order,
+    // so an item is counted under the same tab whichever tab the shopper opens the list from.
+    const rank = (l) => {
+      const saved = ctx.savedTab?.get(String(l.productId));
+      if (saved && l.marketplaceTab === saved) return -1;
+      const i = WISHLIST_TAB_ORDER.indexOf(l.marketplaceTab);
+      return i < 0 ? WISHLIST_TAB_ORDER.length : i;
+    };
+    if (anyTab) listings.sort((a, b) => rank(a) - rank(b) || a.price - b.price);
     const productOf = new Map(products.map((p) => [String(p._id), p]));
     const listingOf = new Map();
     listings.forEach((l) => { if (!listingOf.has(String(l.productId))) listingOf.set(String(l.productId), l); });

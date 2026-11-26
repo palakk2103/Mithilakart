@@ -7,6 +7,7 @@ import { tName } from '../../../../shared/utils/translateName';
 import useTabTheme from '../../../../shared/hooks/useTabTheme';
 import { useLanguage } from '../../../../shared/context/LanguageContext';
 import AddToCartButton from './AddToCartButton';
+import ShareButton from './ShareButton';
 import useWishlistToggle from '../../hooks/useWishlistToggle';
 import { handleImageError } from '../../../../shared/utils/imageUtils';
 
@@ -83,6 +84,7 @@ const ProductCard = ({ product, onClick }) => {
         >
           <Heart size={15} className={`md:w-[18px] md:h-[18px] ${wishlisted ? 'fill-red-500 text-red-500' : ''}`} />
         </button>
+        <ShareButton product={product} className="absolute top-12 right-2 md:top-14 md:right-3 z-10" />
       </div>
       <div className="p-2 md:p-3 flex flex-col flex-1">
         <h3 className="text-[11px] md:text-sm font-medium text-slate-800 line-clamp-2 leading-snug min-h-[30px] md:min-h-[40px]" title={title}>

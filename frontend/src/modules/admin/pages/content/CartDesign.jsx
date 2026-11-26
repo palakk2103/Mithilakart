@@ -272,12 +272,10 @@ const CartDesign = () => {
                             <NumberField key={k} label={`${label} (px)`} min={0} max={max} value={s.style[k]} onChange={(v) => patchStyle(s.key, k, v)} />
                           ))}
                         </div>
-                        {TITLED.has(s.key) && (
-                          <label className="block">
-                            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Heading text (leave empty for the default)</span>
-                            <input maxLength={60} value={s.style.title || ''} onChange={(e) => patchStyle(s.key, 'title', e.target.value)} className={`${field} mt-1`} />
-                          </label>
-                        )}
+                        <label className="block">
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Heading / custom text (leave empty for the default)</span>
+                          <input maxLength={60} value={s.style.title || ''} onChange={(e) => patchStyle(s.key, 'title', e.target.value)} className={`${field} mt-1`} />
+                        </label>
                         <p className="text-[11px] text-slate-500">Empty fields use the Style settings above.</p>
                       </div>
                     )}

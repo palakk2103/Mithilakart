@@ -2,12 +2,18 @@ import customerApi from '../../../shared/api/client';
 
 // Every cart call names the shopping tab it acts on. Each tab has its own
 // cart on the server, so the tab is part of the address of the cart.
-export const getCart = (marketplaceTab, couponCode, tip) =>
-  customerApi.get('/cart', {
-    params: (marketplaceTab || couponCode || tip)
-      ? { ...(marketplaceTab ? { marketplaceTab } : {}), ...(couponCode ? { couponCode } : {}), ...(tip > 0 ? { tip } : {}) }
-      : undefined,
-  });
+// Several parts of a screen ask for the same cart at once; they share one request.
+const inflight = new Map();
+export const getCart = (marketplaceTab, couponCode, tip) => {
+  const params = (marketplaceTab || couponCode || tip)
+    ? { ...(marketplaceTab ? { marketplaceTab } : {}), ...(couponCode ? { couponCode } : {}), ...(tip > 0 ? { tip } : {}) }
+    : undefined;
+  const key = JSON.stringify(params || {});
+  if (inflight.has(key)) return inflight.get(key);
+  const req = customerApi.get('/cart', { params }).finally(() => inflight.delete(key));
+  inflight.set(key, req);
+  return req;
+};
 
 /** CART-1 rails: recommendations for the tab's cart. */
 export const getCartRecommendations = (marketplaceTab, { cart = [], recent = [] } = {}) =>

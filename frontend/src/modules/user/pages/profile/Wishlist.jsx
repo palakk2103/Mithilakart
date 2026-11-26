@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Heart, ShoppingCart, Share2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -10,8 +10,10 @@ import { getCartRecommendationRail } from '../../services/cartApi';
 import { extractList, mapWishlistItem } from '../../utils/mappers';
 import { fetchCartCount } from '../../utils/cartUtils';
 import RailCard from '../../components/checkout/RailCard';
-import CartRails from '../../components/checkout/CartRails';
+import CartRails, { MoveToCart } from '../../components/checkout/CartRails';
 import SafePayments from '../../components/checkout/SafePayments';
+import InfiniteScrollSentinel from '../../../../shared/components/InfiniteScrollSentinel';
+import useIncremental from '../../../../shared/hooks/useIncremental';
 
 const FLOW_TO_TAB = { mithilakart: 'mithilakart', quickshop: 'quick_shop', mithilak: 'mithilak', freshgrocery: 'groceries_fresh' };
 const HOME = { mithilakart: '/home', quickshop: '/quick-shop', mithilak: '/mithilak', freshgrocery: '/fresh-grocery' };
@@ -74,7 +76,16 @@ const WishlistPage = () => {
     items.forEach((i) => { if (i.marketplaceTab) out[i.marketplaceTab] = (out[i.marketplaceTab] || 0) + 1; });
     return out;
   }, [items]);
+  // Opened from a tab (say Quick Shop): that tab's chip is selected first, when it has items.
+  const pickedDefault = useRef(false);
+  useEffect(() => {
+    if (pickedDefault.current || status !== 'ready') return;
+    pickedDefault.current = true;
+    if (counts[tab]) setFilter(tab);
+  }, [status, counts, tab]);
+
   const shown = filter === 'all' ? items : items.filter((i) => i.marketplaceTab === filter);
+  const { visible, hasMore, more } = useIncremental(shown, 20, filter);
 
   const remove = async (item) => {
     const before = useAccountStore.getState().wishlist;
@@ -138,16 +149,19 @@ const WishlistPage = () => {
 
         {items.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" data-testid="wishlist-grid">
-            {shown.map((item) => (
-              <RailCard key={item.productId} item={item.unavailable ? { ...item, stock: 0 } : item} onOpen={open} currentTab={tab} className="w-full">
+            {visible.map((item) => (
+              <RailCard key={item.productId} item={item.unavailable ? { ...item, stock: 0 } : item} onOpen={open} currentTab={tab} className="w-full"
+                // Adding from the wishlist moves the item: into the cart, out of the wishlist.
+                action={<MoveToCart item={item} accentHex={theme.primaryHex} />}>
                 <button type="button" aria-label={`Remove ${item.name} from wishlist`} onClick={() => remove(item)}
-                  className="absolute right-3 top-3 z-10 w-9 h-9 rounded-full bg-white shadow flex items-center justify-center text-rose-600 active:scale-90">
+                  className="absolute right-3 top-12 z-10 w-9 h-9 rounded-full bg-white shadow flex items-center justify-center text-rose-600 active:scale-90">
                   <Trash2 size={16} />
                 </button>
               </RailCard>
             ))}
           </div>
         )}
+        {hasMore && <InfiniteScrollSentinel onVisible={more} watch={visible.length} />}
 
         {status === 'ready' && !items.length && (
           <section className="rounded-2xl bg-white border border-slate-200/70 flex flex-col items-center text-center px-6 py-12">

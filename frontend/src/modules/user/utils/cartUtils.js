@@ -16,8 +16,9 @@ export const fetchCartItems = async (tab = getMarketplaceTab(), couponCode, tip)
     const cart = await getCart(tab, couponCode, tip);
     const items = (cart?.items || []).map(mapCartItem);
     return { cart, items, tab };
-  } catch {
-    return { cart: null, items: [], tab };
+  } catch (error) {
+    // `failed` lets a screen say "could not load" instead of "your cart is empty".
+    return { cart: null, items: [], tab, failed: true, error };
   }
 };
 

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { BaseService } = require('../../core/BaseService');
 const { AppError } = require('../../utils/AppError');
 const CustomPackage = require('../../models/CustomPackage');
+const Category = require('../../models/Category');
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const slugify = (s) => String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
@@ -114,14 +115,34 @@ class PackageService extends BaseService {
     })));
   }
 
-  /** productId -> its category ids, so a package also shows inside its own category. */
+  /**
+   * productId -> its category ids plus every parent category, so a package shows on
+   * the landing page of its main category as well as inside its sub-category.
+   */
   async _categoriesOf(rows) {
     if (!this.productRepository?.findPublic || !rows.length) return new Map();
     const products = await this.productRepository.findPublic({ _id: { $in: rows.map((r) => r.productId) } }, { limit: rows.length });
-    return new Map(products.map((p) => [
+    const own = new Map(products.map((p) => [
       String(p._id),
       [...new Set([p.categoryId, p.subcategoryId, ...(p.categoryIds || [])].filter(Boolean).map(String))],
     ]));
+    const parentOf = new Map();
+    let pending = [...new Set([...own.values()].flat())];
+    for (let depth = 0; depth < 4 && pending.length; depth += 1) {
+      const cats = await Category.find({ _id: { $in: pending.filter((id) => mongoose.Types.ObjectId.isValid(id)) } }, { parentId: 1 }).lean();
+      pending = [];
+      cats.forEach((c) => {
+        const parent = c.parentId ? String(c.parentId) : null;
+        parentOf.set(String(c._id), parent);
+        if (parent && !parentOf.has(parent)) pending.push(parent);
+      });
+    }
+    const withParents = (ids) => {
+      const out = new Set(ids);
+      ids.forEach((id) => { for (let p = parentOf.get(id), n = 0; p && n < 5; p = parentOf.get(p), n += 1) out.add(p); });
+      return [...out];
+    };
+    return new Map([...own].map(([id, ids]) => [id, withParents(ids)]));
   }
 
   async _findActive(idOrSlug) {

@@ -1,5 +1,6 @@
 import { openQuickCategory, openQuickListing } from '../utils/categoryLandingNav';
 import WishlistHeart from '../components/common/WishlistHeart';
+import ShareButton from '../components/common/ShareButton';
 import SeasonalHero from '../../../shared/components/SeasonalHero';
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -533,6 +534,7 @@ const QuickShop = () => {
                     )}
 
                     <WishlistHeart product={prod} />
+                    <ShareButton product={prod} className="absolute top-1 right-10 z-10" />
                     <div className="h-20 flex items-center justify-center my-3">
                       <img 
                         src={getImageUrl(prod.image)} 
@@ -629,6 +631,7 @@ const QuickShop = () => {
                     )}
                     
                     <WishlistHeart product={prod} />
+                    <ShareButton product={prod} className="absolute top-1 right-10 z-10" />
                     <div className="h-20 flex items-center justify-center my-3">
                       <img 
                         src={getImageUrl(prod.image)} 
@@ -661,7 +664,7 @@ const QuickShop = () => {
               <span className="text-[12.5px] font-extrabold text-[#3F2A20] leading-snug">
                 {t('auto.shareYourLocationToAccess')}
               </span>
-              <button className="bg-[color:var(--fg-primary,#D9A21B)] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs">
+              <button type="button" onClick={() => setPromptOpen(true)} className="bg-[color:var(--fg-primary,#D9A21B)] text-white text-[11.5px] font-black px-4 py-2 rounded-xl w-fit active:scale-95 transition-transform shadow-xs">
                 {t('auto.shareLocation')}
               </button>
             </div>
@@ -694,6 +697,7 @@ const QuickShop = () => {
                     )}
                     
                     <WishlistHeart product={prod} />
+                    <ShareButton product={prod} className="absolute top-1 right-10 z-10" />
                     <div className="h-20 flex items-center justify-center my-3">
                       <img 
                         src={getImageUrl(prod.image)} 
@@ -948,6 +952,7 @@ const QuickShop = () => {
                   )}
 
                   <WishlistHeart product={prod} />
+                    <ShareButton product={prod} className="absolute top-1 right-10 z-10" />
                     <div className="h-20 flex items-center justify-center my-3">
                     <img
                       src={getImageUrl(prod.image)}
@@ -1057,6 +1062,7 @@ const QuickShop = () => {
                     )}
 
                     <WishlistHeart product={prod} />
+                    <ShareButton product={prod} className="absolute top-1 right-10 z-10" />
                     <div className="h-20 flex items-center justify-center my-3">
                       <img
                         src={getImageUrl(prod.image)}
@@ -1138,6 +1144,7 @@ const QuickShop = () => {
                   )}
 
                   <WishlistHeart product={prod} />
+                    <ShareButton product={prod} className="absolute top-1 right-10 z-10" />
                     <div className="h-20 flex items-center justify-center my-3">
                     <img
                       src={getImageUrl(prod.image)}

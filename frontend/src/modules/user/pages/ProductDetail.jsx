@@ -21,12 +21,14 @@ import { getOrders } from '../services/ordersApi';
 import { addToWishlist, removeFromWishlist as removeWishlistItem } from '../services/userApi';
 import { mapProductForDetail, mapProductForCard, extractList, mapReview, mapQuestion } from '../utils/mappers';
 import { isAuthenticated } from '../../../shared/api/tokenStorage';
+import { productUrl } from '../components/common/ShareButton';
 import ProductNotFound from '../components/common/ProductNotFound';
 import useWishlistToggle from '../hooks/useWishlistToggle';
 import { customerApi } from '../../../shared/api/client';
 import { toast } from 'react-hot-toast';
 import { addProductToCart, fetchCartCount } from '../utils/cartUtils';
 import useTabTheme from '../../../shared/hooks/useTabTheme';
+import LazySection from '../components/vendor/home/LazySection';
 import SEO from '../../../shared/components/SEO';
 import JsonLd from '../../../shared/components/JsonLd';
 import { SITE_URL } from '../../../config/siteConfig';
@@ -437,7 +439,7 @@ const ProductDetail = () => {
         setToastMessage('Removed from Wishlist');
       } else {
         try {
-          await addToWishlist(product.id);
+          await addToWishlist(product.id, { mithilakart: 'mithilakart', quickshop: 'quick_shop', mithilak: 'mithilak', freshgrocery: 'groceries_fresh' }[theme.activeFlow] || product?.marketplaceTab);
         } catch {
           // ignore API error (e.g. 401 unauthenticated) and update local store
         }
@@ -522,7 +524,8 @@ const ProductDetail = () => {
     const shareData = {
       title: product.name,
       text: `Check out ${product.name} - ₹${product.price} (${product.discount})`,
-      url: window.location.href
+      // The product's own address (state-only URLs like /product-detail open nothing for others).
+      url: productUrl(product),
     };
 
     try {
@@ -532,7 +535,7 @@ const ProductDetail = () => {
         setShowToast(true);
         setTimeout(() => setShowToast(false), 2000);
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(productUrl(product));
         setToastMessage('Link copied to clipboard!');
         setShowToast(true);
         setTimeout(() => setShowToast(false), 2000);
@@ -541,7 +544,7 @@ const ProductDetail = () => {
       if (error.name !== 'AbortError') {
         console.error('Error sharing:', error);
         try {
-          await navigator.clipboard.writeText(window.location.href);
+          await navigator.clipboard.writeText(productUrl(product));
           setToastMessage('Link copied to clipboard!');
           setShowToast(true);
           setTimeout(() => setShowToast(false), 2000);
@@ -1559,44 +1562,46 @@ const ProductDetail = () => {
 
       {/* Similar Products — real products from the same category */}
       {similarProducts.length > 0 && (
-        <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
-          <div className="flex justify-between items-center px-4 mb-3 md:px-0">
-            <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">{t('auto.similarProducts')}</h3>
-          </div>
-          <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
-            {similarProducts.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => navigate('/product-detail', { state: { product: item } })}
-                className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
-              >
-                <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
-                  <img src={item.image} className="w-full h-full object-cover" alt={item.name} loading="lazy" onError={handleImageError} />
-                  {item.rating > 0 && (
-                    <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-gray-100 shadow-2xs">
-                      <span className="text-[9px] font-black text-slate-800">{item.rating}</span>
-                      <Star size={7} fill="#e2a750" className="text-[#e2a750]" />
-                    </div>
-                  )}
-                </div>
-                <div className="px-2.5 pb-2.5 pt-0.5">
-                  <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
-                  {item.off && (
-                    <div className="text-[9px] font-black text-[#e47911] border border-[#e47911] px-1.5 py-0.5 rounded-full w-fit mt-1 uppercase">
-                      {item.off}
-                    </div>
-                  )}
-                  <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
-                    <span className="text-[13px] font-black text-slate-900">{formatPrice(item.price)}</span>
-                    {item.oldPrice && (
-                      <span className="text-[9.5px] text-gray-400 line-through">MRP {formatPrice(item.oldPrice)}</span>
+        <LazySection height="240px">
+          <div className="mt-4 py-4 bg-white border-y border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.01)] md:max-w-6xl md:mx-auto md:w-full md:rounded-3xl md:border md:my-6 md:p-6">
+            <div className="flex justify-between items-center px-4 mb-3 md:px-0">
+              <h3 className="text-[13px] font-black uppercase tracking-wider text-slate-900">{t('auto.similarProducts')}</h3>
+            </div>
+            <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2 md:justify-center md:gap-6 md:px-0 md:overflow-x-visible">
+              {similarProducts.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => navigate('/product-detail', { state: { product: item } })}
+                  className="flex-shrink-0 w-[130px] bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all cursor-pointer hover:shadow-md"
+                >
+                  <div className="aspect-square m-1.5 rounded-xl overflow-hidden relative bg-slate-50 border border-slate-100/55 flex items-center justify-center">
+                    <img src={item.image} className="w-full h-full object-cover" alt={item.name} loading="lazy" decoding="async" onError={handleImageError} />
+                    {item.rating > 0 && (
+                      <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-gray-100 shadow-2xs">
+                        <span className="text-[9px] font-black text-slate-800">{item.rating}</span>
+                        <Star size={7} fill="#e2a750" className="text-[#e2a750]" />
+                      </div>
                     )}
                   </div>
+                  <div className="px-2.5 pb-2.5 pt-0.5">
+                    <h4 className="text-[11px] font-black text-slate-800 truncate uppercase tracking-tight">{item.name}</h4>
+                    {item.off && (
+                      <div className="text-[9px] font-black text-[#e47911] border border-[#e47911] px-1.5 py-0.5 rounded-full w-fit mt-1 uppercase">
+                        {item.off}
+                      </div>
+                    )}
+                    <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
+                      <span className="text-[13px] font-black text-slate-900">{formatPrice(item.price)}</span>
+                      {item.oldPrice && (
+                        <span className="text-[9.5px] text-gray-400 line-through">MRP {formatPrice(item.oldPrice)}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </LazySection>
       )}
 
       {/* Easy Returns Policy Bottom Sheet */}

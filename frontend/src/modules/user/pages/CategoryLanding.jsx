@@ -110,7 +110,8 @@ const CategoryLanding = () => {
   const [reloadKey, setReloadKey] = useState(0);
 
   const fallbackToListing = useCallback((name) => {
-    openMithilaListing(navigate, { id: categoryId, name: name || location.state?.category }, { replace: true });
+    // No landing configured: the listing stands in for it, so it carries the packages (P36).
+    openMithilaListing(navigate, { id: categoryId, name: name || location.state?.category }, { replace: true, state: { showPackages: true } });
   }, [navigate, categoryId, location.state]);
 
   // Flow flags: this page lives inside the MithilaKart tab.

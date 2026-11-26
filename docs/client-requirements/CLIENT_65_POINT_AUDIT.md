@@ -90,3 +90,15 @@ Status key: VERIFIED · LOCKED · PARTIAL · BLOCKED · NOT COMPLETED · NOT REC
 3. The second of two simultaneous orders with a one-use coupon is refused with a generic 500 instead of a clear message.
 4. Login now tells whether a number is registered (client's request). The 10 requests / 15 min per IP limit is what stops harvesting; it was switched off in the test backend.
 5. Orders on Quick Shop and Fresh are now refused 00:00–06:00 IST by default (previously only a banner). Change it in Admin → Settings → Checkout Fees & Limits → Shop hours.
+
+## Update 25 Nov 2026 (client follow-up)
+| Item | Done | Evidence | Status |
+|---|---|---|---|
+| Guest order message | Every way to order while logged out (Checkout, Buy Now, Add to Bag, expired session, order API) says "Please login to continue checkout" / a matching message, and returns to the same checkout after login | Browser + API `401 LOGIN_REQUIRED` | VERIFIED |
+| P58 dynamic cashback | Admin → Settings → Checkout Fees & Limits → Cashback: on/off, instant or wallet-after-delivery, % or ₹, max, minimum order, methods, tabs, uses per customer, dates. Banner and "Know More" are written from these rules and the cashback is really given | Off the bill (₹25 cap), once per customer even with two parallel orders, back after cancel, wallet credit after delivery | VERIFIED |
+| P04 privacy policy | Admin → Legal Policies → Privacy is what customers see | Admin save → `/privacy` shows it | VERIFIED |
+| P39 gift cards | Admin → Promotions → Gift Cards. Code shown once, stored only as a hash; optional lock to one mobile number; freeze; guessing locked after 6 tries; balance returned on cancel | API + browser | VERIFIED |
+| Wallet at checkout | Admin switch; never goes negative with parallel orders; returned once on cancel | API + browser | VERIFIED |
+| Pincode blocking | Admin switch; off by default (courier outage never stops orders) | Not tested against real Shiprocket | PARTIAL |
+
+Test runs (each suite alone): browser 72 + 33 + 17 + 6, API 25 + 29, unit 524 pass / 2 known old fails.

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import i18n from '../../i18n';
+import i18n, { loadLanguageBundle } from '../../i18n';
 import useVendorStore from '../../store/useVendorStore';
 
 export const LANGUAGES = [
@@ -31,6 +31,7 @@ export const LanguageProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: finalCode } }));
     }
 
+    await loadLanguageBundle(finalCode);
     await i18n.changeLanguage(finalCode);
 
     // Refresh dynamic catalog data in storefront store without page reload

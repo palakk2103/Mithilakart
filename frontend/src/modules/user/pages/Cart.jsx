@@ -57,10 +57,12 @@ const Cart = () => {
   const [localWishlist, setLocalWishlist] = useState([]);
   const [tabCounts, setTabCounts] = useState({});
   const [showBill, setShowBill] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  const loadTabCounts = async () => {
+  const loadTabCounts = async (currentTab, currentItems) => {
     const entries = await Promise.all(CART_TABS.map(async ({ tab }) => {
-      const { items } = await fetchCartItems(tab);
+      // The open tab's cart was just loaded; only the other tabs need a request.
+      const { items } = tab === currentTab ? { items: currentItems } : await fetchCartItems(tab);
       return [tab, items.reduce((n, i) => n + (Number(i.qty) || 1), 0)];
     }));
     setTabCounts(Object.fromEntries(entries));
@@ -73,19 +75,27 @@ const Cart = () => {
   };
 
   const loadCartSeq = useRef(0);
-  const loadCart = async () => {
+  const loadCart = async (attempt = 0) => {
     const seq = ++loadCartSeq.current;
+    let retryScheduled = false;
     try {
-      const { items, cart: fetched } = await fetchCartItems();
+      const { items, cart: fetched, failed, tab } = await fetchCartItems();
       // A slower, older response must not overwrite a newer one.
       if (seq !== loadCartSeq.current) return;
+      if (failed) {
+        // Busy server / weak network: retry quietly, never show a cart that only looks empty.
+        if (attempt < 2) { retryScheduled = true; setTimeout(() => loadCart(attempt + 1), 1200 * (attempt + 1)); return; }
+        setLoadFailed(true);
+        return;
+      }
+      setLoadFailed(false);
       setCartItems(items);
       setCart(fetched);
-      loadTabCounts();
+      loadTabCounts(tab, items);
     } catch (e) {
       console.error('Failed to load cart', e);
     } finally {
-      if (seq === loadCartSeq.current) setLoaded(true);
+      if (seq === loadCartSeq.current && !retryScheduled) setLoaded(true);
     }
   };
 
@@ -153,7 +163,7 @@ const Cart = () => {
       try {
         const prodId = target.productId || target.id;
         if (!prodId) throw new Error('Product ID missing');
-        await addToWishlistApi(prodId);
+        await addToWishlistApi(prodId, target.marketplaceTab || cart?.marketplaceTab);
         const prod = { id: prodId, name: target.name, price: target.price, image: target.image, brand: target.brand };
         if (typeof addToWishlistStore === 'function' && !(Array.isArray(wishlist) && wishlist.some((w) => String(w.id) === String(prodId)))) {
           addToWishlistStore(prod);
@@ -193,7 +203,7 @@ const Cart = () => {
 
   const tabSwitcher = isAuthenticated && loaded && CART_TABS.some(({ tab, flow }) => flow !== theme.activeFlow && tabCounts[tab] > 0) ? (
     <nav aria-label="Your carts" className="flex items-center gap-2">
-      <p className="text-[11.5px] font-semibold flex-shrink-0 cd-text">
+      <p className="text-[13.5px] font-bold flex-shrink-0 cd-text">
         {cartItems.length === 0 ? 'You have items in:' : 'Your other carts:'}
       </p>
       <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -202,10 +212,10 @@ const Cart = () => {
             key={tab}
             type="button"
             onClick={() => switchCartTab(flow)}
-            className="flex-shrink-0 h-9 px-3 rounded-full bg-white border border-slate-300 text-[12px] font-bold text-slate-800 flex items-center gap-1.5 active:scale-95 transition-transform"
+            className="flex-shrink-0 h-10 px-3.5 rounded-full bg-white border border-slate-300 text-[13.5px] font-bold text-slate-800 flex items-center gap-1.5 active:scale-95 transition-transform"
           >
             {label}
-            <span className="min-w-[20px] h-5 px-1 rounded-full text-white text-[10.5px] font-extrabold flex items-center justify-center" style={{ background: accentHex }}>{tabCounts[tab]}</span>
+            <span className="min-w-[22px] h-[22px] px-1 rounded-full text-white text-[12px] font-extrabold flex items-center justify-center" style={{ background: accentHex }}>{tabCounts[tab]}</span>
           </button>
         ))}
       </div>
@@ -223,7 +233,7 @@ const Cart = () => {
         <section className="cd-card flex items-start gap-2">
           <MapPin size={20} className="flex-shrink-0 mt-0.5" style={{ color: accentHex }} fill="currentColor" />
           <div className="flex-1 min-w-0">
-            <p className="text-[15.5px] font-bold cd-heading leading-tight">{hasAddress ? t('cart.deliverToHome') : t('cart.deliveryAddress')}</p>
+            <p className="text-[15.5px] font-bold cd-heading leading-tight">{design.title('address', hasAddress ? t('cart.deliverToHome') : t('cart.deliveryAddress'))}</p>
             <p className="text-[13px] mt-1 leading-snug line-clamp-2 cd-text">
               {hasAddress
                 ? <>{user?.name ? <span className="font-semibold">{user.name} | </span> : null}{deliverTo.label}</>
@@ -312,7 +322,7 @@ const Cart = () => {
       </DesignSection>
     ),
 
-    safePayments: <DesignSection id="safePayments" plain><SafePayments /></DesignSection>,
+    safePayments: <DesignSection id="safePayments" plain><SafePayments title={design.title('safePayments')} /></DesignSection>,
   };
 
   return (
@@ -334,6 +344,12 @@ const Cart = () => {
 
         {!isAuthenticated ? (
           <LoginRequiredCard message="Please login to continue checkout" title="Login to see your cart" subtitle="Your cart is empty until you log in. Log in to add items and check out." icon={ShoppingCart} />
+        ) : loadFailed && !cartItems.length ? (
+          <div className="flex flex-col items-center text-center px-6 py-16" role="alert" data-testid="cart-load-failed">
+            <p className="text-[16px] font-bold text-slate-900">We could not load your cart</p>
+            <p className="text-[14px] text-slate-500 mt-1">Your items are safe. Please check your connection and try again.</p>
+            <button type="button" onClick={() => { setLoaded(false); loadCart(); }} className="mt-5 h-12 px-8 cd-btn text-white font-bold text-[14px]" style={{ background: accentHex }}>Try again</button>
+          </div>
         ) : !loaded ? (
           <div className="mt-3 flex flex-col animate-pulse" style={{ gap: 'var(--cd-gap)', padding: '0 var(--cd-px)' }} aria-busy>
             <div className="h-16 rounded-xl bg-white" />

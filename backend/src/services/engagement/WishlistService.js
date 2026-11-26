@@ -11,7 +11,7 @@ class WishlistService extends BaseService {
 
   async list(userId, query = {}) {
     const page = Number(query.page) || 1;
-    const limit = Math.min(Number(query.limit) || 20, 100);
+    const limit = Math.min(Number(query.limit) || 20, MAX_WISHLIST_ITEMS);
     const skip = (page - 1) * limit;
 
     const entries = await this.wishlistRepository.findByUser(userId, { sort: '-createdAt', skip, limit });
@@ -23,14 +23,17 @@ class WishlistService extends BaseService {
     return { items: products, page, limit };
   }
 
-  async add(userId, productId) {
+  async add(userId, productId, marketplaceTab = null) {
     const product = await this.productRepository.findPublicById(productId);
     if (!product) throw AppError.notFound('Product not found');
 
     // The request may carry a sku/catalogKey (cart lines can store one), so
     // always query the wishlist by the resolved product _id.
     const existing = await this.wishlistRepository.findEntry(userId, product._id);
-    if (existing) return existing;
+    if (existing) {
+      if (marketplaceTab && !existing.marketplaceTab) return this.wishlistRepository.upsertActive(userId, product._id, marketplaceTab);
+      return existing;
+    }
 
     const count = await this.wishlistRepository.countByUser(userId);
     if (count >= MAX_WISHLIST_ITEMS) {
@@ -38,7 +41,7 @@ class WishlistService extends BaseService {
     }
 
     // Use the resolved product's _id (the request may have sent a sku/catalogKey)
-    return this.wishlistRepository.upsertActive(userId, product._id);
+    return this.wishlistRepository.upsertActive(userId, product._id, marketplaceTab);
   }
 
   async remove(userId, productId) {

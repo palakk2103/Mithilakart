@@ -44,7 +44,7 @@ const TAB_TO_COMMERCE_FLOW = {
 
 const titleCase = (v) => String(v).toLowerCase().replace(/^./, (c) => c.toUpperCase());
 
-const PAYMENT_METHOD_MAP = { UPI: 'upi', PHONEPE: 'upi', CARD: 'card', COD: 'cod', WALLET: 'wallet' };
+const PAYMENT_METHOD_MAP = { UPI: 'upi', PHONEPE: 'upi', GPAY: 'upi', PAYTM: 'upi', CARD: 'card', COD: 'cod', WALLET: 'wallet' };
 
 const Checkout = () => {
   const { t } = useTranslation();
@@ -357,6 +357,7 @@ const Checkout = () => {
             providerOrderId: paymentInit.providerOrderId || paymentInit.providerPaymentId,
             orderId: result.orderId,
             prefill: { name: address?.name, contact: address?.phone },
+            preferredMethod: paymentMethod,
           });
           const verified = await verifyPayment({
             orderId: result.orderId,
@@ -496,7 +497,7 @@ const Checkout = () => {
             <MapPin size={21} className="flex-shrink-0 mt-0.5" style={{ color: accentHex }} fill="currentColor" />
             <div className="flex-1 min-w-0">
               <p className="text-[14.5px] font-bold cd-heading leading-tight">
-                {address ? `Deliver to ${titleCase(address.type || 'Home')}` : t('checkout.selectAddress')}
+                {sd.title('address', address ? `Deliver to ${titleCase(address.type || 'Home')}` : t('checkout.selectAddress'))}
               </p>
               {address ? (
                 <p className="text-[12px] mt-0.5 leading-snug line-clamp-3 cd-text">
@@ -610,7 +611,7 @@ const Checkout = () => {
 
     trust: <DesignSection id="trust"><TrustBlock content={checkoutContent} /></DesignSection>,
 
-    safePayments: <DesignSection id="safePayments" plain><SafePayments /></DesignSection>,
+    safePayments: <DesignSection id="safePayments" plain><SafePayments title={sd.title('safePayments')} /></DesignSection>,
 
     terms: (
       <DesignSection id="terms" plain>
@@ -627,10 +628,11 @@ const Checkout = () => {
     </div>
   );
 
-  // Neutral coloured tiles stand in for logos; official brand logos can be added later.
   const paymentOptions = [
-    { id: 'UPI', key: 'upi', label: 'UPI', sub: 'Pay using any UPI app', icon: Smartphone, tile: '#4F46E5' },
-    { id: 'PHONEPE', key: 'phonepe', label: 'PhonePe', sub: 'Pay with PhonePe UPI', icon: Smartphone, tile: '#7C3AED' },
+    { id: 'PHONEPE', key: 'phonepe', label: 'PhonePe', sub: 'Pay directly with PhonePe UPI', badge: 'Pe', tile: '#5F259F' },
+    { id: 'GPAY', key: 'gpay', label: 'Google Pay', sub: 'Pay directly with GPay UPI', badge: 'GPay', tile: '#1A73E8' },
+    { id: 'PAYTM', key: 'paytm', label: 'Paytm', sub: 'Pay directly with Paytm UPI', badge: 'Paytm', tile: '#00BAF2' },
+    { id: 'UPI', key: 'upi', label: 'Other UPI Apps (BHIM, CRED, Amazon)', sub: 'Pay using any UPI app or UPI ID', icon: Smartphone, tile: '#4F46E5' },
     { id: 'CARD', key: 'card', label: 'Credit / Debit / ATM Card', sub: 'Visa, Mastercard, RuPay', icon: CreditCard, tile: '#2563EB' },
     ...(codAllowed ? [{ id: 'COD', key: 'cod', label: 'Cash on Delivery', sub: 'Pay at your doorstep', icon: Banknote, tile: '#16A34A' }] : []),
   ];
@@ -673,7 +675,7 @@ const Checkout = () => {
         <section className="cd-card">
           <h2 className="flex items-center gap-2 text-[16px] font-bold cd-heading mb-2.5"><Landmark size={18} style={{ color: accentHex }} /> {pd.title('methods', 'Select Payment Method')}</h2>
           <div role="radiogroup" aria-label="Payment method" className="space-y-2.5">
-            {paymentOptions.map(({ id, key, label, sub, icon: Icon, tile }) => {
+            {paymentOptions.map(({ id, key, label, sub, icon: Icon, badge, tile }) => {
               const checked = selectedPayment === id;
               const earn = bill?.cashback?.offers?.[PAYMENT_METHOD_MAP[id]] || 0;
               const offer = earn > 0 ? `${formatPrice(earn)} cashback` : paymentOffers[key];
@@ -687,8 +689,8 @@ const Checkout = () => {
                   className="w-full flex items-center gap-3 p-3 min-h-[64px] text-left rounded-xl border-2 transition-colors"
                   style={checked ? { borderColor: accentHex, background: `${accentHex}12` } : { borderColor: '#E2E8F0', background: '#fff' }}
                 >
-                  <span className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: tile }}>
-                    <Icon size={21} className="text-white" />
+                  <span className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-extrabold text-[11.5px] tracking-tight" style={{ background: tile }}>
+                    {badge || <Icon size={21} className="text-white" />}
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[15px] font-bold text-slate-900 leading-tight">{label}</span>
@@ -740,12 +742,12 @@ const Checkout = () => {
       </DesignSection>
     ),
 
-    safePayments: <DesignSection id="safePayments" plain><SafePayments /></DesignSection>,
+    safePayments: <DesignSection id="safePayments" plain><SafePayments title={pd.title('safePayments')} /></DesignSection>,
 
     note: (
       <DesignSection id="note" plain>
         <p className="flex items-center justify-center gap-1.5 text-[11.5px] text-slate-500 font-medium">
-          <ShieldCheck size={14} /> {t('checkout.happyCustomers')}
+          <ShieldCheck size={14} /> {pd.title('note', t('checkout.happyCustomers'))}
         </p>
       </DesignSection>
     ),

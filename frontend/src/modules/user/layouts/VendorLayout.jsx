@@ -11,14 +11,16 @@ import {
   X,
 } from 'lucide-react';
 
-import MainSidebar from '../components/common/MainSidebar';
+import lazyWithRetry from '../../../shared/utils/lazyWithRetry';
+const MainSidebar = lazyWithRetry(() => import('../components/common/MainSidebar'));
+const YouPopup = lazyWithRetry(() => import('../components/common/YouPopup'));
+const Footer = lazyWithRetry(() => import('../../../shared/components/Footer'));
 import HeaderTop from '../components/common/HeaderTop';
 import DesktopHeader from '../components/common/DesktopHeader';
 import HeaderTabs from '../components/common/HeaderTabs';
 import SearchBar from '../components/common/SearchBar';
 import CategoryNavbar from '../components/common/CategoryNavbar';
 import LanguageSelector from '../components/common/LanguageSelector';
-import YouPopup from '../components/common/YouPopup';
 import { isAuthenticated as isCustomerAuthenticated } from '../../../shared/api/tokenStorage';
 import { getCachedYouPopupItems, fetchYouPopupItems } from '../../../config/youPopup';
 import useAccountStore from '../../../store/useAccountStore';
@@ -27,7 +29,6 @@ import { fetchCartItems } from '../utils/cartUtils';
 import { useTranslation } from 'react-i18next';
 import { tName } from '../../../shared/utils/translateName';
 import { parsePrice, formatPrice } from '../../../shared/utils/priceFormatter';
-import Footer from '../../../shared/components/Footer';
 import { useLocation as useLiveLocation } from '../../../shared/context/LocationContext';
 import { useHydrateAddresses, getDisplayAddress, findSelectedAddress } from '../../../shared/hooks/useDeliverToAddress';
 import { isPurohitPagePath } from '../../../features/purohit/navigation';
@@ -129,6 +130,12 @@ const VendorLayout = () => {
       : effectiveFlow === 'quickshop'
         ? 'bg-gradient-to-r from-[color:var(--qs-primary,#F26522)] to-[color:var(--qs-dark,#d45014)]'
         : 'bg-gradient-to-r from-[color:var(--mk-primary,#65B842)] to-[color:var(--mk-dark,#3E5A44)]';
+
+  // Toasts and other app-wide accents read the active tab colour from here.
+  useEffect(() => {
+    const v = { mithilak: '--ml-primary', freshgrocery: '--fg-primary', quickshop: '--qs-primary' }[effectiveFlow] || '--mk-primary';
+    document.documentElement.style.setProperty('--active-primary', `var(${v})`);
+  }, [effectiveFlow]);
 
   const cartBadgeBg = effectiveFlow === 'mithilak' 
     ? 'bg-[color:var(--ml-primary,#207C8A)]' 
@@ -311,7 +318,11 @@ const VendorLayout = () => {
       )}
 
       {/* Drawer Sidebar */}
-      <MainSidebar isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+      {isDrawerOpen && (
+        <Suspense fallback={null}>
+          <MainSidebar isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+        </Suspense>
+      )}
 
       {/* Desktop Header */}
       {!hideHeader && (
@@ -369,7 +380,11 @@ const VendorLayout = () => {
             </main>
           </div>
         </div>
-        {!hideFooter && location.pathname !== '/profile' && <Footer />}
+        {!hideFooter && location.pathname !== '/profile' && (
+          <Suspense fallback={null}>
+            <Footer />
+          </Suspense>
+        )}
       </div>
 
       {/* Mobile-First Bottom Navbar (Fixed) */}
@@ -432,7 +447,9 @@ const VendorLayout = () => {
       </nav>
       )}
       {!hideFooter && isYouOpen && (
-        <YouPopup items={youItems} onClose={closeYou} anchorRef={youBtnRef} bottom={navHeight} loggedIn={customerLoggedIn} />
+        <Suspense fallback={null}>
+          <YouPopup items={youItems} onClose={closeYou} anchorRef={youBtnRef} bottom={navHeight} loggedIn={customerLoggedIn} />
+        </Suspense>
       )}
 
       {/* Floating Cart Pill (Shows on all pages when cart has items, except cart/checkout page) */}
